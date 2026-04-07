@@ -14,34 +14,45 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
   const shouldReduceMotion = useReducedMotion();
   const isNavbar = variant === "navbar";
 
+  const size = isNavbar ? 80 : 72;
+
   const motionProps = shouldReduceMotion
     ? {}
     : {
-        whileHover: { scale: 1.04, transition: SPRING },
+        whileHover: { scale: 1.06, transition: SPRING },
         whileTap: isNavbar
           ? { scale: 0.97, transition: SPRING }
           : undefined,
       };
 
-  const content = isNavbar ? (
-    <div className="logo-emblem">
+  const content = (
+    <div
+      className="logo-emblem"
+      style={{ width: size, height: size }}
+    >
+      {/* Outer orbital ring */}
+      {!shouldReduceMotion && (
+        <>
+          <span className="logo-orbit logo-orbit--1" />
+          <span className="logo-orbit logo-orbit--2" />
+          <span className="logo-orbit logo-orbit--3" />
+        </>
+      )}
+
+      {/* Core glow pulse */}
+      <span className="logo-core-glow" />
+
       <Image
         src="/images/triseno-logo.png"
         alt="Triseno Systems"
-        width={200}
-        height={200}
-        className="h-[52px] w-auto object-contain relative z-10"
-        priority
-      />
-    </div>
-  ) : (
-    <div className="logo-emblem logo-emblem--footer">
-      <Image
-        src="/images/triseno-logo.png"
-        alt="Triseno Systems"
-        width={200}
-        height={200}
-        className="h-16 w-auto object-contain relative z-10"
+        width={400}
+        height={400}
+        className="object-contain relative z-10"
+        style={{
+          width: size * 0.75,
+          height: size * 0.75,
+        }}
+        priority={isNavbar}
       />
     </div>
   );
@@ -59,6 +70,8 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
           boxShadow: "none",
           borderRadius: 0,
           padding: 0,
+          lineHeight: 0,
+          fontSize: 0,
         }}
         {...motionProps}
       >
@@ -77,6 +90,8 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
         boxShadow: "none",
         borderRadius: 0,
         padding: 0,
+        lineHeight: 0,
+        fontSize: 0,
       }}
       {...motionProps}
     >

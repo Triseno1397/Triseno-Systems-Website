@@ -179,7 +179,7 @@ body {
   }
 }
 
-/* ─── Logo Silver Emblem ─── */
+/* ─── Logo Silver Emblem with Orbital Rings ─── */
 .logo-emblem {
   position: relative;
   display: flex;
@@ -191,31 +191,87 @@ body {
   box-shadow: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
-  filter: drop-shadow(0 0 8px rgba(180, 210, 230, 0.15));
+  filter: drop-shadow(0 0 10px rgba(180, 220, 240, 0.2));
   transition: filter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .logo-emblem:hover,
 .group:hover .logo-emblem {
-  filter: drop-shadow(0 0 14px rgba(180, 210, 230, 0.3))
-         drop-shadow(0 0 40px rgba(0, 180, 216, 0.12));
+  filter: drop-shadow(0 0 18px rgba(180, 220, 240, 0.4))
+         drop-shadow(0 0 50px rgba(0, 180, 216, 0.2));
 }
 
-.logo-emblem--footer {
-  filter: drop-shadow(0 0 10px rgba(0, 180, 216, 0.2));
+/* Orbital rings */
+.logo-orbit {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  pointer-events: none;
 }
 
-.logo-emblem--footer:hover,
-.group:hover .logo-emblem--footer {
-  filter: drop-shadow(0 0 18px rgba(0, 180, 216, 0.35))
-         drop-shadow(0 0 50px rgba(0, 180, 216, 0.15));
+.logo-orbit--1 {
+  border-top-color: rgba(0, 180, 216, 0.5);
+  border-right-color: rgba(0, 180, 216, 0.15);
+  animation: orbitSpin1 4s linear infinite;
+}
+
+.logo-orbit--2 {
+  inset: -12px;
+  border-bottom-color: rgba(180, 220, 240, 0.35);
+  border-left-color: rgba(180, 220, 240, 0.1);
+  animation: orbitSpin2 6s linear infinite;
+}
+
+.logo-orbit--3 {
+  inset: -3px;
+  border-left-color: rgba(0, 229, 255, 0.25);
+  animation: orbitSpin3 8s linear infinite reverse;
+}
+
+/* Pulse glow behind logo */
+.logo-core-glow {
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 180, 216, 0.12) 0%, transparent 70%);
+  animation: coreGlow 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.group:hover .logo-core-glow {
+  animation: coreGlowHover 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes orbitSpin1 {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbitSpin2 {
+  from { transform: rotate(120deg); }
+  to { transform: rotate(480deg); }
+}
+
+@keyframes orbitSpin3 {
+  from { transform: rotate(240deg); }
+  to { transform: rotate(600deg); }
+}
+
+@keyframes coreGlow {
+  from { opacity: 0.4; transform: scale(1); }
+  to { opacity: 0.8; transform: scale(1.15); }
+}
+
+@keyframes coreGlowHover {
+  from { opacity: 0.6; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1.25); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo-emblem,
-  .logo-emblem--footer {
-    transition: none;
-  }
+  .logo-orbit { animation: none; }
+  .logo-core-glow { animation: none; opacity: 0.5; }
+  .logo-emblem { transition: none; }
 }
 
 /* ─── Scrollbar ─── */
