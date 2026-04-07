@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -39,50 +39,76 @@ const steps = [
 export default function WebDesignProcess() {
   const shouldReduceMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useGSAP(
     () => {
       if (shouldReduceMotion || !containerRef.current) return;
 
-      // Animate the timeline line growing
+      // On mobile: skip scrub-based ScrollTrigger (expensive), use simpler reveals
       const line = containerRef.current.querySelector(".timeline-line-fill");
       if (line) {
-        gsap.fromTo(
-          line,
-          { scaleY: 0, transformOrigin: "top center" },
-          {
-            scaleY: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: containerRef.current.querySelector(".timeline-track"),
-              start: "top 70%",
-              end: "bottom 60%",
-              scrub: 1,
-            },
-          }
-        );
+        if (isDesktop) {
+          gsap.fromTo(
+            line,
+            { scaleY: 0, transformOrigin: "top center" },
+            {
+              scaleY: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: containerRef.current.querySelector(".timeline-track"),
+                start: "top 70%",
+                end: "bottom 60%",
+                scrub: 1,
+              },
+            }
+          );
+        } else {
+          // Simple one-shot reveal on mobile — no scrub
+          gsap.fromTo(
+            line,
+            { scaleY: 0, transformOrigin: "top center" },
+            {
+              scaleY: 1,
+              duration: 1.2,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: line,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
       }
 
-      // Animate each step
       const stepEls = containerRef.current.querySelectorAll(".process-step");
-      stepEls.forEach((step) => {
+      stepEls.forEach((step, i) => {
         gsap.fromTo(
           step,
-          { opacity: 0, x: 40 },
+          { opacity: 0, x: isDesktop ? 40 : 20 },
           {
             opacity: 1,
             x: 0,
-            duration: 0.8,
+            duration: isDesktop ? 0.8 : 0.5,
             ease: "power3.out",
+            delay: isDesktop ? 0 : i * 0.05,
             scrollTrigger: {
               trigger: step,
-              start: "top 80%",
+              start: isDesktop ? "top 80%" : "top 90%",
               toggleActions: "play none none none",
             },
           }
         );
 
-        // Animate the dot
         const dot = step.querySelector(".step-dot");
         if (dot) {
           gsap.fromTo(
@@ -94,7 +120,7 @@ export default function WebDesignProcess() {
               ease: "back.out(2)",
               scrollTrigger: {
                 trigger: step,
-                start: "top 80%",
+                start: isDesktop ? "top 80%" : "top 90%",
                 toggleActions: "play none none none",
               },
             }
@@ -102,7 +128,7 @@ export default function WebDesignProcess() {
         }
       });
     },
-    { scope: containerRef, dependencies: [shouldReduceMotion] }
+    { scope: containerRef, dependencies: [shouldReduceMotion, isDesktop] }
   );
 
   return (

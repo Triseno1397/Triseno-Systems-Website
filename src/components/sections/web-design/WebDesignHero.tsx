@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -15,12 +15,21 @@ import {
 export default function WebDesignHero() {
   const shouldReduceMotion = useReducedMotion();
   const visualRef = useRef<HTMLDivElement>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useGSAP(
     () => {
-      if (shouldReduceMotion || !visualRef.current) return;
+      // Skip GSAP entirely on mobile — the visual is hidden
+      if (shouldReduceMotion || !isDesktop || !visualRef.current) return;
 
-      // Animate the browser mockup lines
       const lines = visualRef.current.querySelectorAll(".mock-line");
       gsap.fromTo(
         lines,
@@ -34,7 +43,6 @@ export default function WebDesignHero() {
         }
       );
 
-      // Animate the mock cards
       const cards = visualRef.current.querySelectorAll(".mock-card");
       gsap.fromTo(
         cards,
@@ -48,10 +56,8 @@ export default function WebDesignHero() {
           delay: 1.4,
         }
       );
-
-      // Badge glow and floating dots moved to CSS keyframes
     },
-    { scope: visualRef, dependencies: [shouldReduceMotion] }
+    { scope: visualRef, dependencies: [shouldReduceMotion, isDesktop] }
   );
 
   return (
@@ -162,22 +168,18 @@ export default function WebDesignHero() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.8 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+      {/* Scroll indicator — CSS-only infinite animation */}
+      <div
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-[fade-in_0.8s_ease_1.5s_both]"
       >
         <span className="text-[11px] tracking-[0.2em] uppercase text-text-tertiary font-mono">
           Explore
         </span>
-        <motion.div
-          animate={{ scaleY: [1, 1.3, 1], opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        <div
           className="w-px h-10 bg-gradient-to-b from-cyan-400 to-transparent"
+          style={{ animation: "scroll-pulse 2s ease-in-out infinite" }}
         />
-      </motion.div>
+      </div>
     </section>
   );
 }

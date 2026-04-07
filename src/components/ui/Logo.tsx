@@ -12,42 +12,38 @@ interface LogoProps {
 
 export default function Logo({ variant, href, onClick }: LogoProps) {
   const shouldReduceMotion = useReducedMotion();
-
   const isNavbar = variant === "navbar";
-
-  const containerClasses = isNavbar
-    ? "relative flex-shrink-0 group"
-    : "relative group inline-block";
 
   const motionProps = shouldReduceMotion
     ? {}
     : {
-        whileHover: { scale: 1.05, transition: SPRING },
+        whileHover: { scale: 1.04, transition: SPRING },
         whileTap: isNavbar
           ? { scale: 0.97, transition: SPRING }
           : undefined,
       };
 
-  const content = (
-    <>
-      {/* Ambient glow behind logo — always visible */}
-      <span
-        className="absolute inset-0 -inset-x-6 -inset-y-4 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: "radial-gradient(ellipse at center, rgba(0, 180, 216, 0.12) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* Logo image — large and prominent */}
+  const content = isNavbar ? (
+    <div className="logo-emblem">
       <Image
         src="/images/triseno-logo.png"
         alt="Triseno Systems"
-        width={isNavbar ? 220 : 260}
-        height={isNavbar ? 110 : 130}
-        className={`${isNavbar ? "h-16" : "h-20"} w-auto object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,180,216,0.25)] transition-[filter] duration-500 group-hover:drop-shadow-[0_0_20px_rgba(0,180,216,0.4)]`}
-        priority={isNavbar}
+        width={200}
+        height={200}
+        className="h-[52px] w-auto object-contain relative z-10"
+        priority
       />
-    </>
+    </div>
+  ) : (
+    <div className="logo-emblem logo-emblem--footer">
+      <Image
+        src="/images/triseno-logo.png"
+        alt="Triseno Systems"
+        width={200}
+        height={200}
+        className="h-16 w-auto object-contain relative z-10"
+      />
+    </div>
   );
 
   if (href) {
@@ -55,7 +51,15 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
       <motion.a
         href={href}
         onClick={onClick}
-        className={containerClasses}
+        className="flex-shrink-0 group"
+        style={{
+          background: "none",
+          backgroundColor: "transparent",
+          border: "none",
+          boxShadow: "none",
+          borderRadius: 0,
+          padding: 0,
+        }}
         {...motionProps}
       >
         {content}
@@ -64,7 +68,18 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
   }
 
   return (
-    <motion.div className={containerClasses} {...motionProps}>
+    <motion.div
+      className="inline-block group"
+      style={{
+        background: "none",
+        backgroundColor: "transparent",
+        border: "none",
+        boxShadow: "none",
+        borderRadius: 0,
+        padding: 0,
+      }}
+      {...motionProps}
+    >
       {content}
     </motion.div>
   );

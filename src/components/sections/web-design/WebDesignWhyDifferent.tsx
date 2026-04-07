@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useReducedMotion } from "framer-motion";
@@ -9,51 +9,52 @@ import ScrollReveal from "@/components/animations/ScrollReveal";
 export default function WebDesignWhyDifferent() {
   const shouldReduceMotion = useReducedMotion();
   const visualRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
 
   useGSAP(
     () => {
       if (shouldReduceMotion || !visualRef.current) return;
 
-      // Animate mockup lines on scroll
       const lines = visualRef.current.querySelectorAll(".wd-mock-line");
       gsap.fromTo(
         lines,
         { scaleX: 0, transformOrigin: "left center" },
         {
           scaleX: 1,
-          duration: 0.6,
+          duration: isMobile ? 0.4 : 0.6,
           ease: "power3.out",
-          stagger: 0.08,
+          stagger: isMobile ? 0.04 : 0.08,
           scrollTrigger: {
             trigger: visualRef.current,
-            start: "top 75%",
+            start: isMobile ? "top 85%" : "top 75%",
             toggleActions: "play none none none",
           },
         }
       );
 
-      // Animate card placeholders
       const cards = visualRef.current.querySelectorAll(".wd-mock-card");
       gsap.fromTo(
         cards,
-        { opacity: 0, scale: 0.9 },
+        { opacity: 0, scale: 0.95 },
         {
           opacity: 1,
           scale: 1,
-          duration: 0.5,
+          duration: isMobile ? 0.35 : 0.5,
           ease: "power3.out",
-          stagger: 0.08,
+          stagger: isMobile ? 0.04 : 0.08,
           scrollTrigger: {
             trigger: visualRef.current,
-            start: "top 70%",
+            start: isMobile ? "top 85%" : "top 70%",
             toggleActions: "play none none none",
           },
         }
       );
-
-      // Badge glow moved to CSS keyframes
     },
-    { scope: visualRef, dependencies: [shouldReduceMotion] }
+    { scope: visualRef, dependencies: [shouldReduceMotion, isMobile] }
   );
 
   return (

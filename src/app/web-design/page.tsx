@@ -1,10 +1,27 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import WebDesignHero from "@/components/sections/web-design/WebDesignHero";
-import WebDesignDifferentiators from "@/components/sections/web-design/WebDesignDifferentiators";
-import WebDesignServices from "@/components/sections/web-design/WebDesignServices";
-import WebDesignProcess from "@/components/sections/web-design/WebDesignProcess";
-import WebDesignWhyDifferent from "@/components/sections/web-design/WebDesignWhyDifferent";
-import WebDesignCTA from "@/components/sections/web-design/WebDesignCTA";
+
+const WebDesignDifferentiators = dynamic(
+  () => import("@/components/sections/web-design/WebDesignDifferentiators"),
+  { ssr: true }
+);
+const WebDesignServices = dynamic(
+  () => import("@/components/sections/web-design/WebDesignServices"),
+  { ssr: true }
+);
+const WebDesignProcess = dynamic(
+  () => import("@/components/sections/web-design/WebDesignProcess"),
+  { ssr: true }
+);
+const WebDesignWhyDifferent = dynamic(
+  () => import("@/components/sections/web-design/WebDesignWhyDifferent"),
+  { ssr: true }
+);
+const WebDesignCTA = dynamic(
+  () => import("@/components/sections/web-design/WebDesignCTA"),
+  { ssr: true }
+);
 
 export const metadata: Metadata = {
   title: "Web Design & Development — Triseno Systems",
