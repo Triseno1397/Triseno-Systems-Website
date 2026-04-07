@@ -179,98 +179,64 @@ body {
   }
 }
 
-/* ─── Logo Silver Emblem with Orbital Rings ─── */
+/* ─── Logo Silver Emblem ─── */
 .logo-emblem {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
-  filter: drop-shadow(0 0 10px rgba(180, 220, 240, 0.2));
-  transition: filter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  filter: drop-shadow(0 0 8px rgba(200, 225, 240, 0.2))
+         drop-shadow(0 0 24px rgba(0, 180, 216, 0.08));
+  transition: filter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.logo-emblem:hover,
+.logo-emblem--nav {
+  filter: drop-shadow(0 0 10px rgba(200, 225, 240, 0.25))
+         drop-shadow(0 0 30px rgba(0, 180, 216, 0.1));
+}
+
 .group:hover .logo-emblem {
-  filter: drop-shadow(0 0 18px rgba(180, 220, 240, 0.4))
+  filter: drop-shadow(0 0 16px rgba(200, 225, 240, 0.45))
          drop-shadow(0 0 50px rgba(0, 180, 216, 0.2));
 }
 
-/* Orbital rings */
-.logo-orbit {
+/* Horizontal scanner line sweeping across the logo */
+.logo-scanline {
   position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 1px solid transparent;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 180, 216, 0.1) 20%,
+    rgba(0, 229, 255, 0.6) 50%,
+    rgba(0, 180, 216, 0.1) 80%,
+    transparent 100%
+  );
+  z-index: 20;
   pointer-events: none;
+  animation: scanSweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 12px 3px rgba(0, 229, 255, 0.25);
 }
 
-.logo-orbit--1 {
-  border-top-color: rgba(0, 180, 216, 0.5);
-  border-right-color: rgba(0, 180, 216, 0.15);
-  animation: orbitSpin1 4s linear infinite;
-}
-
-.logo-orbit--2 {
-  inset: -12px;
-  border-bottom-color: rgba(180, 220, 240, 0.35);
-  border-left-color: rgba(180, 220, 240, 0.1);
-  animation: orbitSpin2 6s linear infinite;
-}
-
-.logo-orbit--3 {
-  inset: -3px;
-  border-left-color: rgba(0, 229, 255, 0.25);
-  animation: orbitSpin3 8s linear infinite reverse;
-}
-
-/* Pulse glow behind logo */
-.logo-core-glow {
-  position: absolute;
-  inset: 15%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 180, 216, 0.12) 0%, transparent 70%);
-  animation: coreGlow 3s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-
-.group:hover .logo-core-glow {
-  animation: coreGlowHover 1.5s ease-in-out infinite alternate;
-}
-
-@keyframes orbitSpin1 {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes orbitSpin2 {
-  from { transform: rotate(120deg); }
-  to { transform: rotate(480deg); }
-}
-
-@keyframes orbitSpin3 {
-  from { transform: rotate(240deg); }
-  to { transform: rotate(600deg); }
-}
-
-@keyframes coreGlow {
-  from { opacity: 0.4; transform: scale(1); }
-  to { opacity: 0.8; transform: scale(1.15); }
-}
-
-@keyframes coreGlowHover {
-  from { opacity: 0.6; transform: scale(1.05); }
-  to { opacity: 1; transform: scale(1.25); }
+@keyframes scanSweep {
+  0% { top: -5%; left: 0; opacity: 0; }
+  5% { opacity: 1; }
+  50% { top: 100%; opacity: 0.8; }
+  55% { opacity: 0; }
+  100% { opacity: 0; top: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo-orbit { animation: none; }
-  .logo-core-glow { animation: none; opacity: 0.5; }
+  .logo-scanline { animation: none; display: none; }
   .logo-emblem { transition: none; }
 }
 
