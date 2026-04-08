@@ -26,17 +26,14 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
       className={`logo-emblem ${isNavbar ? "logo-emblem--nav" : "logo-emblem--footer"}`}
       style={isNavbar ? { perspective: "900px" } : undefined}
     >
-      {/* Ambient scanner line */}
-      {!shouldReduceMotion && <span className="logo-scanline" />}
-
       <Image
         src="/images/triseno-logo.png"
         alt="Triseno Systems"
         width={400}
-        height={300}
-        className={`object-contain object-top relative z-10 ${
+        height={400}
+        className={`object-contain relative z-10 ${
           isNavbar
-            ? `h-[130px] w-[130px] ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
+            ? `h-[160px] w-[160px] ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
             : "h-[64px] w-auto"
         }`}
         priority={isNavbar}
