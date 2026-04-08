@@ -22,7 +22,10 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
       };
 
   const content = (
-    <div className={`logo-emblem ${isNavbar ? "logo-emblem--nav" : "logo-emblem--footer"}`}>
+    <div
+      className={`logo-emblem ${isNavbar ? "logo-emblem--nav" : "logo-emblem--footer"}`}
+      style={isNavbar ? { perspective: "900px" } : undefined}
+    >
       {/* Ambient scanner line */}
       {!shouldReduceMotion && <span className="logo-scanline" />}
 
@@ -32,7 +35,9 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
         width={400}
         height={300}
         className={`object-contain object-top relative z-10 ${
-          isNavbar ? "h-[72px] w-auto" : "h-[64px] w-auto"
+          isNavbar
+            ? `h-[130px] w-[130px] ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
+            : "h-[64px] w-auto"
         }`}
         priority={isNavbar}
       />

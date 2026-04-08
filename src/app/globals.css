@@ -185,7 +185,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -235,9 +235,22 @@ body {
   100% { opacity: 0; top: 100%; }
 }
 
+/* 3D Y-axis rotation for navbar logo */
+@keyframes logoSpin3d {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+
+.logo-spin-3d {
+  transform-style: preserve-3d;
+  animation: logoSpin3d 7s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .logo-scanline { animation: none; display: none; }
   .logo-emblem { transition: none; }
+  .logo-spin-3d { animation: none; }
 }
 
 /* ─── Scrollbar ─── */
