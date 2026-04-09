@@ -27,13 +27,13 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
       style={isNavbar ? { perspective: "900px" } : undefined}
     >
       <Image
-        src="/images/triseno-logo.png"
+        src="/images/triseno-logo-v2.png"
         alt="Triseno Systems"
         width={400}
         height={400}
         className={`object-contain relative z-10 ${
           isNavbar
-            ? `h-[160px] w-[160px] ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
+            ? `h-[140px] w-auto ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
             : "h-[64px] w-auto"
         }`}
         priority={isNavbar}
