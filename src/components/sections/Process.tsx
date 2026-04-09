@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { useGSAP, gsap, ScrollTrigger } from "@/hooks/useGSAPSetup";
+import { useRef } from "react";
+import { useGSAP, gsap } from "@/hooks/useGSAPSetup";
 import { useReducedMotion } from "framer-motion";
 import SectionHeading from "@/components/ui/SectionHeading";
 import {
@@ -52,152 +52,147 @@ const steps = [
 
 export default function Process() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
   const shouldReduceMotion = useReducedMotion();
-  const [isMobile, setIsMobile] = useState(true);
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    const check = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => setIsMobile(window.innerWidth < 768), 150);
-    };
-    setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", check, { passive: true });
-    return () => {
-      window.removeEventListener("resize", check);
-      clearTimeout(timeout);
-    };
-  }, []);
 
   useGSAP(
     () => {
-      if (shouldReduceMotion || isMobile || !trackRef.current || !containerRef.current) return;
+      if (shouldReduceMotion) return;
 
-      const track = trackRef.current;
-      const totalScroll = track.scrollWidth - window.innerWidth;
+      // Animate the timeline line drawing in
+      const line = sectionRef.current?.querySelector(".process-timeline-line");
+      if (line) {
+        gsap.fromTo(
+          line,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top 60%",
+              end: "bottom 40%",
+              scrub: 0.8,
+            },
+          }
+        );
+      }
 
-      gsap.to(track, {
-        x: () => -totalScroll,
-        ease: "none",
-        scrollTrigger: {
-          trigger: containerRef.current,
-          pin: true,
-          scrub: 0.5,
-          end: () => `+=${totalScroll}`,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            if (progressRef.current) {
-              progressRef.current.style.transform = `scaleX(${self.progress})`;
-            }
-          },
-        },
-      });
-
-      // Animate each step card
-      const stepCards = track.querySelectorAll(".process-step");
-      stepCards.forEach((card, i) => {
+      // Staggered card reveals
+      const cards = sectionRef.current?.querySelectorAll(".process-card");
+      cards?.forEach((card, i) => {
+        const isLeft = i % 2 === 0;
         gsap.from(card, {
-          opacity: 0.3,
-          scale: 0.95,
+          opacity: 0,
+          x: isLeft ? -60 : 60,
+          y: 30,
+          duration: 0.9,
+          ease: "power3.out",
           scrollTrigger: {
             trigger: card,
-            containerAnimation: gsap.getById?.("processScroll") || undefined,
-            start: "left 80%",
-            end: "left 20%",
-            scrub: true,
+            start: "top 85%",
+            end: "top 55%",
+            toggleActions: "play none none reverse",
+          },
+        });
+      });
+
+      // Animate the timeline nodes
+      const nodes = sectionRef.current?.querySelectorAll(".process-node");
+      nodes?.forEach((node) => {
+        gsap.from(node, {
+          scale: 0,
+          opacity: 0,
+          duration: 0.5,
+          ease: "back.out(2)",
+          scrollTrigger: {
+            trigger: node,
+            start: "top 80%",
+            toggleActions: "play none none reverse",
           },
         });
       });
     },
-    { scope: sectionRef, dependencies: [shouldReduceMotion, isMobile] }
+    { scope: sectionRef, dependencies: [shouldReduceMotion] }
   );
 
   return (
     <section
       id="process"
       ref={sectionRef}
-      className="relative py-24 md:py-32 lg:py-0"
+      className="relative py-24 md:py-32"
     >
-      {/* Section heading — always visible */}
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 lg:pt-40">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <SectionHeading
           eyebrow="How We Work"
           title="Engineered Delivery"
           description="Every engagement follows a structured methodology designed to minimize risk and maximize measurable outcomes."
         />
-      </div>
 
-      {/* Desktop: Horizontal scroll-pinned */}
-      {!isMobile && (
-        <div ref={containerRef} className="hidden md:block relative">
-          {/* Progress bar */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-white/[0.06] z-10">
-            <div
-              ref={progressRef}
-              className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 origin-left"
-              style={{ transform: "scaleX(0)" }}
-            />
+        {/* Desktop: Alternating timeline layout */}
+        <div className="hidden md:block relative mt-20">
+          {/* Center timeline line */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2">
+            <div className="process-timeline-line h-full w-full bg-gradient-to-b from-cyan-400/60 via-cyan-400/30 to-cyan-400/10 origin-top" />
           </div>
 
-          <div
-            ref={trackRef}
-            className="flex items-stretch gap-8 px-8 py-20 will-change-transform"
-            style={{ width: "fit-content" }}
-          >
-            {steps.map((step, i) => (
-              <div
-                key={step.number}
-                className="process-step flex-shrink-0 w-[400px] lg:w-[450px]"
-              >
-                <div className="h-full p-8 rounded-2xl border border-white/[0.06] bg-navy-800/30 backdrop-blur-sm relative overflow-hidden group">
-                  {/* Gradient top accent */}
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="font-mono text-3xl font-bold text-cyan-400 text-glow-cyan">
-                      {step.number}
-                    </span>
-                    <step.icon
-                      size={28}
-                      weight="duotone"
-                      className="text-cyan-400/60"
-                    />
+          <div className="space-y-16 lg:space-y-20">
+            {steps.map((step, i) => {
+              const isLeft = i % 2 === 0;
+              return (
+                <div key={step.number} className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-6 lg:gap-10">
+                  {/* Left side */}
+                  <div className={isLeft ? "" : "order-3"}>
+                    {isLeft && (
+                      <div className="process-card">
+                        <StepCard step={step} align="right" />
+                      </div>
+                    )}
+                    {!isLeft && (
+                      <div className="process-card">
+                        <StepCard step={step} align="left" />
+                      </div>
+                    )}
                   </div>
 
-                  <h3 className="text-xl font-bold text-text-primary tracking-wider mb-4">
-                    {step.title}
-                  </h3>
+                  {/* Center node */}
+                  <div className="order-2 flex items-center justify-center">
+                    <div className="process-node relative w-12 h-12 rounded-full border-2 border-cyan-400/60 bg-navy-950 flex items-center justify-center z-10">
+                      <span className="font-mono text-xs font-bold text-cyan-400">
+                        {step.number}
+                      </span>
+                      {/* Pulse ring */}
+                      <div className="absolute inset-0 rounded-full border border-cyan-400/20 animate-ping" style={{ animationDuration: "3s" }} />
+                    </div>
+                  </div>
 
-                  <p className="text-text-secondary leading-relaxed">
-                    {step.description}
-                  </p>
-
-                  {/* Connecting line to next step */}
-                  {i < steps.length - 1 && (
-                    <div className="absolute top-1/2 -right-4 w-8 h-px bg-gradient-to-r from-cyan-400/30 to-transparent" />
-                  )}
+                  {/* Right side */}
+                  <div className={isLeft ? "order-3" : ""}>
+                    {isLeft ? (
+                      <div className="opacity-0 pointer-events-none" aria-hidden />
+                    ) : null}
+                    {!isLeft ? (
+                      <div className="opacity-0 pointer-events-none" aria-hidden />
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* Mobile: Vertical timeline */}
-      {isMobile && (
-        <div className="md:hidden px-6 pb-16">
+        {/* Mobile: Vertical timeline */}
+        <div className="md:hidden mt-12">
           <div className="relative">
             {/* Vertical line */}
-            <div className="absolute left-6 top-0 bottom-0 w-px bg-white/[0.06]" />
+            <div className="absolute left-6 top-0 bottom-0 w-px bg-white/[0.06]">
+              <div className="process-timeline-line h-full w-full bg-gradient-to-b from-cyan-400/60 via-cyan-400/30 to-cyan-400/10 origin-top" />
+            </div>
 
             <div className="space-y-8">
               {steps.map((step) => (
-                <div key={step.number} className="relative pl-16">
+                <div key={step.number} className="process-card relative pl-16">
                   {/* Node on timeline */}
-                  <div className="absolute left-4 top-2 w-4 h-4 rounded-full border-2 border-cyan-400 bg-navy-950" />
+                  <div className="process-node absolute left-4 top-2 w-4 h-4 rounded-full border-2 border-cyan-400 bg-navy-950" />
 
                   <span className="font-mono text-sm text-cyan-400 tracking-wider">
                     {step.number}
@@ -213,7 +208,55 @@ export default function Process() {
             </div>
           </div>
         </div>
-      )}
+      </div>
     </section>
+  );
+}
+
+function StepCard({
+  step,
+  align,
+}: {
+  step: (typeof steps)[number];
+  align: "left" | "right";
+}) {
+  return (
+    <div
+      className={`group relative p-8 rounded-2xl border border-white/[0.06] bg-navy-800/30 backdrop-blur-sm overflow-hidden transition-colors duration-500 hover:border-cyan-400/20 hover:bg-navy-800/50 ${
+        align === "right" ? "text-right" : "text-left"
+      }`}
+    >
+      {/* Top gradient accent */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-100" />
+
+      {/* Corner glow on hover */}
+      <div
+        className={`absolute top-0 ${
+          align === "right" ? "right-0" : "left-0"
+        } w-32 h-32 bg-cyan-400/[0.03] rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100 -translate-y-1/2 ${
+          align === "right" ? "translate-x-1/2" : "-translate-x-1/2"
+        }`}
+      />
+
+      <div
+        className={`flex items-center gap-4 mb-6 ${
+          align === "right" ? "justify-end" : "justify-start"
+        }`}
+      >
+        <step.icon
+          size={28}
+          weight="duotone"
+          className="text-cyan-400/60 transition-colors duration-500 group-hover:text-cyan-400"
+        />
+      </div>
+
+      <h3 className="text-xl font-bold text-text-primary tracking-wider mb-4">
+        {step.title}
+      </h3>
+
+      <p className="text-text-secondary leading-relaxed">
+        {step.description}
+      </p>
+    </div>
   );
 }

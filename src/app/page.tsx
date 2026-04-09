@@ -3,9 +3,7 @@ import AuthorityStrip from "@/components/sections/AuthorityStrip";
 import Capabilities from "@/components/sections/Capabilities";
 import Process from "@/components/sections/Process";
 import Showcase from "@/components/sections/Showcase";
-import Audience from "@/components/sections/Audience";
 import WhyTriseno from "@/components/sections/WhyTriseno";
-import WebDesignDivision from "@/components/sections/WebDesignDivision";
 import Contact from "@/components/sections/Contact";
 
 export default function Home() {
@@ -16,9 +14,7 @@ export default function Home() {
       <Capabilities />
       <Process />
       <Showcase />
-      <Audience />
       <WhyTriseno />
-      <WebDesignDivision />
       <Contact />
     </>
   );

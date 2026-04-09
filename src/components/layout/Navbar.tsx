@@ -106,8 +106,8 @@ export default function Navbar() {
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-28">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-8 pt-3">
+          <div className="flex items-center justify-between h-32">
             {/* Logo */}
             <Logo
               variant="navbar"

@@ -30,29 +30,6 @@ const projects = [
     ],
   },
   {
-    title: "Workflow Compression Engine",
-    category: "Workflow Compression",
-    problem:
-      "Multi-step document processing, approval chains, and data reconciliation workflows consuming 40+ hours per cycle across distributed teams.",
-    architecture:
-      "Intelligent pipeline that maps operational workflows and redesigns them as compressed execution layers. A 12-step manual process becomes a 2-layer agent system with automated routing, parallel processing, and exception handling.",
-    outcome:
-      "Operational processes compressed from days to minutes. Continuous monitoring and optimization ensures compression ratios improve over time.",
-    nodes: [
-      { x: 60, y: 80, label: "INGEST", size: 5 },
-      { x: 170, y: 40, label: "PARSE", size: 4 },
-      { x: 170, y: 120, label: "CLASSIFY", size: 4 },
-      { x: 300, y: 60, label: "PROCESS", size: 6 },
-      { x: 300, y: 120, label: "RECONCILE", size: 4 },
-      { x: 430, y: 80, label: "ROUTE", size: 5 },
-      { x: 560, y: 50, label: "APPROVE", size: 4 },
-      { x: 560, y: 110, label: "ARCHIVE", size: 4 },
-    ],
-    edges: [
-      [0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5], [5, 6], [5, 7],
-    ],
-  },
-  {
     title: "Broadcast Metadata Intelligence",
     category: "Broadcast & Media AI",
     problem:
