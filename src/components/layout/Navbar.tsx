@@ -100,23 +100,25 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 overflow-visible ${
           scrolled
             ? "glass border-b border-white/[0.06]"
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8 pt-3">
-          <div className="flex items-center justify-between h-32">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-8 overflow-visible">
+          <div className="flex items-center justify-between h-28 overflow-visible">
             {/* Logo */}
-            <Logo
-              variant="navbar"
-              href="#home"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("#home");
-              }}
-            />
+            <div className="self-start mt-3">
+              <Logo
+                variant="navbar"
+                href="#home"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("#home");
+                }}
+              />
+            </div>
 
             {/* Desktop Links */}
             <div className="hidden md:flex items-center gap-8">
