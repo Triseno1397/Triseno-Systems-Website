@@ -6,7 +6,7 @@ import { fadeUp, staggerContainer } from "@/lib/animations";
 
 export default function WebDesignCTA() {
   return (
-    <section id="wd-contact" className="py-24 lg:py-32">
+    <section id="wd-contact" className="relative py-24 lg:py-32 overflow-hidden">
       <div className="max-w-[800px] mx-auto px-6 lg:px-8 text-center">
         {/* Background glow */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-cyan-400/[0.03] blur-[120px] pointer-events-none" />

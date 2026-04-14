@@ -33,7 +33,7 @@ export default function Logo({ variant, href, onClick }: LogoProps) {
         height={400}
         className={`object-contain relative z-10 ${
           isNavbar
-            ? `h-[210px] w-auto ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
+            ? `h-[120px] md:h-[210px] w-auto ${!shouldReduceMotion ? "logo-spin-3d" : ""}`
             : "h-[64px] w-auto"
         }`}
         priority={isNavbar}

@@ -12,7 +12,7 @@ const navLinks = [
   { label: "Home", href: "#home" },
   { label: "Capabilities", href: "#capabilities" },
   { label: "Process", href: "#process" },
-  { label: "Work", href: "#showcase" },
+  { label: "Portfolio", href: "/portfolio" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -36,8 +36,12 @@ const socialLinks = [
 
 export default function Footer() {
   const scrollTo = (href: string) => {
-    const el = document.getElementById(href.slice(1));
-    el?.scrollIntoView({ behavior: "smooth" });
+    if (href.startsWith("#")) {
+      const el = document.getElementById(href.slice(1));
+      el?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.location.href = href;
+    }
   };
 
   return (

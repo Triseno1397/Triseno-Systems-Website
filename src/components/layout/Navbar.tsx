@@ -65,7 +65,6 @@ const navLinks = [
   { label: "Home", href: "#home" },
   { label: "Capabilities", href: "#capabilities" },
   { label: "Process", href: "#process" },
-  { label: "Work", href: "#showcase" },
   { label: "Portfolio", href: "/portfolio" },
   { label: "Contact", href: "#contact" },
 ];

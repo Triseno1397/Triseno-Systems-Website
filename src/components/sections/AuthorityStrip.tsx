@@ -79,7 +79,7 @@ export default function AuthorityStrip() {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-cyan-400/[0.03] blur-2xl pointer-events-none" />
 
               <div className="relative">
-                <div className="text-5xl md:text-6xl font-bold text-text-primary tracking-tight mb-3">
+                <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-text-primary tracking-tight mb-3">
                   {stat.display ? (
                     <span className="text-glow-cyan">{stat.display}</span>
                   ) : (
