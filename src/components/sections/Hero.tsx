@@ -5,123 +5,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useGSAP, gsap } from "@/hooks/useGSAPSetup";
 import Button from "@/components/ui/Button";
 
-/* ─── Animated SVG Data Visualization ─── */
-function DataVisualization() {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const shouldReduceMotion = useReducedMotion();
-
-  // All infinite animations moved to CSS keyframes for GPU compositing
-
-  return (
-    <svg
-      ref={svgRef}
-      viewBox="0 0 500 500"
-      fill="none"
-      className="w-full h-full"
-      aria-hidden="true"
-    >
-      {/* Grid dots (reduced for performance) */}
-      {Array.from({ length: 8 }).map((_, row) =>
-        Array.from({ length: 8 }).map((_, col) => (
-          <circle
-            key={`dot-${row}-${col}`}
-            cx={60 + col * 52}
-            cy={60 + row * 52}
-            r="1"
-            fill="rgba(0, 180, 216, 0.15)"
-          />
-        ))
-      )}
-
-      {/* Circuit lines — CSS animated */}
-      <path
-        d="M100 250 L200 250 L250 200 L350 200"
-        stroke="rgba(0, 180, 216, 0.3)"
-        strokeWidth="1.5"
-        strokeDasharray="200"
-        style={{ animation: "circuit-dash 2s ease-in-out infinite" }}
-      />
-      <path
-        d="M150 300 L250 300 L300 250 L400 250"
-        stroke="rgba(0, 180, 216, 0.25)"
-        strokeWidth="1.5"
-        strokeDasharray="200"
-        style={{ animation: "circuit-dash 2.3s ease-in-out infinite 0.3s" }}
-      />
-      <path
-        d="M120 180 L220 180 L270 230 L380 230"
-        stroke="rgba(0, 180, 216, 0.2)"
-        strokeWidth="1.5"
-        strokeDasharray="200"
-        style={{ animation: "circuit-dash 2.6s ease-in-out infinite 0.6s" }}
-      />
-      <path
-        d="M80 350 L180 350 L230 300 L320 300 L370 350"
-        stroke="rgba(0, 180, 216, 0.2)"
-        strokeWidth="1"
-        strokeDasharray="200"
-        style={{ animation: "circuit-dash 2.9s ease-in-out infinite 0.9s" }}
-      />
-      <path
-        d="M200 150 L300 150 L350 180 L420 180"
-        stroke="rgba(0, 180, 216, 0.15)"
-        strokeWidth="1"
-        strokeDasharray="200"
-        style={{ animation: "circuit-dash 3.2s ease-in-out infinite 1.2s" }}
-      />
-
-      {/* Nodes — CSS animated pulse */}
-      <circle cx="200" cy="250" r="4" fill="#00b4d8" style={{ animation: "node-pulse 1.5s ease-in-out infinite", ["--pulse-max" as string]: "0.8" }} />
-      <circle cx="250" cy="200" r="3" fill="#00b4d8" style={{ animation: "node-pulse 1.7s ease-in-out infinite 0.4s", ["--pulse-max" as string]: "0.6" }} />
-      <circle cx="350" cy="200" r="5" fill="#00b4d8" style={{ animation: "node-pulse 1.9s ease-in-out infinite 0.8s", ["--pulse-max" as string]: "0.7" }} />
-      <circle cx="300" cy="250" r="3" fill="#00b4d8" style={{ animation: "node-pulse 2.1s ease-in-out infinite 1.2s", ["--pulse-max" as string]: "0.5" }} />
-      <circle cx="250" cy="300" r="4" fill="#00b4d8" style={{ animation: "node-pulse 2.3s ease-in-out infinite 1.6s", ["--pulse-max" as string]: "0.6" }} />
-      <circle cx="400" cy="250" r="4" fill="#00b4d8" style={{ animation: "node-pulse 1.5s ease-in-out infinite 2s", ["--pulse-max" as string]: "0.7" }} />
-      <circle cx="180" cy="350" r="3" fill="#00b4d8" style={{ animation: "node-pulse 1.7s ease-in-out infinite 2.4s", ["--pulse-max" as string]: "0.5" }} />
-      <circle cx="320" cy="300" r="5" fill="#00b4d8" style={{ animation: "node-pulse 1.9s ease-in-out infinite 2.8s", ["--pulse-max" as string]: "0.8" }} />
-      <circle cx="300" cy="150" r="3" fill="#00b4d8" style={{ animation: "node-pulse 2.1s ease-in-out infinite 3.2s", ["--pulse-max" as string]: "0.4" }} />
-
-      {/* Glow rings around main nodes */}
-      <circle cx="350" cy="200" r="12" stroke="rgba(0, 180, 216, 0.15)" strokeWidth="1" fill="none" />
-      <circle cx="320" cy="300" r="14" stroke="rgba(0, 180, 216, 0.12)" strokeWidth="1" fill="none" />
-      <circle cx="200" cy="250" r="10" stroke="rgba(0, 180, 216, 0.12)" strokeWidth="1" fill="none" />
-
-      {/* Particles — reduced count, CSS animated */}
-      {[
-        [210, 240, 10, -15],
-        [340, 195, -8, 12],
-        [255, 290, 15, -10],
-        [395, 245, -12, -18],
-        [180, 175, 8, 20],
-        [290, 155, -15, 10],
-      ].map(([cx, cy, dx, dy], i) => (
-        <circle
-          key={`particle-${i}`}
-          cx={cx}
-          cy={cy}
-          r="1.5"
-          fill="#00b4d8"
-          opacity="0.6"
-          style={{
-            animation: `particle-drift ${2.5 + i * 0.4}s ease-out infinite ${i * 0.5}s`,
-            ["--dx" as string]: `${dx}px`,
-            ["--dy" as string]: `${dy}px`,
-          }}
-        />
-      ))}
-
-      {/* Radial gradient overlay */}
-      <defs>
-        <radialGradient id="heroGlow" cx="60%" cy="45%" r="50%">
-          <stop offset="0%" stopColor="rgba(0, 180, 216, 0.06)" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
-      <rect width="500" height="500" fill="url(#heroGlow)" />
-    </svg>
-  );
-}
-
 /* ─── Hero Section ─── */
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -252,10 +135,19 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Right — Data Visualization */}
-          <div className="hidden lg:block relative">
-            <div className="relative w-full aspect-square max-w-[500px] ml-auto">
-              <DataVisualization />
+          {/* Right — Hero Video */}
+          <div className="hidden lg:flex relative items-center justify-center">
+            <div className="relative w-full max-w-[600px] ml-auto overflow-hidden" style={{ maskImage: 'radial-gradient(ellipse 70% 80% at center, black 50%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 80% at center, black 50%, transparent 100%)' }}>
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover scale-110"
+                style={{ mixBlendMode: 'screen' }}
+              >
+                <source src="/videos/triseno-hero.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </div>
