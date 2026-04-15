@@ -86,69 +86,50 @@ export default function Hero() {
         style={{ background: "var(--gradient-radial)" }}
       />
 
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
-        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 lg:gap-8 items-center">
-          {/* Left — Text Content */}
-          <div className="space-y-8">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-              <span className="block">
-                {headlineLine1.split(" ").map((word, i) => (
-                  <span
-                    key={i}
-                    className="inline-block overflow-hidden"
-                    style={{ marginRight: "0.25em" }}
-                  >
-                    <span className="hero-word inline-block text-text-primary">
-                      {word}
-                    </span>
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
+        <div className="max-w-3xl space-y-8">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
+            <span className="block">
+              {headlineLine1.split(" ").map((word, i) => (
+                <span
+                  key={i}
+                  className="inline-block overflow-hidden"
+                  style={{ marginRight: "0.25em" }}
+                >
+                  <span className="hero-word inline-block text-text-primary">
+                    {word}
                   </span>
-                ))}
-              </span>
-              <span className="block mt-2">
-                {headlineLine2.split(" ").map((word, i) => (
-                  <span
-                    key={i}
-                    className="inline-block overflow-hidden"
-                    style={{ marginRight: "0.25em" }}
-                  >
-                    <span className="hero-word inline-block gradient-text">
-                      {word}
-                    </span>
+                </span>
+              ))}
+            </span>
+            <span className="block mt-2">
+              {headlineLine2.split(" ").map((word, i) => (
+                <span
+                  key={i}
+                  className="inline-block overflow-hidden"
+                  style={{ marginRight: "0.25em" }}
+                >
+                  <span className="hero-word inline-block gradient-text">
+                    {word}
                   </span>
-                ))}
-              </span>
-            </h1>
+                </span>
+              ))}
+            </span>
+          </h1>
 
-            <p className="hero-sub max-w-xl text-lg md:text-xl text-text-secondary leading-relaxed">
-              Triseno Systems designs and deploys AI infrastructure — multi-agent
-              orchestration, workflow compression engines, and decision-layer
-              automation for organizations that need systems, not features.
-            </p>
+          <p className="hero-sub max-w-xl text-lg md:text-xl text-text-secondary leading-relaxed">
+            Triseno Systems designs and deploys AI infrastructure — multi-agent
+            orchestration, workflow compression engines, and decision-layer
+            automation for organizations that need systems, not features.
+          </p>
 
-            <div className="hero-ctas flex flex-col sm:flex-row gap-4">
-              <Button variant="primary" size="large" href="#capabilities">
-                Explore What We Build
-              </Button>
-              <Button variant="secondary" size="large" href="#contact">
-                Start a Conversation
-              </Button>
-            </div>
-          </div>
-
-          {/* Right — Hero Video */}
-          <div className="hidden lg:flex relative items-center justify-center">
-            <div className="relative w-full max-w-[600px] ml-auto overflow-hidden" style={{ maskImage: 'radial-gradient(ellipse 70% 80% at center, black 50%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 80% at center, black 50%, transparent 100%)' }}>
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover scale-110"
-                style={{ mixBlendMode: 'screen' }}
-              >
-                <source src="/videos/triseno-hero.mp4" type="video/mp4" />
-              </video>
-            </div>
+          <div className="hero-ctas flex flex-col sm:flex-row gap-4">
+            <Button variant="primary" size="large" href="#capabilities">
+              Explore What We Build
+            </Button>
+            <Button variant="secondary" size="large" href="#contact">
+              Start a Conversation
+            </Button>
           </div>
         </div>
       </div>

@@ -2,20 +2,12 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import WebDesignHero from "@/components/sections/web-design/WebDesignHero";
 
-const WebDesignDifferentiators = dynamic(
-  () => import("@/components/sections/web-design/WebDesignDifferentiators"),
-  { ssr: true }
-);
-const WebDesignServices = dynamic(
-  () => import("@/components/sections/web-design/WebDesignServices"),
+const WebDesignShowcase = dynamic(
+  () => import("@/components/sections/web-design/WebDesignShowcase"),
   { ssr: true }
 );
 const WebDesignProcess = dynamic(
   () => import("@/components/sections/web-design/WebDesignProcess"),
-  { ssr: true }
-);
-const WebDesignWhyDifferent = dynamic(
-  () => import("@/components/sections/web-design/WebDesignWhyDifferent"),
   { ssr: true }
 );
 const WebDesignCTA = dynamic(
@@ -26,11 +18,11 @@ const WebDesignCTA = dynamic(
 export const metadata: Metadata = {
   title: "Web Design & Development — Triseno Systems",
   description:
-    "AI-native web design and development. Custom websites, web applications, and e-commerce — engineered for intelligence, speed, and conversion.",
+    "Precision-engineered websites for brands that refuse to blend in. Custom websites, web applications, and e-commerce by Triseno Systems.",
   openGraph: {
     title: "Web Design & Development — Triseno Systems",
     description:
-      "AI-native web design and development. Custom websites, web applications, and e-commerce — engineered for intelligence, speed, and conversion.",
+      "Precision-engineered websites for brands that refuse to blend in. Custom websites, web applications, and e-commerce by Triseno Systems.",
     url: "https://trisenosystems.com/web-design",
     siteName: "Triseno Systems",
     type: "website",
@@ -39,33 +31,11 @@ export const metadata: Metadata = {
 
 export default function WebDesignPage() {
   return (
-    <>
+    <div className="wd-division">
       <WebDesignHero />
-
-      <WebDesignDifferentiators />
-
-      {/* Divider */}
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/12 to-transparent" />
-      </div>
-
-      <WebDesignServices />
-
-      {/* Divider */}
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/12 to-transparent" />
-      </div>
-
+      <WebDesignShowcase />
       <WebDesignProcess />
-
-      {/* Divider */}
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/12 to-transparent" />
-      </div>
-
-      <WebDesignWhyDifferent />
-
       <WebDesignCTA />
-    </>
+    </div>
   );
 }

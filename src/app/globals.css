@@ -165,6 +165,18 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes gradient-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes gradient-drift-reverse {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 20px) scale(0.95); }
+  66% { transform: translate(15px, -25px) scale(1.05); }
+  100% { transform: translate(0, 0) scale(1); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .anim-node-pulse,
@@ -222,6 +234,44 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .logo-emblem { transition: none; }
   .logo-spin-3d { animation: none; }
+}
+
+/* ─── Web Design Division — Luxury Color Override ─── */
+.wd-division {
+  --wd-bg: #06060a;
+  --wd-bg-elevated: #0e0e12;
+  --wd-bg-surface: #14141a;
+  --wd-text: #f0ece4;
+  --wd-text-secondary: #9a958c;
+  --wd-text-tertiary: #5a564e;
+  --wd-accent: #c8b89a;
+  --wd-accent-dim: rgba(200, 184, 154, 0.15);
+  --wd-border: rgba(255, 255, 255, 0.06);
+  --wd-border-accent: rgba(200, 184, 154, 0.2);
+  background: var(--wd-bg);
+  color: var(--wd-text);
+}
+
+.wd-division .gradient-text {
+  background: linear-gradient(135deg, #c8b89a 0%, #e8d5b5 50%, #c8b89a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wd-division ::selection {
+  background: rgba(200, 184, 154, 0.3);
+  color: #f0ece4;
+}
+
+@keyframes wd-line-draw {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes wd-fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ─── Scrollbar ─── */
