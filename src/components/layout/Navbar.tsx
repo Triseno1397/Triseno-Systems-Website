@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { List, X, PenNib } from "@phosphor-icons/react";
+import { List, X, PenNib, DeviceMobile } from "@phosphor-icons/react";
 import Button from "@/components/ui/Button";
 import Logo from "@/components/ui/Logo";
 
 const WD_TEXT = "Web Design Division";
+const MOB_TEXT = "Mobile Division";
 
 function CyclingText({ text, className }: { text: string; className?: string }) {
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -18,14 +19,12 @@ function CyclingText({ text, className }: { text: string; className?: string }) 
     let letterIndex = 0;
 
     const runCycle = () => {
-      // Light up letters one by one
       const stepLetter = () => {
         setActiveIndex(letterIndex);
         letterIndex++;
         if (letterIndex < text.length) {
           timeout = setTimeout(stepLetter, 60);
         } else {
-          // Hold last letter briefly, then reset and wait
           timeout = setTimeout(() => {
             setActiveIndex(-1);
             letterIndex = 0;
@@ -36,9 +35,7 @@ function CyclingText({ text, className }: { text: string; className?: string }) 
       stepLetter();
     };
 
-    // Initial delay before first cycle
     timeout = setTimeout(runCycle, 1500);
-
     return () => clearTimeout(timeout);
   }, [text]);
 
@@ -47,7 +44,7 @@ function CyclingText({ text, className }: { text: string; className?: string }) 
       {text.split("").map((char, i) => (
         <span
           key={i}
-          className={`wd-letter inline-block transition-all duration-200 ${
+          className={`inline-block transition-all duration-200 ${
             i <= activeIndex
               ? "text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]"
               : ""
@@ -70,16 +67,7 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const navigate = (href: string) => {
     setMobileOpen(false);
@@ -88,7 +76,6 @@ export default function Navbar() {
       if (el) {
         el.scrollIntoView({ behavior: "smooth" });
       } else {
-        // On a different page — go back to home with the hash
         window.location.href = "/" + href;
       }
     } else {
@@ -98,13 +85,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 overflow-visible ${
-          scrolled
-            ? "glass border-b border-white/[0.06]"
-            : "bg-transparent"
-        }`}
-      >
+      <nav className="absolute top-0 left-0 right-0 z-50 overflow-visible bg-transparent">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8 overflow-visible">
           <div className="flex items-center justify-between h-28 overflow-visible">
             {/* Logo */}
@@ -148,29 +129,37 @@ export default function Navbar() {
                 }}
                 className="wd-nav-link group relative isolate flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-white/90 transition-all duration-300 hover:text-white"
               >
-                {/* Gradient border via pseudo-element */}
                 <span className="absolute inset-0 rounded-full border border-white/20 transition-all duration-300 group-hover:border-cyan-400/50" />
-
-                {/* Glow background on hover */}
                 <span className="absolute inset-0 rounded-full bg-cyan-400/[0.04] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                {/* Shimmer sweep */}
                 <span className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
                   <span className="wd-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-400/[0.08] to-transparent" />
                 </span>
-
                 <PenNib size={14} weight="duotone" className="relative z-10 text-cyan-400" />
                 <CyclingText text={WD_TEXT} className="relative z-10" />
+              </a>
+
+              {/* Mobile Division — featured link */}
+              <a
+                href="/mobile"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/mobile");
+                }}
+                className="mob-nav-link group relative isolate flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-white/90 transition-all duration-300 hover:text-white"
+              >
+                <span className="absolute inset-0 rounded-full border border-white/20 transition-all duration-300 group-hover:border-[#6391ff]/50" />
+                <span className="absolute inset-0 rounded-full bg-[#6391ff]/[0.04] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <span className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+                  <span className="mob-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#6391ff]/[0.08] to-transparent" />
+                </span>
+                <DeviceMobile size={14} weight="duotone" className="relative z-10 text-[#6391ff]" />
+                <CyclingText text={MOB_TEXT} className="relative z-10" />
               </a>
             </div>
 
             {/* Desktop CTA */}
             <div className="hidden md:block">
-              <Button
-                variant="primary"
-                href="#contact"
-                size="default"
-              >
+              <Button variant="primary" href="#contact" size="default">
                 Start a Conversation
               </Button>
             </div>
@@ -242,11 +231,30 @@ export default function Navbar() {
                 <CyclingText text={WD_TEXT} />
               </motion.a>
 
-              <motion.div
+              {/* Mobile Division — featured mobile link */}
+              <motion.a
+                href="/mobile"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/mobile");
+                }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
                   delay: (navLinks.length + 1) * 0.1,
+                  duration: 0.4,
+                }}
+                className="relative flex items-center gap-3 px-6 py-3 rounded-full border border-white/20 text-white/90 text-xl font-medium hover:border-[#6391ff]/50 hover:bg-[#6391ff]/[0.06] hover:text-white transition-all duration-300"
+              >
+                <DeviceMobile size={20} weight="duotone" className="text-[#6391ff]" />
+                <CyclingText text={MOB_TEXT} />
+              </motion.a>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: (navLinks.length + 1.5) * 0.1,
                   duration: 0.4,
                 }}
               >

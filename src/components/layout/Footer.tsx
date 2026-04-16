@@ -23,6 +23,7 @@ const serviceLinks = [
   { label: "Workflow Compression", href: null },
   { label: "Revenue Operations", href: null },
   { label: "Website Design & Development", href: "/web-design" },
+  { label: "Mobile Development", href: "/mobile" },
   { label: "Broadcast & Production AI", href: null },
   { label: "Infrastructure Retainers", href: null },
 ];

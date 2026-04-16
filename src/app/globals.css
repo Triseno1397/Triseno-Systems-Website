@@ -264,6 +264,51 @@ body {
   color: #f0ece4;
 }
 
+/* ─── Mobile Division — Cool Blue Color Override ─── */
+.mob-division {
+  --mob-bg: #06060e;
+  --mob-bg-elevated: #0c0e18;
+  --mob-bg-surface: #12141e;
+  --mob-text: #e8edf8;
+  --mob-text-secondary: #8892b0;
+  --mob-text-tertiary: #4a5578;
+  --mob-accent: #6391ff;
+  --mob-accent-dim: rgba(99, 145, 255, 0.15);
+  --mob-border: rgba(255, 255, 255, 0.06);
+  --mob-border-accent: rgba(99, 145, 255, 0.2);
+  background: var(--mob-bg);
+  color: var(--mob-text);
+}
+
+.mob-division .gradient-text {
+  background: linear-gradient(135deg, #6391ff 0%, #94b5ff 50%, #6391ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mob-division ::selection {
+  background: rgba(99, 145, 255, 0.3);
+  color: #e8edf8;
+}
+
+/* ─── Mobile Nav Link ─── */
+.mob-nav-link .mob-shimmer {
+  animation: mob-shimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes mob-shimmer {
+  0% { transform: translateX(-100%); }
+  40%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mob-nav-link .mob-shimmer {
+    animation: none;
+  }
+}
+
+/* ─── Web Design Division — Additional Animations ─── */
 @keyframes wd-line-draw {
   from { stroke-dashoffset: 1000; }
   to { stroke-dashoffset: 0; }
@@ -272,6 +317,55 @@ body {
 @keyframes wd-fade-in-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wd-grid-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes wd-line-grow {
+  0%, 100% { transform: scaleX(0.7); opacity: 0.5; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes wd-code-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes wd-swatch-pop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes wd-scan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes wd-shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  50%, 100% { transform: translateX(200%); }
+}
+
+@keyframes wd-shimmer {
+  0% { transform: translateX(-100%); }
+  50%, 100% { transform: translateX(100%); }
+}
+
+@keyframes wd-line-flow {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wd-division *,
+  .mob-division * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }
 
 /* ─── Scrollbar ─── */
