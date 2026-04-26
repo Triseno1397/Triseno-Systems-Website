@@ -1,11 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useRef } from "react";
 import { Compass, PencilLine, Rocket } from "@phosphor-icons/react";
 
 const fadeUp = {
-  hidden: { y: 40, opacity: 0 },
+  hidden: { y: 30, opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
@@ -20,159 +19,109 @@ const stagger = {
 
 const steps = [
   {
-    num: "01",
+    num: "I",
+    numeric: "01",
     title: "Strategy",
     desc: "We learn your market, audit your competitors, and define what success looks like before anything is designed.",
     icon: Compass,
-    accent: "#c8b89a",
+    pullQuote: "Nothing is drawn before it's decided.",
   },
   {
-    num: "02",
+    num: "II",
+    numeric: "02",
     title: "Design & Build",
     desc: "High-fidelity design to production code. You see, approve, and experience every stage before we move forward.",
     icon: PencilLine,
-    accent: "#e8d5b5",
+    pullQuote: "Every pixel ships with a rationale.",
   },
   {
-    num: "03",
+    num: "III",
+    numeric: "03",
     title: "Launch & Evolve",
     desc: "We deploy, optimize, and refine. Your site gets better every week, not just on launch day.",
     icon: Rocket,
-    accent: "#d4c4a8",
+    pullQuote: "Launch is the beginning of the work, not the end.",
   },
 ];
 
-function StepCard({ step, index }: { step: typeof steps[0]; index: number }) {
+function StepColumn({ step, index }: { step: typeof steps[0]; index: number }) {
   const shouldReduceMotion = useReducedMotion();
   const Icon = step.icon;
 
   return (
-    <motion.div
-      variants={fadeUp}
-      className="group relative"
-    >
-      {/* Card */}
-      <div
-        className="relative rounded-2xl border p-8 lg:p-10 overflow-hidden transition-all duration-500 hover:border-[var(--wd-border-accent)]"
-        style={{
-          borderColor: "var(--wd-border)",
-          background: "var(--wd-bg-elevated)",
-        }}
-      >
-        {/* Hover glow */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-          style={{
-            background: `radial-gradient(300px circle at 50% 0%, rgba(200,184,154,0.06), transparent 70%)`,
-          }}
-        />
-
-        {/* Top accent line */}
-        <motion.div
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{
-            background: `linear-gradient(to right, transparent, ${step.accent}, transparent)`,
-          }}
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: 0.3 + index * 0.2 }}
-        />
-
-        {/* Icon */}
-        <motion.div
-          className="mb-6 relative"
-          animate={shouldReduceMotion ? {} : { y: [0, -4, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
-        >
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110"
-            style={{
-              background: `rgba(200,184,154,0.08)`,
-              border: "1px solid rgba(200,184,154,0.1)",
-            }}
-          >
-            <Icon
-              size={22}
-              weight="duotone"
-              style={{ color: step.accent }}
-              className="transition-transform duration-500 group-hover:rotate-12"
-            />
-          </div>
-          {/* Glow behind icon */}
-          <div
-            className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"
-            style={{ background: step.accent }}
-          />
-        </motion.div>
-
-        {/* Step number */}
+    <motion.div variants={fadeUp} className="group relative flex flex-col">
+      {/* Roman numeral marker */}
+      <div className="flex items-baseline gap-3 mb-8">
         <span
-          className="block text-[64px] lg:text-[80px] font-bold leading-none tracking-[-0.04em] select-none mb-4 transition-all duration-500 group-hover:opacity-[0.08]"
-          style={{ color: "rgba(255,255,255,0.03)" }}
+          className="wd-serif leading-none tracking-[-0.04em]"
+          style={{
+            color: "var(--wd-accent)",
+            fontSize: "clamp(64px, 8vw, 120px)",
+            fontWeight: 500,
+          }}
         >
           {step.num}
         </span>
-
-        <h3
-          className="text-xl lg:text-2xl font-bold tracking-[-0.02em] mb-4"
-          style={{ color: "var(--wd-text)" }}
-        >
-          {step.title}
-        </h3>
-
-        <p
-          className="text-[15px] leading-relaxed"
-          style={{ color: "var(--wd-text-secondary)" }}
-        >
-          {step.desc}
-        </p>
-
-        {/* Bottom corner accent */}
-        <motion.div
-          className="absolute bottom-4 right-4 w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{ background: `radial-gradient(circle, ${step.accent}15, transparent)` }}
-          animate={shouldReduceMotion ? {} : { scale: [1, 1.3, 1] }}
-          transition={{ duration: 3, repeat: Infinity }}
+        <div
+          className="h-px flex-1 mb-4"
+          style={{ background: "var(--wd-text)", opacity: 0.3 }}
         />
+        <span
+          className="font-mono text-[9px] tracking-[0.35em] uppercase mb-4"
+          style={{ color: "var(--wd-text-tertiary)" }}
+        >
+          Ch. {step.numeric}
+        </span>
       </div>
-    </motion.div>
-  );
-}
 
-/* ─── Animated Connection Line Between Steps ─── */
-function ConnectorLine() {
-  return (
-    <div className="hidden md:flex items-center justify-center py-4">
+      {/* Icon */}
       <motion.div
-        className="flex items-center gap-2 w-full max-w-[200px]"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.5 }}
+        className="mb-6"
+        animate={shouldReduceMotion ? {} : { y: [0, -3, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
       >
         <div
-          className="flex-1 h-px"
+          className="w-12 h-12 flex items-center justify-center border-2 transition-all duration-500 group-hover:rotate-3"
           style={{
-            background: "linear-gradient(to right, var(--wd-border), var(--wd-accent), var(--wd-border))",
-            animation: "wd-line-flow 3s ease-in-out infinite",
+            borderColor: "var(--wd-text)",
+            background: "var(--wd-paper)",
           }}
-        />
-        <motion.div
-          className="w-2 h-2 rounded-full"
-          style={{ background: "var(--wd-accent)", opacity: 0.4 }}
-          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-        <div
-          className="flex-1 h-px"
-          style={{
-            background: "linear-gradient(to right, var(--wd-border), var(--wd-accent), var(--wd-border))",
-            animation: "wd-line-flow 3s ease-in-out infinite reverse",
-          }}
-        />
+        >
+          <Icon size={22} weight="regular" style={{ color: "var(--wd-accent)" }} />
+        </div>
       </motion.div>
-    </div>
+
+      <h3
+        className="font-bold tracking-[-0.02em] mb-3"
+        style={{
+          color: "var(--wd-text)",
+          fontSize: "clamp(24px, 2.5vw, 34px)",
+          lineHeight: 1.05,
+        }}
+      >
+        {step.title}
+      </h3>
+
+      <p
+        className="text-[15px] leading-[1.65] mb-6"
+        style={{ color: "var(--wd-text-secondary)" }}
+      >
+        {step.desc}
+      </p>
+
+      {/* Pull quote */}
+      <div
+        className="border-l-2 pl-4 py-1 mt-auto"
+        style={{ borderColor: "var(--wd-accent)" }}
+      >
+        <span
+          className="wd-serif text-base"
+          style={{ color: "var(--wd-text)" }}
+        >
+          &ldquo;{step.pullQuote}&rdquo;
+        </span>
+      </div>
+    </motion.div>
   );
 }
 
@@ -181,93 +130,128 @@ export default function WebDesignProcess() {
 
   return (
     <section className="relative py-24 lg:py-36">
-      {/* Top divider */}
-      <div className="absolute top-0 left-0 right-0 max-w-[1400px] mx-auto px-6 lg:px-8">
-        <div
-          className="h-px"
-          style={{
-            background: "linear-gradient(to right, transparent, var(--wd-border), transparent)",
-          }}
-        />
+      {/* Section top rule */}
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 mb-12 lg:mb-16">
+        <div className="flex items-center gap-6">
+          <span
+            className="font-mono text-[10px] tracking-[0.35em] uppercase"
+            style={{ color: "var(--wd-accent)" }}
+          >
+            The Method
+          </span>
+          <motion.div
+            className="flex-1 h-px origin-left"
+            style={{ background: "var(--wd-text)", opacity: 0.85 }}
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, ease: [0.33, 1, 0.68, 1] }}
+          />
+          <span
+            className="font-mono text-[10px] tracking-[0.3em] uppercase"
+            style={{ color: "var(--wd-text-tertiary)" }}
+          >
+            PP. 06
+          </span>
+        </div>
       </div>
 
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          className="mb-16 lg:mb-24"
+          className="mb-20 lg:mb-28 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 md:gap-16 items-end"
           initial={shouldReduceMotion ? false : "hidden"}
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
           variants={fadeUp}
         >
-          <span
-            className="inline-flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] uppercase mb-6"
-            style={{ color: "var(--wd-accent)" }}
-          >
-            <span className="w-8 h-px" style={{ background: "var(--wd-accent)" }} />
-            Our Approach
-          </span>
-          <h2
-            className="text-[clamp(32px,5vw,64px)] font-bold leading-[1] tracking-[-0.03em] max-w-[600px]"
-            style={{ color: "var(--wd-text)" }}
-          >
-            Simple process.
-            <br />
-            <span className="gradient-text">Exceptional results.</span>
-          </h2>
+          <div>
+            <h2
+              className="font-bold leading-[0.88] tracking-[-0.04em]"
+              style={{
+                color: "var(--wd-text)",
+                fontSize: "clamp(40px, 6vw, 96px)",
+              }}
+            >
+              Three
+              <br />
+              <span className="wd-serif" style={{ color: "var(--wd-accent)", fontWeight: 500 }}>
+                chapters.
+              </span>
+            </h2>
+          </div>
+          <div className="max-w-[460px]">
+            <p
+              className="text-lg leading-[1.55]"
+              style={{ color: "var(--wd-text-secondary)" }}
+            >
+              Our process, set in three parts. Simple in outline,
+              uncompromising in execution.
+            </p>
+          </div>
         </motion.div>
 
-        {/* Steps — now as interactive cards with connectors */}
+        {/* Three-column layout with gutter rules */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
+          className="relative grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-0"
           initial={shouldReduceMotion ? false : "hidden"}
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
         >
           {steps.map((step, i) => (
-            <StepCard key={step.num} step={step} index={i} />
+            <div
+              key={step.num}
+              className={`relative ${i > 0 ? "md:pl-10 md:border-l" : ""} ${
+                i < steps.length - 1 ? "md:pr-10" : ""
+              }`}
+              style={i > 0 ? { borderColor: "var(--wd-border)" } : undefined}
+            >
+              <StepColumn step={step} index={i} />
+            </div>
           ))}
         </motion.div>
 
-        {/* Animated progress bar below steps */}
+        {/* Bottom rule with progression */}
         <motion.div
-          className="mt-12 lg:mt-16 max-w-[800px] mx-auto"
+          className="mt-20 lg:mt-28 max-w-[900px] mx-auto"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.8 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
         >
-          <div className="relative h-px w-full" style={{ background: "var(--wd-border)" }}>
-            <motion.div
-              className="absolute top-0 left-0 h-full rounded-full"
-              style={{ background: "var(--wd-accent)" }}
-              initial={{ width: "0%" }}
-              whileInView={{ width: "100%" }}
-              viewport={{ once: true }}
-              transition={{ duration: 2, delay: 1, ease: [0.33, 1, 0.68, 1] }}
-            />
-            {/* Traveling glow dot */}
-            <motion.div
-              className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-              style={{
-                background: "var(--wd-accent)",
-                boxShadow: "0 0 12px rgba(200,184,154,0.5)",
-              }}
-              animate={{ left: ["0%", "100%"] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            />
-          </div>
-          <div className="flex justify-between mt-4">
+          <div className="relative flex items-center justify-between">
             {["Discovery", "Development", "Deployment"].map((label, i) => (
-              <span
-                key={label}
-                className="font-mono text-[9px] tracking-[0.15em] uppercase"
-                style={{ color: "var(--wd-text-tertiary)" }}
-              >
-                {label}
-              </span>
+              <div key={label} className="flex flex-col items-center gap-2">
+                <motion.div
+                  className="w-3 h-3 rounded-full border-2"
+                  style={{
+                    borderColor: "var(--wd-accent)",
+                    background: i === 0 ? "var(--wd-accent)" : "var(--wd-bg)",
+                  }}
+                  animate={
+                    i === 1
+                      ? { scale: [1, 1.3, 1], background: ["var(--wd-bg)", "var(--wd-accent)", "var(--wd-bg)"] }
+                      : {}
+                  }
+                  transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+                />
+                <span
+                  className="font-mono text-[9px] tracking-[0.25em] uppercase"
+                  style={{ color: "var(--wd-text-secondary)" }}
+                >
+                  {label}
+                </span>
+              </div>
             ))}
+            <motion.div
+              className="absolute left-0 right-0 top-1.5 h-px -z-10"
+              style={{ background: "var(--wd-accent)", opacity: 0.4 }}
+              initial={{ scaleX: 0, transformOrigin: "left" }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 2, delay: 0.8, ease: [0.33, 1, 0.68, 1] }}
+            />
           </div>
         </motion.div>
       </div>

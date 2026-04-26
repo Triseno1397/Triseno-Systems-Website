@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 
 /* ─── Ambient Particle Field ───
    A full-viewport canvas of slowly drifting particles with faint
@@ -25,6 +26,8 @@ export default function ParticleField() {
   const particles = useRef<Particle[]>([]);
   const raf = useRef<number>(0);
   const dpr = useRef(1);
+  const pathname = usePathname();
+  const hidden = pathname?.startsWith("/web-design");
 
   const init = useCallback((w: number, h: number) => {
     particles.current = Array.from({ length: PARTICLE_COUNT }, () => ({
@@ -38,6 +41,7 @@ export default function ParticleField() {
   }, []);
 
   useEffect(() => {
+    if (hidden) return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mq.matches) return;
 
@@ -139,7 +143,9 @@ export default function ParticleField() {
       window.removeEventListener("resize", onResize);
       clearTimeout(resizeTimer);
     };
-  }, [init]);
+  }, [init, hidden]);
+
+  if (hidden) return null;
 
   return (
     <canvas

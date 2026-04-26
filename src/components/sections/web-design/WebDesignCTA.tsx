@@ -1,11 +1,11 @@
 "use client";
 
 import { motion, useReducedMotion, useMotionValue, useSpring } from "framer-motion";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowUpRight } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
 
 const fadeUp = {
-  hidden: { y: 30, opacity: 0 },
+  hidden: { y: 24, opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
@@ -18,7 +18,7 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
 };
 
-/* ─── Magnetic Button ─── */
+/* ─── Editorial Magnetic Button ─── */
 function MagneticCTA() {
   const ref = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
@@ -31,8 +31,8 @@ function MagneticCTA() {
     const rect = ref.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    x.set((e.clientX - centerX) * 0.3);
-    y.set((e.clientY - centerY) * 0.3);
+    x.set((e.clientX - centerX) * 0.25);
+    y.set((e.clientY - centerY) * 0.25);
   }, [x, y]);
 
   const handleLeave = useCallback(() => {
@@ -44,10 +44,10 @@ function MagneticCTA() {
     <motion.a
       ref={ref}
       href="mailto:Tristen@trisenosystems.com?subject=Web%20Design%20Inquiry"
-      className="group relative inline-flex items-center gap-3 px-12 py-6 rounded-xl font-semibold text-sm tracking-wide overflow-hidden"
+      className="group relative inline-flex items-center gap-4 px-10 py-5 font-mono text-[11px] tracking-[0.35em] uppercase overflow-hidden"
       style={{
-        background: "var(--wd-accent)",
-        color: "var(--wd-bg)",
+        background: "var(--wd-text)",
+        color: "var(--wd-paper)",
         x: springX,
         y: springY,
       }}
@@ -56,72 +56,105 @@ function MagneticCTA() {
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-      {/* Shimmer sweep */}
+      {/* Accent bar that sweeps in on hover */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)",
-          animation: "wd-shimmer 2.5s ease-in-out infinite",
-        }}
+        className="absolute inset-0 origin-left transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:scale-x-100 scale-x-0"
+        style={{ background: "var(--wd-accent)" }}
       />
-
-      {/* Glow ring on hover */}
-      <div
-        className="absolute -inset-1 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: "transparent",
-          boxShadow: "0 0 30px rgba(200,184,154,0.3), 0 0 60px rgba(200,184,154,0.1)",
-        }}
-      />
-
       <span className="relative z-10">Start a Conversation</span>
-      <ArrowRight
-        size={18}
+      <ArrowUpRight
+        size={16}
         weight="bold"
-        className="relative z-10 transition-transform duration-300 group-hover:translate-x-1.5"
+        className="relative z-10 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
       />
     </motion.a>
   );
 }
 
-/* ─── Floating Ambient Particles ─── */
-function AmbientParticles() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: 1 + Math.random() * 2,
-    duration: 8 + Math.random() * 12,
-    delay: Math.random() * 5,
-  }));
-
+/* ─── Postmark Stamp ─── */
+function Postmark() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-            background: "var(--wd-accent)",
-          }}
-          animate={{
-            y: [0, -40, 0],
-            x: [0, Math.random() > 0.5 ? 20 : -20, 0],
-            opacity: [0, 0.3, 0],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
+    <motion.div
+      className="absolute top-10 right-10 lg:top-16 lg:right-16 pointer-events-none"
+      initial={{ opacity: 0, rotate: -20, scale: 0.6 }}
+      whileInView={{ opacity: 1, rotate: -12, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8, delay: 0.6 }}
+      style={{ transformOrigin: "center" }}
+    >
+      <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+        <circle cx="60" cy="60" r="56" stroke="var(--wd-accent)" strokeWidth="1.5" />
+        <circle cx="60" cy="60" r="48" stroke="var(--wd-accent)" strokeWidth="0.8" strokeDasharray="2 3" />
+        <text
+          x="60"
+          y="48"
+          textAnchor="middle"
+          fontFamily="var(--font-geist-mono), monospace"
+          fontSize="7"
+          letterSpacing="0.25em"
+          fill="var(--wd-accent)"
+        >
+          TRISENO
+        </text>
+        <text
+          x="60"
+          y="66"
+          textAnchor="middle"
+          fontFamily="serif"
+          fontStyle="italic"
+          fontSize="14"
+          fill="var(--wd-accent)"
+          fontWeight="500"
+        >
+          Studio
+        </text>
+        <text
+          x="60"
+          y="82"
+          textAnchor="middle"
+          fontFamily="var(--font-geist-mono), monospace"
+          fontSize="7"
+          letterSpacing="0.25em"
+          fill="var(--wd-accent)"
+        >
+          MMXXVI
+        </text>
+        <line x1="22" y1="60" x2="30" y2="60" stroke="var(--wd-accent)" strokeWidth="1" />
+        <line x1="90" y1="60" x2="98" y2="60" stroke="var(--wd-accent)" strokeWidth="1" />
+      </svg>
+    </motion.div>
+  );
+}
+
+/* ─── Hand-signature squiggle ─── */
+function Signature() {
+  return (
+    <svg width="180" height="50" viewBox="0 0 180 50" fill="none" className="ml-1">
+      <motion.path
+        d="M4 30 Q 14 10, 24 25 T 46 28 Q 60 10, 74 30 T 100 28 Q 114 12, 128 28 T 156 26 L 172 24"
+        stroke="var(--wd-accent)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray="260"
+        initial={{ strokeDashoffset: 260 }}
+        whileInView={{ strokeDashoffset: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 2, delay: 0.8, ease: [0.33, 1, 0.68, 1] }}
+      />
+      <motion.path
+        d="M175 24 L 170 40"
+        stroke="var(--wd-accent)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray="30"
+        initial={{ strokeDashoffset: 30 }}
+        whileInView={{ strokeDashoffset: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 2.6 }}
+      />
+    </svg>
   );
 }
 
@@ -129,94 +162,179 @@ export default function WebDesignCTA() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative py-32 lg:py-44 overflow-hidden">
-      {/* Top divider */}
-      <div className="absolute top-0 left-0 right-0 max-w-[1400px] mx-auto px-6 lg:px-8">
-        <div
-          className="h-px"
-          style={{
-            background: "linear-gradient(to right, transparent, var(--wd-border), transparent)",
-          }}
-        />
-      </div>
-
-      {/* Ambient particles */}
-      {!shouldReduceMotion && <AmbientParticles />}
-
-      {/* Animated radial glow */}
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse, rgba(200, 184, 154, 0.04) 0%, transparent 70%)",
-        }}
-        animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      {/* Decorative rings */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        {[200, 350, 500].map((size, i) => (
+    <section className="relative py-24 lg:py-36 overflow-hidden">
+      {/* Section top rule */}
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 mb-16 lg:mb-24">
+        <div className="flex items-center gap-6">
+          <span
+            className="font-mono text-[10px] tracking-[0.35em] uppercase"
+            style={{ color: "var(--wd-accent)" }}
+          >
+            Correspondence
+          </span>
           <motion.div
-            key={size}
-            className="absolute rounded-full border"
-            style={{
-              width: size,
-              height: size,
-              top: -size / 2,
-              left: -size / 2,
-              borderColor: `rgba(200,184,154,${0.04 - i * 0.01})`,
-            }}
-            animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
-            transition={{ duration: 60 + i * 20, repeat: Infinity, ease: "linear" }}
+            className="flex-1 h-px origin-left"
+            style={{ background: "var(--wd-text)", opacity: 0.85 }}
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, ease: [0.33, 1, 0.68, 1] }}
           />
-        ))}
+          <span
+            className="font-mono text-[10px] tracking-[0.3em] uppercase"
+            style={{ color: "var(--wd-text-tertiary)" }}
+          >
+            PP. 07 — Fin.
+          </span>
+        </div>
       </div>
 
       <motion.div
-        className="max-w-[1400px] mx-auto px-6 lg:px-8 relative z-10 text-center"
+        className="relative max-w-[1100px] mx-auto px-6 lg:px-8"
         initial={shouldReduceMotion ? false : "hidden"}
         whileInView="visible"
         viewport={{ once: true, margin: "-60px" }}
         variants={stagger}
       >
-        {/* Decorative line above heading */}
-        <motion.div
-          className="mx-auto mb-8 w-px h-16"
+        {/* Letter paper — the whole section reads as a letter */}
+        <div
+          className="relative border p-8 md:p-14 lg:p-20"
           style={{
-            background: "linear-gradient(180deg, transparent, var(--wd-accent), transparent)",
+            background: "var(--wd-paper)",
+            borderColor: "var(--wd-text)",
+            boxShadow: "8px 8px 0 var(--wd-accent-dim)",
           }}
-          variants={fadeUp}
-        />
-
-        <motion.h2
-          className="text-[clamp(36px,7vw,80px)] font-bold leading-[0.92] tracking-[-0.04em] mb-6"
-          style={{ color: "var(--wd-text)" }}
-          variants={fadeUp}
         >
-          Let&apos;s talk.
-        </motion.h2>
+          {!shouldReduceMotion && <Postmark />}
 
-        <motion.p
-          className="text-lg md:text-xl leading-relaxed max-w-[440px] mx-auto mb-12"
-          style={{ color: "var(--wd-text-secondary)" }}
-          variants={fadeUp}
+          {/* Salutation */}
+          <motion.div variants={fadeUp} className="mb-10">
+            <span
+              className="font-mono text-[10px] tracking-[0.35em] uppercase mb-2 block"
+              style={{ color: "var(--wd-text-tertiary)" }}
+            >
+              From the desk of Triseno Studio
+            </span>
+            <p
+              className="wd-serif text-2xl md:text-3xl"
+              style={{ color: "var(--wd-text-secondary)", fontWeight: 400 }}
+            >
+              To our future client —
+            </p>
+          </motion.div>
+
+          {/* Giant headline */}
+          <motion.h2
+            variants={fadeUp}
+            className="font-bold leading-[0.88] tracking-[-0.05em] mb-10"
+            style={{
+              color: "var(--wd-text)",
+              fontSize: "clamp(56px, 10vw, 160px)",
+            }}
+          >
+            Let&apos;s
+            <br />
+            <span className="wd-serif" style={{ color: "var(--wd-accent)", fontWeight: 500 }}>
+              talk.
+            </span>
+          </motion.h2>
+
+          {/* Body paragraphs — two-column editorial */}
+          <motion.div
+            variants={fadeUp}
+            className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12 max-w-[820px]"
+          >
+            <p
+              className="text-base md:text-[17px] leading-[1.75]"
+              style={{ color: "var(--wd-text-secondary)" }}
+            >
+              <span
+                className="wd-serif float-left text-[64px] leading-[0.8] mr-2 mt-1"
+                style={{ color: "var(--wd-accent)", fontWeight: 500 }}
+              >
+                T
+              </span>
+              ell us about your project. Send a few paragraphs, a link to
+              a reference site, or just a list of rough ambitions. No
+              brief required.
+            </p>
+            <p
+              className="text-base md:text-[17px] leading-[1.75]"
+              style={{ color: "var(--wd-text-secondary)" }}
+            >
+              We&apos;ll write back with exactly how we&apos;d build it —
+              timeline, approach, investment. <em className="wd-serif">No commitment. No pricing pressure.</em> Just a conversation about the work.
+            </p>
+          </motion.div>
+
+          {/* Rule */}
+          <motion.div
+            className="h-px w-full mb-10 origin-left"
+            style={{ background: "var(--wd-text)", opacity: 0.3 }}
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, delay: 0.4 }}
+          />
+
+          {/* CTA + signature */}
+          <motion.div
+            variants={fadeUp}
+            className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8"
+          >
+            <div>
+              <MagneticCTA />
+              <p
+                className="mt-6 font-mono text-[10px] tracking-[0.25em] uppercase"
+                style={{ color: "var(--wd-text-tertiary)" }}
+              >
+                Or write to{" "}
+                <a
+                  href="mailto:Tristen@trisenosystems.com"
+                  className="underline underline-offset-4 transition-colors duration-300"
+                  style={{ color: "var(--wd-accent)" }}
+                >
+                  Tristen@trisenosystems.com
+                </a>
+              </p>
+            </div>
+
+            {/* Signature block */}
+            <div className="flex flex-col items-start md:items-end">
+              <span
+                className="wd-serif text-lg mb-1"
+                style={{ color: "var(--wd-text-secondary)" }}
+              >
+                Warmly,
+              </span>
+              <Signature />
+              <span
+                className="font-mono text-[10px] tracking-[0.3em] uppercase mt-1"
+                style={{ color: "var(--wd-text-tertiary)" }}
+              >
+                The Studio
+              </span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Colophon */}
+        <motion.div
+          className="mt-16 text-center"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Tell us about your project. We&apos;ll tell you exactly how we&apos;d
-          build it.
-        </motion.p>
-
-        <motion.div variants={fadeUp}>
-          <MagneticCTA />
+          <div
+            className="inline-flex items-center gap-3 font-mono text-[9px] tracking-[0.35em] uppercase"
+            style={{ color: "var(--wd-text-tertiary)" }}
+          >
+            <span>—</span>
+            <span>End of Feature</span>
+            <span>—</span>
+          </div>
         </motion.div>
-
-        <motion.p
-          className="mt-10 font-mono text-[10px] tracking-[0.12em] uppercase"
-          style={{ color: "var(--wd-text-tertiary)" }}
-          variants={fadeUp}
-        >
-          No commitment &middot; No pricing pressure &middot; Just a
-          conversation
-        </motion.p>
       </motion.div>
     </section>
   );

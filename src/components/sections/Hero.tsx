@@ -80,6 +80,28 @@ export default function Hero() {
       className="relative min-h-[100dvh] flex items-center overflow-hidden"
       style={{ background: "var(--gradient-hero)" }}
     >
+      {/* Background looping video */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/videos/tunnel.mp4" type="video/mp4" />
+      </video>
+
+      {/* Readability overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(10,14,26,0.85) 0%, rgba(10,14,26,0.55) 55%, rgba(10,14,26,0.25) 100%)",
+        }}
+      />
+
       {/* Background radial glow */}
       <div
         className="absolute inset-0 pointer-events-none"

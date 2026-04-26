@@ -1,7 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, useMotionValue, useTransform, useSpring } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 /* ─── Animation Variants ─── */
 const lineVariants = {
@@ -18,277 +17,156 @@ const lineVariants = {
 };
 
 const fadeVariants = {
-  hidden: { y: 15, opacity: 0 },
+  hidden: { y: 12, opacity: 0 },
   visible: (i: number) => ({
     y: 0,
     opacity: 1,
     transition: {
       duration: 0.7,
       ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
-      delay: 0.7 + i * 0.15,
+      delay: 0.6 + i * 0.12,
     },
   }),
 };
 
-/* ─── Floating Orbs ─── */
-function FloatingOrbs() {
+/* ─── Hand-drawn underline SVG ─── */
+function HandUnderline() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Primary warm orb */}
-      <div
-        className="absolute w-[500px] h-[500px] rounded-full opacity-[0.035]"
-        style={{
-          top: "15%",
-          right: "10%",
-          background: "radial-gradient(circle, #c8b89a 0%, transparent 70%)",
-          animation: "gradient-drift 20s ease-in-out infinite",
-        }}
+    <svg
+      viewBox="0 0 400 20"
+      fill="none"
+      className="absolute left-0 -bottom-4 w-full h-5"
+      preserveAspectRatio="none"
+    >
+      <motion.path
+        d="M4 14 Q 80 4, 160 10 T 320 8 T 396 12"
+        stroke="var(--wd-accent)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray="400"
+        initial={{ strokeDashoffset: 400 }}
+        animate={{ strokeDashoffset: 0 }}
+        transition={{ duration: 1.6, delay: 1.4, ease: [0.33, 1, 0.68, 1] }}
       />
-      {/* Secondary orb */}
-      <div
-        className="absolute w-[350px] h-[350px] rounded-full opacity-[0.025]"
-        style={{
-          bottom: "20%",
-          left: "5%",
-          background: "radial-gradient(circle, #e8d5b5 0%, transparent 70%)",
-          animation: "gradient-drift-reverse 25s ease-in-out infinite",
-        }}
-      />
-      {/* Accent micro-orb */}
-      <div
-        className="absolute w-[200px] h-[200px] rounded-full opacity-[0.04]"
-        style={{
-          top: "60%",
-          right: "30%",
-          background: "radial-gradient(circle, #c8b89a 0%, transparent 70%)",
-          animation: "gradient-drift 15s ease-in-out infinite reverse",
-        }}
-      />
-    </div>
+    </svg>
   );
 }
 
-/* ─── Animated Grid Lines (design-feel background) ─── */
-function DesignGrid() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Horizontal lines */}
-      {[20, 40, 60, 80].map((top) => (
-        <div
-          key={`h-${top}`}
-          className="absolute left-0 right-0 h-px"
-          style={{
-            top: `${top}%`,
-            background: "linear-gradient(to right, transparent, rgba(200,184,154,0.04), transparent)",
-            animation: `wd-grid-pulse ${6 + top * 0.05}s ease-in-out infinite`,
-          }}
-        />
-      ))}
-      {/* Vertical lines */}
-      {[25, 50, 75].map((left) => (
-        <div
-          key={`v-${left}`}
-          className="absolute top-0 bottom-0 w-px"
-          style={{
-            left: `${left}%`,
-            background: "linear-gradient(to bottom, transparent, rgba(200,184,154,0.03), transparent)",
-            animation: `wd-grid-pulse ${7 + left * 0.03}s ease-in-out infinite reverse`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Floating Design Elements (browser windows, code brackets, etc.) ─── */
-function FloatingElements({ mouseX, mouseY }: { mouseX: number; mouseY: number }) {
-  const elements = [
-    { x: 75, y: 20, size: 120, delay: 0, content: "browser" },
-    { x: 85, y: 55, size: 80, delay: 0.5, content: "code" },
-    { x: 70, y: 75, size: 100, delay: 1, content: "palette" },
-    { x: 90, y: 35, size: 60, delay: 1.5, content: "cursor" },
-  ];
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none hidden lg:block">
-      {elements.map((el, i) => {
-        const parallaxX = (mouseX - 0.5) * (15 + i * 5);
-        const parallaxY = (mouseY - 0.5) * (15 + i * 5);
-
-        return (
-          <motion.div
-            key={i}
-            className="absolute"
-            style={{
-              left: `${el.x}%`,
-              top: `${el.y}%`,
-              width: el.size,
-              height: el.size,
-            }}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              x: parallaxX,
-              y: parallaxY,
-            }}
-            transition={{
-              opacity: { duration: 1, delay: 1.2 + el.delay },
-              scale: { duration: 1, delay: 1.2 + el.delay },
-              x: { type: "spring", stiffness: 50, damping: 30 },
-              y: { type: "spring", stiffness: 50, damping: 30 },
-            }}
-          >
-            {el.content === "browser" && <BrowserElement size={el.size} />}
-            {el.content === "code" && <CodeElement size={el.size} />}
-            {el.content === "palette" && <PaletteElement size={el.size} />}
-            {el.content === "cursor" && <CursorElement size={el.size} />}
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-function BrowserElement({ size }: { size: number }) {
-  return (
-    <div
-      className="rounded-lg border overflow-hidden"
-      style={{
-        width: size,
-        height: size * 0.75,
-        borderColor: "rgba(200,184,154,0.15)",
-        background: "rgba(14,14,18,0.8)",
-        backdropFilter: "blur(8px)",
-        animation: "float-y 6s ease-in-out infinite",
-      }}
-    >
-      {/* Browser bar */}
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b" style={{ borderColor: "rgba(200,184,154,0.1)" }}>
-        <div className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
-        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400/40" />
-        <div className="w-1.5 h-1.5 rounded-full bg-green-400/40" />
-        <div className="ml-2 flex-1 h-2 rounded bg-white/[0.06]" />
-      </div>
-      {/* Content lines with typing animation */}
-      <div className="p-3 space-y-1.5">
-        <div className="h-1 rounded bg-white/[0.08] w-[80%]" style={{ animation: "wd-line-grow 3s ease-in-out infinite" }} />
-        <div className="h-1 rounded bg-white/[0.05] w-[60%]" style={{ animation: "wd-line-grow 3s ease-in-out infinite 0.2s" }} />
-        <div className="h-1 rounded bg-white/[0.03] w-[70%]" style={{ animation: "wd-line-grow 3s ease-in-out infinite 0.4s" }} />
-        <div className="mt-2 w-8 h-3 rounded" style={{ background: "rgba(200,184,154,0.2)" }} />
-      </div>
-    </div>
-  );
-}
-
-function CodeElement({ size }: { size: number }) {
-  return (
-    <div
-      className="rounded-lg border p-3"
-      style={{
-        width: size,
-        height: size,
-        borderColor: "rgba(200,184,154,0.1)",
-        background: "rgba(14,14,18,0.7)",
-        backdropFilter: "blur(8px)",
-        animation: "float-y 7s ease-in-out infinite 1s",
-      }}
-    >
-      <div className="font-mono text-[8px] leading-relaxed" style={{ color: "rgba(200,184,154,0.4)" }}>
-        <div><span style={{ color: "rgba(200,184,154,0.6)" }}>{"<"}</span>div<span style={{ color: "rgba(200,184,154,0.6)" }}>{">"}</span></div>
-        <div className="pl-2" style={{ animation: "wd-code-blink 2s step-end infinite" }}>{"  _"}</div>
-        <div><span style={{ color: "rgba(200,184,154,0.6)" }}>{"</"}</span>div<span style={{ color: "rgba(200,184,154,0.6)" }}>{">"}</span></div>
-      </div>
-    </div>
-  );
-}
-
-function PaletteElement({ size }: { size: number }) {
-  return (
-    <div
-      className="rounded-lg border p-3 flex flex-wrap gap-1.5"
-      style={{
-        width: size,
-        height: size * 0.5,
-        borderColor: "rgba(200,184,154,0.1)",
-        background: "rgba(14,14,18,0.7)",
-        backdropFilter: "blur(8px)",
-        animation: "float-y 8s ease-in-out infinite 0.5s",
-      }}
-    >
-      {["#c8b89a", "#e8d5b5", "#9a958c", "#f0ece4", "#5a564e"].map((color, i) => (
-        <div
-          key={color}
-          className="w-4 h-4 rounded-full transition-transform duration-300"
-          style={{
-            background: color,
-            opacity: 0.6,
-            animation: `wd-swatch-pop 4s ease-in-out infinite ${i * 0.3}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function CursorElement({ size }: { size: number }) {
-  return (
-    <div
-      style={{
-        width: size * 0.4,
-        height: size * 0.6,
-        animation: "float-y 5s ease-in-out infinite 2s",
-      }}
-    >
-      <svg viewBox="0 0 24 36" fill="none" className="w-full h-full">
-        <path
-          d="M2 2L2 28L8 22L14 34L18 32L12 20L20 20L2 2Z"
-          fill="rgba(200,184,154,0.15)"
-          stroke="rgba(200,184,154,0.3)"
-          strokeWidth="1"
-        />
-      </svg>
-    </div>
-  );
-}
-
-/* ─── Animated Metrics Strip ─── */
-function MetricsStrip() {
-  const metrics = [
-    { label: "Performance", value: "98" },
-    { label: "Accessibility", value: "100" },
-    { label: "Best Practices", value: "95" },
-  ];
-
+/* ─── Large folio numeral ─── */
+function Folio() {
   return (
     <motion.div
-      className="mt-14 lg:mt-20 flex items-center gap-8 lg:gap-12"
-      initial={{ opacity: 0, y: 20 }}
+      className="hidden lg:block absolute top-[12%] right-[6%] pointer-events-none select-none"
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 1.4, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 1.2, delay: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
     >
-      {metrics.map((m, i) => (
-        <div key={m.label} className="flex items-center gap-3">
+      <div className="flex flex-col items-end gap-4">
+        <span
+          className="font-mono text-[10px] tracking-[0.4em] uppercase"
+          style={{ color: "var(--wd-text-tertiary)" }}
+        >
+          Issue 01 &middot; Spring MMXXVI
+        </span>
+        <div className="relative">
           <span
-            className="text-2xl lg:text-3xl font-bold tracking-tight"
-            style={{ color: "var(--wd-accent)" }}
+            className="wd-serif block leading-[0.8] tracking-[-0.08em]"
+            style={{
+              fontSize: "clamp(180px, 22vw, 340px)",
+              color: "var(--wd-accent)",
+              animation: "wd-folio-pulse 6s ease-in-out infinite",
+            }}
           >
-            {m.value}
+            01
           </span>
           <span
-            className="text-[10px] font-mono tracking-[0.1em] uppercase"
-            style={{ color: "var(--wd-text-tertiary)" }}
+            className="absolute -bottom-2 right-2 font-mono text-[10px] tracking-[0.3em] uppercase"
+            style={{ color: "var(--wd-text-secondary)" }}
           >
-            {m.label}
+            The Studio
           </span>
-          {i < metrics.length - 1 && (
-            <div
-              className="w-px h-6 ml-5 lg:ml-8"
-              style={{ background: "var(--wd-border)" }}
-            />
-          )}
         </div>
-      ))}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Corner masthead marks ─── */
+function Masthead() {
+  return (
+    <>
+      {/* Top rule */}
+      <motion.div
+        className="absolute top-[11rem] left-6 lg:left-8 right-6 lg:right-8 h-px origin-left"
+        style={{ background: "var(--wd-text)", opacity: 0.85 }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 1.2, delay: 0.3, ease: [0.33, 1, 0.68, 1] }}
+      />
+      {/* Thin rule below top rule for double-rule effect */}
+      <motion.div
+        className="absolute top-[11.4rem] left-6 lg:left-8 right-6 lg:right-8 h-px origin-left"
+        style={{ background: "var(--wd-text)", opacity: 0.4 }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 1.4, delay: 0.4, ease: [0.33, 1, 0.68, 1] }}
+      />
+      {/* Masthead labels */}
+      <motion.div
+        className="absolute top-[11.9rem] left-6 lg:left-8 right-6 lg:right-8 flex justify-between font-mono text-[9px] tracking-[0.3em] uppercase"
+        style={{ color: "var(--wd-text-secondary)" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.9 }}
+      >
+        <span>Triseno / Studio Edition</span>
+        <span className="hidden md:inline">Vol. I · The Craft Issue</span>
+        <span>Price: On Inquiry</span>
+      </motion.div>
+    </>
+  );
+}
+
+/* ─── Ornamental corner mark ─── */
+function OrnamentMark() {
+  return (
+    <motion.div
+      className="absolute bottom-12 right-8 lg:right-14 pointer-events-none"
+      initial={{ opacity: 0, rotate: -10 }}
+      animate={{ opacity: 1, rotate: 0 }}
+      transition={{ duration: 1, delay: 1.6 }}
+    >
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <circle
+          cx="32"
+          cy="32"
+          r="28"
+          stroke="var(--wd-accent)"
+          strokeWidth="1"
+          strokeDasharray="2 4"
+          opacity="0.6"
+        />
+        <circle
+          cx="32"
+          cy="32"
+          r="20"
+          stroke="var(--wd-text)"
+          strokeWidth="0.6"
+          opacity="0.5"
+        />
+        <text
+          x="32"
+          y="36"
+          textAnchor="middle"
+          fontFamily="var(--font-geist-mono), monospace"
+          fontSize="7"
+          letterSpacing="0.2em"
+          fill="var(--wd-accent)"
+        >
+          TS
+        </text>
+      </svg>
     </motion.div>
   );
 }
@@ -296,37 +174,12 @@ function MetricsStrip() {
 /* ─── Main Hero Component ─── */
 export default function WebDesignHero() {
   const shouldReduceMotion = useReducedMotion();
-  const sectionRef = useRef<HTMLElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-
-  useEffect(() => {
-    if (shouldReduceMotion) return;
-    const handler = (e: MouseEvent) => {
-      setMousePos({
-        x: e.clientX / window.innerWidth,
-        y: e.clientY / window.innerHeight,
-      });
-    };
-    window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
-  }, [shouldReduceMotion]);
 
   return (
-    <section ref={sectionRef} className="relative min-h-[100dvh] flex flex-col justify-center overflow-hidden">
-      {/* Background layers */}
-      {!shouldReduceMotion && <DesignGrid />}
-      {!shouldReduceMotion && <FloatingOrbs />}
-      {!shouldReduceMotion && <FloatingElements mouseX={mousePos.x} mouseY={mousePos.y} />}
-
-      {/* Warm radial glow (enhanced) */}
-      <div
-        className="absolute top-[30%] left-[40%] w-[1000px] h-[700px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse, rgba(200, 184, 154, 0.05) 0%, transparent 70%)",
-          transform: `translate(${(mousePos.x - 0.5) * -30}px, ${(mousePos.y - 0.5) * -30}px)`,
-          transition: "transform 0.5s ease-out",
-        }}
-      />
+    <section className="relative min-h-[100dvh] flex flex-col justify-center overflow-hidden pt-56 pb-20">
+      {!shouldReduceMotion && <Masthead />}
+      {!shouldReduceMotion && <Folio />}
+      {!shouldReduceMotion && <OrnamentMark />}
 
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 w-full relative z-10">
         {/* Eyebrow */}
@@ -338,90 +191,187 @@ export default function WebDesignHero() {
           custom={0}
         >
           <span
-            className="inline-flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] uppercase"
+            className="inline-flex items-center gap-4 font-mono text-[10px] tracking-[0.35em] uppercase"
             style={{ color: "var(--wd-accent)" }}
           >
             <span
-              className="w-8 h-px"
+              className="w-10 h-px"
               style={{ background: "var(--wd-accent)" }}
             />
-            <span className="relative">
-              Web Design Division
-              {/* Animated underline sweep */}
-              <motion.span
-                className="absolute bottom-[-3px] left-0 h-px"
-                style={{ background: "var(--wd-accent)" }}
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 1.2, delay: 1, ease: [0.33, 1, 0.68, 1] }}
-              />
-            </span>
+            Feature — Web Design Division
           </span>
         </motion.div>
 
         {/* Headline */}
-        <h1 className="mb-12 lg:mb-16">
-          {["We design", "experiences that"].map((text, i) => (
-            <span key={text} className="block overflow-hidden">
-              <motion.span
-                className="block text-[clamp(44px,8vw,110px)] font-bold leading-[0.92] tracking-[-0.04em]"
-                style={{ color: "var(--wd-text)" }}
-                initial={shouldReduceMotion ? false : "hidden"}
-                animate="visible"
-                variants={lineVariants}
-                custom={i}
-              >
-                {text}
-              </motion.span>
-            </span>
-          ))}
+        <h1 className="mb-14 lg:mb-16 max-w-[1100px]">
           <span className="block overflow-hidden">
             <motion.span
-              className="block text-[clamp(44px,8vw,110px)] font-bold leading-[0.92] tracking-[-0.04em] gradient-text"
+              className="block font-bold leading-[0.88] tracking-[-0.045em]"
+              style={{
+                color: "var(--wd-text)",
+                fontSize: "clamp(48px, 9vw, 140px)",
+              }}
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate="visible"
+              variants={lineVariants}
+              custom={0}
+            >
+              Websites,
+            </motion.span>
+          </span>
+          <span className="block overflow-hidden">
+            <motion.span
+              className="block font-bold leading-[0.88] tracking-[-0.045em]"
+              style={{
+                color: "var(--wd-text)",
+                fontSize: "clamp(48px, 9vw, 140px)",
+              }}
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate="visible"
+              variants={lineVariants}
+              custom={1}
+            >
+              crafted with
+            </motion.span>
+          </span>
+          <span className="block overflow-hidden relative">
+            <motion.span
+              className="wd-serif block leading-[0.88] tracking-[-0.04em]"
+              style={{
+                color: "var(--wd-accent)",
+                fontSize: "clamp(48px, 9vw, 140px)",
+                fontWeight: 500,
+              }}
               initial={shouldReduceMotion ? false : "hidden"}
               animate="visible"
               variants={lineVariants}
               custom={2}
             >
-              command attention.
+              intention.
+              <HandUnderline />
             </motion.span>
           </span>
         </h1>
 
-        {/* Subtitle */}
-        <motion.p
-          className="text-lg md:text-xl leading-relaxed max-w-[480px]"
-          style={{ color: "var(--wd-text-secondary)" }}
+        {/* Two-column editorial body */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-8 md:gap-16 items-start max-w-[1100px]">
+          <motion.div
+            initial={shouldReduceMotion ? false : "hidden"}
+            animate="visible"
+            variants={fadeVariants}
+            custom={1}
+          >
+            <div
+              className="font-mono text-[9px] tracking-[0.3em] uppercase mb-3"
+              style={{ color: "var(--wd-text-tertiary)" }}
+            >
+              Column A
+            </div>
+            <p
+              className="text-base md:text-[17px] leading-[1.6]"
+              style={{ color: "var(--wd-text-secondary)" }}
+            >
+              Precision-engineered digital presences for brands that
+              refuse to blend in. Every detail considered, nothing left to
+              default.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={shouldReduceMotion ? false : "hidden"}
+            animate="visible"
+            variants={fadeVariants}
+            custom={2}
+          >
+            <div
+              className="font-mono text-[9px] tracking-[0.3em] uppercase mb-3"
+              style={{ color: "var(--wd-text-tertiary)" }}
+            >
+              Column B
+            </div>
+            <p
+              className="text-base md:text-[17px] leading-[1.6]"
+              style={{ color: "var(--wd-text-secondary)" }}
+            >
+              <em className="wd-serif">Four disciplines.</em> One
+              standard. From brand sites to full-stack platforms — built
+              to be seen, built to last.
+            </p>
+          </motion.div>
+
+          {/* Stamp / seal */}
+          <motion.div
+            className="hidden md:flex flex-col items-center justify-center"
+            initial={{ opacity: 0, rotate: -8, scale: 0.6 }}
+            animate={{ opacity: 1, rotate: -4, scale: 1 }}
+            transition={{ duration: 0.8, delay: 1.4 }}
+          >
+            <div
+              className="w-24 h-24 rounded-full border-[1.5px] flex items-center justify-center relative"
+              style={{
+                borderColor: "var(--wd-accent)",
+                color: "var(--wd-accent)",
+              }}
+            >
+              <div
+                className="absolute inset-1 rounded-full border"
+                style={{ borderColor: "var(--wd-accent)", opacity: 0.4 }}
+              />
+              <div className="text-center leading-tight">
+                <div className="font-mono text-[7px] tracking-[0.2em] uppercase opacity-80">
+                  Est.
+                </div>
+                <div className="wd-serif text-2xl font-semibold">
+                  2024
+                </div>
+                <div className="font-mono text-[7px] tracking-[0.2em] uppercase opacity-80">
+                  Studio
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Lower rule + folio footer */}
+        <motion.div
+          className="mt-16 lg:mt-24 flex items-center gap-6"
           initial={shouldReduceMotion ? false : "hidden"}
           animate="visible"
           variants={fadeVariants}
-          custom={1}
+          custom={3}
         >
-          Precision-engineered websites for brands that refuse to blend in.
-        </motion.p>
-
-        {/* Metrics strip */}
-        {!shouldReduceMotion && <MetricsStrip />}
+          <span
+            className="font-mono text-[10px] tracking-[0.3em] uppercase"
+            style={{ color: "var(--wd-text-tertiary)" }}
+          >
+            Continue Reading
+          </span>
+          <div
+            className="flex-1 h-px"
+            style={{ background: "var(--wd-border)" }}
+          />
+          <span
+            className="font-mono text-[10px] tracking-[0.3em] uppercase"
+            style={{ color: "var(--wd-text-tertiary)" }}
+          >
+            PP. 02 – 05
+          </span>
+        </motion.div>
       </div>
 
       {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3"
-        initial={shouldReduceMotion ? false : "hidden"}
-        animate="visible"
-        variants={fadeVariants}
-        custom={2}
+        className="absolute bottom-6 left-6 lg:left-8 flex flex-col items-start gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 1.8 }}
       >
-        <span className="font-mono text-[9px] tracking-[0.2em] uppercase" style={{ color: "var(--wd-text-tertiary)" }}>
-          Scroll
+        <span
+          className="font-mono text-[9px] tracking-[0.3em] uppercase"
+          style={{ color: "var(--wd-text-tertiary)" }}
+        >
+          Turn the page ↓
         </span>
-        <div
-          className="w-px h-10 origin-top"
-          style={{
-            background: "linear-gradient(180deg, var(--wd-accent), transparent)",
-            animation: "scroll-pulse 2.5s ease-in-out infinite",
-          }}
-        />
       </motion.div>
     </section>
   );

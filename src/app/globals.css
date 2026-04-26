@@ -236,76 +236,85 @@ body {
   .logo-spin-3d { animation: none; }
 }
 
-/* ─── Web Design Division — Luxury Color Override ─── */
+/* ─── Web Design Division — Editorial Warm Override ─── */
 .wd-division {
-  --wd-bg: #06060a;
-  --wd-bg-elevated: #0e0e12;
-  --wd-bg-surface: #14141a;
-  --wd-text: #f0ece4;
-  --wd-text-secondary: #9a958c;
-  --wd-text-tertiary: #5a564e;
-  --wd-accent: #c8b89a;
-  --wd-accent-dim: rgba(200, 184, 154, 0.15);
-  --wd-border: rgba(255, 255, 255, 0.06);
-  --wd-border-accent: rgba(200, 184, 154, 0.2);
+  --wd-bg: #ebe3d1;
+  --wd-bg-elevated: #e2d9c2;
+  --wd-bg-surface: #d6cbae;
+  --wd-paper: #f3ecdc;
+  --wd-text: #1a1410;
+  --wd-text-secondary: #4a3d2e;
+  --wd-text-tertiary: #8a7a5c;
+  --wd-accent: #c44a28;
+  --wd-accent-soft: #e07a5f;
+  --wd-accent-ink: #8a3018;
+  --wd-accent-dim: rgba(196, 74, 40, 0.12);
+  --wd-border: rgba(26, 20, 16, 0.12);
+  --wd-border-soft: rgba(26, 20, 16, 0.06);
+  --wd-border-accent: rgba(196, 74, 40, 0.35);
   background: var(--wd-bg);
   color: var(--wd-text);
+  position: relative;
+}
+
+.wd-division::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(26, 20, 16, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(26, 20, 16, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(196, 74, 40, 0.02) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px, 7px 7px;
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+
+.wd-division > * {
+  position: relative;
+  z-index: 1;
 }
 
 .wd-division .gradient-text {
-  background: linear-gradient(135deg, #c8b89a 0%, #e8d5b5 50%, #c8b89a 100%);
+  background: linear-gradient(135deg, #c44a28 0%, #e07a5f 50%, #c44a28 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .wd-division ::selection {
-  background: rgba(200, 184, 154, 0.3);
-  color: #f0ece4;
+  background: rgba(196, 74, 40, 0.35);
+  color: #1a1410;
 }
 
-/* ─── Mobile Division — Cool Blue Color Override ─── */
-.mob-division {
-  --mob-bg: #06060e;
-  --mob-bg-elevated: #0c0e18;
-  --mob-bg-surface: #12141e;
-  --mob-text: #e8edf8;
-  --mob-text-secondary: #8892b0;
-  --mob-text-tertiary: #4a5578;
-  --mob-accent: #6391ff;
-  --mob-accent-dim: rgba(99, 145, 255, 0.15);
-  --mob-border: rgba(255, 255, 255, 0.06);
-  --mob-border-accent: rgba(99, 145, 255, 0.2);
-  background: var(--mob-bg);
-  color: var(--mob-text);
+.wd-serif {
+  font-family: "Playfair Display", "Didot", "Georgia", var(--font-geist-sans), serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
-.mob-division .gradient-text {
-  background: linear-gradient(135deg, #6391ff 0%, #94b5ff 50%, #6391ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+@keyframes wd-underline-draw {
+  from { stroke-dashoffset: 400; }
+  to { stroke-dashoffset: 0; }
 }
 
-.mob-division ::selection {
-  background: rgba(99, 145, 255, 0.3);
-  color: #e8edf8;
+@keyframes wd-folio-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
 }
 
-/* ─── Mobile Nav Link ─── */
-.mob-nav-link .mob-shimmer {
-  animation: mob-shimmer 3.5s ease-in-out infinite;
+@keyframes wd-stamp-in {
+  0% { transform: rotate(-8deg) scale(0.6); opacity: 0; }
+  60% { transform: rotate(-4deg) scale(1.08); opacity: 1; }
+  100% { transform: rotate(-4deg) scale(1); opacity: 1; }
 }
 
-@keyframes mob-shimmer {
-  0% { transform: translateX(-100%); }
-  40%, 100% { transform: translateX(100%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mob-nav-link .mob-shimmer {
-    animation: none;
-  }
+@keyframes wd-rule-sweep {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
 }
 
 /* ─── Web Design Division — Additional Animations ─── */
@@ -361,8 +370,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wd-division *,
-  .mob-division * {
+  .wd-division * {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
