@@ -37,13 +37,20 @@ export default function WebDesignPageShell() {
     let smoother: ScrollSmoother | null = null;
 
     if (!reduced && wrapperRef.current && contentRef.current) {
-      smoother = ScrollSmoother.create({
-        wrapper: wrapperRef.current,
-        content: contentRef.current,
-        smooth: window.innerWidth <= 768 ? 0.6 : 1.5,
-        effects: true,
-        normalizeScroll: true,
-      });
+      try {
+        smoother = ScrollSmoother.create({
+          wrapper: wrapperRef.current,
+          content: contentRef.current,
+          smooth: window.innerWidth <= 768 ? 0.6 : 1.5,
+          effects: true,
+          normalizeScroll: true,
+        });
+        wrapperRef.current.classList.add("is-smoothing");
+      } catch (err) {
+        // Fall back to native scroll. Page still works — just no smooth easing.
+        console.warn("[web-design] ScrollSmoother failed to init, falling back:", err);
+        smoother = null;
+      }
     }
 
     // Fade the hero canvas as Section 2 scrolls over it; unmount entirely past Section 2
@@ -74,6 +81,7 @@ export default function WebDesignPageShell() {
 
     return () => {
       document.body.classList.remove("web-design-active");
+      wrapperRef.current?.classList.remove("is-smoothing");
       if (fadeTrigger) fadeTrigger.kill();
       if (unmountTrigger) unmountTrigger.kill();
       if (smoother) smoother.kill();

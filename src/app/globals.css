@@ -261,8 +261,9 @@ main a {
   color: #ffffff;
 }
 
-/* ScrollSmoother required wrappers */
-#smooth-wrapper {
+/* ScrollSmoother fixed-wrapper styles only apply once JS confirms ScrollSmoother
+   has initialized, otherwise the page would be clipped to one viewport with no scroll. */
+#smooth-wrapper.is-smoothing {
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -271,13 +272,6 @@ main a {
 #smooth-content {
   overflow: visible;
   width: 100%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #smooth-wrapper {
-    position: static;
-    overflow: visible;
-  }
 }
 
 /* WebGL canvas wrappers should never block clicks on UI above them */
