@@ -73,6 +73,11 @@ body {
   color: #e8edf5;
 }
 
+/* Default internal link hover — subtle electric-blue shift */
+main a {
+  transition: color 0.2s ease;
+}
+
 /* ─── Utility Classes ─── */
 .glass {
   background: var(--glass-bg);

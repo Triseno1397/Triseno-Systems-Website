@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ParticleField from "@/components/animations/ParticleField";
+import PageTransition from "@/components/layout/PageTransition";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,15 +17,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Triseno Systems | AI Infrastructure for Operations & Scale",
+  title: {
+    default: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
+    template: "%s",
+  },
   description:
     "Multi-agent orchestration, workflow compression, and decision-layer automation. Triseno Systems builds the operational AI layer for complex enterprises.",
+  metadataBase: new URL("https://trisenosystems.com"),
   icons: {
     icon: "/images/triseno-logo-v2.png",
     apple: "/images/triseno-logo-v2.png",
   },
   openGraph: {
-    title: "Triseno Systems | AI Infrastructure for Operations & Scale",
+    title: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
     description:
       "Multi-agent orchestration, workflow compression, and decision-layer automation. Triseno Systems builds the operational AI layer for complex enterprises.",
     url: "https://trisenosystems.com",
@@ -42,7 +47,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Triseno Systems | AI Infrastructure for Operations & Scale",
+    title: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
     description:
       "Multi-agent orchestration, workflow compression, and decision-layer automation.",
   },
@@ -65,7 +70,9 @@ export default function RootLayout({
       <body>
         <ParticleField />
         <Navbar />
-        <main className="relative z-[1]">{children}</main>
+        <main className="relative z-[1]">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <Footer />
       </body>
     </html>

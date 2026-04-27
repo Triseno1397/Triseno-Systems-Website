@@ -1,136 +1,102 @@
 "use client";
 
-import {
-  LinkedinLogo,
-  XLogo,
-  InstagramLogo,
-  GithubLogo,
-} from "@phosphor-icons/react";
+import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 
-const navLinks = [
-  { label: "Home", href: "#home" },
-  { label: "Capabilities", href: "#capabilities" },
-  { label: "Process", href: "#process" },
+const navigationLinks = [
+  { label: "Home", href: "/" },
+  { label: "Capabilities", href: "/capabilities" },
+  { label: "Process", href: "/process" },
   { label: "Portfolio", href: "/portfolio" },
-  { label: "Contact", href: "#contact" },
+  { label: "Contact", href: "/contact" },
+  { label: "Web Design Division", href: "/web-design" },
 ];
 
 const serviceLinks = [
-  { label: "AI Operations Audit", href: null },
-  { label: "Multi-Agent Orchestration", href: null },
-  { label: "Product & Catalog Intelligence", href: null },
-  { label: "Workflow Compression", href: null },
-  { label: "Revenue Operations", href: null },
-  { label: "Website Design & Development", href: "/web-design" },
-  { label: "Broadcast & Production AI", href: null },
-  { label: "Infrastructure Retainers", href: null },
-];
-
-const socialLinks = [
-  { icon: LinkedinLogo, href: "#", label: "LinkedIn" },
-  { icon: XLogo, href: "#", label: "X" },
-  { icon: InstagramLogo, href: "#", label: "Instagram" },
-  { icon: GithubLogo, href: "#", label: "GitHub" },
+  { label: "Multi-agent orchestration", href: "/capabilities#orchestration" },
+  { label: "Workflow compression", href: "/capabilities#compression" },
+  { label: "Decision-layer automation", href: "/capabilities#decision-intelligence" },
+  { label: "Product & catalog intelligence", href: "/capabilities#catalog-intelligence" },
+  { label: "Broadcast & production AI", href: "/capabilities#broadcast-ai" },
+  { label: "Revenue operations", href: "/capabilities#revenue-ops" },
 ];
 
 export default function Footer() {
-  const scrollTo = (href: string) => {
-    if (href.startsWith("#")) {
-      const el = document.getElementById(href.slice(1));
-      el?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      window.location.href = href;
-    }
-  };
-
   return (
-    <footer className="border-t border-white/[0.06] bg-navy-900">
+    <footer className="relative border-t border-white/[0.06] bg-navy-900">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Logo variant="footer" />
-            <p className="text-sm text-text-secondary leading-relaxed">
-              AI infrastructure for operations, intelligence, and scale.
-            </p>
-          </div>
+        {/* Brand row */}
+        <div className="mb-12 flex flex-col gap-4 max-w-md">
+          <Logo variant="footer" />
+          <p className="text-sm text-text-secondary leading-relaxed">
+            AI infrastructure for operations, intelligence, and scale.
+          </p>
+        </div>
 
-          {/* Navigation */}
+        {/* Three columns */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 tracking-wider uppercase">
+            <h4 className="text-sm font-semibold text-text-primary mb-5 tracking-wider uppercase">
               Navigation
             </h4>
             <ul className="space-y-3">
-              {navLinks.map((link) => (
+              {navigationLinks.map((link) => (
                 <li key={link.href}>
-                  <a
+                  <Link
                     href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollTo(link.href);
-                    }}
-                    className="text-sm text-text-secondary hover:text-cyan-400 transition-colors duration-300"
+                    className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Services */}
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 tracking-wider uppercase">
+            <h4 className="text-sm font-semibold text-text-primary mb-5 tracking-wider uppercase">
               Services
             </h4>
             <ul className="space-y-3">
               {serviceLinks.map((service) => (
-                <li key={service.label}>
-                  {service.href ? (
-                    <a
-                      href={service.href}
-                      className="text-sm text-text-secondary hover:text-cyan-400 transition-colors duration-300"
-                    >
-                      {service.label}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-text-secondary">
-                      {service.label}
-                    </span>
-                  )}
+                <li key={service.href}>
+                  <Link
+                    href={service.href}
+                    className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
+                  >
+                    {service.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Contact & Social */}
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 tracking-wider uppercase">
-              Get in Touch
+            <h4 className="text-sm font-semibold text-text-primary mb-5 tracking-wider uppercase">
+              Contact
             </h4>
-            <a
-              href="mailto:Tristen@trisenosystems.com"
-              className="text-sm text-text-secondary hover:text-cyan-400 transition-colors duration-300"
-            >
-              Tristen@trisenosystems.com
-            </a>
-            <div className="flex items-center gap-4 mt-6">
-              {socialLinks.map((social) => (
+            <ul className="space-y-3">
+              <li>
                 <a
-                  key={social.label}
-                  href={social.href}
-                  aria-label={social.label}
-                  className="text-text-tertiary hover:text-cyan-400 transition-colors duration-300"
+                  href="mailto:Tristen@trisenosystems.com"
+                  className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
                 >
-                  <social.icon size={20} weight="regular" />
+                  Tristen@trisenosystems.com
                 </a>
-              ))}
-            </div>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
+                >
+                  Start a conversation
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
-        {/* Bottom bar */}
         <div className="mt-16 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-tertiary">
             &copy; 2026 Triseno Systems. All rights reserved.

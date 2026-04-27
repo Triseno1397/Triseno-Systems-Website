@@ -214,10 +214,10 @@ export default function Hero() {
           </p>
 
           <div className="hero-ctas flex flex-col sm:flex-row gap-4">
-            <Button variant="primary" size="large" href="#capabilities">
-              Explore What We Build
+            <Button variant="primary" size="large" href="/capabilities">
+              Explore Capabilities
             </Button>
-            <Button variant="secondary" size="large" href="#contact">
+            <Button variant="secondary" size="large" href="/contact">
               Start a Conversation
             </Button>
           </div>
