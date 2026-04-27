@@ -8,12 +8,68 @@ import Button from "@/components/ui/Button";
 /* ─── Hero Section ─── */
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoARef = useRef<HTMLVideoElement>(null);
+  const videoBRef = useRef<HTMLVideoElement>(null);
   const shouldReduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Seamless cross-fade loop: when the active video nears its end,
+  // start the inactive one from frame 0 and fade between them.
+  useEffect(() => {
+    const a = videoARef.current;
+    const b = videoBRef.current;
+    if (!a || !b) return;
+
+    const FADE = 0.8; // seconds of cross-fade
+    let active: HTMLVideoElement = a;
+    let inactive: HTMLVideoElement = b;
+    let swapping = false;
+
+    a.style.opacity = "1";
+    b.style.opacity = "0";
+
+    const onTimeUpdate = () => {
+      if (swapping) return;
+      const remaining = active.duration - active.currentTime;
+      if (!isFinite(remaining)) return;
+      if (remaining <= FADE) {
+        swapping = true;
+        inactive.currentTime = 0;
+        const playPromise = inactive.play();
+        if (playPromise) playPromise.catch(() => {});
+        // Trigger CSS transition to swap opacities
+        requestAnimationFrame(() => {
+          inactive.style.opacity = "1";
+          active.style.opacity = "0";
+        });
+      }
+    };
+
+    const onEnded = () => {
+      // After the previous active finishes, flip roles for the next cycle
+      const prev = active;
+      active = inactive;
+      inactive = prev;
+      inactive.pause();
+      swapping = false;
+    };
+
+    a.addEventListener("timeupdate", onTimeUpdate);
+    b.addEventListener("timeupdate", onTimeUpdate);
+    a.addEventListener("ended", onEnded);
+    b.addEventListener("ended", onEnded);
+
+    return () => {
+      a.removeEventListener("timeupdate", onTimeUpdate);
+      b.removeEventListener("timeupdate", onTimeUpdate);
+      a.removeEventListener("ended", onEnded);
+      b.removeEventListener("ended", onEnded);
+    };
+  }, [mounted]);
 
   useGSAP(
     () => {
@@ -80,11 +136,23 @@ export default function Hero() {
       className="relative min-h-[100dvh] flex items-center overflow-hidden"
       style={{ background: "var(--gradient-hero)" }}
     >
-      {/* Background looping video */}
+      {/* Background looping video — two stacked videos cross-fade for a seamless loop */}
       <video
+        ref={videoARef}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 1, transition: "opacity 0.8s linear" }}
         autoPlay
-        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/videos/tunnel.mp4" type="video/mp4" />
+      </video>
+      <video
+        ref={videoBRef}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0, transition: "opacity 0.8s linear" }}
         muted
         playsInline
         preload="auto"
