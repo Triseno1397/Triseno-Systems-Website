@@ -59,13 +59,7 @@ function Particles({ count = 60 }: { count?: number }) {
   );
 }
 
-function ClosingScene({
-  reduceMotion,
-  isMobile,
-}: {
-  reduceMotion: boolean;
-  isMobile: boolean;
-}) {
+function ClosingScene({ reduceMotion }: { reduceMotion: boolean }) {
   return (
     <>
       <color attach="background" args={["#050810"]} />
@@ -77,12 +71,59 @@ function ClosingScene({
         position={[0, 0, -2]}
         scale={1.1}
         spin={reduceMotion ? 0 : 0.04}
-        segments={isMobile ? 180 : 300}
+        segments={300}
         tubeRadius={0.13}
       />
 
-      {!reduceMotion && !isMobile && <Particles count={70} />}
+      {!reduceMotion && <Particles count={70} />}
     </>
+  );
+}
+
+function ClosingMobileVisual() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0"
+      style={{
+        background:
+          "radial-gradient(ellipse 70% 50% at 30% 30%, rgba(0,229,255,0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 75% 70%, rgba(157,92,255,0.10) 0%, transparent 60%)",
+      }}
+    >
+      <svg
+        viewBox="0 0 400 600"
+        className="absolute inset-0 h-full w-full opacity-60"
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          animation: "wd-glow-breathe 7s ease-in-out infinite",
+          mixBlendMode: "screen",
+        }}
+      >
+        <defs>
+          <linearGradient id="wd-closing-ribbon" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.0" />
+            <stop offset="40%" stopColor="#00e5ff" stopOpacity="0.5" />
+            <stop offset="60%" stopColor="#9d5cff" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#0077ff" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M -40 360 C 100 200, 200 520, 320 320 S 460 200, 520 380"
+          fill="none"
+          stroke="url(#wd-closing-ribbon)"
+          strokeWidth="28"
+          strokeLinecap="round"
+          style={{ filter: "blur(3px)" }}
+        />
+        <path
+          d="M -40 360 C 100 200, 200 520, 320 320 S 460 200, 520 380"
+          fill="none"
+          stroke="url(#wd-closing-ribbon)"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -162,16 +203,18 @@ export default function ClosingArchitectSection() {
       className="relative isolate min-h-[100dvh] w-full overflow-hidden"
       style={{ background: "#050810" }}
     >
+      {/* WebGL canvas — desktop only. Mobile gets a static ambient backdrop. */}
       <div className="absolute inset-0 z-0">
-        {mounted && shouldRender && (
+        {mounted && !isMobile && shouldRender && (
           <Canvas
-            dpr={[1, isMobile ? 1.25 : 1.5]}
+            dpr={[1, 1.5]}
             camera={{ position: [0, 0, 6], fov: 42 }}
-            gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
+            gl={{ antialias: true, powerPreference: "high-performance" }}
           >
-            <ClosingScene reduceMotion={reduceMotion} isMobile={isMobile} />
+            <ClosingScene reduceMotion={reduceMotion} />
           </Canvas>
         )}
+        {mounted && isMobile && <ClosingMobileVisual />}
       </div>
 
       <div className="relative z-[2] mx-auto flex min-h-[100dvh] max-w-[1100px] flex-col items-center justify-center px-6 text-center">

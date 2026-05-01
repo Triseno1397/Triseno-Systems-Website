@@ -77,6 +77,75 @@ function HeroScene({
   );
 }
 
+function HeroMobileVisual() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 flex items-center justify-center"
+      style={{
+        background:
+          "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,229,255,0.08) 0%, rgba(157,92,255,0.05) 35%, transparent 70%)",
+      }}
+    >
+      {/* Static ribbon behind the browser */}
+      <svg
+        viewBox="0 0 400 400"
+        className="absolute inset-0 h-full w-full opacity-70"
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          animation: "wd-glow-breathe 6s ease-in-out infinite",
+          mixBlendMode: "screen",
+        }}
+      >
+        <defs>
+          <linearGradient id="wd-hero-ribbon" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.0" />
+            <stop offset="35%" stopColor="#00e5ff" stopOpacity="0.55" />
+            <stop offset="65%" stopColor="#9d5cff" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#0077ff" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M -20 240 C 80 80, 180 360, 280 180 S 460 100, 520 260"
+          fill="none"
+          stroke="url(#wd-hero-ribbon)"
+          strokeWidth="22"
+          strokeLinecap="round"
+          style={{ filter: "blur(2px)" }}
+        />
+        <path
+          d="M -20 240 C 80 80, 180 360, 280 180 S 460 100, 520 260"
+          fill="none"
+          stroke="url(#wd-hero-ribbon)"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      {/* Static browser mockup */}
+      <svg
+        viewBox="0 0 300 200"
+        className="relative w-[78%] max-w-[420px]"
+        style={{
+          filter: "drop-shadow(0 24px 40px rgba(0,229,255,0.18))",
+        }}
+        aria-hidden="true"
+      >
+        <rect x="2" y="2" width="296" height="196" rx="8" fill="rgba(13,20,40,0.92)" stroke="rgba(255,255,255,0.1)" />
+        <rect x="2" y="2" width="296" height="22" rx="8" fill="rgba(8,12,22,0.95)" />
+        <circle cx="14" cy="13" r="3" fill="#ff5f57" opacity="0.85" />
+        <circle cx="24" cy="13" r="3" fill="#febc2e" opacity="0.85" />
+        <circle cx="34" cy="13" r="3" fill="#28c840" opacity="0.85" />
+        <rect x="80" y="7" width="160" height="11" rx="5" fill="rgba(8,12,22,0.95)" stroke="rgba(255,255,255,0.06)" />
+        <rect x="14" y="34" width="272" height="92" rx="3" fill="rgba(0,229,255,0.08)" stroke="rgba(0,229,255,0.25)" />
+        <rect x="14" y="138" width="170" height="6" rx="3" fill="rgba(255,255,255,0.16)" />
+        <rect x="14" y="150" width="120" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
+        <rect x="14" y="172" width="64" height="16" rx="8" fill="#00e5ff" opacity="0.9" />
+      </svg>
+    </div>
+  );
+}
+
 export default function HeroBrowserDollySection() {
   const sectionRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
@@ -158,13 +227,14 @@ export default function HeroBrowserDollySection() {
       role="img"
       aria-label="Web design division — animated 3D browser window with sweeping color ribbon"
     >
-      {/* WebGL canvas */}
+      {/* WebGL canvas — desktop only. Mobile uses a static SVG visual to
+          avoid GPU pressure from mount/unmount cycles. */}
       <div className="absolute inset-0 z-0">
-        {mounted && shouldRender && (
+        {mounted && !isMobile && shouldRender && (
           <Canvas
-            dpr={[1, isMobile ? 1.25 : 2]}
+            dpr={[1, 2]}
             camera={{ position: [0, 0, 8], fov: 38 }}
-            gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
+            gl={{ antialias: true, powerPreference: "high-performance" }}
           >
             <HeroScene
               scrollProgressRef={scrollProgressRef}
@@ -173,6 +243,7 @@ export default function HeroBrowserDollySection() {
             />
           </Canvas>
         )}
+        {mounted && isMobile && <HeroMobileVisual />}
       </div>
 
       {/* Foreground HTML */}
