@@ -1,22 +1,53 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
+import { useEffect } from "react";
 import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
-import { SplitText } from "gsap/SplitText";
+import Lenis from "lenis";
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP, ScrollTrigger, ScrollSmoother, SplitText);
+// Register ScrollTrigger + useGSAP exactly once at module load (idempotent guard).
+let pluginsRegistered = false;
+if (typeof window !== "undefined" && !pluginsRegistered) {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+  pluginsRegistered = true;
 }
 
-export { useGSAP, gsap, ScrollTrigger, ScrollSmoother, SplitText };
+export function useGSAPScroll() {
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
-export function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
+    if (reduceMotion) {
+      ScrollTrigger.refresh();
+      return () => {
+        ScrollTrigger.getAll().forEach((t) => t.kill());
+      };
+    }
 
-export function killAllScrollTriggers() {
-  ScrollTrigger.getAll().forEach((t) => t.kill());
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    const lenis = new Lenis({
+      lerp: isMobile ? 0.06 : 0.1,
+      smoothWheel: true,
+    });
+
+    const onScroll = () => ScrollTrigger.update();
+    lenis.on("scroll", onScroll);
+
+    const raf = (time: number) => {
+      lenis.raf(time * 1000);
+    };
+    gsap.ticker.add(raf);
+    gsap.ticker.lagSmoothing(0);
+
+    ScrollTrigger.refresh();
+
+    return () => {
+      gsap.ticker.remove(raf);
+      lenis.off("scroll", onScroll);
+      lenis.destroy();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
+  }, []);
 }

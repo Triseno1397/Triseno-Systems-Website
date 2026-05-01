@@ -241,48 +241,40 @@ main a {
   .logo-spin-3d { animation: none; }
 }
 
-/* ─── Web Design Division — Dark page-as-demo theme ─── */
-.web-design-page {
+/* ─── Web Design Division — Page-as-Demo (Phase A) ─── */
+.wd-page {
   --wd-bg: #050810;
-  --wd-bg-elevated: #0a0e1a;
-  --wd-text: #ffffff;
-  --wd-text-secondary: rgba(255, 255, 255, 0.6);
-  --wd-text-tertiary: rgba(255, 255, 255, 0.4);
-  --wd-border: rgba(255, 255, 255, 0.08);
-  --wd-accent-electric: #00e5ff;
+  --wd-bg-2: #0a0e1a;
+  --wd-accent: #00e5ff;
   --wd-accent-blue: #0077ff;
   --wd-accent-purple: #9d5cff;
+  --wd-text: #ffffff;
+  --wd-text-2: rgba(255, 255, 255, 0.6);
+  --wd-text-3: rgba(255, 255, 255, 0.4);
+  --wd-hairline: rgba(255, 255, 255, 0.08);
   background: var(--wd-bg);
   color: var(--wd-text);
+  position: relative;
+  font-family: var(--font-geist-sans), "DM Sans", system-ui, sans-serif;
 }
 
-.web-design-page ::selection {
+.wd-page ::selection {
   background: rgba(0, 229, 255, 0.35);
   color: #ffffff;
 }
 
-/* ScrollSmoother fixed-wrapper styles only apply once JS confirms ScrollSmoother
-   has initialized, otherwise the page would be clipped to one viewport with no scroll. */
-#smooth-wrapper.is-smoothing {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
+@keyframes wd-scroll-pulse {
+  0%, 100% { opacity: 0.25; transform: scaleY(0.85); }
+  50% { opacity: 1; transform: scaleY(1); }
 }
 
-#smooth-content {
-  overflow: visible;
-  width: 100%;
+@keyframes wd-glow-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
 }
 
-/* WebGL canvas wrappers should never block clicks on UI above them */
-.web-design-page canvas {
-  pointer-events: none;
-}
-
-/* Hide the body-level global footer when ScrollSmoother is active on /web-design;
-   we render a copy of <Footer /> inside the smooth-content so it scrolls with the page. */
-body.web-design-active > footer {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .wd-page [data-anim] { animation: none !important; }
 }
 
 /* ─── Scrollbar ─── */

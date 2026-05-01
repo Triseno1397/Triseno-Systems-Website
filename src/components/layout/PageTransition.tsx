@@ -8,10 +8,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const shouldReduceMotion = useReducedMotion();
 
-  // /web-design owns its own curtain transition AND uses ScrollSmoother, which
-  // requires the smooth-wrapper to be the offset parent of fixed-positioned
-  // elements. Wrapping it in a transformed motion.div breaks both.
-  if (shouldReduceMotion || pathname?.startsWith("/web-design")) {
+  if (shouldReduceMotion) {
     return <>{children}</>;
   }
 

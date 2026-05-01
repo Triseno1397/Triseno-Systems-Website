@@ -1,44 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function PageCurtain({
-  onComplete,
-}: {
-  onComplete?: () => void;
-}) {
-  const [phase, setPhase] = useState<"down" | "up" | "gone">("down");
+export default function PageCurtain() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setPhase("gone");
-      onComplete?.();
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setDone(true);
       return;
     }
+    const el = ref.current;
+    if (!el) return;
+    // Force reflow then trigger transition.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(-100%)";
+      });
+    });
+    const t = window.setTimeout(() => setDone(true), 720);
+    return () => window.clearTimeout(t);
+  }, []);
 
-    const t1 = window.setTimeout(() => setPhase("up"), 60);
-    const t2 = window.setTimeout(() => {
-      setPhase("gone");
-      onComplete?.();
-    }, 660);
-
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [onComplete]);
-
-  if (phase === "gone") return null;
+  if (done) return null;
 
   return (
     <div
+      ref={ref}
       aria-hidden="true"
-      className="fixed inset-0 z-[100] pointer-events-none"
+      className="fixed inset-0 z-[9999] pointer-events-none"
       style={{
-        background: "#050810",
-        transform: phase === "down" ? "translateY(0)" : "translateY(-100%)",
-        transition: "transform 600ms cubic-bezier(0.7, 0, 0.2, 1)",
+        backgroundColor: "#050810",
+        transform: "translateY(0)",
+        transition: "transform 600ms cubic-bezier(0.7, 0, 0.18, 1)",
         willChange: "transform",
       }}
     />

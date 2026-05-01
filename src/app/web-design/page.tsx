@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import WebDesignPageShell from "@/components/web-design/WebDesignPageShell";
+import WebDesignErrorBoundary from "@/components/web-design/WebDesignErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Web Design Division — Triseno Systems",
   description:
-    "This page is the demo. Every scroll moment is a premium technique you can ship on your own site.",
+    "The page is the demo. Custom sites, web apps, e-commerce, and landing pages — engineered by Triseno Systems.",
   openGraph: {
     title: "Web Design Division — Triseno Systems",
     description:
-      "This page is the demo. Every scroll moment is a premium technique you can ship on your own site.",
+      "The page is the demo. Custom sites, web apps, e-commerce, and landing pages — engineered by Triseno Systems.",
     url: "https://trisenosystems.com/web-design",
     siteName: "Triseno Systems",
     type: "website",
@@ -16,5 +17,9 @@ export const metadata: Metadata = {
 };
 
 export default function WebDesignPage() {
-  return <WebDesignPageShell />;
+  return (
+    <WebDesignErrorBoundary>
+      <WebDesignPageShell />
+    </WebDesignErrorBoundary>
+  );
 }
