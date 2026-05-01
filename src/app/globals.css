@@ -111,22 +111,6 @@ main a {
   100% { transform: translateX(-50%); }
 }
 
-/* ─── Web Design Nav Link ─── */
-.wd-nav-link .wd-shimmer {
-  animation: wd-shimmer 3s ease-in-out infinite;
-}
-
-@keyframes wd-shimmer {
-  0% { transform: translateX(-100%); }
-  40%, 100% { transform: translateX(100%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wd-nav-link .wd-shimmer {
-    animation: none;
-  }
-}
-
 /* ─── GPU-Composited Animations (replace GSAP repeat:-1) ─── */
 
 @keyframes node-pulse {

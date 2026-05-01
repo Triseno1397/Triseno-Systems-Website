@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import PageHero from "@/components/layout/PageHero";
 import ScrollReveal from "@/components/animations/ScrollReveal";
+import HiddenPortalSeal from "@/components/contact/HiddenPortalSeal";
 
 const howDidYouFindUs = [
   "Instagram",
@@ -339,6 +340,8 @@ export default function ContactContent() {
           </div>
         </div>
       </section>
+
+      <HiddenPortalSeal />
     </>
   );
 }

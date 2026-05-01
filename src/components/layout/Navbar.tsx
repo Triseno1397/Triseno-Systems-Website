@@ -1,62 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { List, X, PenNib } from "@phosphor-icons/react";
+import { List, X } from "@phosphor-icons/react";
 import Logo from "@/components/ui/Logo";
-
-const WD_TEXT = "Web Design Division";
-
-function CyclingText({ text, className }: { text: string; className?: string }) {
-  const [activeIndex, setActiveIndex] = useState(-1);
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let timeout: ReturnType<typeof setTimeout>;
-    let letterIndex = 0;
-
-    const runCycle = () => {
-      const stepLetter = () => {
-        setActiveIndex(letterIndex);
-        letterIndex++;
-        if (letterIndex < text.length) {
-          timeout = setTimeout(stepLetter, 60);
-        } else {
-          timeout = setTimeout(() => {
-            setActiveIndex(-1);
-            letterIndex = 0;
-            timeout = setTimeout(runCycle, 3000);
-          }, 400);
-        }
-      };
-      stepLetter();
-    };
-
-    timeout = setTimeout(runCycle, 1500);
-    return () => clearTimeout(timeout);
-  }, [text]);
-
-  return (
-    <span className={className} aria-label={text}>
-      {text.split("").map((char, i) => (
-        <span
-          key={i}
-          className={`inline-block transition-all duration-200 ${
-            i <= activeIndex
-              ? "text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]"
-              : ""
-          }`}
-          style={{ minWidth: char === " " ? "0.25em" : undefined }}
-        >
-          {char}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -108,39 +57,6 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-
-              {/* Divider */}
-              <div className="w-px h-5 bg-white/[0.08]" />
-
-              {/* Web Design Division — featured link */}
-              <Link
-                href="/web-design"
-                className={`wd-nav-link group relative isolate flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                  isActive(pathname, "/web-design")
-                    ? "text-white"
-                    : "text-white/90 hover:text-white"
-                }`}
-              >
-                <span
-                  className={`absolute inset-0 rounded-full border transition-all duration-300 ${
-                    isActive(pathname, "/web-design")
-                      ? "border-cyan-400/60"
-                      : "border-white/20 group-hover:border-cyan-400/50"
-                  }`}
-                />
-                <span
-                  className={`absolute inset-0 rounded-full bg-cyan-400/[0.04] transition-opacity duration-300 ${
-                    isActive(pathname, "/web-design")
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
-                  }`}
-                />
-                <span className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
-                  <span className="wd-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-400/[0.08] to-transparent" />
-                </span>
-                <PenNib size={14} weight="duotone" className="relative z-10 text-cyan-400" />
-                <CyclingText text={WD_TEXT} className="relative z-10" />
-              </Link>
             </div>
 
             {/* Mobile Toggle */}
@@ -201,33 +117,6 @@ export default function Navbar() {
                   </motion.div>
                 );
               })}
-
-              {/* Divider */}
-              <motion.div
-                initial={{ opacity: 0, scaleX: 0 }}
-                animate={{ opacity: 1, scaleX: 1 }}
-                transition={{ delay: navLinks.length * 0.1, duration: 0.4 }}
-                className="w-16 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"
-              />
-
-              {/* Web Design Division — featured mobile link */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: (navLinks.length + 0.5) * 0.1,
-                  duration: 0.4,
-                }}
-              >
-                <Link
-                  href="/web-design"
-                  onClick={() => setMobileOpen(false)}
-                  className="relative flex items-center gap-3 px-6 py-3 rounded-full border border-white/20 text-white/90 text-xl font-medium hover:border-cyan-400/50 hover:bg-cyan-400/[0.06] hover:text-white transition-all duration-300"
-                >
-                  <PenNib size={20} weight="duotone" className="text-cyan-400" />
-                  <CyclingText text={WD_TEXT} />
-                </Link>
-              </motion.div>
             </nav>
           </motion.div>
         )}
