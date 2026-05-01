@@ -145,9 +145,11 @@ export default function Navbar() {
 
             {/* Mobile Toggle */}
             <button
+              type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden text-text-primary p-2"
+              className="md:hidden text-text-primary relative z-[60] inline-flex items-center justify-center min-w-[44px] min-h-[44px] p-2 [touch-action:manipulation]"
               aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X size={24} /> : <List size={24} />}
             </button>
