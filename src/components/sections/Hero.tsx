@@ -161,12 +161,22 @@ export default function Hero() {
         <source src="/videos/tunnel.mp4" type="video/mp4" />
       </video>
 
-      {/* Readability overlay */}
+      {/* Readability overlay — desktop: horizontal fade so text reads on
+          the left and the tunnel shows on the right. */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="hidden md:block absolute inset-0 pointer-events-none"
         style={{
           background:
             "linear-gradient(90deg, rgba(10,14,26,0.85) 0%, rgba(10,14,26,0.55) 55%, rgba(10,14,26,0.25) 100%)",
+        }}
+      />
+      {/* Readability overlay — mobile: vertical fade so the tunnel is
+          actually visible. Headline gets a text-shadow below for contrast. */}
+      <div
+        className="md:hidden absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(10,14,26,0.78) 0%, rgba(10,14,26,0.45) 38%, rgba(10,14,26,0.2) 70%, rgba(10,14,26,0.45) 100%)",
         }}
       />
 
@@ -178,7 +188,13 @@ export default function Hero() {
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
         <div className="max-w-3xl space-y-8">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
+          <h1
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
+            style={{
+              textShadow:
+                "0 2px 14px rgba(5,8,16,0.55), 0 1px 4px rgba(5,8,16,0.4)",
+            }}
+          >
             <span className="block">
               {headlineLine1.split(" ").map((word, i) => (
                 <span
