@@ -1,8 +1,14 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { EffectComposer, ChromaticAberration } from "@react-three/postprocessing";
+import {
+  EffectComposer,
+  ChromaticAberration,
+  Bloom,
+  Vignette,
+} from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
+import { Environment } from "@react-three/drei";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -45,9 +51,18 @@ function HeroScene({
     <>
       <color attach="background" args={["#050810"]} />
       <fog attach="fog" args={["#050810", 6, 18]} />
-      <ambientLight intensity={0.4} />
-      <pointLight position={[3, 2, 4]} intensity={1.4} color="#00e5ff" />
-      <pointLight position={[-4, -2, 3]} intensity={0.8} color="#9d5cff" />
+
+      {/* HDR environment lighting — drives reflections on the chassis,
+          screen, and traffic-light spheres. background={false} keeps the
+          fog/sky as our designed near-black. */}
+      <Environment preset="city" background={false} environmentIntensity={0.55} />
+
+      {/* Accent lights tinted to the brand palette, kept subtle since IBL
+          is doing the bulk of the work. */}
+      <ambientLight intensity={0.15} />
+      <pointLight position={[3, 2, 4]} intensity={1.0} color="#00e5ff" />
+      <pointLight position={[-4, -2, 3]} intensity={0.6} color="#9d5cff" />
+      <pointLight position={[0, 4, -2]} intensity={0.4} color="#0077ff" />
 
       {!reduceMotion && <CameraDolly scrollProgressRef={scrollProgressRef} />}
 
@@ -64,13 +79,20 @@ function HeroScene({
       <BrowserMockup width={isMobile ? 4.6 : 6.4} height={isMobile ? 2.9 : 4} />
 
       {!isMobile && (
-        <EffectComposer>
+        <EffectComposer multisampling={0}>
+          <Bloom
+            mipmapBlur
+            intensity={0.6}
+            luminanceThreshold={0.85}
+            luminanceSmoothing={0.2}
+          />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.0018, 0.0024)}
+            offset={new THREE.Vector2(0.0014, 0.002)}
             radialModulation={false}
             modulationOffset={0}
           />
+          <Vignette eskil={false} offset={0.1} darkness={0.55} />
         </EffectComposer>
       )}
     </>

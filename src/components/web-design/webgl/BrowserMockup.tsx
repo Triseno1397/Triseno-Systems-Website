@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import * as THREE from "three";
+import { RoundedBox } from "@react-three/drei";
 
 interface Props {
   width?: number;
@@ -9,24 +10,20 @@ interface Props {
   position?: [number, number, number];
 }
 
+const ACCENT = "#00e5ff";
+
 export default function BrowserMockup({
   width = 6.4,
   height = 4,
   position = [0, 0, 0],
 }: Props) {
   const chromeHeight = 0.45;
+  const screenHeight = height - chromeHeight;
   const chromeY = height / 2 - chromeHeight / 2;
-  const contentY = -chromeHeight / 2;
-  const contentHeight = height - chromeHeight;
+  const screenY = -chromeHeight / 2;
+  const screenZ = 0.075; // sits on top of the chassis face
 
-  const innerEdges = useMemo(() => {
-    const plane = new THREE.PlaneGeometry(width - 0.02, height - 0.02);
-    const edges = new THREE.EdgesGeometry(plane);
-    plane.dispose();
-    return edges;
-  }, [width, height]);
-
-  // Hairline grid texture for content area
+  // Hairline grid texture for the screen content.
   const gridTexture = useMemo(() => {
     const size = 256;
     const canvas = document.createElement("canvas");
@@ -55,80 +52,153 @@ export default function BrowserMockup({
 
   return (
     <group position={position}>
-      {/* Outer frame */}
-      <mesh position={[0, 0, -0.05]}>
-        <planeGeometry args={[width + 0.18, height + 0.18]} />
-        <meshBasicMaterial color="#11151f" transparent opacity={0.9} />
-      </mesh>
+      {/* Chassis — beveled rounded slab. PBR so HDR env reflects across it. */}
+      <RoundedBox
+        args={[width + 0.18, height + 0.18, 0.16]}
+        radius={0.06}
+        smoothness={6}
+        position={[0, 0, 0]}
+      >
+        <meshPhysicalMaterial
+          color="#0a1020"
+          metalness={0.6}
+          roughness={0.35}
+          clearcoat={1}
+          clearcoatRoughness={0.18}
+          envMapIntensity={1.1}
+        />
+      </RoundedBox>
 
-      {/* Window body */}
-      <mesh>
+      {/* Screen — slightly recessed glassy plate, low roughness so the
+          environment glances across it. */}
+      <mesh position={[0, 0, screenZ]}>
         <planeGeometry args={[width, height]} />
-        <meshBasicMaterial color="#0a0e1a" />
+        <meshPhysicalMaterial
+          color="#04060d"
+          metalness={0.4}
+          roughness={0.15}
+          clearcoat={1}
+          clearcoatRoughness={0.05}
+          envMapIntensity={1.4}
+        />
       </mesh>
 
-      {/* Chrome bar */}
-      <mesh position={[0, chromeY, 0.001]}>
-        <planeGeometry args={[width, chromeHeight]} />
-        <meshBasicMaterial color="#10141f" />
+      {/* Chrome bar — sits proud of the screen surface. */}
+      <RoundedBox
+        args={[width - 0.05, chromeHeight, 0.012]}
+        radius={0.012}
+        smoothness={4}
+        position={[0, chromeY, screenZ + 0.008]}
+      >
+        <meshStandardMaterial color="#0c1326" metalness={0.3} roughness={0.6} />
+      </RoundedBox>
+
+      {/* Chrome bottom hairline accent */}
+      <mesh position={[0, chromeY - chromeHeight / 2 + 0.005, screenZ + 0.015]}>
+        <planeGeometry args={[width - 0.08, 0.005]} />
+        <meshStandardMaterial
+          color={ACCENT}
+          emissive={ACCENT}
+          emissiveIntensity={0.6}
+          transparent
+          opacity={0.55}
+        />
       </mesh>
 
-      {/* Chrome bottom hairline */}
-      <mesh position={[0, chromeY - chromeHeight / 2, 0.002]}>
-        <planeGeometry args={[width, 0.005]} />
-        <meshBasicMaterial color="#1a2030" />
-      </mesh>
-
-      {/* Traffic light dots */}
+      {/* Traffic-light dots — small spheres so they catch light. */}
       {[
-        { color: "#ff5f57", x: -width / 2 + 0.18 },
-        { color: "#febc2e", x: -width / 2 + 0.34 },
-        { color: "#28c840", x: -width / 2 + 0.5 },
+        { color: "#ff5f57", x: -width / 2 + 0.22 },
+        { color: "#febc2e", x: -width / 2 + 0.4 },
+        { color: "#28c840", x: -width / 2 + 0.58 },
       ].map((d, i) => (
-        <mesh key={i} position={[d.x, chromeY, 0.003]}>
-          <circleGeometry args={[0.06, 24]} />
-          <meshBasicMaterial color={d.color} />
+        <mesh key={i} position={[d.x, chromeY, screenZ + 0.022]}>
+          <sphereGeometry args={[0.06, 16, 16]} />
+          <meshStandardMaterial
+            color={d.color}
+            emissive={d.color}
+            emissiveIntensity={0.45}
+            metalness={0.1}
+            roughness={0.4}
+          />
         </mesh>
       ))}
 
       {/* Address bar */}
-      <mesh position={[0.5, chromeY, 0.003]}>
-        <planeGeometry args={[width * 0.55, chromeHeight * 0.55]} />
-        <meshBasicMaterial color="#070b15" />
+      <RoundedBox
+        args={[width * 0.55, chromeHeight * 0.55, 0.01]}
+        radius={chromeHeight * 0.18}
+        smoothness={4}
+        position={[0.5, chromeY, screenZ + 0.022]}
+      >
+        <meshStandardMaterial color="#040813" metalness={0.4} roughness={0.5} />
+      </RoundedBox>
+
+      {/* Content area — hairline grid */}
+      <mesh position={[0, screenY, screenZ + 0.011]}>
+        <planeGeometry args={[width - 0.06, screenHeight - 0.06]} />
+        <meshStandardMaterial
+          map={gridTexture}
+          transparent
+          opacity={0.85}
+          metalness={0.2}
+          roughness={0.55}
+        />
       </mesh>
 
-      {/* Content area: hairline grid */}
-      <mesh position={[0, contentY, 0.001]}>
-        <planeGeometry args={[width - 0.04, contentHeight - 0.04]} />
-        <meshBasicMaterial map={gridTexture} transparent opacity={0.9} />
-      </mesh>
-
-      {/* Hero block placeholder */}
-      <mesh position={[0, contentY + contentHeight * 0.25, 0.004]}>
-        <planeGeometry args={[width * 0.7, contentHeight * 0.32]} />
-        <meshBasicMaterial color="#0d1428" transparent opacity={0.85} />
+      {/* Hero image block — emissive panel with subtle inner glow */}
+      <mesh position={[0, screenY + screenHeight * 0.25, screenZ + 0.018]}>
+        <planeGeometry args={[width * 0.7, screenHeight * 0.32]} />
+        <meshStandardMaterial
+          color="#0a1428"
+          emissive={ACCENT}
+          emissiveIntensity={0.18}
+          metalness={0.15}
+          roughness={0.5}
+        />
       </mesh>
 
       {/* Headline placeholder bars */}
-      <mesh position={[-width * 0.2, contentY + contentHeight * 0.05, 0.005]}>
-        <planeGeometry args={[width * 0.45, 0.06]} />
-        <meshBasicMaterial color="#1c2640" />
+      <mesh
+        position={[
+          -width * 0.18,
+          screenY + screenHeight * 0.05,
+          screenZ + 0.024,
+        ]}
+      >
+        <planeGeometry args={[width * 0.45, 0.07]} />
+        <meshStandardMaterial color="#1f2c4a" metalness={0.3} roughness={0.55} />
       </mesh>
-      <mesh position={[-width * 0.25, contentY - contentHeight * 0.05, 0.005]}>
-        <planeGeometry args={[width * 0.32, 0.04]} />
-        <meshBasicMaterial color="#162035" />
+      <mesh
+        position={[
+          -width * 0.23,
+          screenY - screenHeight * 0.05,
+          screenZ + 0.024,
+        ]}
+      >
+        <planeGeometry args={[width * 0.32, 0.05]} />
+        <meshStandardMaterial color="#162035" metalness={0.3} roughness={0.6} />
       </mesh>
 
-      {/* CTA button */}
-      <mesh position={[-width * 0.3, contentY - contentHeight * 0.18, 0.005]}>
-        <planeGeometry args={[width * 0.16, 0.18]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.85} />
-      </mesh>
-
-      {/* Inner hairline border */}
-      <lineSegments geometry={innerEdges} position={[0, 0, 0.006]}>
-        <lineBasicMaterial color="#1c2640" transparent opacity={0.7} />
-      </lineSegments>
+      {/* CTA — strongly emissive so Bloom picks it up. */}
+      <RoundedBox
+        args={[width * 0.18, 0.22, 0.02]}
+        radius={0.05}
+        smoothness={4}
+        position={[
+          -width * 0.32,
+          screenY - screenHeight * 0.18,
+          screenZ + 0.028,
+        ]}
+      >
+        <meshStandardMaterial
+          color={ACCENT}
+          emissive={ACCENT}
+          emissiveIntensity={2.4}
+          metalness={0.2}
+          roughness={0.35}
+          toneMapped={false}
+        />
+      </RoundedBox>
     </group>
   );
 }
