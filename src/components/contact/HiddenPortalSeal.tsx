@@ -7,25 +7,22 @@
  *
  * Mechanic: drag the spinning emblem onto the stationary one. While the
  * cursor is over the target, the target collapses (shrinks toward zero
- * while a bright cyan core grows out of its center — a singularity).
+ * while a bright cyan/purple core grows out of its center — a singularity).
  * When the collapse completes (~750ms), the screen flashes and the page
- * hard-navigates to /web-design. No release timing required; the visual
- * tells you when it's done.
+ * hard-navigates to /web-design.
+ *
+ * Hit detection runs off a window-level pointermove listener (and a rAF
+ * fallback) rather than framer-motion's onDrag so we don't miss frames
+ * during fast drags or motionless holds.
  */
 
-import { useRef, useState } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  type PanInfo,
-} from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import Image from "next/image";
 
 const HOLD_DURATION_MS = 750;
-const FLASH_BEFORE_NAV_MS = 360;
-// Inflate the target hit zone so an imprecise drop still registers.
-const HIT_PADDING = 32;
+const FLASH_BEFORE_NAV_MS = 320;
+const HIT_PADDING = 36;
 
 export default function HiddenPortalSeal() {
   const targetRef = useRef<HTMLDivElement>(null);
@@ -39,6 +36,7 @@ export default function HiddenPortalSeal() {
   const holdStartRef = useRef<number | null>(null);
   const holdRafRef = useRef<number | null>(null);
   const unlockedRef = useRef(false);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -79,21 +77,21 @@ export default function HiddenPortalSeal() {
     holdRafRef.current = requestAnimationFrame(tick);
   };
 
-  const isPointInTarget = (point: { x: number; y: number }) => {
+  const isPointInTarget = (px: number, py: number) => {
     const t = targetRef.current;
     if (!t) return false;
     const r = t.getBoundingClientRect();
     return (
-      point.x >= r.left - HIT_PADDING &&
-      point.x <= r.right + HIT_PADDING &&
-      point.y >= r.top - HIT_PADDING &&
-      point.y <= r.bottom + HIT_PADDING
+      px >= r.left - HIT_PADDING &&
+      px <= r.right + HIT_PADDING &&
+      py >= r.top - HIT_PADDING &&
+      py <= r.bottom + HIT_PADDING
     );
   };
 
-  const onDrag = (_: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
+  const evaluateOverlap = (px: number, py: number) => {
     if (unlockedRef.current) return;
-    const overNow = isPointInTarget(info.point);
+    const overNow = isPointInTarget(px, py);
     if (overNow && !overTargetRef.current) {
       overTargetRef.current = true;
       setOverTarget(true);
@@ -102,6 +100,48 @@ export default function HiddenPortalSeal() {
       overTargetRef.current = false;
       setOverTarget(false);
       cancelHold();
+    }
+  };
+
+  // Window-level pointer tracking while dragging. This is more reliable
+  // than framer-motion's onDrag callback, which can miss frames on
+  // touch devices and doesn't fire when the pointer is held still.
+  useEffect(() => {
+    if (!dragging) return;
+
+    const handlePointer = (e: PointerEvent) => {
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+      evaluateOverlap(e.clientX, e.clientY);
+    };
+    const handleTouch = (e: TouchEvent) => {
+      const touch = e.touches[0] ?? e.changedTouches[0];
+      if (!touch) return;
+      lastPointerRef.current = { x: touch.clientX, y: touch.clientY };
+      evaluateOverlap(touch.clientX, touch.clientY);
+    };
+
+    window.addEventListener("pointermove", handlePointer, { passive: true });
+    window.addEventListener("touchmove", handleTouch, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointer);
+      window.removeEventListener("touchmove", handleTouch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging]);
+
+  const onDragStart = (e: PointerEvent | MouseEvent | TouchEvent) => {
+    setDragging(true);
+    // Seed the pointer position from the drag-start event so we can
+    // immediately evaluate overlap before the first move event fires.
+    const ptr =
+      "clientX" in e
+        ? { x: e.clientX, y: e.clientY }
+        : "touches" in e && e.touches[0]
+          ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+          : null;
+    if (ptr) {
+      lastPointerRef.current = ptr;
+      evaluateOverlap(ptr.x, ptr.y);
     }
   };
 
@@ -129,8 +169,7 @@ export default function HiddenPortalSeal() {
           dragMomentum={false}
           dragSnapToOrigin
           dragElastic={0.4}
-          onDragStart={() => setDragging(true)}
-          onDrag={onDrag}
+          onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           whileDrag={{ scale: 1.05, cursor: "grabbing" }}
           whileHover={{ scale: 1.03 }}
@@ -150,7 +189,7 @@ export default function HiddenPortalSeal() {
               alt=""
               width={400}
               height={400}
-              className="h-[136px] w-[136px] object-contain"
+              className="h-[136px] w-[136px] object-contain pointer-events-none"
               draggable={false}
               priority={false}
             />
@@ -167,7 +206,7 @@ export default function HiddenPortalSeal() {
             alt=""
             width={400}
             height={400}
-            className="h-[136px] w-[136px] object-contain select-none"
+            className="h-[136px] w-[136px] object-contain select-none pointer-events-none"
             draggable={false}
             style={{
               transform: `scale(${targetScale})`,
@@ -208,7 +247,7 @@ export default function HiddenPortalSeal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.36, ease: "easeOut" }}
+            transition={{ duration: 0.32, ease: "easeOut" }}
             className="pointer-events-none fixed inset-0 z-[200]"
             style={{
               background:
