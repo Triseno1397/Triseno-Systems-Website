@@ -122,6 +122,46 @@ export default function Hero() {
           },
           "-=0.3"
         );
+
+      // Scroll-driven "warp into the tunnel" effect.
+      // The video stack scales up + brightens + blurs slightly as you
+      // scroll the hero out of view. The foreground content drifts up
+      // faster than the section, so the user feels like they're sliding
+      // forward into the tunnel mouth.
+      const section = containerRef.current;
+      const videoStack = section.querySelector<HTMLDivElement>(
+        ".hero-video-stack"
+      );
+      const heroContent = section.querySelector<HTMLDivElement>(".hero-content");
+
+      if (videoStack) {
+        gsap.to(videoStack, {
+          scale: 1.32,
+          filter:
+            "brightness(1.32) saturate(1.3) contrast(1.08) blur(2.5px)",
+          ease: "none",
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.6,
+          },
+        });
+      }
+
+      if (heroContent) {
+        gsap.to(heroContent, {
+          y: -120,
+          opacity: 0,
+          ease: "none",
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "60% top",
+            scrub: 0.6,
+          },
+        });
+      }
     },
     { scope: containerRef, dependencies: [shouldReduceMotion, mounted] }
   );
@@ -136,30 +176,48 @@ export default function Hero() {
       className="relative min-h-[100dvh] flex items-center overflow-hidden"
       style={{ background: "var(--gradient-hero)" }}
     >
-      {/* Background looping video — two stacked videos cross-fade for a seamless loop */}
-      <video
-        ref={videoARef}
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        style={{ opacity: 1, transition: "opacity 0.8s linear" }}
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        aria-hidden="true"
+      {/* Background looping video — two stacked videos cross-fade for a
+          seamless loop. Wrapped in .hero-video-stack so the GSAP
+          ScrollTrigger can scrub scale + filter on both at once. */}
+      <div
+        className="hero-video-stack absolute inset-0 pointer-events-none"
+        style={{
+          willChange: "transform, filter",
+          transformOrigin: "center center",
+        }}
       >
-        <source src="/videos/tunnel.mp4" type="video/mp4" />
-      </video>
-      <video
-        ref={videoBRef}
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        style={{ opacity: 0, transition: "opacity 0.8s linear" }}
-        muted
-        playsInline
-        preload="auto"
-        aria-hidden="true"
-      >
-        <source src="/videos/tunnel.mp4" type="video/mp4" />
-      </video>
+        <video
+          ref={videoARef}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: 1,
+            transition: "opacity 0.8s linear",
+            filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
+          }}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        >
+          <source src="/videos/tunnel.mp4" type="video/mp4" />
+        </video>
+        <video
+          ref={videoBRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: 0,
+            transition: "opacity 0.8s linear",
+            filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
+          }}
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        >
+          <source src="/videos/tunnel.mp4" type="video/mp4" />
+        </video>
+      </div>
 
       {/* Readability overlay — desktop: horizontal fade so text reads on
           the left and the tunnel shows on the right. */}
@@ -167,16 +225,16 @@ export default function Hero() {
         className="hidden md:block absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(90deg, rgba(10,14,26,0.85) 0%, rgba(10,14,26,0.55) 55%, rgba(10,14,26,0.25) 100%)",
+            "linear-gradient(90deg, rgba(10,14,26,0.78) 0%, rgba(10,14,26,0.4) 55%, rgba(10,14,26,0.1) 100%)",
         }}
       />
-      {/* Readability overlay — mobile: vertical fade so the tunnel is
-          actually visible. Headline gets a text-shadow below for contrast. */}
+      {/* Readability overlay — mobile: keep the tunnel as the hero and
+          darken only enough to keep type readable. */}
       <div
         className="md:hidden absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(180deg, rgba(10,14,26,0.78) 0%, rgba(10,14,26,0.45) 38%, rgba(10,14,26,0.2) 70%, rgba(10,14,26,0.45) 100%)",
+            "linear-gradient(180deg, rgba(10,14,26,0.6) 0%, rgba(10,14,26,0.18) 32%, rgba(10,14,26,0.04) 60%, rgba(10,14,26,0.32) 100%)",
         }}
       />
 
@@ -186,7 +244,7 @@ export default function Hero() {
         style={{ background: "var(--gradient-radial)" }}
       />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
+      <div className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
         <div className="max-w-3xl space-y-8">
           <h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
