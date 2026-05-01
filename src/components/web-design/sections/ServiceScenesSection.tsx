@@ -1,14 +1,8 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  EffectComposer,
-  ChromaticAberration,
-} from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Ribbon from "@/components/web-design/webgl/Ribbon";
@@ -54,17 +48,11 @@ const SERVICES: Service[] = [
   },
 ];
 
-interface AberrationHandle {
-  offset: THREE.Vector2;
-}
-
 function CameraRig({
   scrollRef,
-  aberrationRef,
   setActiveIdx,
 }: {
   scrollRef: React.MutableRefObject<number>;
-  aberrationRef: React.MutableRefObject<AberrationHandle | null>;
   setActiveIdx: (i: number) => void;
 }) {
   const { camera } = useThree();
@@ -78,21 +66,10 @@ function CameraRig({
     camera.lookAt(0, 0, z - 4);
 
     const segs = SERVICES.length - 1;
-    const pos = p * segs;
-    const idx = Math.round(pos);
+    const idx = Math.round(p * segs);
     if (idx !== lastIdx.current) {
       lastIdx.current = idx;
       setActiveIdx(idx);
-    }
-
-    const handle = aberrationRef.current;
-    if (handle && handle.offset) {
-      const local = Math.abs(pos - Math.round(pos));
-      const intensity = local * 2;
-      handle.offset.set(
-        0.0015 + intensity * 0.006,
-        0.002 + intensity * 0.008
-      );
     }
   });
   return null;
@@ -107,8 +84,6 @@ function ServicesScene({
   setActiveIdx: (i: number) => void;
   isMobile: boolean;
 }) {
-  const aberrationRef = useRef<AberrationHandle | null>(null);
-
   // Ribbon threads through all rooms. Memoized so the TubeGeometry inside
   // <Ribbon> isn't rebuilt on every render of this scene.
   const ribbonPoints = useMemo(
@@ -135,11 +110,7 @@ function ServicesScene({
       <pointLight position={[3, 3, SERVICES[2].z + 3]} intensity={1.0} color="#0077ff" />
       <pointLight position={[-3, 2, SERVICES[3].z + 3]} intensity={1.2} color="#00e5ff" />
 
-      <CameraRig
-        scrollRef={scrollRef}
-        aberrationRef={aberrationRef}
-        setActiveIdx={setActiveIdx}
-      />
+      <CameraRig scrollRef={scrollRef} setActiveIdx={setActiveIdx} />
 
       <Ribbon
         curvePoints={ribbonPoints}
@@ -156,16 +127,6 @@ function ServicesScene({
       <LandingPageArtifact position={[0, 0, SERVICES[3].z]} />
 
       <HairlineFloor />
-
-      <EffectComposer>
-        <ChromaticAberration
-          ref={aberrationRef as never}
-          blendFunction={BlendFunction.NORMAL}
-          offset={new THREE.Vector2(0.002, 0.0025)}
-          radialModulation={false}
-          modulationOffset={0}
-        />
-      </EffectComposer>
     </>
   );
 }
