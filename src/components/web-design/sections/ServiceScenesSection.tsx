@@ -131,31 +131,159 @@ function ServicesScene({
   );
 }
 
-function MobileFlatStack() {
+const MOBILE_ACCENTS = ["#00e5ff", "#0077ff", "#9d5cff", "#00e5ff"];
+
+function MobileServiceMockup({ idx, color }: { idx: number; color: string }) {
+  const dim = "rgba(255,255,255,0.08)";
+  const dim2 = "rgba(255,255,255,0.16)";
+  if (idx === 0) {
+    // Custom sites — hero block + headline + CTA
+    return (
+      <svg viewBox="0 0 200 110" className="block h-full w-full" aria-hidden="true">
+        <rect x="6" y="6" width="188" height="98" rx="6" fill="rgba(13,20,40,0.85)" stroke={dim} />
+        <rect x="14" y="14" width="172" height="14" rx="2" fill="rgba(10,14,26,0.9)" />
+        <circle cx="22" cy="21" r="2" fill={dim2} />
+        <circle cx="30" cy="21" r="2" fill={dim2} />
+        <circle cx="38" cy="21" r="2" fill={dim2} />
+        <rect x="14" y="34" width="172" height="40" rx="3" fill={`${color}22`} stroke={`${color}55`} />
+        <rect x="14" y="80" width="100" height="6" rx="2" fill={dim2} />
+        <rect x="14" y="90" width="64" height="4" rx="2" fill={dim} />
+        <rect x="148" y="86" width="38" height="12" rx="6" fill={color} opacity="0.85" />
+      </svg>
+    );
+  }
+  if (idx === 1) {
+    // Web apps — sidebar + chart line
+    return (
+      <svg viewBox="0 0 200 110" className="block h-full w-full" aria-hidden="true">
+        <rect x="6" y="6" width="188" height="98" rx="6" fill="rgba(13,20,40,0.85)" stroke={dim} />
+        <rect x="6" y="6" width="42" height="98" rx="6" fill="rgba(8,12,22,0.9)" />
+        <rect x="14" y="18" width="26" height="3" rx="1.5" fill={dim2} />
+        <rect x="14" y="26" width="20" height="3" rx="1.5" fill={dim} />
+        <rect x="14" y="34" width="22" height="3" rx="1.5" fill={dim} />
+        <rect x="56" y="14" width="132" height="38" rx="3" fill="rgba(10,14,26,0.85)" />
+        <polyline
+          points="60,42 80,30 100,38 120,22 140,32 160,18 180,28"
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <rect x="56" y="60" width="62" height="38" rx="3" fill="rgba(10,14,26,0.7)" />
+        <rect x="124" y="60" width="62" height="38" rx="3" fill="rgba(10,14,26,0.7)" />
+      </svg>
+    );
+  }
+  if (idx === 2) {
+    // E-commerce — product card + price + cart
+    return (
+      <svg viewBox="0 0 200 110" className="block h-full w-full" aria-hidden="true">
+        <rect x="6" y="6" width="188" height="98" rx="6" fill="rgba(13,20,40,0.85)" stroke={dim} />
+        <rect x="14" y="14" width="80" height="60" rx="3" fill={`${color}1f`} stroke={`${color}55`} />
+        <rect x="104" y="18" width="80" height="6" rx="2" fill={dim2} />
+        <rect x="104" y="30" width="60" height="4" rx="2" fill={dim} />
+        <rect x="104" y="40" width="40" height="8" rx="2" fill={color} opacity="0.85" />
+        <rect x="104" y="56" width="80" height="14" rx="7" fill={color} opacity="0.9" />
+        <rect x="14" y="82" width="36" height="20" rx="3" fill="rgba(10,14,26,0.7)" />
+        <rect x="56" y="82" width="36" height="20" rx="3" fill="rgba(10,14,26,0.7)" />
+        <rect x="98" y="82" width="36" height="20" rx="3" fill="rgba(10,14,26,0.7)" />
+      </svg>
+    );
+  }
+  // Landing pages — vertical stack of section blocks
   return (
-    <div className="space-y-8 px-6 py-20">
-      {SERVICES.map((s) => (
-        <div
-          key={s.num}
-          className="rounded-2xl border p-6"
-          style={{
-            background: "rgba(13,20,40,0.6)",
-            borderColor: "rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/45">
-            <span className="font-mono">Service {s.num}</span>
-            <span className="h-px w-8 bg-white/15" />
-          </div>
-          <h3
-            className="mt-3 text-2xl font-semibold tracking-tight text-white"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            {s.title}
-          </h3>
-          <p className="mt-2 text-sm text-white/55">{s.body}</p>
+    <svg viewBox="0 0 200 110" className="block h-full w-full" aria-hidden="true">
+      <rect x="6" y="6" width="188" height="98" rx="6" fill="rgba(13,20,40,0.85)" stroke={dim} />
+      <rect x="60" y="14" width="80" height="22" rx="3" fill={`${color}1f`} stroke={`${color}55`} />
+      <rect x="78" y="42" width="44" height="4" rx="2" fill={dim2} />
+      <rect x="86" y="50" width="28" height="3" rx="1.5" fill={dim} />
+      <rect x="60" y="60" width="80" height="14" rx="3" fill="rgba(10,14,26,0.85)" />
+      <rect x="60" y="78" width="80" height="14" rx="3" fill="rgba(10,14,26,0.85)" />
+      <rect x="80" y="96" width="40" height="6" rx="3" fill={color} opacity="0.85" />
+    </svg>
+  );
+}
+
+function MobileFlatStack() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const cards = containerRef.current?.querySelectorAll("[data-wd-mobile-card]");
+    if (!cards || cards.length === 0) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).dataset.wdActive = "true";
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.15 }
+    );
+    cards.forEach((c) => io.observe(c));
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="px-5 py-20">
+      <div className="mb-10 text-center">
+        <div className="text-[11px] uppercase tracking-[0.3em] text-white/45">
+          Web design division
         </div>
-      ))}
+        <h2
+          className="mt-3 text-3xl font-semibold tracking-tight text-white"
+          style={{ letterSpacing: "-0.025em" }}
+        >
+          What we build.
+        </h2>
+      </div>
+      <div className="space-y-5">
+        {SERVICES.map((s, i) => {
+          const color = MOBILE_ACCENTS[i];
+          return (
+            <article
+              key={s.num}
+              data-wd-mobile-card
+              className="wd-mobile-card relative overflow-hidden rounded-2xl border"
+              style={{
+                background: "rgba(10,14,26,0.7)",
+                borderColor: "rgba(255,255,255,0.08)",
+                boxShadow: `0 0 0 1px rgba(255,255,255,0.02), 0 20px 40px -24px ${color}40`,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-px"
+                style={{
+                  background: `linear-gradient(90deg, transparent 0%, ${color} 50%, transparent 100%)`,
+                  opacity: 0.7,
+                }}
+              />
+              <div className="aspect-[200/110] w-full">
+                <MobileServiceMockup idx={i} color={color} />
+              </div>
+              <div className="p-5">
+                <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-white/45">
+                  <span className="font-mono" style={{ color }}>
+                    {s.num}
+                  </span>
+                  <span className="h-px w-8" style={{ background: `${color}66` }} />
+                  <span>Service</span>
+                </div>
+                <h3
+                  className="mt-3 text-xl font-semibold tracking-tight text-white"
+                  style={{ letterSpacing: "-0.02em" }}
+                >
+                  {s.title}
+                </h3>
+                <p className="mt-2 text-sm text-white/60">{s.body}</p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }

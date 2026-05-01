@@ -273,8 +273,26 @@ main a {
   50% { opacity: 0.85; }
 }
 
+/* Mobile services cards: hidden until scrolled into view, then slide up + fade. */
+.wd-mobile-card {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.wd-mobile-card[data-wd-active="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wd-page [data-anim] { animation: none !important; }
+  .wd-mobile-card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ─── Scrollbar ─── */
