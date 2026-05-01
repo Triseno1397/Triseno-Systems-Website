@@ -6,7 +6,7 @@ import {
   ChromaticAberration,
 } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -109,17 +109,21 @@ function ServicesScene({
 }) {
   const aberrationRef = useRef<AberrationHandle | null>(null);
 
-  // Ribbon threads through all rooms
-  const ribbonPoints = [
-    new THREE.Vector3(-3, 1.6, 6),
-    new THREE.Vector3(2, -1.4, -4),
-    new THREE.Vector3(-2.5, 1.2, -14),
-    new THREE.Vector3(2.6, -1.2, -22),
-    new THREE.Vector3(-2.2, 1.4, -30),
-    new THREE.Vector3(2.4, -1, -38),
-    new THREE.Vector3(-2.8, 1.6, -46),
-    new THREE.Vector3(2, -1.5, -54),
-  ];
+  // Ribbon threads through all rooms. Memoized so the TubeGeometry inside
+  // <Ribbon> isn't rebuilt on every render of this scene.
+  const ribbonPoints = useMemo(
+    () => [
+      new THREE.Vector3(-3, 1.6, 6),
+      new THREE.Vector3(2, -1.4, -4),
+      new THREE.Vector3(-2.5, 1.2, -14),
+      new THREE.Vector3(2.6, -1.2, -22),
+      new THREE.Vector3(-2.2, 1.4, -30),
+      new THREE.Vector3(2.4, -1, -38),
+      new THREE.Vector3(-2.8, 1.6, -46),
+      new THREE.Vector3(2, -1.5, -54),
+    ],
+    []
+  );
 
   return (
     <>

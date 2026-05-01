@@ -63,14 +63,16 @@ function HeroScene({
       {/* Browser mockup */}
       <BrowserMockup width={isMobile ? 4.6 : 6.4} height={isMobile ? 2.9 : 4} />
 
-      <EffectComposer>
-        <ChromaticAberration
-          blendFunction={BlendFunction.NORMAL}
-          offset={new THREE.Vector2(0.0018, 0.0024)}
-          radialModulation={false}
-          modulationOffset={0}
-        />
-      </EffectComposer>
+      {!isMobile && (
+        <EffectComposer>
+          <ChromaticAberration
+            blendFunction={BlendFunction.NORMAL}
+            offset={new THREE.Vector2(0.0018, 0.0024)}
+            radialModulation={false}
+            modulationOffset={0}
+          />
+        </EffectComposer>
+      )}
     </>
   );
 }
@@ -82,6 +84,7 @@ export default function HeroBrowserDollySection() {
   const [mounted, setMounted] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -101,6 +104,20 @@ export default function HeroBrowserDollySection() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Unmount the Canvas once the user has scrolled well past the hero so the
+  // WebGL context isn't running while they read the rest of the page.
+  useEffect(() => {
+    if (!mounted) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShouldRender(entry.isIntersecting),
+      { rootMargin: "50% 0px 50% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mounted]);
 
   // Headline reveal
   useGSAP(
@@ -143,11 +160,11 @@ export default function HeroBrowserDollySection() {
     >
       {/* WebGL canvas */}
       <div className="absolute inset-0 z-0">
-        {mounted && (
+        {mounted && shouldRender && (
           <Canvas
-            dpr={[1, isMobile ? 1.5 : 2]}
+            dpr={[1, isMobile ? 1.25 : 2]}
             camera={{ position: [0, 0, 8], fov: 38 }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
+            gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
           >
             <HeroScene
               scrollProgressRef={scrollProgressRef}

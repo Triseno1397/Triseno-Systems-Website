@@ -59,7 +59,13 @@ function Particles({ count = 60 }: { count?: number }) {
   );
 }
 
-function ClosingScene({ reduceMotion }: { reduceMotion: boolean }) {
+function ClosingScene({
+  reduceMotion,
+  isMobile,
+}: {
+  reduceMotion: boolean;
+  isMobile: boolean;
+}) {
   return (
     <>
       <color attach="background" args={["#050810"]} />
@@ -71,11 +77,11 @@ function ClosingScene({ reduceMotion }: { reduceMotion: boolean }) {
         position={[0, 0, -2]}
         scale={1.1}
         spin={reduceMotion ? 0 : 0.04}
-        segments={300}
+        segments={isMobile ? 180 : 300}
         tubeRadius={0.13}
       />
 
-      {!reduceMotion && <Particles count={70} />}
+      {!reduceMotion && !isMobile && <Particles count={70} />}
     </>
   );
 }
@@ -86,11 +92,28 @@ export default function ClosingArchitectSection() {
   const [submitted, setSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setIsMobile(window.matchMedia("(max-width: 768px)").matches);
   }, []);
+
+  // Mount the Canvas only when the section is near the viewport so the
+  // closing-page WebGL context is not running while the user is up at the hero.
+  useEffect(() => {
+    if (!mounted) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShouldRender(entry.isIntersecting),
+      { rootMargin: "150% 0px 50% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mounted]);
 
   useGSAP(
     () => {
@@ -140,13 +163,13 @@ export default function ClosingArchitectSection() {
       style={{ background: "#050810" }}
     >
       <div className="absolute inset-0 z-0">
-        {mounted && (
+        {mounted && shouldRender && (
           <Canvas
-            dpr={[1, 1.5]}
+            dpr={[1, isMobile ? 1.25 : 1.5]}
             camera={{ position: [0, 0, 6], fov: 42 }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
+            gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
           >
-            <ClosingScene reduceMotion={reduceMotion} />
+            <ClosingScene reduceMotion={reduceMotion} isMobile={isMobile} />
           </Canvas>
         )}
       </div>
