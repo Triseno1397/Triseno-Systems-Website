@@ -4,12 +4,14 @@ import { useRef, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useGSAP, gsap } from "@/hooks/useGSAPSetup";
 import Button from "@/components/ui/Button";
+import HyperspeedField from "@/components/sections/HyperspeedField";
 
 /* ─── Hero Section ─── */
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
+  const warpProgressRef = useRef(0);
   const shouldReduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(false);
 
@@ -123,44 +125,76 @@ export default function Hero() {
           "-=0.3"
         );
 
-      // Scroll-driven "warp into the tunnel" effect.
-      // The video stack scales up + brightens + blurs slightly as you
-      // scroll the hero out of view. The foreground content drifts up
-      // faster than the section, so the user feels like they're sliding
-      // forward into the tunnel mouth.
+      // ── Hyperspeed warp on scroll ──
+      // The hero is a 200dvh section; the visual layer is sticky for the
+      // first 100vh of scroll. As the user scrolls through the second 100vh,
+      // a single scroll-tied timeline drives:
+      //   - warpProgressRef (0..1) which the HyperspeedField canvas reads
+      //   - tunnel video stack: scales up, gains brightness/blur, fades
+      //   - foreground content: drifts up and fades out fast
+      //   - scroll indicator: fades almost immediately
+      //   - final flash: peaks at ~90% scroll for the warp-snap handoff
       const section = containerRef.current;
       const videoStack = section.querySelector<HTMLDivElement>(
         ".hero-video-stack"
       );
       const heroContent = section.querySelector<HTMLDivElement>(".hero-content");
+      const flash = section.querySelector<HTMLDivElement>(".hero-flash");
+      const scrollIndicator =
+        section.querySelector<HTMLDivElement>(".hero-scroll");
+
+      const warpTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.6,
+          onUpdate: (self) => {
+            warpProgressRef.current = self.progress;
+          },
+        },
+      });
 
       if (videoStack) {
-        gsap.to(videoStack, {
-          scale: 1.32,
-          filter:
-            "brightness(1.32) saturate(1.3) contrast(1.08) blur(2.5px)",
-          ease: "none",
-          scrollTrigger: {
-            trigger: section,
-            start: "top top",
-            end: "bottom top",
-            scrub: 0.6,
+        warpTl.to(
+          videoStack,
+          {
+            scale: 1.55,
+            filter: "brightness(1.45) saturate(1.5) contrast(1.1) blur(5px)",
+            ease: "none",
+            duration: 1,
           },
-        });
+          0
+        );
+        warpTl.to(
+          videoStack,
+          { opacity: 0.18, ease: "none", duration: 0.7 },
+          0.25
+        );
       }
 
       if (heroContent) {
-        gsap.to(heroContent, {
-          y: -120,
-          opacity: 0,
-          ease: "none",
-          scrollTrigger: {
-            trigger: section,
-            start: "top top",
-            end: "60% top",
-            scrub: 0.6,
-          },
-        });
+        warpTl.to(
+          heroContent,
+          { y: -160, opacity: 0, ease: "none", duration: 0.55 },
+          0
+        );
+      }
+
+      if (scrollIndicator) {
+        warpTl.to(
+          scrollIndicator,
+          { opacity: 0, ease: "none", duration: 0.18 },
+          0
+        );
+      }
+
+      if (flash) {
+        warpTl.to(
+          flash,
+          { opacity: 1, ease: "power3.in", duration: 0.18 },
+          0.82
+        );
       }
     },
     { scope: containerRef, dependencies: [shouldReduceMotion, mounted] }
@@ -173,145 +207,174 @@ export default function Hero() {
     <section
       id="home"
       ref={containerRef}
-      className="relative min-h-[100dvh] flex items-center overflow-hidden"
-      style={{ background: "var(--gradient-hero)" }}
+      className="relative"
+      style={{
+        minHeight: "200dvh",
+        background: "var(--gradient-hero)",
+      }}
     >
-      {/* Background looping video — two stacked videos cross-fade for a
-          seamless loop. Wrapped in .hero-video-stack so the GSAP
-          ScrollTrigger can scrub scale + filter on both at once. */}
+      {/* Sticky visual layer — pinned for the first 100vh of scroll while
+          the warp ramps up across the second 100vh. */}
       <div
-        className="hero-video-stack absolute inset-0 pointer-events-none"
-        style={{
-          willChange: "transform, filter",
-          transformOrigin: "center center",
-        }}
+        className="sticky top-0 h-[100dvh] overflow-hidden flex items-center"
+        style={{ background: "var(--gradient-hero)" }}
       >
-        <video
-          ref={videoARef}
-          className="absolute inset-0 w-full h-full object-cover"
+        {/* Background looping video — two stacked videos cross-fade for a
+            seamless loop. Wrapped in .hero-video-stack so the GSAP
+            ScrollTrigger can scrub scale + filter + opacity on both at once. */}
+        <div
+          className="hero-video-stack absolute inset-0 pointer-events-none"
           style={{
-            opacity: 1,
-            transition: "opacity 0.8s linear",
-            filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
+            willChange: "transform, filter, opacity",
+            transformOrigin: "center center",
           }}
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden="true"
         >
-          <source src="/videos/tunnel.mp4" type="video/mp4" />
-        </video>
-        <video
-          ref={videoBRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: 0,
-            transition: "opacity 0.8s linear",
-            filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
-          }}
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden="true"
-        >
-          <source src="/videos/tunnel.mp4" type="video/mp4" />
-        </video>
-      </div>
-
-      {/* Readability overlay — desktop: horizontal fade so text reads on
-          the left and the tunnel shows on the right. */}
-      <div
-        className="hidden md:block absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(10,14,26,0.78) 0%, rgba(10,14,26,0.4) 55%, rgba(10,14,26,0.1) 100%)",
-        }}
-      />
-      {/* Readability overlay — mobile: keep the tunnel as the hero and
-          darken only enough to keep type readable. */}
-      <div
-        className="md:hidden absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(10,14,26,0.6) 0%, rgba(10,14,26,0.18) 32%, rgba(10,14,26,0.04) 60%, rgba(10,14,26,0.32) 100%)",
-        }}
-      />
-
-      {/* Background radial glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: "var(--gradient-radial)" }}
-      />
-
-      <div className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
-        <div className="max-w-3xl space-y-8">
-          <h1
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
+          <video
+            ref={videoARef}
+            className="absolute inset-0 w-full h-full object-cover"
             style={{
-              textShadow:
-                "0 2px 14px rgba(5,8,16,0.55), 0 1px 4px rgba(5,8,16,0.4)",
+              opacity: 1,
+              transition: "opacity 0.8s linear",
+              filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
             }}
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
           >
-            <span className="block">
-              {headlineLine1.split(" ").map((word, i) => (
-                <span
-                  key={i}
-                  className="inline-block overflow-hidden"
-                  style={{ marginRight: "0.25em" }}
-                >
-                  <span className="hero-word inline-block text-text-primary">
-                    {word}
-                  </span>
-                </span>
-              ))}
-            </span>
-            <span className="block mt-2">
-              {headlineLine2.split(" ").map((word, i) => (
-                <span
-                  key={i}
-                  className="inline-block overflow-hidden"
-                  style={{ marginRight: "0.25em" }}
-                >
-                  <span className="hero-word inline-block gradient-text">
-                    {word}
-                  </span>
-                </span>
-              ))}
-            </span>
-          </h1>
+            <source src="/videos/tunnel.mp4" type="video/mp4" />
+          </video>
+          <video
+            ref={videoBRef}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: 0,
+              transition: "opacity 0.8s linear",
+              filter: "brightness(1.18) saturate(1.18) contrast(1.05)",
+            }}
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          >
+            <source src="/videos/tunnel.mp4" type="video/mp4" />
+          </video>
+        </div>
 
-          <p className="hero-sub max-w-xl text-lg md:text-xl text-text-secondary leading-relaxed">
-            Triseno Systems designs and deploys AI infrastructure — multi-agent
-            orchestration, workflow compression engines, and decision-layer
-            automation for organizations that need systems, not features.
-          </p>
+        {/* Hyperspeed warp — canvas reads warpProgressRef every frame and
+            ramps from "ambient stars" to "full Star Trek snap" as you scroll. */}
+        {mounted && !shouldReduceMotion && (
+          <HyperspeedField progressRef={warpProgressRef} />
+        )}
 
-          <div className="hero-ctas flex flex-col sm:flex-row gap-4">
-            <Button variant="primary" size="large" href="/capabilities">
-              Explore Capabilities
-            </Button>
-            <Button variant="secondary" size="large" href="/contact">
-              Start a Conversation
-            </Button>
+        {/* Readability overlay — desktop: horizontal fade so text reads on
+            the left and the tunnel shows on the right. */}
+        <div
+          className="hidden md:block absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(10,14,26,0.78) 0%, rgba(10,14,26,0.4) 55%, rgba(10,14,26,0.1) 100%)",
+          }}
+        />
+        {/* Readability overlay — mobile: keep the tunnel as the hero and
+            darken only enough to keep type readable. */}
+        <div
+          className="md:hidden absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(10,14,26,0.6) 0%, rgba(10,14,26,0.18) 32%, rgba(10,14,26,0.04) 60%, rgba(10,14,26,0.32) 100%)",
+          }}
+        />
+
+        {/* Background radial glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "var(--gradient-radial)" }}
+        />
+
+        <div className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
+          <div className="max-w-3xl space-y-8">
+            <h1
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
+              style={{
+                textShadow:
+                  "0 2px 14px rgba(5,8,16,0.55), 0 1px 4px rgba(5,8,16,0.4)",
+              }}
+            >
+              <span className="block">
+                {headlineLine1.split(" ").map((word, i) => (
+                  <span
+                    key={i}
+                    className="inline-block overflow-hidden"
+                    style={{ marginRight: "0.25em" }}
+                  >
+                    <span className="hero-word inline-block text-text-primary">
+                      {word}
+                    </span>
+                  </span>
+                ))}
+              </span>
+              <span className="block mt-2">
+                {headlineLine2.split(" ").map((word, i) => (
+                  <span
+                    key={i}
+                    className="inline-block overflow-hidden"
+                    style={{ marginRight: "0.25em" }}
+                  >
+                    <span className="hero-word inline-block gradient-text">
+                      {word}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </h1>
+
+            <p className="hero-sub max-w-xl text-lg md:text-xl text-text-secondary leading-relaxed">
+              Triseno Systems designs and deploys AI infrastructure — multi-agent
+              orchestration, workflow compression engines, and decision-layer
+              automation for organizations that need systems, not features.
+            </p>
+
+            <div className="hero-ctas flex flex-col sm:flex-row gap-4">
+              <Button variant="primary" size="large" href="/capabilities">
+                Explore Capabilities
+              </Button>
+              <Button variant="secondary" size="large" href="/contact">
+                Start a Conversation
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2, duration: 1 }}
-      >
-        <div className="w-px h-8 bg-gradient-to-b from-transparent to-cyan-400/50" />
+        {/* Scroll indicator — fades out almost immediately once the warp begins */}
         <motion.div
-          className="w-1.5 h-1.5 rounded-full bg-cyan-400"
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="hero-scroll absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 1 }}
+        >
+          <div className="w-px h-8 bg-gradient-to-b from-transparent to-cyan-400/50" />
+          <motion.div
+            className="w-1.5 h-1.5 rounded-full bg-cyan-400"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
+
+        {/* Final warp-snap flash — invisible until the GSAP timeline fades it
+            in around 80–100% scroll progress. Hands off cleanly to the next
+            section, which slides up underneath as the section ends. */}
+        <div
+          className="hero-flash pointer-events-none absolute inset-0 z-20"
+          style={{
+            opacity: 0,
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.92) 0%, rgba(180,235,255,0.6) 22%, rgba(0,229,255,0.35) 42%, rgba(157,92,255,0.18) 60%, rgba(5,8,16,0) 80%)",
+            mixBlendMode: "screen",
+          }}
         />
-      </motion.div>
+      </div>
     </section>
   );
 }
