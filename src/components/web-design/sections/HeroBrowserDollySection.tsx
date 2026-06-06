@@ -176,6 +176,7 @@ export default function HeroBrowserDollySection() {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [inView, setInView] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -196,15 +197,22 @@ export default function HeroBrowserDollySection() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Unmount the Canvas once the user has scrolled well past the hero so the
-  // WebGL context isn't running while they read the rest of the page.
+  // Mount the Canvas once the hero is near the viewport, then KEEP it mounted
+  // and just pause its render loop when off-screen (see `inView` → frameloop).
+  // Destroying and recreating the WebGL context on every scroll trips
+  // Chromium's context-loss guard ("WebGL context could not be created… was
+  // blocked"), which makes every 3D scene on the page go blank/glitchy.
   useEffect(() => {
     if (!mounted) return;
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => setShouldRender(entry.isIntersecting),
-      { rootMargin: "50% 0px 50% 0px" }
+      ([entry]) => {
+        const vis = entry.isIntersecting;
+        setInView(vis);
+        if (vis) setShouldRender(true); // latch: never unmount once shown
+      },
+      { rootMargin: "100% 0px 100% 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -255,6 +263,7 @@ export default function HeroBrowserDollySection() {
         {mounted && !isMobile && shouldRender && (
           <Canvas
             dpr={[1, 2]}
+            frameloop={inView ? "always" : "never"}
             camera={{ position: [0, 0, 8], fov: 38 }}
             gl={{ antialias: true, powerPreference: "high-performance" }}
           >
@@ -271,8 +280,8 @@ export default function HeroBrowserDollySection() {
       {/* Foreground HTML */}
       <div className="relative z-[2] mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col px-6 pt-8 md:pt-12">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-white/50">
-          <span>Web design division</span>
-          <span className="hidden md:inline">Phase A — page is the demo</span>
+          <span>Triseno Systems — Web Design</span>
+          <span className="hidden md:inline">Engineered, never templated</span>
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -288,10 +297,11 @@ export default function HeroBrowserDollySection() {
             This page is the demo.
           </h1>
           <p
-            className="mt-6 max-w-[36ch] text-base text-white/55 md:text-lg"
+            className="mt-6 max-w-[40ch] text-base text-white/55 md:text-lg"
             style={{ letterSpacing: "-0.005em" }}
           >
-            Scroll. Every section is a feature you can ship.
+            Scroll. Everything you feel here — the speed, the motion, the
+            polish — is hand-built. It&apos;s the standard we build to for you.
           </p>
         </div>
 

@@ -18,6 +18,7 @@ interface Service {
   num: string;
   title: string;
   body: string;
+  tag: string;
   z: number;
 }
 
@@ -26,24 +27,28 @@ const SERVICES: Service[] = [
     num: "01",
     title: "Custom sites",
     body: "Brand-defining sites for companies that refuse to look like everyone else.",
+    tag: "↳ strategy · design system · custom build",
     z: 0,
   },
   {
     num: "02",
     title: "Web apps",
     body: "Interactive products and dashboards built with the same craft as a marketing site.",
+    tag: "↳ product design · front-end · data viz",
     z: -16,
   },
   {
     num: "03",
     title: "E-commerce",
     body: "Storefronts engineered for conversion, speed, and brand premium.",
+    tag: "↳ headless · conversion · performance",
     z: -32,
   },
   {
     num: "04",
     title: "Landing pages",
     body: "Surgical, high-performance pages built around a single moment of decision.",
+    tag: "↳ message · design · build · launch",
     z: -48,
   },
 ];
@@ -279,6 +284,9 @@ function MobileFlatStack() {
                   {s.title}
                 </h3>
                 <p className="mt-2 text-sm text-white/60">{s.body}</p>
+                <p className="mt-3 text-[10px] uppercase tracking-[0.3em] text-white/35">
+                  {s.tag}
+                </p>
               </div>
             </article>
           );
@@ -296,6 +304,7 @@ export default function ServiceScenesSection() {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -303,14 +312,20 @@ export default function ServiceScenesSection() {
     setIsMobile(window.matchMedia("(max-width: 768px)").matches);
   }, []);
 
-  // Mount/unmount the canvas based on viewport proximity
+  // Mount the canvas once it's near the viewport, then keep it mounted and
+  // pause the render loop off-screen (frameloop). Recreating the WebGL context
+  // on every scroll trips Chromium's context-loss guard and blanks the scenes.
   useEffect(() => {
     if (!mounted) return;
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => setShouldRender(entry.isIntersecting),
-      { rootMargin: "200% 0px 200% 0px" }
+      ([entry]) => {
+        const vis = entry.isIntersecting;
+        setInView(vis);
+        if (vis) setShouldRender(true); // latch: never unmount once shown
+      },
+      { rootMargin: "100% 0px 100% 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -374,6 +389,7 @@ export default function ServiceScenesSection() {
             {mounted && shouldRender && (
               <Canvas
                 dpr={[1, 1.75]}
+                frameloop={inView ? "always" : "never"}
                 camera={{ position: [0, 0.3, 6], fov: 42 }}
                 gl={{ antialias: true, powerPreference: "high-performance" }}
               >
@@ -404,7 +420,7 @@ export default function ServiceScenesSection() {
                   {SERVICES[activeIdx].body}
                 </p>
                 <p className="mt-12 text-[11px] uppercase tracking-[0.3em] text-white/35">
-                  ↳ technique: 3D camera dolly · multi-scene · chromatic aberration
+                  {SERVICES[activeIdx].tag}
                 </p>
               </div>
             </div>

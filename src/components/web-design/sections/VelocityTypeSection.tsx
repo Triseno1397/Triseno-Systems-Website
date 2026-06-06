@@ -115,10 +115,10 @@ export default function VelocityTypeSection() {
               willChange: "transform",
             }}
           >
-            Designed for what&apos;s next.
+            The web, engineered.
           </h2>
           <p className="mt-12 text-center text-[11px] uppercase tracking-[0.3em] text-white/45">
-            ↳ technique: scroll-velocity-reactive type
+            ↳ no templates · no page builders · built from zero
           </p>
         </div>
       </div>
