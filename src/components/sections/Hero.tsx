@@ -126,22 +126,18 @@ export default function Hero() {
         );
 
       // ── Hyperspeed warp on scroll ──
-      // Hero is 140dvh; the visual layer is sticky for the first 100vh, so
-      // there is ~40vh of "warp runway." A single scroll-tied timeline
-      // drives the whole sequence so it ends in continuous dark space —
-      // no white-sheet dwell — for a smooth pivot into the next section:
-      //
-      //   0–35%  warp ramping, content fading, scroll cue gone
-      //   35–65% peak warp + tunnel at max intensity
-      //   65–82% white/cyan flash blooms (the warp snap)
-      //   82–100% flash + warp + tunnel ALL fade to dark, leaving the
-      //           sticky panel transparent so the next section can slide
-      //           up underneath cleanly
+      // The hero is a 200dvh section; the visual layer is sticky for the
+      // first 100vh of scroll. As the user scrolls through the second 100vh,
+      // a single scroll-tied timeline drives:
+      //   - warpProgressRef (0..1) which the HyperspeedField canvas reads
+      //   - tunnel video stack: scales up, gains brightness/blur, fades
+      //   - foreground content: drifts up and fades out fast
+      //   - scroll indicator: fades almost immediately
+      //   - final flash: peaks at ~90% scroll for the warp-snap handoff
       const section = containerRef.current;
       const videoStack = section.querySelector<HTMLDivElement>(
         ".hero-video-stack"
       );
-      const warpLayer = section.querySelector<HTMLDivElement>(".hero-warp");
       const heroContent = section.querySelector<HTMLDivElement>(".hero-content");
       const flash = section.querySelector<HTMLDivElement>(".hero-flash");
       const scrollIndicator =
@@ -152,7 +148,7 @@ export default function Hero() {
           trigger: section,
           start: "top top",
           end: "bottom bottom",
-          scrub: 0.6,
+          scrub: 1,
           onUpdate: (self) => {
             warpProgressRef.current = self.progress;
           },
@@ -163,60 +159,44 @@ export default function Hero() {
         warpTl.to(
           videoStack,
           {
-            scale: 1.5,
+            scale: 1.55,
             filter: "brightness(1.45) saturate(1.5) contrast(1.1) blur(5px)",
             ease: "none",
-            duration: 0.65,
+            duration: 1,
           },
           0
         );
-        // Tunnel fades to nothing during the flash so the screen doesn't
-        // get muddy underneath the warp finale.
         warpTl.to(
           videoStack,
-          { opacity: 0, ease: "none", duration: 0.18 },
-          0.65
+          { opacity: 0.18, ease: "none", duration: 0.7 },
+          0.25
         );
       }
 
       if (heroContent) {
+        // Hold the text in place at the start of the scroll, then let it
+        // drift up and fade on an ease-in curve so it lingers instead of
+        // vanishing the instant you scroll.
         warpTl.to(
           heroContent,
-          { y: -160, opacity: 0, ease: "none", duration: 0.4 },
-          0
+          { y: -110, opacity: 0, ease: "power2.in", duration: 0.55 },
+          0.2
         );
       }
 
       if (scrollIndicator) {
         warpTl.to(
           scrollIndicator,
-          { opacity: 0, ease: "none", duration: 0.14 },
+          { opacity: 0, ease: "power1.in", duration: 0.22 },
           0
         );
       }
 
       if (flash) {
-        // Bloom in, hold briefly, fade back out so we end on dark navy.
-        warpTl
-          .to(
-            flash,
-            { opacity: 1, ease: "power3.in", duration: 0.16 },
-            0.65
-          )
-          .to(
-            flash,
-            { opacity: 0, ease: "power2.out", duration: 0.18 },
-            0.82
-          );
-      }
-
-      if (warpLayer) {
-        // Warp streaks fade with the flash so we exit hyperspeed into
-        // calm dark space — not a frozen starfield.
         warpTl.to(
-          warpLayer,
-          { opacity: 0, ease: "power2.out", duration: 0.22 },
-          0.78
+          flash,
+          { opacity: 1, ease: "power3.in", duration: 0.18 },
+          0.82
         );
       }
     },
@@ -232,7 +212,7 @@ export default function Hero() {
       ref={containerRef}
       className="relative"
       style={{
-        minHeight: "140dvh",
+        minHeight: "200dvh",
         background: "var(--gradient-hero)",
       }}
     >
@@ -286,16 +266,9 @@ export default function Hero() {
         </div>
 
         {/* Hyperspeed warp — canvas reads warpProgressRef every frame and
-            ramps from "ambient stars" to "full Star Trek snap" as you scroll.
-            Wrapped so the GSAP timeline can fade the whole field out at the
-            end of the warp for a clean handoff. */}
+            ramps from "ambient stars" to "full Star Trek snap" as you scroll. */}
         {mounted && !shouldReduceMotion && (
-          <div
-            className="hero-warp absolute inset-0 pointer-events-none"
-            style={{ willChange: "opacity" }}
-          >
-            <HyperspeedField progressRef={warpProgressRef} />
-          </div>
+          <HyperspeedField progressRef={warpProgressRef} />
         )}
 
         {/* Readability overlay — desktop: horizontal fade so text reads on
@@ -323,7 +296,10 @@ export default function Hero() {
           style={{ background: "var(--gradient-radial)" }}
         />
 
-        <div className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0">
+        <div
+          className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0"
+          style={{ willChange: "transform, opacity" }}
+        >
           <div className="max-w-3xl space-y-8">
             <h1
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
