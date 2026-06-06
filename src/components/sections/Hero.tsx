@@ -193,11 +193,12 @@ export default function Hero() {
       }
 
       if (flash) {
-        warpTl.to(
-          flash,
-          { opacity: 1, ease: "power3.in", duration: 0.18 },
-          0.82
-        );
+        // Bloom the warp climax in, then ease it down before the section ends
+        // so the hero doesn't leave a hard white block scrolling away — the
+        // fixed WarpHandoff overlay carries the blast across the seam.
+        warpTl
+          .to(flash, { opacity: 0.92, ease: "power2.in", duration: 0.12 }, 0.8)
+          .to(flash, { opacity: 0.4, ease: "power1.out", duration: 0.08 }, 0.92);
       }
     },
     { scope: containerRef, dependencies: [shouldReduceMotion, mounted] }

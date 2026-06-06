@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
 import Hero from "@/components/sections/Hero";
+import WarpHandoff from "@/components/sections/WarpHandoff";
 import CapabilitiesShowcase from "@/components/sections/CapabilitiesShowcase";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import Button from "@/components/ui/Button";
@@ -30,6 +31,10 @@ export default function HomeContent() {
   return (
     <div data-home-root>
       <Hero />
+
+      {/* Fixed warp-blast overlay that whites out the hero→showcase seam and
+          clears to deliver you into the Capabilities section. */}
+      <WarpHandoff />
 
       {/* Pinned scroll-zoom showcase replaces the old "What we engineer" cards */}
       <CapabilitiesShowcase />
