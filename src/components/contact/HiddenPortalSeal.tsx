@@ -17,11 +17,11 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useMotionValue } from "framer-motion";
+import { motion, useMotionValue } from "framer-motion";
 import Image from "next/image";
+import PortalBlast from "@/components/contact/PortalBlast";
 
 const HOLD_DURATION_MS = 750;
-const FLASH_BEFORE_NAV_MS = 320;
 const HIT_PADDING = 36;
 
 export default function HiddenPortalSeal() {
@@ -31,6 +31,9 @@ export default function HiddenPortalSeal() {
   const [overTarget, setOverTarget] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [unlocking, setUnlocking] = useState(false);
+  const [blastOrigin, setBlastOrigin] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
   const overTargetRef = useRef(false);
   const holdStartRef = useRef<number | null>(null);
@@ -53,11 +56,16 @@ export default function HiddenPortalSeal() {
   const triggerUnlock = () => {
     if (unlockedRef.current) return;
     unlockedRef.current = true;
+    // Anchor the blast to the screen point where the singularity formed.
+    const t = targetRef.current;
+    if (t) {
+      const r = t.getBoundingClientRect();
+      setBlastOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    }
     setUnlocking(true);
     cancelHold();
-    window.setTimeout(() => {
-      window.location.assign("/web-design");
-    }, FLASH_BEFORE_NAV_MS);
+    // Navigation is fired from PortalBlast's timeline, once the bloom has the
+    // screen fully covered — so the warp plays out before the page swaps.
   };
 
   const startHold = () => {
@@ -240,22 +248,13 @@ export default function HiddenPortalSeal() {
         </div>
       </div>
 
-      {/* Unlock flash — radial cyan/purple sweep before navigation */}
-      <AnimatePresence>
-        {unlocking && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.32, ease: "easeOut" }}
-            className="pointer-events-none fixed inset-0 z-[200]"
-            style={{
-              background:
-                "radial-gradient(circle at 50% 60%, rgba(0,229,255,0.7) 0%, rgba(157,92,255,0.32) 30%, rgba(5,8,16,0) 62%), #050810",
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Unlock — hyperspeed detonation that warps into /web-design. */}
+      {unlocking && (
+        <PortalBlast
+          origin={blastOrigin}
+          onNavigate={() => window.location.assign("/web-design")}
+        />
+      )}
     </>
   );
 }
