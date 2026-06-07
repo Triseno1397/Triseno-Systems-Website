@@ -165,38 +165,35 @@ export default function WarpThrottle({
       aria-valuenow={Math.round(value * 100)}
       aria-valuetext={`Warp ${factor}, ${status}`}
       onKeyDown={onKeyDown}
-      className={`group flex select-none flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-[#0a0e1a]/40 px-4 py-5 backdrop-blur-md outline-none transition-colors focus-visible:border-cyan-400/40 ${className ?? ""}`}
+      className={`group flex select-none flex-col items-center gap-2 px-0 py-1 outline-none transition-colors md:gap-3 md:rounded-2xl md:border md:border-white/[0.06] md:bg-[#0a0e1a]/40 md:px-4 md:py-5 md:backdrop-blur-md md:focus-visible:border-cyan-400/40 ${className ?? ""}`}
       style={{ touchAction: "none" }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2">
+      {/* Header — desktop only */}
+      <div className="hidden items-center gap-2 md:flex">
         <Lightning size={14} weight="fill" className="text-cyan-400" />
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-400/80">
           Warp Drive
         </span>
       </div>
 
-      {/* Readout */}
+      {/* Readout — compact on mobile (number only) */}
       <div className="flex flex-col items-center leading-none">
-        <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-text-tertiary">
+        <span className="hidden font-mono text-[9px] uppercase tracking-[0.25em] text-text-tertiary md:block">
           Throttle
         </span>
         <span
-          className="font-mono text-3xl font-semibold tabular-nums text-text-primary"
+          className="font-mono text-base font-semibold tabular-nums text-text-primary md:text-3xl"
           style={{ textShadow: `0 0 ${8 + value * 18}px rgba(0,229,255,${0.4 + value * 0.5})` }}
         >
           {factor}
         </span>
-        <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-300/80">
+        <span className="hidden font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-300/80 md:block">
           {status}
         </span>
       </div>
 
       {/* Track */}
-      <div
-        className="relative flex items-center justify-center"
-        style={{ height: "clamp(190px, 34vh, 320px)" }}
-      >
+      <div className="relative flex h-[clamp(150px,32vh,240px)] items-center justify-center md:h-[clamp(190px,34vh,320px)]">
         {/* Powering-up halo behind the track */}
         <div
           aria-hidden="true"
@@ -209,10 +206,10 @@ export default function WarpThrottle({
           }}
         />
 
-        {/* Scale ticks */}
+        {/* Scale ticks — desktop only */}
         <div
           aria-hidden="true"
-          className="absolute -left-4 inset-y-0 flex flex-col justify-between py-1"
+          className="absolute -left-4 inset-y-0 hidden flex-col justify-between py-1 md:flex"
         >
           {[9, 7, 5, 3, 1].map((n) => (
             <span
@@ -230,7 +227,7 @@ export default function WarpThrottle({
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
-          className="relative h-full w-3 cursor-pointer rounded-full"
+          className="relative h-full w-2 cursor-pointer rounded-full md:w-3"
           style={{
             background:
               "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.4))",
@@ -261,9 +258,8 @@ export default function WarpThrottle({
 
           {/* Handle */}
           <div
-            className="absolute left-1/2 top-0 grid cursor-grab place-items-center rounded-md active:cursor-grabbing"
+            className="absolute left-1/2 top-0 grid w-8 cursor-grab place-items-center rounded-md active:cursor-grabbing md:w-[46px]"
             style={{
-              width: 46,
               height: HANDLE_H,
               transform: `translate(-50%, ${handleOffset}px)`,
               background: "linear-gradient(180deg, #18222f, #0a0e1a)",
@@ -289,9 +285,9 @@ export default function WarpThrottle({
         </div>
       </div>
 
-      {/* Hint */}
+      {/* Hint — desktop only */}
       <span
-        className={`font-mono text-[9px] uppercase tracking-[0.2em] text-white/35 transition-opacity duration-500 ${
+        className={`hidden font-mono text-[9px] uppercase tracking-[0.2em] text-white/35 transition-opacity duration-500 md:block ${
           touched ? "opacity-0" : "opacity-100"
         }`}
       >

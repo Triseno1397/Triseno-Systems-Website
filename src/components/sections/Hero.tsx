@@ -315,12 +315,12 @@ export default function Hero() {
           style={{ background: "var(--gradient-radial)" }}
         />
 
-        {/* Warp throttle — pinned in the right-side visual zone of the hero;
-            drag it to set the warp speed. Below the flash (z-20) so the
-            warp-out handoff covers it cleanly; hidden on small screens where
-            the hero is full-bleed text. */}
+        {/* Warp throttle — drag it to set the warp speed. Below the flash
+            (z-20) so the warp-out handoff covers it cleanly.
+            Desktop: full panel centered on the right visual zone.
+            Mobile: a skinny bar at the top-right, clear of the 112px navbar. */}
         {mounted && !shouldReduceMotion && (
-          <div className="hidden md:block absolute right-4 lg:right-12 top-1/2 z-[15] -translate-y-1/2">
+          <div className="absolute right-3 top-[120px] z-[15] md:right-4 md:top-1/2 md:-translate-y-1/2 lg:right-12">
             <WarpThrottle targetRef={warpTargetRef} initial={INITIAL_WARP} />
           </div>
         )}
@@ -329,7 +329,7 @@ export default function Hero() {
           className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0"
           style={{ willChange: "transform, opacity" }}
         >
-          <div className="max-w-3xl space-y-8">
+          <div className="max-w-3xl space-y-8 pr-14 md:pr-0">
             <h1
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight"
               style={{
