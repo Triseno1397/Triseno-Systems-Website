@@ -1,216 +1,73 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  EffectComposer,
-  ChromaticAberration,
-  Bloom,
-  Vignette,
-} from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
-import { Environment } from "@react-three/drei";
 import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import Ribbon from "@/components/web-design/webgl/Ribbon";
-import BrowserMockup from "@/components/web-design/webgl/BrowserMockup";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { splitText } from "@/lib/split-text";
 
-function CameraDolly({
-  scrollProgressRef,
-}: {
-  scrollProgressRef: React.MutableRefObject<number>;
-}) {
-  const { camera } = useThree();
-  const wobbleRef = useRef({ t: 0 });
-  const startZ = 8;
-  const endZ = 0.4;
-
-  useFrame((_, delta) => {
-    wobbleRef.current.t += delta;
-    const p = scrollProgressRef.current;
-    const z = THREE.MathUtils.lerp(startZ, endZ, p);
-    const wob = Math.sin(wobbleRef.current.t * 0.6) * 0.0035;
-    camera.position.set(wob * 8, wob * 4, z);
-    camera.lookAt(0, 0, 0);
-  });
-  return null;
+// Register once (idempotent — the page shell registers too, but a section
+// should never assume another module ran first).
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
-function HeroScene({
-  scrollProgressRef,
-  reduceMotion,
-  isMobile,
-}: {
-  scrollProgressRef: React.MutableRefObject<number>;
-  reduceMotion: boolean;
-  isMobile: boolean;
-}) {
-  return (
-    <>
-      <color attach="background" args={["#050810"]} />
-      <fog attach="fog" args={["#050810", 6, 18]} />
+const SUBLINE = "Scroll. Every section is a feature you can ship.";
+// Terminal-flavoured glyph pool for the compile/scramble effect.
+const SCRAMBLE_GLYPHS = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789/<>{}[]#%&$*=+-—·";
 
-      {/* HDR environment lighting — drives reflections on the chassis,
-          screen, and traffic-light spheres. background={false} keeps the
-          fog/sky as our designed near-black. */}
-      <Environment preset="city" background={false} environmentIntensity={0.55} />
-
-      {/* Accent lights tinted to the brand palette, kept subtle since IBL
-          is doing the bulk of the work. */}
-      <ambientLight intensity={0.15} />
-      <pointLight position={[3, 2, 4]} intensity={1.0} color="#00e5ff" />
-      <pointLight position={[-4, -2, 3]} intensity={0.6} color="#9d5cff" />
-      <pointLight position={[0, 4, -2]} intensity={0.4} color="#0077ff" />
-
-      {!reduceMotion && <CameraDolly scrollProgressRef={scrollProgressRef} />}
-
-      {/* Ribbon behind browser */}
-      <Ribbon
-        position={[0, 0, -1.2]}
-        scale={0.85}
-        spin={reduceMotion ? 0 : 0.05}
-        segments={isMobile ? 200 : 360}
-        tubeRadius={isMobile ? 0.16 : 0.18}
-      />
-
-      {/* Browser mockup */}
-      <BrowserMockup width={isMobile ? 4.6 : 6.4} height={isMobile ? 2.9 : 4} />
-
-      {!isMobile && (
-        <EffectComposer multisampling={0}>
-          <Bloom
-            mipmapBlur
-            intensity={0.6}
-            luminanceThreshold={0.85}
-            luminanceSmoothing={0.2}
-          />
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.0014, 0.002)}
-            radialModulation={false}
-            modulationOffset={0}
-          />
-          <Vignette eskil={false} offset={0.1} darkness={0.55} />
-        </EffectComposer>
-      )}
-    </>
-  );
-}
-
-function HeroMobileVisual() {
-  return (
-    <div
-      aria-hidden="true"
-      className="absolute inset-0 flex items-center justify-center"
-      style={{
-        background:
-          "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,229,255,0.08) 0%, rgba(157,92,255,0.05) 35%, transparent 70%)",
-      }}
-    >
-      {/* Static ribbon behind the browser */}
-      <svg
-        viewBox="0 0 400 400"
-        className="absolute inset-0 h-full w-full opacity-70"
-        preserveAspectRatio="xMidYMid slice"
-        style={{
-          animation: "wd-glow-breathe 6s ease-in-out infinite",
-          mixBlendMode: "screen",
-        }}
-      >
-        <defs>
-          <linearGradient id="wd-hero-ribbon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.0" />
-            <stop offset="35%" stopColor="#00e5ff" stopOpacity="0.55" />
-            <stop offset="65%" stopColor="#9d5cff" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#0077ff" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M -20 240 C 80 80, 180 360, 280 180 S 460 100, 520 260"
-          fill="none"
-          stroke="url(#wd-hero-ribbon)"
-          strokeWidth="22"
-          strokeLinecap="round"
-          style={{ filter: "blur(2px)" }}
-        />
-        <path
-          d="M -20 240 C 80 80, 180 360, 280 180 S 460 100, 520 260"
-          fill="none"
-          stroke="url(#wd-hero-ribbon)"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      </svg>
-
-      {/* Static browser mockup */}
-      <svg
-        viewBox="0 0 300 200"
-        className="relative w-[78%] max-w-[420px]"
-        style={{
-          filter: "drop-shadow(0 24px 40px rgba(0,229,255,0.18))",
-        }}
-        aria-hidden="true"
-      >
-        <rect x="2" y="2" width="296" height="196" rx="8" fill="rgba(13,20,40,0.92)" stroke="rgba(255,255,255,0.1)" />
-        <rect x="2" y="2" width="296" height="22" rx="8" fill="rgba(8,12,22,0.95)" />
-        <circle cx="14" cy="13" r="3" fill="#ff5f57" opacity="0.85" />
-        <circle cx="24" cy="13" r="3" fill="#febc2e" opacity="0.85" />
-        <circle cx="34" cy="13" r="3" fill="#28c840" opacity="0.85" />
-        <rect x="80" y="7" width="160" height="11" rx="5" fill="rgba(8,12,22,0.95)" stroke="rgba(255,255,255,0.06)" />
-        <rect x="14" y="34" width="272" height="92" rx="3" fill="rgba(0,229,255,0.08)" stroke="rgba(0,229,255,0.25)" />
-        <rect x="14" y="138" width="170" height="6" rx="3" fill="rgba(255,255,255,0.16)" />
-        <rect x="14" y="150" width="120" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
-        <rect x="14" y="172" width="64" height="16" rx="8" fill="#00e5ff" opacity="0.9" />
-      </svg>
-    </div>
-  );
-}
-
+/**
+ * Web-design division hero — "OS Window" macro-Z dolly.
+ *
+ * A dark browser/OS window floats in space between two depth layers of neon
+ * fluid shapes. As the pinned section is scrubbed:
+ *   Phase A — the window tilts on a 3D axis (rotateX/rotateY) like a physical
+ *             object, while the subline scrambles/recompiles like terminal code.
+ *   Phase B — the window scales up exponentially with transform-origin on the
+ *             green inner canvas, so the camera "flies into" the screen. The
+ *             frame and the two neon layers blow outward past the viewport at
+ *             different speeds (layered parallax).
+ *   Phase C — a full-bleed teal-green canvas takes over (the infinite morph)
+ *             and settles to the navy of the next section for a seamless handoff.
+ *
+ * Everything animates transform/opacity only, on hardware-accelerated layers,
+ * and every ScrollTrigger / listener / quickTo is torn down on unmount.
+ */
 export default function HeroBrowserDollySection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Mouse-parallax wrappers (outer) — kept separate from the scroll-driven
+  // inner wrappers so cursor transforms and scroll transforms never fight.
+  const backTiltRef = useRef<HTMLDivElement>(null);
+  const windowTiltRef = useRef<HTMLDivElement>(null);
+  const frontTiltRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-driven inner wrappers.
+  const backShapesRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const frontShapesRef = useRef<HTMLDivElement>(null);
+
+  const copyRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const scrollProgressRef = useRef(0);
+  const sublineRef = useRef<HTMLParagraphElement>(null);
+
+  const morphRef = useRef<HTMLDivElement>(null);
+  const morphGlowRef = useRef<HTMLDivElement>(null);
+
+  const progressRef = useRef(0);
+
   const [mounted, setMounted] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setIsMobile(window.matchMedia("(max-width: 768px)").matches);
-
-    const onScroll = () => {
-      const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const total = rect.height;
-      const passed = Math.max(0, -rect.top);
-      const p = Math.min(1, Math.max(0, passed / total));
-      scrollProgressRef.current = p;
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Unmount the Canvas once the user has scrolled well past the hero so the
-  // WebGL context isn't running while they read the rest of the page.
-  useEffect(() => {
-    if (!mounted) return;
-    const el = sectionRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setShouldRender(entry.isIntersecting),
-      { rootMargin: "50% 0px 50% 0px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [mounted]);
-
-  // Headline reveal
+  // Headline character reveal on arrival (independent of the scroll timeline).
   useGSAP(
     () => {
       if (!mounted) return;
@@ -223,21 +80,242 @@ export default function HeroBrowserDollySection() {
       }
 
       const split = splitText(el, { mode: "chars" });
-      gsap.set(split.chars, { y: 60, opacity: 0 });
-      // Wait for the page curtain to lift (~600ms) before revealing the headline.
+      gsap.set(split.chars, { yPercent: 110, opacity: 0 });
+      gsap.set(el, { opacity: 1 });
+      // Wait for the page curtain (~600ms) to lift before the headline lands.
       gsap.to(split.chars, {
-        y: 0,
+        yPercent: 0,
         opacity: 1,
         stagger: 0.025,
         duration: 1.4,
         ease: "expo.out",
         delay: 0.65,
+        force3D: true,
       });
-      return () => {
-        split.revert();
-      };
+      return () => split.revert();
     },
     { scope: sectionRef, dependencies: [mounted, reduceMotion] }
+  );
+
+  // The cinematic scroll sequence + mouse parallax.
+  useGSAP(
+    () => {
+      if (!mounted) return;
+
+      const section = sectionRef.current;
+      const win = windowRef.current;
+      const back = backShapesRef.current;
+      const front = frontShapesRef.current;
+      const copy = copyRef.current;
+      const headline = headlineRef.current;
+      const subline = sublineRef.current;
+      const morph = morphRef.current;
+      const morphGlow = morphGlowRef.current;
+      if (!section || !win || !back || !front || !copy || !morph || !morphGlow) {
+        return;
+      }
+
+      // Reduced motion: hold the static composed frame, no pin, no scrub.
+      if (reduceMotion) {
+        gsap.set([back, front], { opacity: 1 });
+        gsap.set(win, { rotateX: 0, rotateY: 0, scale: 1 });
+        gsap.set(copy, { opacity: 1 });
+        gsap.set(morph, { opacity: 0 });
+        if (subline) subline.textContent = SUBLINE;
+        return;
+      }
+
+      // Tuned intensities — mobile keeps the same choreography but pulls the
+      // exponential scale and parallax spread in so GPU load stays light.
+      const winScale = isMobile ? 11 : 19;
+      const backScale = isMobile ? 2.0 : 2.6;
+      const frontScale = isMobile ? 3.6 : 5.6;
+
+      // ── Terminal scramble for the subline ────────────────────────────────
+      // Driven by a proxy value on the timeline: n=0 → clean, n=1 → full noise.
+      // Scrubbing forward glitches it apart; scrubbing back recompiles it.
+      const scramble = { n: 0 };
+      const renderScramble = () => {
+        if (!subline) return;
+        const n = scramble.n;
+        if (n <= 0.001) {
+          subline.textContent = SUBLINE;
+          return;
+        }
+        let out = "";
+        for (let i = 0; i < SUBLINE.length; i++) {
+          const ch = SUBLINE[i];
+          if (ch === " ") {
+            out += " ";
+          } else if (Math.random() < n) {
+            out +=
+              SCRAMBLE_GLYPHS[
+                Math.floor(Math.random() * SCRAMBLE_GLYPHS.length)
+              ];
+          } else {
+            out += ch;
+          }
+        }
+        subline.textContent = out;
+      };
+
+      // Resting states.
+      // 3D depth comes from the stage's `perspective`; the window only owns its
+      // own rotate/scale so the mouse-tilt wrapper and the scroll-rotate
+      // compose in a single perspective space.
+      gsap.set(win, {
+        transformOrigin: "50% 56%",
+        rotateX: 0,
+        rotateY: 0,
+        rotateZ: 0,
+        scale: 1,
+        yPercent: 0,
+        force3D: true,
+      });
+      gsap.set([back, front], { transformOrigin: "50% 50%", force3D: true });
+      gsap.set(morph, { opacity: 0 });
+      gsap.set(morphGlow, { opacity: 1 });
+
+      let tl: gsap.core.Timeline | null = null;
+      let quickFns: Array<gsap.QuickToFunc> = [];
+      let onMove: ((e: PointerEvent) => void) | null = null;
+
+      // Defer until layout settles so pin spacing is measured correctly.
+      const rafId = requestAnimationFrame(() => {
+        tl = gsap.timeline({
+          defaults: { ease: "none", force3D: true },
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "+=240%",
+            pin: true,
+            scrub: 1.2,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              progressRef.current = self.progress;
+            },
+          },
+        });
+
+        // ── Phase A — perspective warp (the window becomes a physical object)
+        tl.to(
+          win,
+          {
+            rotateX: 10,
+            rotateY: -6,
+            rotateZ: 1.2,
+            yPercent: -2,
+            duration: 0.18,
+            ease: "power2.out",
+          },
+          0
+        );
+
+        // Subline compiles/scrambles, then the whole copy block lifts away.
+        tl.to(
+          scramble,
+          { n: 1, duration: 0.16, ease: "power1.in", onUpdate: renderScramble },
+          0.05
+        );
+        tl.to(
+          headline,
+          { scale: 1.35, ease: "power2.in", duration: 0.32 },
+          0.1
+        );
+        tl.to(
+          copy,
+          { opacity: 0, yPercent: -8, duration: 0.2, ease: "power2.in" },
+          0.12
+        );
+
+        // ── Phase B — macro fly-through. Window scales exponentially into the
+        // green canvas; the tilt straightens as the "camera" aligns with it.
+        tl.to(
+          win,
+          {
+            scale: winScale,
+            rotateX: 0,
+            rotateY: 0,
+            rotateZ: 0,
+            yPercent: 0,
+            duration: 0.66,
+            ease: "power3.in",
+          },
+          0.18
+        );
+
+        // Layered parallax: the back layer drifts out slowly, the front layer
+        // rushes past the camera much faster — both fade as they pass.
+        tl.to(
+          back,
+          { scale: backScale, rotate: 8, opacity: 0, duration: 0.62, ease: "power2.in" },
+          0.16
+        );
+        tl.to(
+          front,
+          { scale: frontScale, rotate: -12, opacity: 0, duration: 0.5, ease: "power3.in" },
+          0.16
+        );
+
+        // ── Phase C — the infinite morph. A crisp full-bleed canvas takes over
+        // (hiding the now-giant blurred window), then settles to navy so it
+        // hands off seamlessly into the next section's background.
+        tl.to(
+          morph,
+          { opacity: 1, duration: 0.16, ease: "power2.out" },
+          0.72
+        );
+        tl.to(
+          morphGlow,
+          { opacity: 0, duration: 0.14, ease: "power2.in" },
+          0.9
+        );
+      });
+
+      // ── Mouse-track parallax (premium quickTo interpolation) ──────────────
+      // Only meaningful at the top of the page; the contribution is gated to
+      // zero as soon as the dolly engages so it never fights the timeline.
+      const enableMouse = !isMobile && window.matchMedia("(pointer: fine)").matches;
+      if (enableMouse) {
+        const qBackX = gsap.quickTo(backTiltRef.current, "x", { duration: 0.8, ease: "power3" });
+        const qBackY = gsap.quickTo(backTiltRef.current, "y", { duration: 0.8, ease: "power3" });
+        const qWinX = gsap.quickTo(windowTiltRef.current, "x", { duration: 0.7, ease: "power3" });
+        const qWinY = gsap.quickTo(windowTiltRef.current, "y", { duration: 0.7, ease: "power3" });
+        const qWinRY = gsap.quickTo(windowTiltRef.current, "rotationY", { duration: 0.9, ease: "power3" });
+        const qWinRX = gsap.quickTo(windowTiltRef.current, "rotationX", { duration: 0.9, ease: "power3" });
+        const qFrontX = gsap.quickTo(frontTiltRef.current, "x", { duration: 0.6, ease: "power3" });
+        const qFrontY = gsap.quickTo(frontTiltRef.current, "y", { duration: 0.6, ease: "power3" });
+        quickFns = [qBackX, qBackY, qWinX, qWinY, qWinRY, qWinRX, qFrontX, qFrontY];
+
+        onMove = (e: PointerEvent) => {
+          const gate = Math.max(0, 1 - progressRef.current * 6);
+          if (gate <= 0) return;
+          const nx = (e.clientX / window.innerWidth - 0.5) * gate;
+          const ny = (e.clientY / window.innerHeight - 0.5) * gate;
+          // Depth: background moves least, foreground most.
+          qBackX(nx * 14);
+          qBackY(ny * 10);
+          qWinX(nx * 26);
+          qWinY(ny * 18);
+          qWinRY(nx * 6);
+          qWinRX(-ny * 5);
+          qFrontX(nx * 52);
+          qFrontY(ny * 36);
+        };
+        window.addEventListener("pointermove", onMove, { passive: true });
+      }
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        if (onMove) window.removeEventListener("pointermove", onMove);
+        quickFns.forEach((fn) => fn.tween?.kill());
+        tl?.scrollTrigger?.kill();
+        tl?.kill();
+        if (subline) subline.textContent = SUBLINE;
+      };
+    },
+    { scope: sectionRef, dependencies: [mounted, reduceMotion, isMobile] }
   );
 
   return (
@@ -245,37 +323,166 @@ export default function HeroBrowserDollySection() {
       ref={sectionRef}
       data-wd-section="hero"
       className="relative isolate min-h-[100dvh] w-full overflow-hidden"
-      style={{ background: "#050810" }}
-      role="img"
-      aria-label="Web design division — animated 3D browser window with sweeping color ribbon"
+      style={{ background: "var(--wd-bg, #050810)" }}
     >
-      {/* WebGL canvas — desktop only. Mobile uses a static SVG visual to
-          avoid GPU pressure from mount/unmount cycles. */}
-      <div className="absolute inset-0 z-0">
-        {mounted && !isMobile && shouldRender && (
-          <Canvas
-            dpr={[1, 2]}
-            camera={{ position: [0, 0, 8], fov: 38 }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
-          >
-            <HeroScene
-              scrollProgressRef={scrollProgressRef}
-              reduceMotion={reduceMotion}
-              isMobile={isMobile}
+      <div
+        ref={stageRef}
+        aria-hidden="true"
+        className="absolute inset-0 z-0"
+        style={{ perspective: "1400px", perspectiveOrigin: "50% 46%" }}
+      >
+        {/* ── BACK neon depth layer (behind the window) ── */}
+        <div ref={backTiltRef} className="absolute inset-0">
+          <div ref={backShapesRef} className="absolute inset-0">
+            <span
+              data-anim
+              className="wd-blob"
+              style={{
+                top: "8%",
+                left: "-6%",
+                width: "46vw",
+                height: "46vw",
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(0,229,255,0.55) 0%, rgba(0,119,255,0.22) 40%, transparent 70%)",
+                animation: "wd-glow-breathe 8s ease-in-out infinite",
+              }}
             />
-          </Canvas>
-        )}
-        {mounted && isMobile && <HeroMobileVisual />}
+            <span
+              data-anim
+              className="wd-blob"
+              style={{
+                bottom: "2%",
+                right: "-10%",
+                width: "52vw",
+                height: "52vw",
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(157,92,255,0.5) 0%, rgba(157,92,255,0.18) 42%, transparent 70%)",
+                animation: "wd-glow-breathe 9.5s ease-in-out infinite 1.2s",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ── The OS / browser window ── */}
+        <div
+          ref={windowTiltRef}
+          className="absolute inset-0 flex items-center justify-center px-6"
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <div
+            ref={windowRef}
+            className="wd-window relative w-full max-w-[860px]"
+            style={{
+              aspectRatio: "16 / 10",
+              transformStyle: "preserve-3d",
+              willChange: "transform",
+            }}
+          >
+            {/* Chrome bar */}
+            <div className="wd-window-chrome">
+              <span className="flex items-center gap-2">
+                <i className="wd-dot" style={{ background: "#ff5f57" }} />
+                <i className="wd-dot" style={{ background: "#febc2e" }} />
+                <i className="wd-dot" style={{ background: "#28c840" }} />
+              </span>
+              <span className="wd-addressbar">trisenosystems.com</span>
+              <span className="flex items-center gap-2 opacity-40">
+                <i className="wd-ctl" />
+                <i className="wd-ctl" />
+                <i className="wd-ctl" />
+              </span>
+            </div>
+
+            {/* Body — the central placeholder canvas (the green inner block) */}
+            <div className="wd-window-body">
+              <div className="wd-canvas">
+                <div className="wd-canvas-grid" />
+                <div className="wd-canvas-content">
+                  <span className="wd-canvas-bar" style={{ width: "58%" }} />
+                  <span className="wd-canvas-bar wd-canvas-bar--dim" style={{ width: "40%" }} />
+                  <span className="wd-canvas-cta" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── FRONT neon depth layer (in front of the window) ── */}
+        <div ref={frontTiltRef} className="absolute inset-0">
+          <div ref={frontShapesRef} className="absolute inset-0">
+            <span
+              data-anim
+              className="wd-blob"
+              style={{
+                top: "32%",
+                left: "-12%",
+                width: "30vw",
+                height: "30vw",
+                mixBlendMode: "screen",
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(0,229,255,0.7) 0%, rgba(0,229,255,0.25) 38%, transparent 66%)",
+                animation: "wd-glow-breathe 6.5s ease-in-out infinite 0.4s",
+              }}
+            />
+            <span
+              data-anim
+              className="wd-ring"
+              style={{
+                top: "16%",
+                right: "4%",
+                width: "min(24vw, 280px)",
+                height: "min(24vw, 280px)",
+                animation: "wd-glow-breathe 7.5s ease-in-out infinite 0.8s",
+              }}
+            />
+            <span
+              data-anim
+              className="wd-blob"
+              style={{
+                bottom: "6%",
+                right: "-8%",
+                width: "26vw",
+                height: "26vw",
+                mixBlendMode: "screen",
+                background:
+                  "radial-gradient(circle at 50% 50%, rgba(157,92,255,0.7) 0%, rgba(157,92,255,0.22) 40%, transparent 68%)",
+                animation: "wd-glow-breathe 8.5s ease-in-out infinite 1.6s",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ── Phase C morph layer — full-bleed canvas → navy handoff ── */}
+        <div
+          ref={morphRef}
+          className="absolute inset-0"
+          style={{ background: "var(--wd-bg, #050810)", opacity: 0, willChange: "opacity" }}
+        >
+          <div
+            ref={morphGlowRef}
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 52%, rgba(28,255,196,0.9) 0%, rgba(0,229,255,0.5) 28%, rgba(10,40,36,0.85) 60%, var(--wd-bg, #050810) 100%)",
+              willChange: "opacity",
+            }}
+          />
+        </div>
       </div>
 
-      {/* Foreground HTML */}
-      <div className="relative z-[2] mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col px-6 pt-8 md:pt-12">
-        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-white/50">
-          <span>Web design division</span>
+      {/* ── Foreground copy ── */}
+      <div
+        ref={copyRef}
+        className="relative z-[3] mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col px-6 pt-8 md:pt-12"
+        style={{ willChange: "transform, opacity" }}
+      >
+        {/* Division branding now lives in the navbar lockup; this row keeps a
+            right-aligned HUD status so it never collides with the logo. */}
+        <div className="flex items-center justify-end text-[11px] uppercase tracking-[0.22em] text-white/50">
           <span className="hidden md:inline">Phase A — page is the demo</span>
         </div>
 
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div className="pointer-events-none flex flex-1 flex-col items-center justify-center text-center">
           <h1
             ref={headlineRef}
             className="font-semibold leading-[0.95] tracking-tight text-white"
@@ -283,15 +490,20 @@ export default function HeroBrowserDollySection() {
               fontSize: "clamp(3rem, 8vw, 9rem)",
               letterSpacing: "-0.03em",
               opacity: reduceMotion ? 1 : 0,
+              willChange: "transform",
             }}
           >
             This page is the demo.
           </h1>
           <p
-            className="mt-6 max-w-[36ch] text-base text-white/55 md:text-lg"
-            style={{ letterSpacing: "-0.005em" }}
+            ref={sublineRef}
+            className="mt-6 max-w-[42ch] text-base text-white/55 md:text-lg"
+            style={{
+              fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
+              letterSpacing: "0.01em",
+            }}
           >
-            Scroll. Every section is a feature you can ship.
+            {SUBLINE}
           </p>
         </div>
 

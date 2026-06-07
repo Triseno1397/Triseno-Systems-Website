@@ -3,9 +3,35 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { List, X } from "@phosphor-icons/react";
 import Logo from "@/components/ui/Logo";
+
+// "Monolith Split" branding lockup motion — the divider slices down, then the
+// two HUD lines resolve from a left-to-right blur-to-clear, staggered after the
+// logo has settled on load.
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const brandContainer: Variants = {
+  hidden: {},
+  show: { transition: { delayChildren: 0.45, staggerChildren: 0.16 } },
+};
+
+const dividerVariants: Variants = {
+  hidden: { scaleY: 0, opacity: 0 },
+  show: { scaleY: 1, opacity: 1, transition: { duration: 0.6, ease: EASE_OUT } },
+};
+
+const brandTextWrap: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12 } },
+};
+
+const brandLine: Variants = {
+  hidden: { opacity: 0, x: -10, filter: "blur(8px)" },
+  show: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.6, ease: EASE_OUT } },
+};
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -23,15 +49,62 @@ function isActive(pathname: string, href: string) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname() ?? "/";
+  const reduceMotion = useReducedMotion();
+  const showDivision =
+    pathname === "/web-design" || pathname.startsWith("/web-design/");
 
   return (
     <>
       <nav className="absolute top-0 left-0 right-0 z-50 overflow-visible bg-transparent">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8 overflow-visible">
           <div className="flex items-center justify-between h-28 overflow-visible">
-            {/* Logo */}
-            <div className="self-start mt-3">
+            {/* Branding lockup — logo with dedicated breathing room; on the
+                web-design division route a vertical gradient divider and a
+                premium HUD label split off to the right ("Monolith Split"). */}
+            <div className="flex items-center self-start mt-3 overflow-visible">
               <Logo variant="navbar" href="/" />
+
+              {showDivision && (
+                <motion.div
+                  className="ml-1 hidden items-center gap-4 md:flex lg:ml-3 lg:gap-5"
+                  variants={brandContainer}
+                  initial={reduceMotion ? false : "hidden"}
+                  animate="show"
+                >
+                  <motion.span
+                    aria-hidden="true"
+                    variants={dividerVariants}
+                    className="block w-px"
+                    style={{
+                      height: 46,
+                      transformOrigin: "top",
+                      background:
+                        "linear-gradient(180deg, rgba(0,229,255,0) 0%, rgba(0,229,255,0.55) 42%, rgba(157,92,255,0.5) 64%, rgba(157,92,255,0) 100%)",
+                    }}
+                  />
+                  <motion.div
+                    className="flex flex-col gap-[5px]"
+                    variants={brandTextWrap}
+                  >
+                    <motion.span
+                      variants={brandLine}
+                      className="font-mono text-[10px] uppercase leading-none tracking-[0.3em] text-white/40 whitespace-nowrap"
+                    >
+                      Triseno Systems //
+                    </motion.span>
+                    <motion.span
+                      variants={brandLine}
+                      className="font-mono text-[11px] uppercase leading-none tracking-[0.32em] whitespace-nowrap"
+                      style={{
+                        color: "#9fe9ff",
+                        textShadow: "0 0 12px rgba(0,229,255,0.45)",
+                      }}
+                    >
+                      Web Design Division
+                    </motion.span>
+                  </motion.div>
+                </motion.div>
+              )}
             </div>
 
             {/* Desktop Links */}
