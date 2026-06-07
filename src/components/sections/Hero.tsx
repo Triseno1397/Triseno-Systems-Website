@@ -8,7 +8,7 @@ import HyperspeedField from "@/components/sections/HyperspeedField";
 import WarpThrottle from "@/components/sections/WarpThrottle";
 
 // Resting throttle position on load (0..1) — the warp spools up to this.
-const INITIAL_WARP = 0.35;
+const INITIAL_WARP = 0.03;
 
 /* ─── Hero Section ─── */
 export default function Hero() {

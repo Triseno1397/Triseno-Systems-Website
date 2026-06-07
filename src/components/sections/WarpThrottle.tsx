@@ -22,8 +22,13 @@ import {
 } from "react";
 import { Lightning } from "@phosphor-icons/react";
 
-const HANDLE_H = 26; // px — handle grip height
+const HANDLE_H = 30; // px — handle grip height
 const STEP = 0.05;
+
+// Faceted/beveled silhouette for the thruster grip — reads more "machined
+// cockpit lever" than a plain rounded block.
+const BEVEL =
+  "polygon(0% 30%, 22% 0%, 78% 0%, 100% 30%, 100% 70%, 78% 100%, 22% 100%, 0% 70%)";
 
 function statusFor(v: number): string {
   if (v < 0.04) return "All Stop";
@@ -43,7 +48,7 @@ interface Props {
 
 export default function WarpThrottle({
   targetRef,
-  initial = 0.35,
+  initial = 0.03,
   className,
 }: Props) {
   const [value, setValue] = useState(initial);
@@ -165,15 +170,35 @@ export default function WarpThrottle({
       aria-valuenow={Math.round(value * 100)}
       aria-valuetext={`Warp ${factor}, ${status}`}
       onKeyDown={onKeyDown}
-      className={`group flex select-none flex-col items-center gap-2 px-0 py-1 outline-none transition-colors md:gap-3 md:rounded-2xl md:border md:border-white/[0.06] md:bg-[#0a0e1a]/40 md:px-4 md:py-5 md:backdrop-blur-md md:focus-visible:border-cyan-400/40 ${className ?? ""}`}
+      className={`group relative flex select-none flex-col items-center gap-2 px-0 py-1 outline-none transition-colors md:gap-3 md:rounded-2xl md:border md:border-cyan-400/15 md:bg-gradient-to-b md:from-[#0c1320]/70 md:to-[#070b14]/80 md:px-4 md:py-5 md:shadow-[0_0_0_1px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] md:backdrop-blur-md md:focus-visible:border-cyan-400/50 ${className ?? ""}`}
       style={{ touchAction: "none" }}
     >
+      {/* Console corner brackets — desktop only, give the panel a HUD frame */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1.5 top-1.5 hidden h-3 w-3 border-l border-t border-cyan-400/40 md:block"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute right-1.5 top-1.5 hidden h-3 w-3 border-r border-t border-cyan-400/40 md:block"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-1.5 left-1.5 hidden h-3 w-3 border-b border-l border-cyan-400/40 md:block"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-1.5 right-1.5 hidden h-3 w-3 border-b border-r border-cyan-400/40 md:block"
+      />
+
       {/* Header — desktop only */}
-      <div className="hidden items-center gap-2 md:flex">
-        <Lightning size={14} weight="fill" className="text-cyan-400" />
+      <div className="hidden items-center gap-1.5 md:flex">
+        <span className="font-mono text-[10px] text-cyan-400/40">[</span>
+        <Lightning size={13} weight="fill" className="text-cyan-400" />
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-400/80">
           Warp Drive
         </span>
+        <span className="font-mono text-[10px] text-cyan-400/40">]</span>
       </div>
 
       {/* Readout — compact on mobile (number only) */}
@@ -181,12 +206,20 @@ export default function WarpThrottle({
         <span className="hidden font-mono text-[9px] uppercase tracking-[0.25em] text-text-tertiary md:block">
           Throttle
         </span>
-        <span
-          className="font-mono text-base font-semibold tabular-nums text-text-primary md:text-3xl"
-          style={{ textShadow: `0 0 ${8 + value * 18}px rgba(0,229,255,${0.4 + value * 0.5})` }}
-        >
-          {factor}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="hidden font-mono text-sm leading-none text-cyan-400/40 md:block">
+            &laquo;
+          </span>
+          <span
+            className="font-mono text-base font-semibold tabular-nums text-text-primary md:text-3xl"
+            style={{ textShadow: `0 0 ${8 + value * 18}px rgba(0,229,255,${0.4 + value * 0.5})` }}
+          >
+            {factor}
+          </span>
+          <span className="hidden font-mono text-sm leading-none text-cyan-400/40 md:block">
+            &raquo;
+          </span>
+        </div>
         <span className="hidden font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-300/80 md:block">
           {status}
         </span>
@@ -206,10 +239,40 @@ export default function WarpThrottle({
           }}
         />
 
-        {/* Scale ticks — desktop only */}
+        {/* Throttle-quadrant housing — desktop only. A machined channel the
+            lever rides in, with bolt heads at the corners. */}
         <div
           aria-hidden="true"
-          className="absolute -left-4 inset-y-0 hidden flex-col justify-between py-1 md:flex"
+          className="absolute -inset-y-3 left-1/2 hidden w-[58px] -translate-x-1/2 rounded-lg md:block"
+          style={{
+            background:
+              "linear-gradient(90deg, #0b121c 0%, #18222f 50%, #0b121c 100%)",
+            boxShadow:
+              "inset 0 0 0 1px rgba(0,180,216,0.18), inset 0 2px 14px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.5)",
+          }}
+        >
+          {[
+            "left-1.5 top-1.5",
+            "right-1.5 top-1.5",
+            "bottom-1.5 left-1.5",
+            "bottom-1.5 right-1.5",
+          ].map((pos) => (
+            <span
+              key={pos}
+              className={`absolute ${pos} h-1.5 w-1.5 rounded-full`}
+              style={{
+                background:
+                  "radial-gradient(circle at 35% 30%, #2c3a48, #060a12)",
+                boxShadow: "inset 0 0 0 0.5px rgba(0,229,255,0.2)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Scale ticks (numbered) — desktop only */}
+        <div
+          aria-hidden="true"
+          className="absolute -left-5 inset-y-0 hidden flex-col justify-between py-1 md:flex"
         >
           {[9, 7, 5, 3, 1].map((n) => (
             <span
@@ -218,6 +281,17 @@ export default function WarpThrottle({
             >
               {n}
             </span>
+          ))}
+        </div>
+
+        {/* Gate notches (unnumbered) — desktop only, mirror the scale on the
+            right for a throttle-quadrant feel. */}
+        <div
+          aria-hidden="true"
+          className="absolute -right-3 inset-y-0 hidden flex-col justify-between py-1 md:flex"
+        >
+          {Array.from({ length: 9 }).map((_, i) => (
+            <span key={i} className="block h-px w-2 bg-cyan-400/20" />
           ))}
         </div>
 
@@ -235,6 +309,17 @@ export default function WarpThrottle({
               "inset 0 0 0 1px rgba(0,180,216,0.2), inset 0 2px 10px rgba(0,0,0,0.65)",
           }}
         >
+          {/* Redline / max-warp hazard zone at the top of the channel */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 hidden h-[12%] rounded-t-full md:block"
+            style={{
+              background:
+                "repeating-linear-gradient(45deg, rgba(255,77,79,0.45) 0 3px, transparent 3px 6px)",
+              opacity: 0.5 + value * 0.5,
+            }}
+          />
+
           {/* Fill (bottom -> handle) */}
           <div
             aria-hidden="true"
@@ -256,29 +341,58 @@ export default function WarpThrottle({
             }}
           />
 
-          {/* Handle */}
+          {/* Handle — faceted machined thruster grip */}
           <div
-            className="absolute left-1/2 top-0 grid w-8 cursor-grab place-items-center rounded-md active:cursor-grabbing md:w-[46px]"
+            className="absolute left-1/2 top-0 w-8 cursor-grab active:cursor-grabbing md:w-[52px]"
             style={{
               height: HANDLE_H,
               transform: `translate(-50%, ${handleOffset}px)`,
-              background: "linear-gradient(180deg, #18222f, #0a0e1a)",
-              border: "1px solid rgba(0,229,255,0.55)",
-              boxShadow: `0 0 ${8 + value * 22}px rgba(0,229,255,${0.4 + value * 0.5}), inset 0 1px 0 rgba(255,255,255,0.18)`,
             }}
           >
-            {/* Grip lines */}
-            <div className="flex flex-col gap-[3px]">
-              <span className="block h-px w-5 bg-cyan-300/70" />
-              <span className="block h-px w-5 bg-cyan-300/70" />
-              <span className="block h-px w-5 bg-cyan-300/70" />
+            {/* Outer bevel — acts as the glowing rim of the lever */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{
+                clipPath: BEVEL,
+                background:
+                  "linear-gradient(180deg, rgba(0,229,255,0.85), rgba(0,180,216,0.5))",
+                boxShadow: `0 0 ${8 + value * 22}px rgba(0,229,255,${0.4 + value * 0.5})`,
+              }}
+            />
+            {/* Inner metal face */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-[1.5px]"
+              style={{
+                clipPath: BEVEL,
+                background:
+                  "linear-gradient(180deg, #2a3744 0%, #141d27 48%, #090d16 100%)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2)",
+              }}
+            />
+            {/* Finger grooves + active reading line */}
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="flex flex-col items-center gap-[3px]">
+                <span className="block h-px w-5 bg-black/50" />
+                <span
+                  className="block h-[2px] w-6 rounded-full bg-cyan-300"
+                  style={{
+                    boxShadow: `0 0 ${4 + value * 10}px rgba(0,229,255,${0.6 + value * 0.4})`,
+                  }}
+                />
+                <span className="block h-px w-5 bg-black/50" />
+              </div>
             </div>
             {/* First-run pulse hint */}
             {!touched && (
               <span
                 aria-hidden="true"
-                className="absolute inset-0 rounded-md animate-ping"
-                style={{ border: "1px solid rgba(0,229,255,0.55)" }}
+                className="absolute inset-0 animate-ping"
+                style={{
+                  clipPath: BEVEL,
+                  border: "1px solid rgba(0,229,255,0.55)",
+                }}
               />
             )}
           </div>
