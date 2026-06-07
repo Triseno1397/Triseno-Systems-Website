@@ -135,7 +135,6 @@ export default function ClosingArchitectSection() {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
-  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -143,20 +142,15 @@ export default function ClosingArchitectSection() {
     setIsMobile(window.matchMedia("(max-width: 768px)").matches);
   }, []);
 
-  // Mount the Canvas once the closing section is near the viewport, then keep
-  // it mounted and pause the render loop off-screen (frameloop). Recreating the
-  // WebGL context on every scroll trips Chromium's context-loss guard.
+  // Mount the Canvas only when the section is near the viewport so the
+  // closing-page WebGL context is not running while the user is up at the hero.
   useEffect(() => {
     if (!mounted) return;
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
-        const vis = entry.isIntersecting;
-        setInView(vis);
-        if (vis) setShouldRender(true); // latch: never unmount once shown
-      },
-      { rootMargin: "100% 0px 100% 0px" }
+      ([entry]) => setShouldRender(entry.isIntersecting),
+      { rootMargin: "150% 0px 50% 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -214,7 +208,6 @@ export default function ClosingArchitectSection() {
         {mounted && !isMobile && shouldRender && (
           <Canvas
             dpr={[1, 1.5]}
-            frameloop={inView ? "always" : "never"}
             camera={{ position: [0, 0, 6], fov: 42 }}
             gl={{ antialias: true, powerPreference: "high-performance" }}
           >
@@ -286,7 +279,7 @@ export default function ClosingArchitectSection() {
         )}
 
         <p className="mt-16 text-[11px] uppercase tracking-[0.3em] text-white/35">
-          ↳ Triseno Systems · Web Design Division
+          ↳ technique: ambient WebGL · particle drift · ribbon continuity
         </p>
       </div>
     </section>
