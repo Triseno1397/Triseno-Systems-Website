@@ -5,19 +5,39 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useGSAP, gsap } from "@/hooks/useGSAPSetup";
 import Button from "@/components/ui/Button";
 import HyperspeedField from "@/components/sections/HyperspeedField";
+import WarpThrottle from "@/components/sections/WarpThrottle";
+
+// Resting throttle position on load (0..1) — the warp spools up to this.
+const INITIAL_WARP = 0.35;
 
 /* ─── Hero Section ─── */
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
+  // Star speed (read by HyperspeedField) and the throttle's manual target.
   const warpProgressRef = useRef(0);
+  const warpTargetRef = useRef(INITIAL_WARP);
   const shouldReduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Ease the actual star speed toward the throttle target every frame so the
+  // engine "spools up/down" smoothly instead of snapping.
+  useEffect(() => {
+    if (!mounted || shouldReduceMotion) return;
+    const ease = () => {
+      warpProgressRef.current +=
+        (warpTargetRef.current - warpProgressRef.current) * 0.07;
+    };
+    gsap.ticker.add(ease);
+    return () => {
+      gsap.ticker.remove(ease);
+    };
+  }, [mounted, shouldReduceMotion]);
 
   // Seamless cross-fade loop: when the active video nears its end,
   // start the inactive one from frame 0 and fade between them.
@@ -125,15 +145,16 @@ export default function Hero() {
           "-=0.3"
         );
 
-      // ── Hyperspeed warp on scroll ──
+      // ── Hero scroll choreography ──
       // The hero is a 200dvh section; the visual layer is sticky for the
       // first 100vh of scroll. As the user scrolls through the second 100vh,
-      // a single scroll-tied timeline drives:
-      //   - warpProgressRef (0..1) which the HyperspeedField canvas reads
+      // a single scroll-tied timeline drives the cinematic handoff:
       //   - tunnel video stack: scales up, gains brightness/blur, fades
       //   - foreground content: drifts up and fades out fast
       //   - scroll indicator: fades almost immediately
       //   - final flash: peaks at ~90% scroll for the warp-snap handoff
+      // The star speed itself is NOT scroll-driven — it's set manually by the
+      // WarpThrottle (warpTargetRef, eased into warpProgressRef above).
       const section = containerRef.current;
       const videoStack = section.querySelector<HTMLDivElement>(
         ".hero-video-stack"
@@ -149,9 +170,6 @@ export default function Hero() {
           start: "top top",
           end: "bottom bottom",
           scrub: 1,
-          onUpdate: (self) => {
-            warpProgressRef.current = self.progress;
-          },
         },
       });
 
@@ -266,8 +284,8 @@ export default function Hero() {
           </video>
         </div>
 
-        {/* Hyperspeed warp — canvas reads warpProgressRef every frame and
-            ramps from "ambient stars" to "full Star Trek snap" as you scroll. */}
+        {/* Hyperspeed warp — canvas reads warpProgressRef every frame. Its
+            speed is set manually by the WarpThrottle below (eased in). */}
         {mounted && !shouldReduceMotion && (
           <HyperspeedField progressRef={warpProgressRef} />
         )}
@@ -296,6 +314,16 @@ export default function Hero() {
           className="absolute inset-0 pointer-events-none"
           style={{ background: "var(--gradient-radial)" }}
         />
+
+        {/* Warp throttle — pinned in the right-side visual zone of the hero;
+            drag it to set the warp speed. Below the flash (z-20) so the
+            warp-out handoff covers it cleanly; hidden on small screens where
+            the hero is full-bleed text. */}
+        {mounted && !shouldReduceMotion && (
+          <div className="hidden md:block absolute right-4 lg:right-12 top-1/2 z-[15] -translate-y-1/2">
+            <WarpThrottle targetRef={warpTargetRef} initial={INITIAL_WARP} />
+          </div>
+        )}
 
         <div
           className="hero-content relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 w-full py-32 lg:py-0"
