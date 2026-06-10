@@ -5,6 +5,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import Hero from "@/components/sections/Hero";
 import WarpHandoff from "@/components/sections/WarpHandoff";
 import CapabilitiesShowcase from "@/components/sections/CapabilitiesShowcase";
+import WebDesignDivision from "@/components/sections/WebDesignDivision";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import Button from "@/components/ui/Button";
 import { useGSAPScroll } from "@/hooks/useGSAPScroll";
@@ -72,6 +73,9 @@ export default function HomeContent() {
           </ScrollReveal>
         </div>
       </section>
+
+      {/* Web Design — separate division band (sub-brand identity + threshold) */}
+      <WebDesignDivision />
 
       {/* Why Triseno teaser */}
       <section className="relative py-24 md:py-32">

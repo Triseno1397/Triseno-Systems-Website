@@ -41,16 +41,33 @@ export default function Footer() {
               Navigation
             </h4>
             <ul className="space-y-3">
-              {navigationLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              {navigationLinks.map((link) => {
+                const isDivision = link.href === "/web-design";
+                return (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className={`inline-flex items-center gap-2 text-sm transition-colors duration-200 ${
+                        isDivision
+                          ? "text-[#c9a4ff] hover:text-[#d9bcff]"
+                          : "text-text-secondary hover:text-[#00e5ff]"
+                      }`}
+                    >
+                      {isDivision && (
+                        <span
+                          aria-hidden="true"
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{
+                            background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
+                            boxShadow: "0 0 6px rgba(157,92,255,0.6)",
+                          }}
+                        />
+                      )}
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

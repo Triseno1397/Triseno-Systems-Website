@@ -130,6 +130,34 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* Sub-brand — the Web Design division gets its own accented
+                  entry, divided off from the core nav with a cyan→violet
+                  identity so it reads as a separate wing of Triseno. */}
+              <span aria-hidden="true" className="h-5 w-px bg-white/15" />
+              <Link
+                href="/web-design"
+                className={`group relative inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-all duration-300 ${
+                  showDivision
+                    ? "border-[#9d5cff]/55 bg-[#9d5cff]/[0.08] shadow-[0_0_24px_rgba(157,92,255,0.18)]"
+                    : "border-white/10 bg-white/[0.03] hover:border-[#9d5cff]/50 hover:bg-[#9d5cff]/[0.06] hover:shadow-[0_0_22px_rgba(157,92,255,0.18)]"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{
+                    background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
+                    boxShadow: "0 0 8px rgba(157,92,255,0.7)",
+                  }}
+                />
+                <span
+                  className="bg-clip-text font-medium text-transparent"
+                  style={{ backgroundImage: "linear-gradient(110deg,#9fe9ff,#c9a4ff)" }}
+                >
+                  Web Design
+                </span>
+              </Link>
             </div>
 
             {/* Mobile Toggle */}
@@ -190,6 +218,37 @@ export default function Navbar() {
                   </motion.div>
                 );
               })}
+
+              {/* Sub-brand division entry — set apart with a divider and the
+                  cyan→violet identity. */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: navLinks.length * 0.1, duration: 0.4 }}
+                className="flex flex-col items-center gap-4 pt-2"
+              >
+                <span aria-hidden="true" className="h-px w-10 bg-white/15" />
+                <Link
+                  href="/web-design"
+                  onClick={() => setMobileOpen(false)}
+                  className="inline-flex items-center gap-2.5 rounded-full border border-[#9d5cff]/40 bg-[#9d5cff]/[0.08] px-5 py-2.5"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
+                      boxShadow: "0 0 10px rgba(157,92,255,0.7)",
+                    }}
+                  />
+                  <span
+                    className="bg-clip-text text-xl font-medium text-transparent"
+                    style={{ backgroundImage: "linear-gradient(110deg,#9fe9ff,#c9a4ff)" }}
+                  >
+                    Web Design Division
+                  </span>
+                </Link>
+              </motion.div>
             </nav>
           </motion.div>
         )}
