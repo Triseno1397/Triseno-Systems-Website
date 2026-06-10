@@ -17,6 +17,7 @@ export default function VelocityTypeSection() {
       if (!section || !headline) return;
 
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const isMobile = window.matchMedia("(max-width: 768px)").matches;
       const split = splitText(headline, { mode: "both" });
       if (reduce) {
         gsap.set(split.chars, { y: 0, opacity: 1, skewX: 0, scaleX: 1 });
@@ -31,9 +32,11 @@ export default function VelocityTypeSection() {
         const reveal = gsap.timeline({
           scrollTrigger: {
             trigger: section,
+            // Hold the pin far longer so the word-by-word reveal unfurls over
+            // real scroll distance instead of resolving in under one screen.
             start: "top top",
-            end: "+=80%",
-            scrub: 0.6,
+            end: isMobile ? "+=160%" : "+=130%",
+            scrub: isMobile ? 1.2 : 0.9,
             pin: true,
           },
         });

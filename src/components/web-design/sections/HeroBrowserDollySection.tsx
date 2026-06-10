@@ -182,14 +182,20 @@ export default function HeroBrowserDollySection() {
 
       // Defer until layout settles so pin spacing is measured correctly.
       const rafId = requestAnimationFrame(() => {
+        // Spread the dolly over more scroll — extra on mobile, where the
+        // shorter dvh otherwise compresses the whole sequence into too few
+        // pixels — and lean on a slightly heavier scrub so it glides.
+        const heroEnd = isMobile ? "+=320%" : "+=260%";
+        const heroScrub = isMobile ? 1.4 : 1.2;
+
         tl = gsap.timeline({
           defaults: { ease: "none", force3D: true },
           scrollTrigger: {
             trigger: section,
             start: "top top",
-            end: "+=240%",
+            end: heroEnd,
             pin: true,
-            scrub: 1.2,
+            scrub: heroScrub,
             anticipatePin: 1,
             invalidateOnRefresh: true,
             onUpdate: (self) => {

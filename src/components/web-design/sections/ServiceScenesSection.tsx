@@ -394,7 +394,9 @@ export default function ServiceScenesSection() {
         st = ScrollTrigger.create({
           trigger: section,
           start: "top top",
-          end: "+=300%",
+          // More scroll per room so the camera dolly between the four scenes
+          // reads as a slow, weighted glide rather than a quick rush.
+          end: "+=360%",
           pin: true,
           scrub: true,
           onUpdate: (self) => {
@@ -417,7 +419,7 @@ export default function ServiceScenesSection() {
     const segs = SERVICES.length - 1;
     const targetProgress = i / segs;
     const top = section.offsetTop;
-    const totalScroll = window.innerHeight * 3; // matches end "+=300%"
+    const totalScroll = window.innerHeight * 3.6; // matches end "+=360%"
     window.scrollTo({ top: top + totalScroll * targetProgress, behavior: "smooth" });
   };
 

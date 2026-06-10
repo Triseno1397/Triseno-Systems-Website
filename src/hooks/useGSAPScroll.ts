@@ -27,9 +27,16 @@ export function useGSAPScroll() {
     }
 
     const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    // Smooth every input, not just the wheel. On touch we sync Lenis to the
+    // native gesture (syncTouch) with a gentler inertia, so scrubbed
+    // ScrollTrigger timelines glide as the finger moves instead of lurching
+    // with each fling — the main reason the division's scroll choreography
+    // felt fast and janky on mobile.
     const lenis = new Lenis({
-      lerp: isMobile ? 0.06 : 0.1,
+      lerp: isMobile ? 0.08 : 0.1,
       smoothWheel: true,
+      syncTouch: isMobile,
+      syncTouchLerp: 0.08,
     });
 
     const onScroll = () => ScrollTrigger.update();
