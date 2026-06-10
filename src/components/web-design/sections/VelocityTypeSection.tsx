@@ -100,10 +100,10 @@ export default function VelocityTypeSection() {
     <section
       ref={sectionRef}
       data-wd-section="velocity"
-      className="relative min-h-[150vh] w-full overflow-hidden"
+      className="relative min-h-[100dvh] w-full overflow-hidden"
       style={{ background: "#050810" }}
     >
-      <div className="sticky top-0 flex min-h-[100dvh] flex-col items-center justify-center px-6">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center px-6">
         <div className="mx-auto w-full max-w-[1400px]">
           <h2
             ref={headlineRef}

@@ -1,6 +1,14 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  EffectComposer,
+  ChromaticAberration,
+  Bloom,
+  Vignette,
+} from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
+import { Environment } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useGSAP } from "@gsap/react";
@@ -50,20 +58,38 @@ const SERVICES: Service[] = [
 
 function CameraRig({
   scrollRef,
+  mouseRef,
   setActiveIdx,
 }: {
   scrollRef: React.MutableRefObject<number>;
+  mouseRef: React.MutableRefObject<{ x: number; y: number }>;
   setActiveIdx: (i: number) => void;
 }) {
   const { camera } = useThree();
   const lastIdx = useRef(0);
+  const smooth = useRef(0);
+  const t = useRef(0);
 
-  useFrame(() => {
-    const p = scrollRef.current;
+  useFrame((_, delta) => {
+    t.current += delta;
+
+    // Weighted glide: damp the camera toward the scrubbed scroll position so
+    // the dolly reads as a heavy, mechanical move rather than snapping 1:1.
+    const target = scrollRef.current;
+    smooth.current += (target - smooth.current) * Math.min(1, delta * 6);
+    const p = smooth.current;
+
     const totalRange = SERVICES[SERVICES.length - 1].z - SERVICES[0].z;
     const z = SERVICES[0].z + p * totalRange + 6;
-    camera.position.set(0, 0.3, z);
-    camera.lookAt(0, 0, z - 4);
+
+    // Subtle idle sway + cursor parallax keep the scene alive while at rest.
+    const swayX = Math.sin(t.current * 0.5) * 0.12;
+    const swayY = Math.cos(t.current * 0.4) * 0.08;
+    const mx = mouseRef.current.x * 0.6;
+    const my = mouseRef.current.y * 0.4;
+
+    camera.position.set(swayX + mx, 0.3 + swayY + my, z);
+    camera.lookAt(mx * 0.4, 0.3 + my * 0.3, z - 4);
 
     const segs = SERVICES.length - 1;
     const idx = Math.round(p * segs);
@@ -77,10 +103,12 @@ function CameraRig({
 
 function ServicesScene({
   scrollRef,
+  mouseRef,
   setActiveIdx,
   isMobile,
 }: {
   scrollRef: React.MutableRefObject<number>;
+  mouseRef: React.MutableRefObject<{ x: number; y: number }>;
   setActiveIdx: (i: number) => void;
   isMobile: boolean;
 }) {
@@ -104,13 +132,18 @@ function ServicesScene({
     <>
       <color attach="background" args={["#050810"]} />
       <fog attach="fog" args={["#050810", 8, 30]} />
+
+      {/* HDR image-based lighting for premium reflections on the panels;
+          background={false} keeps our designed near-black fog/sky. */}
+      <Environment preset="city" background={false} environmentIntensity={0.35} />
+
       <ambientLight intensity={0.3} />
       <pointLight position={[3, 3, SERVICES[0].z + 3]} intensity={1.2} color="#00e5ff" />
       <pointLight position={[-3, 2, SERVICES[1].z + 3]} intensity={1.0} color="#9d5cff" />
       <pointLight position={[3, 3, SERVICES[2].z + 3]} intensity={1.0} color="#0077ff" />
       <pointLight position={[-3, 2, SERVICES[3].z + 3]} intensity={1.2} color="#00e5ff" />
 
-      <CameraRig scrollRef={scrollRef} setActiveIdx={setActiveIdx} />
+      <CameraRig scrollRef={scrollRef} mouseRef={mouseRef} setActiveIdx={setActiveIdx} />
 
       <Ribbon
         curvePoints={ribbonPoints}
@@ -127,6 +160,24 @@ function ServicesScene({
       <LandingPageArtifact position={[0, 0, SERVICES[3].z]} />
 
       <HairlineFloor />
+
+      {/* Cinematic finish — Bloom only catches the bright emissive accents
+          (CTAs, price, rim lines); subtle CA + vignette frame the depth. */}
+      <EffectComposer multisampling={0}>
+        <Bloom
+          mipmapBlur
+          intensity={0.7}
+          luminanceThreshold={0.55}
+          luminanceSmoothing={0.25}
+        />
+        <ChromaticAberration
+          blendFunction={BlendFunction.NORMAL}
+          offset={new THREE.Vector2(0.001, 0.0014)}
+          radialModulation={false}
+          modulationOffset={0}
+        />
+        <Vignette eskil={false} offset={0.15} darkness={0.6} />
+      </EffectComposer>
     </>
   );
 }
@@ -291,6 +342,7 @@ function MobileFlatStack() {
 export default function ServiceScenesSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef(0);
+  const mouseRef = useRef({ x: 0, y: 0 });
   const [activeIdx, setActiveIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -302,6 +354,18 @@ export default function ServiceScenesSection() {
     setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setIsMobile(window.matchMedia("(max-width: 768px)").matches);
   }, []);
+
+  // Cursor parallax (desktop only) — fed into the camera rig through a ref so
+  // it never triggers React re-renders. Cleaned up on unmount.
+  useEffect(() => {
+    if (!mounted || reduceMotion || isMobile) return;
+    const onMove = (e: PointerEvent) => {
+      mouseRef.current.x = e.clientX / window.innerWidth - 0.5;
+      mouseRef.current.y = e.clientY / window.innerHeight - 0.5;
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [mounted, reduceMotion, isMobile]);
 
   // Mount/unmount the canvas based on viewport proximity
   useEffect(() => {
@@ -379,6 +443,7 @@ export default function ServiceScenesSection() {
               >
                 <ServicesScene
                   scrollRef={scrollRef}
+                  mouseRef={mouseRef}
                   setActiveIdx={setActiveIdx}
                   isMobile={isMobile}
                 />
