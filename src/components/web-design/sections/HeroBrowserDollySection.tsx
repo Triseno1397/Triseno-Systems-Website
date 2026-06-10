@@ -264,18 +264,14 @@ export default function HeroBrowserDollySection() {
           0.16
         );
 
-        // ── Phase C — the infinite morph. A crisp full-bleed canvas takes over
-        // (hiding the now-giant blurred window), then settles to navy so it
-        // hands off seamlessly into the next section's background.
+        // ── Phase C — dissolve the fly-through straight into the navy of the
+        // next section. The old teal-green "morph" glow was removed; a plain
+        // navy wash now rises over the enlarging window a touch earlier and
+        // hands off seamlessly, so there's no bright green takeover mid-scroll.
         tl.to(
           morph,
-          { opacity: 1, duration: 0.16, ease: "power2.out" },
-          0.72
-        );
-        tl.to(
-          morphGlow,
-          { opacity: 0, duration: 0.14, ease: "power2.in" },
-          0.9
+          { opacity: 1, duration: 0.28, ease: "power2.inOut" },
+          0.44
         );
       });
 
@@ -468,8 +464,10 @@ export default function HeroBrowserDollySection() {
             ref={morphGlowRef}
             className="absolute inset-0"
             style={{
+              // Navy wash (green takeover removed) — a subtle deep-blue center
+              // settling into the page background for a clean dark handoff.
               background:
-                "radial-gradient(circle at 50% 52%, rgba(28,255,196,0.9) 0%, rgba(0,229,255,0.5) 28%, rgba(10,40,36,0.85) 60%, var(--wd-bg, #050810) 100%)",
+                "radial-gradient(circle at 50% 52%, rgba(8,18,38,0.9) 0%, var(--wd-bg, #050810) 70%)",
               willChange: "opacity",
             }}
           />
