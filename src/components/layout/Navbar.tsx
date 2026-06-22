@@ -35,9 +35,7 @@ const brandLine: Variants = {
 
 const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Capabilities", href: "/capabilities" },
-  { label: "Process", href: "/process" },
-  { label: "Portfolio", href: "/portfolio" },
+  { label: "Work", href: "/portfolio" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -135,8 +133,9 @@ export default function Navbar() {
                   entry, divided off from the core nav with a cyan→violet
                   identity so it reads as a separate wing of Triseno. */}
               <span aria-hidden="true" className="h-5 w-px bg-white/15" />
-              <Link
-                href="/web-design"
+              <a
+                href="/web-design-division.html"
+                target="_self"
                 className={`group relative inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-all duration-300 ${
                   showDivision
                     ? "border-[#9d5cff]/55 bg-[#9d5cff]/[0.08] shadow-[0_0_24px_rgba(157,92,255,0.18)]"
@@ -157,7 +156,7 @@ export default function Navbar() {
                 >
                   Web Design
                 </span>
-              </Link>
+              </a>
             </div>
 
             {/* Mobile Toggle */}
@@ -228,8 +227,9 @@ export default function Navbar() {
                 className="flex flex-col items-center gap-4 pt-2"
               >
                 <span aria-hidden="true" className="h-px w-10 bg-white/15" />
-                <Link
-                  href="/web-design"
+                <a
+                  href="/web-design-division.html"
+                  target="_self"
                   onClick={() => setMobileOpen(false)}
                   className="inline-flex items-center gap-2.5 rounded-full border border-[#9d5cff]/40 bg-[#9d5cff]/[0.08] px-5 py-2.5"
                 >
@@ -247,7 +247,7 @@ export default function Navbar() {
                   >
                     Web Design Division
                   </span>
-                </Link>
+                </a>
               </motion.div>
             </nav>
           </motion.div>

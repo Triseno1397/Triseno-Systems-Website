@@ -21,7 +21,7 @@ const industries = [
     name: "Broadcast",
     subtitle: "Real-time routing",
     description: "Zero-downtime AI orchestration and multi-source routing for live production.",
-    href: "/capabilities#industries",
+    href: "/#capabilities",
     metadata: [
       { label: "ROUTING", val: "ACTIVE" },
       { label: "STREAMS", val: "4K LIVE" },
@@ -34,7 +34,7 @@ const industries = [
     name: "Ecommerce",
     subtitle: "Catalog intelligence",
     description: "SKU catalog engines turning complex product data into active revenue assets.",
-    href: "/capabilities#industries",
+    href: "/#capabilities",
     metadata: [
       { label: "SYNC RATE", val: "10K/MIN" },
       { label: "INVENTORY", val: "DYNAMIC" },
@@ -47,7 +47,7 @@ const industries = [
     name: "Operations",
     subtitle: "Process automation",
     description: "Autonomous agent networks engineered to compress enterprise cycles.",
-    href: "/capabilities#industries",
+    href: "/#capabilities",
     metadata: [
       { label: "LATENCY", val: "<50MS" },
       { label: "AGENTS", val: "ACTIVE" },
@@ -59,7 +59,7 @@ const industries = [
     name: "Creative",
     subtitle: "Pipeline acceleration",
     description: "Automated media pipelines scaling production without quality loss.",
-    href: "/capabilities#industries",
+    href: "/#capabilities",
     metadata: [
       { label: "RECONCILE", val: "AUTO" },
       { label: "CODECS", val: "RAW/H.265" },
@@ -71,7 +71,7 @@ const industries = [
     name: "Tech & SaaS",
     subtitle: "AI infrastructure",
     description: "AI-native systems built to embed operational intelligence at scale.",
-    href: "/capabilities#industries",
+    href: "/#capabilities",
     metadata: [
       { label: "THROUGHPUT", val: "UNLIMIT" },
       { label: "DECISIONS", val: "0.2S" },

@@ -248,11 +248,11 @@ export default function HiddenPortalSeal() {
         </div>
       </div>
 
-      {/* Unlock — hyperspeed detonation that warps into /web-design. */}
+      {/* Unlock — hyperspeed detonation that warps into the Web Design Division. */}
       {unlocking && (
         <PortalBlast
           origin={blastOrigin}
-          onNavigate={() => window.location.assign("/web-design")}
+          onNavigate={() => window.location.assign("/web-design-division.html")}
         />
       )}
     </>
