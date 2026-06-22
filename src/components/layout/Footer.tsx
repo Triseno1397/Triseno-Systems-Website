@@ -7,7 +7,7 @@ const navigationLinks = [
   { label: "Home", href: "/" },
   { label: "Work", href: "/portfolio" },
   { label: "Contact", href: "/contact" },
-  { label: "Web Design Division", href: "/web-design-division.html" },
+  { label: "Web Design Division", href: "/web-design-division" },
 ];
 
 const serviceLinks = [
@@ -37,7 +37,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {navigationLinks.map((link) => {
-                const isDivision = link.href === "/web-design-division.html";
+                const isDivision = link.href === "/web-design-division";
                 const className = `inline-flex items-center gap-2 text-sm transition-colors duration-200 ${
                   isDivision
                     ? "text-[#c9a4ff] hover:text-[#d9bcff]"

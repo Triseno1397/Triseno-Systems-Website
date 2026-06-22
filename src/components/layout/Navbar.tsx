@@ -134,7 +134,7 @@ export default function Navbar() {
                   identity so it reads as a separate wing of Triseno. */}
               <span aria-hidden="true" className="h-5 w-px bg-white/15" />
               <a
-                href="/web-design-division.html"
+                href="/web-design-division"
                 target="_self"
                 className={`group relative inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-all duration-300 ${
                   showDivision
@@ -228,7 +228,7 @@ export default function Navbar() {
               >
                 <span aria-hidden="true" className="h-px w-10 bg-white/15" />
                 <a
-                  href="/web-design-division.html"
+                  href="/web-design-division"
                   target="_self"
                   onClick={() => setMobileOpen(false)}
                   className="inline-flex items-center gap-2.5 rounded-full border border-[#9d5cff]/40 bg-[#9d5cff]/[0.08] px-5 py-2.5"

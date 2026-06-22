@@ -252,7 +252,7 @@ export default function HiddenPortalSeal() {
       {unlocking && (
         <PortalBlast
           origin={blastOrigin}
-          onNavigate={() => window.location.assign("/web-design-division.html")}
+          onNavigate={() => window.location.assign("/web-design-division")}
         />
       )}
     </>
