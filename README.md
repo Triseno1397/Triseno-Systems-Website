@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Triseno Systems — Website
 
-## Getting Started
+The marketing site for **[trisenosystems.com](https://trisenosystems.com)** — a premium, motion-driven site for an AI infrastructure company (multi-agent orchestration, workflow compression, decision-layer automation).
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**, built with **Turbopack**
+- **Tailwind CSS 4** (theme defined inline in `src/app/globals.css`)
+- **GSAP** + `@gsap/react` + **ScrollTrigger** — pinned/scrubbed scroll choreography
+- **Lenis** — smooth scroll that drives the scrubbed timelines
+- **Framer Motion** — component micro-interactions and page transitions
+- **React Three Fiber** + `drei` + `postprocessing` — the 3D scenes in the Web Design division
+- **@phosphor-icons/react** — icons (no emojis, no Lucide)
+- **Geist Sans** (headings) + **Geist Mono** (code/tech accents)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # start the dev server at http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command         | Description                          |
+| --------------- | ------------------------------------ |
+| `npm run dev`   | Start the local dev server (Turbopack) |
+| `npm run build` | Production build                     |
+| `npm run start` | Serve the production build           |
+| `npm run lint`  | Run ESLint                           |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> `next.config.ts` pins `turbopack.root` because the project path contains a space.
 
-## Learn More
+## Routes
 
-To learn more about Next.js, take a look at the following resources:
+| Path           | Page                                                        |
+| -------------- | ----------------------------------------------------------- |
+| `/`            | Home — canvas **warp hero** (`WarpHero`) with a draggable speed throttle, capabilities zoom, "Built For", and the Web Design division band |
+| `/capabilities`| Capabilities                                                |
+| `/process`     | Process                                                     |
+| `/portfolio`   | Portfolio                                                   |
+| `/contact`     | Contact (hides an easter-egg portal into `/web-design`)     |
+| `/web-design`  | Web Design **division** — a self-contained cyan→violet sub-brand with 3D (R3F) hero and scroll demo |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/                 # App Router routes + root layout + globals.css
+    page.tsx           # Home (renders HomeContent)
+    layout.tsx         # Root layout: Navbar, PageTransition, Footer
+    capabilities|process|portfolio|contact|web-design/
+  components/
+    sections/          # Homepage + page sections (WarpHero, CapabilitiesZoom, BuiltFor, ...)
+    layout/            # Navbar, Footer, PageHero, PageTransition
+    animations/        # ScrollReveal, TextReveal, ParallaxLayer, MagneticButton
+    ui/                # Button, shared primitives
+    web-design/        # The Web Design division (sections + WebGL scenes)
+  hooks/               # useGSAPScroll (Lenis), useGSAPSetup, useScrollParallax, ...
+  lib/                 # animation/timeline helpers (capabilities-zoom, split-text, animations)
+```
 
-## Deploy on Vercel
+## Conventions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Design and code rules live in **`CLAUDE.md`** — the highlights:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Dark navy palette (`--bg-primary: #0a0e1a`, `--accent-primary: #00b4d8`); no white backgrounds, no purple gradients.
+- Animate only `transform` and `opacity`; never layout properties. Always respect `prefers-reduced-motion`.
+- The homepage hero is a single performant `<canvas>` warp — no per-frame GSAP, no global particle field.
+- The **Web Design division** (`src/app/web-design/**`, `src/components/web-design/**`) is a self-contained sub-brand; treat it as its own surface.
+
+## Deployment
+
+Hosted on **Vercel** (team _Triseno's projects_). Pushing to `main` triggers a production deploy; pull request branches get preview deployments automatically.
