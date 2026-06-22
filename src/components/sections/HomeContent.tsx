@@ -2,22 +2,13 @@
 
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
-import Hero from "@/components/sections/Hero";
-import WarpHandoff from "@/components/sections/WarpHandoff";
-import CapabilitiesShowcase from "@/components/sections/CapabilitiesShowcase";
+import WarpHero from "@/components/sections/WarpHero";
+import CapabilitiesZoom from "@/components/sections/CapabilitiesZoom";
 import WebDesignDivision from "@/components/sections/WebDesignDivision";
+import BuiltFor from "@/components/sections/BuiltFor";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import Button from "@/components/ui/Button";
 import { useGSAPScroll } from "@/hooks/useGSAPScroll";
-import { useScrollParallax } from "@/hooks/useScrollParallax";
-
-const industries = [
-  "Broadcast",
-  "Ecommerce",
-  "Enterprise Operations",
-  "Creative Production",
-  "Tech & SaaS",
-];
 
 const whyBullets = [
   "Outcome-tied pricing",
@@ -27,52 +18,17 @@ const whyBullets = [
 
 export default function HomeContent() {
   useGSAPScroll();
-  useScrollParallax("[data-home-root]");
 
   return (
     <div data-home-root>
-      <Hero />
+      {/* Single performant canvas warp hero with the draggable speed throttle. */}
+      <WarpHero />
 
-      {/* Fixed warp-blast overlay that whites out the hero→showcase seam and
-          clears to deliver you into the Capabilities section. */}
-      <WarpHandoff />
+      {/* Pinned scroll-zoom-through of the capability words ("What we engineer") */}
+      <CapabilitiesZoom />
 
-      {/* Pinned scroll-zoom showcase replaces the old "What we engineer" cards */}
-      <CapabilitiesShowcase />
-
-      {/* Built for — Industries strip */}
-      <section className="relative py-16 md:py-20 border-t border-white/[0.06]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="flex flex-col items-start gap-6">
-              <span
-                className="font-mono text-xs tracking-[0.25em] uppercase text-cyan-400/70"
-                data-speed="1.15"
-              >
-                Built for
-              </span>
-              <div
-                className="flex flex-wrap items-center gap-x-6 gap-y-3 text-text-primary text-lg md:text-xl font-medium"
-                data-speed="0.92"
-              >
-                {industries.map((industry, i) => (
-                  <span key={industry} className="flex items-center gap-x-6">
-                    <Link
-                      href="/capabilities#industries"
-                      className="hover:text-[#00e5ff] transition-colors duration-200"
-                    >
-                      {industry}
-                    </Link>
-                    {i < industries.length - 1 && (
-                      <span className="text-cyan-400/40">·</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
+      {/* Restructured Built For section */}
+      <BuiltFor />
 
       {/* Web Design — separate division band (sub-brand identity + threshold) */}
       <WebDesignDivision />

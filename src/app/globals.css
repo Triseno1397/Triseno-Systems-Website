@@ -426,6 +426,11 @@ main a {
   }
 }
 
+/* ─── Warp Throttle Slider (WarpHero) ─── */
+.warp-slider { -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.1); border-radius: 999px; }
+.warp-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #00e5ff; box-shadow: 0 0 12px rgba(0,229,255,0.8); border: none; cursor: ns-resize; }
+.warp-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #00e5ff; box-shadow: 0 0 12px rgba(0,229,255,0.8); border: none; cursor: ns-resize; }
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 6px;
