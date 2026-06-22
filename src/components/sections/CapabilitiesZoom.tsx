@@ -22,19 +22,19 @@ const CAPABILITIES: Capability[] = [
     index: "01",
     word: "Orchestration",
     description: "Multi-agent systems that operate as a team.",
-    href: "/capabilities#orchestration",
+    href: "/#capabilities",
   },
   {
     index: "02",
     word: "Compression",
     description: "40-hour workflows engineered down to minutes.",
-    href: "/capabilities#compression",
+    href: "/#capabilities",
   },
   {
     index: "03",
     word: "Decision Intelligence",
     description: "Judgment that operates at machine speed.",
-    href: "/capabilities#decision-intelligence",
+    href: "/#capabilities",
   },
 ];
 
@@ -154,6 +154,7 @@ export default function CapabilitiesZoom() {
     return (
       <section
         ref={sectionRef}
+        id="capabilities"
         data-section="capabilities-showcase"
         className="relative bg-[#0a0e1a] py-24 md:py-32"
       >
@@ -188,6 +189,7 @@ export default function CapabilitiesZoom() {
   return (
     <section
       ref={sectionRef}
+      id="capabilities"
       data-section="capabilities-showcase"
       className="relative bg-[#0a0e1a]"
       style={{ minHeight: "100dvh" }}

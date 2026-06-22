@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
-import WarpHero from "@/components/sections/WarpHero";
+import FlowHero from "@/components/sections/FlowHero";
 import CapabilitiesZoom from "@/components/sections/CapabilitiesZoom";
-import WebDesignDivision from "@/components/sections/WebDesignDivision";
 import BuiltFor from "@/components/sections/BuiltFor";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import Button from "@/components/ui/Button";
@@ -21,17 +20,14 @@ export default function HomeContent() {
 
   return (
     <div data-home-root>
-      {/* Single performant canvas warp hero with the draggable speed throttle. */}
-      <WarpHero />
+      {/* Single performant canvas flow-field hero with the draggable speed throttle. */}
+      <FlowHero />
 
       {/* Pinned scroll-zoom-through of the capability words ("What we engineer") */}
       <CapabilitiesZoom />
 
       {/* Restructured Built For section */}
       <BuiltFor />
-
-      {/* Web Design — separate division band (sub-brand identity + threshold) */}
-      <WebDesignDivision />
 
       {/* Why Triseno teaser */}
       <section className="relative py-24 md:py-32">
@@ -65,7 +61,7 @@ export default function HomeContent() {
           <ScrollReveal delay={0.3}>
             <div className="mt-12">
               <Link
-                href="/process#why"
+                href="/#capabilities"
                 className="group inline-flex items-center gap-2 text-base text-cyan-400 hover:text-[#00e5ff] font-medium transition-colors duration-200"
               >
                 How we engineer this

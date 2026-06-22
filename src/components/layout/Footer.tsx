@@ -5,20 +5,15 @@ import Logo from "@/components/ui/Logo";
 
 const navigationLinks = [
   { label: "Home", href: "/" },
-  { label: "Capabilities", href: "/capabilities" },
-  { label: "Process", href: "/process" },
-  { label: "Portfolio", href: "/portfolio" },
+  { label: "Work", href: "/portfolio" },
   { label: "Contact", href: "/contact" },
-  { label: "Web Design Division", href: "/web-design" },
+  { label: "Web Design Division", href: "/web-design-division.html" },
 ];
 
 const serviceLinks = [
-  { label: "Multi-agent orchestration", href: "/capabilities#orchestration" },
-  { label: "Workflow compression", href: "/capabilities#compression" },
-  { label: "Decision-layer automation", href: "/capabilities#decision-intelligence" },
-  { label: "Product & catalog intelligence", href: "/capabilities#catalog-intelligence" },
-  { label: "Broadcast & production AI", href: "/capabilities#broadcast-ai" },
-  { label: "Revenue operations", href: "/capabilities#revenue-ops" },
+  { label: "Multi-agent orchestration", href: "/#capabilities" },
+  { label: "Workflow compression", href: "/#capabilities" },
+  { label: "Decision-layer automation", href: "/#capabilities" },
 ];
 
 export default function Footer() {
@@ -42,29 +37,36 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {navigationLinks.map((link) => {
-                const isDivision = link.href === "/web-design";
+                const isDivision = link.href === "/web-design-division.html";
+                const className = `inline-flex items-center gap-2 text-sm transition-colors duration-200 ${
+                  isDivision
+                    ? "text-[#c9a4ff] hover:text-[#d9bcff]"
+                    : "text-text-secondary hover:text-[#00e5ff]"
+                }`;
+                const dot = isDivision && (
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
+                      boxShadow: "0 0 6px rgba(157,92,255,0.6)",
+                    }}
+                  />
+                );
                 return (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className={`inline-flex items-center gap-2 text-sm transition-colors duration-200 ${
-                        isDivision
-                          ? "text-[#c9a4ff] hover:text-[#d9bcff]"
-                          : "text-text-secondary hover:text-[#00e5ff]"
-                      }`}
-                    >
-                      {isDivision && (
-                        <span
-                          aria-hidden="true"
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{
-                            background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
-                            boxShadow: "0 0 6px rgba(157,92,255,0.6)",
-                          }}
-                        />
-                      )}
-                      {link.label}
-                    </Link>
+                    {isDivision ? (
+                      // Static playground page lives in /public — full navigation, not Next routing.
+                      <a href={link.href} target="_self" className={className}>
+                        {dot}
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link href={link.href} className={className}>
+                        {dot}
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 );
               })}

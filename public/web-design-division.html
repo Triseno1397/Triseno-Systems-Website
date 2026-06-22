@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Triseno // Web Design Division</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #08080c;
+    --ink-2: #101016;
+    --lime: #00e5ff;
+    --magenta: #ff2d78;
+    --white: #ffffff;
+    --dim: rgba(255,255,255,0.55);
+    --hair: rgba(255,255,255,0.1);
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, monospace;
+    --mono: var(--font-mono);
+    --cyan-400: #00b4d8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--white); font-family: var(--display);
+    -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  ::selection { background: var(--lime); color: #000; }
+  a { color: inherit; text-decoration: none; }
+  h1,h2,h3 { margin: 0; font-weight: 800; line-height: 0.92; letter-spacing: -0.03em; }
+  .mono { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.22em; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 40px; }
+
+  /* custom cursor */
+  .cur, .cur-ring { position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none;
+    border-radius: 50%; transform: translate(-50%,-50%); mix-blend-mode: difference; }
+  .cur { width: 8px; height: 8px; background: #fff; }
+  .cur-ring { width: 40px; height: 40px; border: 1.5px solid #fff; transition: width .25s, height .25s, background .25s, opacity .25s; }
+  .cur-ring.grow { width: 76px; height: 76px; background: rgba(255,255,255,0.12); }
+  @media (hover: none), (pointer: coarse) { .cur, .cur-ring { display: none; } }
+
+  /* nav */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center;
+    justify-content: space-between; padding: 22px 40px; mix-blend-mode: difference; }
+  nav .brand { font-family: var(--mono); font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: #fff; }
+  nav .brand b { color: var(--lime); }
+  .nav-right { display: flex; align-items: center; gap: 28px; }
+  .nav-right a { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+
+  .magnetic { position: relative; display: inline-flex; align-items: center; justify-content: center;
+    will-change: transform; }
+  .btn { padding: 16px 30px; border-radius: 100px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase; font-weight: 600; background: var(--lime); color: #000; }
+  .btn.alt { background: transparent; color: #fff; border: 1.5px solid var(--hair); }
+
+  /* hero */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 120px 0 0; position: relative; }
+  .hero .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--dim); margin-bottom: 28px; display: flex; gap: 12px; align-items: center; }
+  .hero .eyebrow b { color: var(--magenta); }
+  .hero h1 { font-size: clamp(56px, 13vw, 200px); }
+  .hero h1 .lime { color: var(--lime); }
+  .hero h1 .out { -webkit-text-stroke: 2px var(--white); color: transparent; }
+  .hero .sub { max-width: 560px; margin-top: 36px; font-family: var(--display); font-weight: 400; font-size: clamp(16px,1.5vw,21px); line-height: 1.55; color: var(--dim); }
+  .hero .cta-row { margin-top: 44px; display: flex; gap: 18px; flex-wrap: wrap; }
+  .scrollcue { position: absolute; bottom: 34px; left: 40px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em; color: var(--dim); display: flex; align-items: center; gap: 10px; }
+  .scrollcue .line { width: 46px; height: 1px; background: var(--lime); transform-origin: left; animation: cue 1.8s ease-in-out infinite; }
+  @keyframes cue { 0%,100% { transform: scaleX(0.3); opacity: .4; } 50% { transform: scaleX(1); opacity: 1; } }
+
+  /* marquee */
+  .marquee { border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 22px 0; overflow: hidden; white-space: nowrap; }
+  .marquee .track { display: inline-flex; gap: 0; animation: scrollx 24s linear infinite; will-change: transform; }
+  .marquee span { font-size: clamp(28px,5vw,64px); font-weight: 800; letter-spacing: -0.02em; padding: 0 28px; }
+  .marquee span:nth-child(even) { color: var(--lime); }
+  .marquee .dot { color: var(--magenta); -webkit-text-stroke: 0; }
+  @keyframes scrollx { to { transform: translateX(-50%); } }
+
+  section.band { padding: 130px 0; position: relative; }
+  .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; margin-bottom: 64px; flex-wrap: wrap; }
+  .sec-head h2 { font-size: clamp(40px,7vw,104px); }
+  .sec-head .label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--magenta); }
+
+  /* pinned horizontal gallery */
+  .gallery { height: 100vh; overflow: hidden; }
+  .h-track { display: flex; gap: 36px; height: 100%; align-items: center; padding: 0 40px; will-change: transform; }
+  .work { position: relative; flex: 0 0 auto; width: 60vw; max-width: 760px; aspect-ratio: 16/10; border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--hair); will-change: transform; transform-style: preserve-3d; }
+  .work .fill { position: absolute; inset: 0; }
+  .work .meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px; display: flex; align-items: flex-end; justify-content: space-between;
+    background: linear-gradient(0deg, rgba(0,0,0,0.7), transparent); transform: translateZ(40px); }
+  .work .meta h3 { font-size: clamp(24px,3vw,44px); }
+  .work .meta .tags { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--lime); text-align: right; }
+  .work .idx { position: absolute; top: 22px; left: 26px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; color: #fff; mix-blend-mode: difference; transform: translateZ(40px); }
+
+  /* capabilities scrub list */
+  .caps { border-top: 1px solid var(--hair); }
+  .cap { display: grid; grid-template-columns: 120px 1fr auto; gap: 30px; align-items: center; padding: 42px 0; border-bottom: 1px solid var(--hair); overflow: hidden; }
+  .cap .n { font-family: var(--mono); font-size: 14px; letter-spacing: 0.2em; color: var(--magenta); }
+  .cap h3 { font-size: clamp(30px,4.5vw,62px); }
+  .cap .d { max-width: 360px; font-family: var(--display); font-weight: 400; font-size: 15px; line-height: 1.5; color: var(--dim); }
+  .reveal-line { display: inline-block; will-change: transform; }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 30px; }
+  .stat { border-top: 2px solid var(--lime); padding-top: 22px; }
+  .stat .v { font-size: clamp(40px,6vw,86px); font-weight: 800; letter-spacing: -0.03em; }
+  .stat .v small { font-size: 0.4em; color: var(--magenta); }
+  .stat .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin-top: 8px; }
+
+  /* playground */
+  .play { position: relative; min-height: 560px; border: 1px solid var(--hair); border-radius: 18px; overflow: hidden; background:
+      radial-gradient(120% 120% at 80% 10%, rgba(212,255,63,0.06), transparent 50%),
+      radial-gradient(120% 120% at 10% 90%, rgba(255,45,120,0.06), transparent 50%); }
+  .grid-react { position: absolute; inset: 0; pointer-events: none; }
+  .gd { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.18); transform: translate(-50%,-50%); will-change: transform, background; }
+  .chip { position: absolute; padding: 14px 22px; border-radius: 100px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600; cursor: grab; user-select: none; will-change: transform; border: 1.5px solid; background: rgba(8,8,12,0.6); backdrop-filter: blur(4px); }
+  .chip:active { cursor: grabbing; }
+  .play .hint { position: absolute; left: 30px; top: 26px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+
+  /* CTA */
+  .cta { text-align: center; padding: 150px 0; }
+  .cta h2 { font-size: clamp(48px,11vw,168px); margin-bottom: 56px; }
+  .cta h2 .lime { color: var(--lime); }
+  .cta .magnetic { display: inline-flex; }
+  .cta .btn-xl { padding: 24px 46px; font-size: 14px; }
+
+  footer { border-top: 1px solid var(--hair); padding: 40px 0; }
+  footer .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer a.back { font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan-400, #00b4d8); }
+  footer .mono { font-size: 11px; color: var(--dim); }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 0 22px; }
+    .stats { grid-template-columns: repeat(2,1fr); }
+    .cap { grid-template-columns: 60px 1fr; }
+    .cap .d { display: none; }
+    .work { width: 82vw; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee .track, .scrollcue .line { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="cur"></div>
+  <div class="cur-ring"></div>
+
+  <nav>
+    <a class="brand" href="#top">TRISENO <b>// WEB</b></a>
+    <div class="nav-right">
+      <a href="#work" data-cursor>Work</a>
+      <a href="#caps" data-cursor>Capabilities</a>
+      <span class="magnetic" data-magnetic><a class="btn" href="#contact" data-cursor>Start a project</a></span>
+    </div>
+  </nav>
+
+  <div class="wrap" id="top">
+    <header class="hero">
+      <div class="eyebrow"><span>Triseno</span> <b>// Web Design Division</b></div>
+      <h1>
+        DESIGN<br />
+        THAT <span class="lime" data-scramble>MOVES</span><br />
+        <span class="out">PEOPLE.</span>
+      </h1>
+      <p class="sub">The web arm of Triseno Systems. Cinematic, motion-led sites engineered to convert — the same intelligence layer, now in your storefront.</p>
+      <div class="cta-row">
+        <span class="magnetic" data-magnetic><a class="btn" href="#contact" data-cursor>Start a project</a></span>
+        <span class="magnetic" data-magnetic><a class="btn alt" href="#work" data-cursor>See the work</a></span>
+      </div>
+      <div class="scrollcue mono"><span class="line"></span> Scroll</div>
+    </header>
+  </div>
+
+  <div class="marquee">
+    <div class="track" id="mq"></div>
+  </div>
+
+  <!-- Pinned horizontal work gallery -->
+  <section class="gallery" id="work">
+    <div class="h-track" id="htrack">
+      <div class="wrap" style="flex:0 0 auto; width:auto; display:flex; flex-direction:column; justify-content:center; padding-right:20px;">
+        <span class="label mono" style="color:var(--magenta)">Selected Work</span>
+        <h2 style="font-size:clamp(40px,6vw,92px); max-width:9ch; margin-top:18px;">Sites that<br/>don't sit still.</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capabilities -->
+  <section class="band" id="caps">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>What we do</h2>
+        <span class="label">04 · Disciplines</span>
+      </div>
+      <div class="caps" id="capList"></div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="band" style="padding-top:0;">
+    <div class="wrap">
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+
+  <!-- Interactive playground -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>Playground</h2>
+        <span class="label">Drag · Hover · React</span>
+      </div>
+      <div class="play" id="play">
+        <span class="hint">// grab the chips — throw them around</span>
+        <div class="grid-react" id="greact"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="contact">
+    <div class="wrap">
+      <h2>LET'S BUILD<br/><span class="lime" data-scramble>SOMETHING</span> LOUD.</h2>
+      <span class="magnetic" data-magnetic><a class="btn btn-xl" href="mailto:Tristen@trisenosystems.com" data-cursor>Start a project</a></span>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap row">
+      <a class="back" href="/" data-cursor>← Back to Triseno Systems</a>
+      <span class="mono">Tristen@trisenosystems.com</span>
+      <span class="mono">© 2026 Triseno · Web Design Division</span>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+  <script src="division.js"></script>
+</body>
+</html>
