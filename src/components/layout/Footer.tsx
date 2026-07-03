@@ -5,15 +5,20 @@ import Logo from "@/components/ui/Logo";
 
 const navigationLinks = [
   { label: "Home", href: "/" },
+  { label: "Studio", href: "/studio" },
   { label: "Work", href: "/portfolio" },
   { label: "Contact", href: "/contact" },
   { label: "Web Design Division", href: "/web-design-division" },
 ];
 
-const serviceLinks = [
-  { label: "Multi-agent orchestration", href: "/#capabilities" },
-  { label: "Workflow compression", href: "/#capabilities" },
-  { label: "Decision-layer automation", href: "/#capabilities" },
+// Studio (content) services route to /studio; the Web Design entry points at
+// the static division page in /public.
+const studioServices = [
+  { label: "Paid Social Creative", href: "/studio" },
+  { label: "UGC Ads", href: "/studio" },
+  { label: "Short-Form Content", href: "/studio" },
+  { label: "Product Video", href: "/studio" },
+  { label: "Brand Films", href: "/studio" },
 ];
 
 export default function Footer() {
@@ -25,7 +30,8 @@ export default function Footer() {
         <div className="mb-12 flex flex-col gap-4 max-w-md">
           <Logo variant="footer" />
           <p className="text-sm text-text-secondary leading-relaxed">
-            AI infrastructure for operations, intelligence, and scale.
+            One studio, two divisions — video content for paid social and cinematic,
+            conversion-built websites.
           </p>
         </div>
 
@@ -78,8 +84,8 @@ export default function Footer() {
               Services
             </h4>
             <ul className="space-y-3">
-              {serviceLinks.map((service) => (
-                <li key={service.href}>
+              {studioServices.map((service) => (
+                <li key={service.label}>
                   <Link
                     href={service.href}
                     className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
@@ -88,6 +94,24 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                {/* Static playground page lives in /public — plain anchor, not Next routing. */}
+                <a
+                  href="/web-design-division"
+                  target="_self"
+                  className="inline-flex items-center gap-2 text-sm text-[#c9a4ff] hover:text-[#d9bcff] transition-colors duration-200"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      background: "linear-gradient(135deg,#00e5ff,#9d5cff)",
+                      boxShadow: "0 0 6px rgba(157,92,255,0.6)",
+                    }}
+                  />
+                  Web Design
+                </a>
+              </li>
             </ul>
           </div>
 

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import PageTransition from "@/components/layout/PageTransition";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -66,13 +63,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body>
-        <Navbar />
-        <main className="relative z-[1]">
-          <PageTransition>{children}</PageTransition>
-        </main>
-        <Footer />
-      </body>
+      {/* Root layout owns only <html>, fonts, <body>, and metadata. Global
+          nav/footer chrome lives in the (site) route group so the full-screen
+          portal (/) and the warm Studio page (/studio) can supply their own. */}
+      <body>{children}</body>
     </html>
   );
 }

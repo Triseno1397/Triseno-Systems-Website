@@ -34,7 +34,7 @@ const brandLine: Variants = {
 };
 
 const navLinks = [
-  { label: "Home", href: "/" },
+  { label: "Studio", href: "/studio" },
   { label: "Work", href: "/portfolio" },
   { label: "Contact", href: "/contact" },
 ];
