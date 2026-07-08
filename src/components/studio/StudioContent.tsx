@@ -67,6 +67,42 @@ const thumbBg = (i: number) =>
   `radial-gradient(ellipse at ${HOTSPOTS[i]}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
 
+// Where every Studio CTA routes. Displayed and mailed to the same address.
+const STUDIO_EMAIL = "tristen@trisenosystems.com";
+
+// Build a mailto: with an encoded subject + body — opens the visitor's mail
+// client pre-addressed to the studio inbox. No backend required, works on Vercel.
+const mailto = (subject: string, bodyLines: string[]) =>
+  `mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent(subject)}` +
+  `&body=${encodeURIComponent(bodyLines.join("\r\n"))}`;
+
+const QUOTE_HREF = mailto("Quote request — Triseno Studio", [
+  "Hi Tristen,",
+  "",
+  "I'd like a quote for a video project.",
+  "",
+  "• What we're selling / promoting:",
+  "• Where it needs to run (Meta / TikTok / YouTube / other):",
+  "• Formats or deliverables:",
+  "• Timeline:",
+  "• Budget range:",
+  "",
+  "Thanks,",
+]);
+
+const CALL_HREF = mailto("Book a call — Triseno Studio", [
+  "Hi Tristen,",
+  "",
+  "I'd like to book a call about a project.",
+  "",
+  "• Name:",
+  "• Company:",
+  "• What we're looking to make:",
+  "• Best days / times to reach me:",
+  "",
+  "Thanks,",
+]);
+
 // One copy of the footer marquee sequence; rendered twice for a seamless wrap.
 const FOOT_WORDS = [
   { text: "Triseno", cls: "fill" },
@@ -137,15 +173,15 @@ function MarqueeFooter() {
             <span className="line">
               Let&apos;s make something <span className="grad">worth watching.</span>
             </span>
-            <a className="em" href="mailto:Tristen@trisenosystems.com">
-              Tristen@trisenosystems.com
+            <a className="em" href={`mailto:${STUDIO_EMAIL}`}>
+              {STUDIO_EMAIL}
             </a>
           </div>
           <div className="foot-col">
             <h4>Studio</h4>
             <a href="#make">What we make</a>
             <a href="#contact">Start a project</a>
-            <a href="#contact">Request a quote</a>
+            <a href={QUOTE_HREF}>Request a quote</a>
           </div>
           <div className="foot-col">
             <h4>Triseno</h4>
@@ -232,8 +268,7 @@ export default function StudioContent() {
             <span className="pip" />
             Studio — Content Division
           </span>
-          {/* TODO: booking URL */}
-          <a className="nav-cta" href="#contact">
+          <a className="nav-cta" href={CALL_HREF}>
             Book a call
           </a>
         </div>
@@ -369,15 +404,17 @@ export default function StudioContent() {
             concepts and a quote — no retainer required to start.
           </p>
           <div className="actions reveal">
-            {/* TODO: booking URL */}
-            <a className="btn btn-solid" href="#">
+            <a className="btn btn-solid" href={CALL_HREF}>
               Book a call
             </a>
-            {/* TODO: quote-request URL */}
-            <a className="btn btn-ghost" href="#">
+            <a className="btn btn-ghost" href={QUOTE_HREF}>
               Request a quote
             </a>
           </div>
+          <p className="cta-email reveal">
+            Prefer email? Reach us directly at{" "}
+            <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>
+          </p>
         </div>
       </section>
 

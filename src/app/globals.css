@@ -762,6 +762,9 @@ main a {
 .studio-page .cta h2 .grad { background: linear-gradient(110deg, var(--studio-a), var(--studio-b)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
 .studio-page .cta p { margin-top: 24px; color: var(--ink-2); font-size: 18px; max-width: 48ch; margin-left:auto; margin-right:auto; line-height: 1.55; }
 .studio-page .cta .actions { margin-top: 44px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.studio-page .cta .cta-email { margin-top: 22px; font-size: 14px; color: var(--ink-3); }
+.studio-page .cta .cta-email a { color: var(--ink-1); border-bottom: 1px solid var(--studio-a); padding-bottom: 2px; text-decoration: none; transition: opacity 200ms var(--ease); }
+.studio-page .cta .cta-email a:hover { opacity: 0.7; }
 
 /* FOOTER — marquee */
 .studio-page footer { position: relative; background: #08060a; border-top: 1px solid var(--hairline); overflow: hidden; }
