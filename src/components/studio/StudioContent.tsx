@@ -45,9 +45,9 @@ const MAKE = [
   },
   {
     n: "05",
-    title: "Motion Ads",
-    sm: "No shoot day. Pure motion.",
-    desc: "Footage-free ads built from kinetic type, animated product, and generative visuals — designed frame by frame and cut to a beat. Our AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
+    title: "HyperMotion Ads",
+    sm: "Maximum motion. No shoot day.",
+    desc: "High-velocity, footage-free ads built from kinetic type, animated product, and generative visuals — designed frame by frame and cut hard to the beat. Our AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
     ratio: "9:16",
     tags: ["9:16 · 1:1 · 16:9", "Footage-free", "AI-accelerated"],
   },
