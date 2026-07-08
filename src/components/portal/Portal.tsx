@@ -16,6 +16,46 @@ import { useGSAP } from "@gsap/react";
 
 export default function Portal() {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const exitRef = useRef<HTMLDivElement | null>(null);
+  const navigatingRef = useRef(false);
+
+  // Themed exit transition: wipe a destination-colored curtain in from the
+  // clicked side, then navigate. Falls back to a normal link for reduced-motion,
+  // modifier-clicks (open-in-new-tab), and non-primary buttons.
+  const enterDivision = (
+    e: React.MouseEvent,
+    href: string,
+    side: "studio" | "web",
+    label: string
+  ) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    const exit = exitRef.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!exit || reduce) return; // let the browser follow the <a href>
+    e.preventDefault();
+    if (navigatingRef.current) return;
+    navigatingRef.current = true;
+
+    rootRef.current?.classList.add("pe-active");
+    exit.classList.remove("pe-studio", "pe-web");
+    exit.classList.add(side === "studio" ? "pe-studio" : "pe-web");
+    const labelEl = exit.querySelector<HTMLElement>(".pe-label");
+    const labelText = exit.querySelector<HTMLElement>(".pe-label-text");
+    if (labelText) labelText.textContent = label;
+
+    const fromLeft = side === "studio";
+    gsap.set(exit, { xPercent: fromLeft ? -100 : 100, opacity: 1 });
+    gsap.set(labelEl, { opacity: 0, y: 12 });
+
+    const portalEl = rootRef.current?.querySelector("#portal");
+    if (portalEl) gsap.to(portalEl, { scale: 0.985, duration: 0.72, ease: "expo.inOut" });
+
+    gsap
+      .timeline({ onComplete: () => { window.location.href = href; } })
+      .to(exit, { xPercent: 0, duration: 0.72, ease: "expo.inOut" })
+      .to(labelEl, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, "-=0.36")
+      .to({}, { duration: 0.16 });
+  };
 
   useGSAP(
     () => {
@@ -279,6 +319,14 @@ export default function Portal() {
         <div className="dot" />
       </div>
 
+      {/* exit transition curtain (color + label set on click) */}
+      <div className="portal-exit" ref={exitRef} aria-hidden="true">
+        <span className="pe-label">
+          <span className="pe-label-text" />
+          <span className="pe-arr" />
+        </span>
+      </div>
+
       {/* intro curtain — the "Forge" reveal. Uses the existing silver Triseno
           mark (assets/triseno-mark.png was not shipped; swap the src + the two
           mask-image refs in globals.css to use a tighter-trimmed emblem). */}
@@ -314,6 +362,7 @@ export default function Portal() {
           data-cursor="studio"
           href="/studio"
           aria-label="Enter Triseno Studio — content & video ads"
+          onClick={(e) => enterDivision(e, "/studio", "studio", "Triseno Studio")}
         >
           <div className="panel-bg" data-parallax="0.4" />
           <div className="film-frames" data-parallax="0.9" aria-hidden="true">
@@ -348,6 +397,7 @@ export default function Portal() {
           data-cursor="web"
           href="/web-design-division"
           aria-label="Enter Web Design Division"
+          onClick={(e) => enterDivision(e, "/web-design-division", "web", "Web Design Division")}
         >
           <div className="panel-bg" data-parallax="0.4" />
           <div className="web-grid" data-parallax="0.9" aria-hidden="true" />

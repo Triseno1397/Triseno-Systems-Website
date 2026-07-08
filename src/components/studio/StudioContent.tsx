@@ -45,6 +45,14 @@ const MAKE = [
   },
   {
     n: "05",
+    title: "Motion Ads",
+    sm: "No shoot day. Pure motion.",
+    desc: "Footage-free ads built from kinetic type, animated product, and generative visuals — designed frame by frame and cut to a beat. Our AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
+    ratio: "9:16",
+    tags: ["9:16 · 1:1 · 16:9", "Footage-free", "AI-accelerated"],
+  },
+  {
+    n: "06",
     title: "Brand Films",
     sm: "The flagship piece",
     desc: "Cinematic hero pieces for the top of your site and the top of your funnel — story, craft, and scale in a single film.",
@@ -54,7 +62,7 @@ const MAKE = [
 ];
 
 // Thumb hotspot varies a touch per item so the preview feels alive.
-const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "58% 35%"];
+const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%"];
 const thumbBg = (i: number) =>
   `radial-gradient(ellipse at ${HOTSPOTS[i]}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;

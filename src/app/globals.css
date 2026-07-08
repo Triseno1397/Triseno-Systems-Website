@@ -568,8 +568,13 @@ main a {
 .portal-page .panel-title { font-size: clamp(36px, 5vw, 76px); font-weight: 600; line-height: 0.96; letter-spacing: -0.035em; max-width: 12ch; transition: opacity 700ms var(--ease); }
 .portal-page .panel-title .line { display: block; overflow: hidden; }
 .portal-page .panel-title .char { display: inline-block; will-change: transform; }
-.portal-page .panel-studio .panel-title .grad { background: linear-gradient(110deg, var(--studio-a), var(--studio-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.portal-page .panel-web .panel-title .grad { background: linear-gradient(110deg, var(--web-a), var(--web-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* Gradient must live on the .char spans too — once the title is split into
+   per-letter inline-block spans, background-clip:text on the parent .grad no
+   longer paints onto the children, so the letters would render transparent. */
+.portal-page .panel-studio .panel-title .grad,
+.portal-page .panel-studio .panel-title .grad .char { background: linear-gradient(110deg, var(--studio-a), var(--studio-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.portal-page .panel-web .panel-title .grad,
+.portal-page .panel-web .panel-title .grad .char { background: linear-gradient(110deg, var(--web-a), var(--web-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .portal-page .panel-sub { margin-top: 22px; font-size: clamp(14px, 1.1vw, 17px); line-height: 1.5; color: var(--ink-2); max-width: 32ch; }
 .portal-page .panel-enter { margin-top: 38px; display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-1); padding: 14px 24px; border: 1px solid var(--hairline); border-radius: 999px; transition: border-color 250ms var(--ease), background 250ms; will-change: transform; }
 .portal-page .panel-enter .label { display: inline-block; will-change: transform; }
@@ -590,6 +595,26 @@ main a {
 .portal-page .corner { position: fixed; bottom: 26px; z-index: 70; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); pointer-events: none; }
 .portal-page .corner.left { left: clamp(20px, 4vw, 48px); }
 .portal-page .corner.right { right: clamp(20px, 4vw, 48px); }
+
+/* exit transition — a themed curtain that wipes in from the clicked side and
+   carries the destination's atmosphere, so entering a division feels seamless */
+.portal-page .portal-exit { position: fixed; inset: 0; z-index: 145; pointer-events: none; opacity: 0; transform: translateX(-100%); display: grid; place-items: center; will-change: transform, opacity; }
+.portal-page .portal-exit.pe-studio {
+  background:
+    radial-gradient(ellipse 70% 60% at 40% 32%, rgba(255,138,61,0.28) 0%, transparent 58%),
+    radial-gradient(ellipse 60% 70% at 78% 78%, rgba(255,77,109,0.20) 0%, transparent 58%),
+    linear-gradient(160deg, #1a0f12 0%, #120b13 55%, #0c0a0e 100%);
+}
+.portal-page .portal-exit.pe-web {
+  background:
+    radial-gradient(ellipse 70% 60% at 60% 32%, rgba(0,229,255,0.22) 0%, transparent 58%),
+    radial-gradient(ellipse 60% 70% at 22% 78%, rgba(157,92,255,0.20) 0%, transparent 58%),
+    linear-gradient(200deg, #0a1624 0%, #0c1026 55%, var(--navy-950) 100%);
+}
+.portal-page .pe-label { display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: clamp(11px, 1.4vw, 14px); letter-spacing: 0.34em; text-transform: uppercase; color: rgba(255,255,255,0.92); opacity: 0; }
+.portal-page .pe-label .pe-arr { width: 20px; height: 1px; background: currentColor; position: relative; }
+.portal-page .pe-label .pe-arr::after { content: ""; position: absolute; right: 0; top: 50%; width: 6px; height: 6px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; transform: translateY(-50%) rotate(45deg); }
+.portal-page.pe-active .cursor { opacity: 0; }
 
 /* intro curtain — "Forge" reveal */
 .portal-page .curtain { position: fixed; inset: 0; z-index: 150; background: var(--navy-950); display: grid; place-items: center; overflow: hidden; }
