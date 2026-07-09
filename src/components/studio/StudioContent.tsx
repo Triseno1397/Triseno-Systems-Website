@@ -80,39 +80,15 @@ const thumbBg = (i: number) =>
 
 // Where every Studio CTA routes. Displayed and mailed to the same address.
 const STUDIO_EMAIL = "tristen@trisenosystems.com";
+// Instagram is tagged alongside the email everywhere it appears on the site.
+const INSTAGRAM_URL = "https://instagram.com/trisenosystems";
+const INSTAGRAM_HANDLE = "@trisenosystems";
 
 // Build a mailto: with an encoded subject + body — opens the visitor's mail
 // client pre-addressed to the studio inbox. No backend required, works on Vercel.
 const mailto = (subject: string, bodyLines: string[]) =>
   `mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent(subject)}` +
   `&body=${encodeURIComponent(bodyLines.join("\r\n"))}`;
-
-const QUOTE_HREF = mailto("Quote request — Triseno Studio", [
-  "Hi Tristen,",
-  "",
-  "I'd like a quote for a video project.",
-  "",
-  "• What we're selling / promoting:",
-  "• Where it needs to run (Meta / TikTok / YouTube / other):",
-  "• Formats or deliverables:",
-  "• Timeline:",
-  "• Budget range:",
-  "",
-  "Thanks,",
-]);
-
-const CALL_HREF = mailto("Book a call — Triseno Studio", [
-  "Hi Tristen,",
-  "",
-  "I'd like to book a call about a project.",
-  "",
-  "• Name:",
-  "• Company:",
-  "• What we're looking to make:",
-  "• Best days / times to reach me:",
-  "",
-  "Thanks,",
-]);
 
 // One copy of the footer marquee sequence; rendered twice for a seamless wrap.
 const FOOT_WORDS = [
@@ -184,15 +160,24 @@ function MarqueeFooter() {
             <span className="line">
               Let&apos;s make something <span className="grad">worth watching.</span>
             </span>
-            <a className="em" href={`mailto:${STUDIO_EMAIL}`}>
-              {STUDIO_EMAIL}
-            </a>
+            <div className="contacts">
+              <a className="em" href={`mailto:${STUDIO_EMAIL}`}>
+                {STUDIO_EMAIL}
+              </a>
+              <a
+                className="em"
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {INSTAGRAM_HANDLE}
+              </a>
+            </div>
           </div>
           <div className="foot-col">
             <h4>Studio</h4>
             <a href="#make">What we make</a>
             <a href="#contact">Start a project</a>
-            <a href={QUOTE_HREF}>Request a quote</a>
           </div>
           <div className="foot-col">
             <h4>Triseno</h4>
@@ -231,6 +216,26 @@ export default function StudioContent() {
   const [active, setActive] = useState(0); // selected tab (drives .on immediately)
   const [shown, setShown] = useState(0); // content currently in the preview
   const [fading, setFading] = useState(false);
+  const [sent, setSent] = useState(false); // inquiry form → email handed off
+
+  // Inquiry form — one avenue for the whole division. Composes a pre-addressed
+  // email from the fields and hands it to the visitor's mail client (no backend,
+  // works on Vercel), then confirms in-place.
+  const handleInquiry = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name") || "").trim();
+    const email = String(fd.get("email") || "").trim();
+    const budget = String(fd.get("budget") || "").trim();
+    const project = String(fd.get("project") || "").trim();
+
+    const lines = [`Name: ${name}`, `Email: ${email}`];
+    if (budget) lines.push(`Budget: ${budget}`);
+    lines.push("", "Project:", project);
+
+    window.location.href = mailto("New project inquiry — Triseno Studio", lines);
+    setSent(true);
+  };
 
   // Nav — condense on scroll.
   useEffect(() => {
@@ -299,8 +304,8 @@ export default function StudioContent() {
             <span className="pip" />
             Studio — Content Division
           </span>
-          <a className="nav-cta" href={CALL_HREF}>
-            Book a call
+          <a className="nav-cta" href="#contact">
+            Start a project
           </a>
         </div>
       </nav>
@@ -466,17 +471,69 @@ export default function StudioContent() {
             Tell us what you&apos;re selling and where it needs to run. We&apos;ll come back with
             concepts and a quote — no retainer required to start.
           </p>
-          <div className="actions reveal">
-            <a className="btn btn-solid" href={CALL_HREF}>
-              Book a call
-            </a>
-            <a className="btn btn-ghost" href={QUOTE_HREF}>
-              Request a quote
-            </a>
-          </div>
+
+          {sent ? (
+            <div className="inquiry-sent">
+              <h3>Thanks — your email is ready to send.</h3>
+              <p>
+                We just opened a pre-filled message in your mail app. Hit send and we&apos;ll
+                get back to you within one business day. If nothing opened, reach us at{" "}
+                <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>.
+              </p>
+            </div>
+          ) : (
+            <form className="inquiry" onSubmit={handleInquiry}>
+              <div className="row">
+                <div className="field">
+                  <label htmlFor="iq-name">Name</label>
+                  <input id="iq-name" name="name" type="text" required placeholder="Your name" />
+                </div>
+                <div className="field">
+                  <label htmlFor="iq-email">Email</label>
+                  <input
+                    id="iq-email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="you@company.com"
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="iq-budget">Budget range (optional)</label>
+                <select id="iq-budget" name="budget" defaultValue="">
+                  <option value="">Not sure yet</option>
+                  <option>Under $2k</option>
+                  <option>$2k–$5k</option>
+                  <option>$5k–$10k</option>
+                  <option>$10k+</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="iq-project">What are you looking to make?</label>
+                <textarea
+                  id="iq-project"
+                  name="project"
+                  required
+                  placeholder="What you're selling, where it needs to run, and any timeline in mind..."
+                />
+              </div>
+              <button type="submit" className="btn btn-solid">
+                Send inquiry
+              </button>
+              <p className="inquiry-note">
+                Goes straight to our inbox — we reply within one business day.
+              </p>
+            </form>
+          )}
+
           <p className="cta-email reveal">
-            Prefer email? Reach us directly at{" "}
+            Prefer to reach us directly?{" "}
             <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>
+            {" · "}
+            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+              {INSTAGRAM_HANDLE}
+            </a>
           </p>
         </div>
       </section>

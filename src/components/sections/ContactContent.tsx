@@ -307,9 +307,17 @@ export default function ContactContent() {
                   </h4>
                   <a
                     href="mailto:Tristen@trisenosystems.com"
-                    className="text-lg text-text-primary hover:text-[#00e5ff] transition-colors duration-200"
+                    className="block text-lg text-text-primary hover:text-[#00e5ff] transition-colors duration-200"
                   >
                     Tristen@trisenosystems.com
+                  </a>
+                  <a
+                    href="https://instagram.com/trisenosystems"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
+                  >
+                    Instagram @trisenosystems
                   </a>
                 </div>
 

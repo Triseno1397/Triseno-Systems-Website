@@ -143,7 +143,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
                 >
-                  Instagram
+                  Instagram @trisenosystems
                 </a>
               </li>
             </ul>
@@ -155,7 +155,21 @@ export default function Footer() {
             &copy; 2026 Triseno Systems. All rights reserved.
           </p>
           <p className="text-xs text-text-tertiary font-mono tracking-wider">
-            Tristen@trisenosystems.com
+            <a
+              href="mailto:Tristen@trisenosystems.com"
+              className="hover:text-[#00e5ff] transition-colors duration-200"
+            >
+              Tristen@trisenosystems.com
+            </a>
+            <span className="mx-2">·</span>
+            <a
+              href="https://instagram.com/trisenosystems"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#00e5ff] transition-colors duration-200"
+            >
+              @trisenosystems
+            </a>
           </p>
         </div>
       </div>
