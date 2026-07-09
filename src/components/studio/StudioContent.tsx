@@ -10,7 +10,17 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 
-const MAKE = [
+type MakeItem = {
+  n: string;
+  title: string;
+  sm: string;
+  desc: string;
+  ratio: string;
+  tags: string[];
+  video?: string; // per-format demo reel; falls back to the gradient thumb when absent
+};
+
+const MAKE: MakeItem[] = [
   {
     n: "01",
     title: "Paid Social Creative",
@@ -50,6 +60,7 @@ const MAKE = [
     desc: "High-velocity, footage-free ads built from kinetic type, animated product, and generative visuals — designed frame by frame and cut hard to the beat. Our AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
     ratio: "9:16",
     tags: ["9:16 · 1:1 · 16:9", "Footage-free", "AI-accelerated"],
+    video: "/videos/pickleball-hypermotion.mp4",
   },
   {
     n: "06",
@@ -194,8 +205,17 @@ function MarqueeFooter() {
 
         <div className="foot-bottom">
           <span className="fmeta">© 2026 Triseno Systems</span>
-          {/* TODO: wire real social handles when available. */}
-          <span className="fmeta">Instagram &nbsp;·&nbsp; TikTok &nbsp;·&nbsp; YouTube &nbsp;·&nbsp; LinkedIn</span>
+          {/* Instagram is live; TODO: wire TikTok / YouTube / LinkedIn when handles exist. */}
+          <span className="fmeta">
+            <a
+              href="https://instagram.com/trisenosystems"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Instagram
+            </a>
+            &nbsp;·&nbsp; TikTok &nbsp;·&nbsp; YouTube &nbsp;·&nbsp; LinkedIn
+          </span>
         </div>
       </div>
     </footer>
@@ -205,6 +225,7 @@ function MarqueeFooter() {
 export default function StudioContent() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState(0); // selected tab (drives .on immediately)
@@ -241,6 +262,16 @@ export default function StudioContent() {
   useEffect(() => () => {
     if (swapTimer.current) clearTimeout(swapTimer.current);
   }, []);
+
+  // Honor reduced-motion: the format reel autoplays for everyone else, but users
+  // who opt out get a still first frame instead of a looping clip.
+  useEffect(() => {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    previewRef.current?.querySelectorAll("video").forEach((v) => {
+      v.pause();
+      v.currentTime = 0;
+    });
+  }, [shown]);
 
   // Select a format — tab highlights instantly, preview crossfades after 180ms.
   const select = (i: number) => {
@@ -343,13 +374,45 @@ export default function StudioContent() {
               })}
             </div>
 
-            <div className="make-preview" aria-live="polite">
-              <div
-                className={`pv-thumb${fading ? " pv-fade" : ""}`}
-                style={{ background: thumbBg(shown) }}
-              />
-              {/* TODO: drop a per-format <video muted loop autoPlay> or poster into the preview. */}
-              <div className="pv-play" aria-hidden="true" />
+            <div className="make-preview" aria-live="polite" ref={previewRef}>
+              {d.video ? (
+                <div className={`pv-video-wrap${fading ? " pv-fade" : ""}`}>
+                  {/* Blurred fill of the same clip so a 9:16 ad fills the wide
+                      frame without cropping the hook or CTA. */}
+                  <video
+                    className="pv-video-bg"
+                    src={d.video}
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
+                  {/* The ad itself, shown whole. */}
+                  <video
+                    key={d.video}
+                    className="pv-video"
+                    src={d.video}
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                  />
+                  {/* Bottom scrim keeps the meta legible over the moving footage. */}
+                  <div className="pv-scrim" aria-hidden="true" />
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={`pv-thumb${fading ? " pv-fade" : ""}`}
+                    style={{ background: thumbBg(shown) }}
+                  />
+                  <div className="pv-play" aria-hidden="true" />
+                </>
+              )}
               <div className="pv-ratio">{d.ratio}</div>
               <div className={`pv-meta${fading ? " pv-fade" : ""}`}>
                 <h3>{d.title}</h3>
