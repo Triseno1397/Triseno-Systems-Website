@@ -136,6 +136,16 @@ export default function Footer() {
                   Start a conversation
                 </Link>
               </li>
+              <li>
+                <a
+                  href="https://instagram.com/trisenosystems"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
+                >
+                  Instagram
+                </a>
+              </li>
             </ul>
           </div>
         </div>
