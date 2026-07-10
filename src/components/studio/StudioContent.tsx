@@ -170,7 +170,8 @@ function MarqueeFooter() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {INSTAGRAM_HANDLE}
+                <span className="em-label">Instagram</span>
+                <span className="em-handle">{INSTAGRAM_HANDLE}</span>
               </a>
             </div>
           </div>
@@ -326,8 +327,9 @@ export default function StudioContent() {
             <span className="grad">while it scrolls.</span>
           </h1>
           <p className="hero-sub">
-            We script, shoot, and edit performance creative for Meta, TikTok, and YouTube —
-            from UGC to cinematic brand films. Built to convert, not just to look good.
+            We script, shoot, and edit performance creative for Instagram, TikTok, YouTube,
+            and every feed in between — from UGC to cinematic brand films. Built to convert,
+            not just to look good.
           </p>
           <div className="hero-actions">
             <a className="btn btn-solid" href="#contact">
@@ -528,11 +530,11 @@ export default function StudioContent() {
           )}
 
           <p className="cta-email reveal">
-            Prefer to reach us directly?{" "}
+            <span className="cta-email-lead">Prefer to reach us directly?</span>
             <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>
-            {" · "}
+            <span className="cta-email-sep" aria-hidden="true">·</span>
             <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
-              {INSTAGRAM_HANDLE}
+              Instagram {INSTAGRAM_HANDLE}
             </a>
           </p>
         </div>

@@ -168,7 +168,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="hover:text-[#00e5ff] transition-colors duration-200"
             >
-              @trisenosystems
+              Instagram @trisenosystems
             </a>
           </p>
         </div>
