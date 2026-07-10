@@ -14,20 +14,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
+    default: "Triseno Systems · One studio, two divisions",
     template: "%s",
   },
   description:
-    "Multi-agent orchestration, workflow compression, and decision-layer automation. Triseno Systems builds the operational AI layer for complex enterprises.",
+    "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
   metadataBase: new URL("https://trisenosystems.com"),
   icons: {
     icon: "/images/triseno-logo-v2.png",
     apple: "/images/triseno-logo-v2.png",
   },
   openGraph: {
-    title: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
+    title: "Triseno Systems · One studio, two divisions",
     description:
-      "Multi-agent orchestration, workflow compression, and decision-layer automation. Triseno Systems builds the operational AI layer for complex enterprises.",
+      "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
     url: "https://trisenosystems.com",
     siteName: "Triseno Systems",
     type: "website",
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Triseno Systems — AI infrastructure for operations, intelligence, and scale.",
+    title: "Triseno Systems · One studio, two divisions",
     description:
-      "Multi-agent orchestration, workflow compression, and decision-layer automation.",
+      "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
   },
   robots: {
     index: true,
