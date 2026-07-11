@@ -20,6 +20,9 @@ type MakeItem = {
   tags: string[];
   video?: string; // per-format demo reel; falls back to the gradient thumb when absent
   audio?: boolean; // clip carries a soundtrack — surfaces the mute/unmute toggle
+  // Two clips shown side by side in one preview (UGC showcase). Takes precedence
+  // over `video`; each cell has its own caption and independent unmute.
+  videos?: { src: string; label: string }[];
 };
 
 const MAKE: MakeItem[] = [
@@ -49,6 +52,8 @@ const MAKE: MakeItem[] = [
     desc: "Fast hook, clear benefit, hard offer, unmissable CTA — structured around the click, not the applause. The workhorse a performance founder is actually shopping for.",
     ratio: "9:16",
     tags: ["9:16 · 1:1 · 4:5", "3–6 variants", "Performance"],
+    video: "/videos/direct-response.mp4",
+    audio: true,
   },
   {
     n: "04",
@@ -70,9 +75,13 @@ const MAKE: MakeItem[] = [
     n: "06",
     title: "UGC Ads",
     sm: "Converts like a recommendation.",
-    desc: "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break.",
+    desc: "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break. From ASMR unboxings to hands-on demos, across every orientation the feed serves.",
     ratio: "9:16",
-    tags: ["9:16 · 1:1", "Creator-matched", "Volume"],
+    tags: ["9:16 · 16:9", "Creator-matched", "Volume"],
+    videos: [
+      { src: "/videos/ugc-watch-unbox.mp4", label: "Watch unboxing" },
+      { src: "/videos/ugc-pixl-unbox.mp4", label: "ASMR unboxing" },
+    ],
   },
 ];
 
@@ -217,12 +226,14 @@ export default function StudioContent() {
   const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const mainVideoRef = useRef<HTMLVideoElement | null>(null);
+  const duoVideoRefs = useRef<(HTMLVideoElement | null)[]>([]); // dual-showcase clips
 
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState(0); // selected tab (drives .on immediately)
   const [shown, setShown] = useState(0); // content currently in the preview
   const [fading, setFading] = useState(false);
   const [sound, setSound] = useState(false); // preview audio on/off (starts muted)
+  const [duoSound, setDuoSound] = useState<number | null>(null); // which dual clip is unmuted (one at a time)
   const [sent, setSent] = useState(false); // inquiry form → email handed off
 
   // Inquiry form — one avenue for the whole division. Composes a pre-addressed
@@ -291,6 +302,14 @@ export default function StudioContent() {
     if (mainVideoRef.current) mainVideoRef.current.muted = !sound;
   }, [sound, shown]);
 
+  // Dual showcase: only the selected clip carries audio — the other stays muted,
+  // so two soundtracks never overlap.
+  useEffect(() => {
+    duoVideoRefs.current.forEach((v, i) => {
+      if (v) v.muted = duoSound !== i;
+    });
+  }, [duoSound, shown]);
+
   // Select a format — tab highlights instantly, preview crossfades after 180ms.
   const select = (i: number) => {
     if (i === active) return;
@@ -301,6 +320,7 @@ export default function StudioContent() {
       setShown(i);
       setFading(false);
       setSound(false); // new format lands muted so switching tabs never blares audio
+      setDuoSound(null); // ...and the dual showcase resets to fully muted too
     }, 180);
   };
 
@@ -395,7 +415,57 @@ export default function StudioContent() {
             </div>
 
             <div className="make-preview" aria-live="polite" ref={previewRef}>
-              {d.video ? (
+              {d.videos ? (
+                <div className={`pv-video-wrap pv-duo${fading ? " pv-fade" : ""}`}>
+                  {d.videos.map((clip, i) => (
+                    <div className="pv-duo-cell" key={clip.src}>
+                      {/* Ambient blurred fill so each clip shows whole — no cropping
+                          of the hook or CTA — regardless of its orientation. */}
+                      <video
+                        className="pv-duo-bg"
+                        src={clip.src}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        preload="metadata"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                      />
+                      <video
+                        ref={(el) => {
+                          duoVideoRefs.current[i] = el;
+                        }}
+                        className="pv-duo-vid"
+                        src={clip.src}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        preload="metadata"
+                      />
+                      <span className="pv-duo-cap">{clip.label}</span>
+                      <button
+                        type="button"
+                        className={`pv-duo-sound${duoSound === i ? " on" : ""}`}
+                        aria-label={
+                          duoSound === i ? `Mute ${clip.label}` : `Unmute ${clip.label}`
+                        }
+                        aria-pressed={duoSound === i}
+                        onClick={() => setDuoSound((s) => (s === i ? null : i))}
+                      >
+                        {duoSound === i ? (
+                          <SpeakerSimpleHigh size={15} weight="fill" />
+                        ) : (
+                          <SpeakerSimpleSlash size={15} weight="fill" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                  {/* Bottom scrim keeps the meta legible over both clips. */}
+                  <div className="pv-scrim" aria-hidden="true" />
+                </div>
+              ) : d.video ? (
                 <div className={`pv-video-wrap${fading ? " pv-fade" : ""}`}>
                   {/* Blurred fill of the same clip so a 9:16 ad fills the wide
                       frame without cropping the hook or CTA. */}
@@ -449,7 +519,9 @@ export default function StudioContent() {
                   )}
                 </button>
               )}
-              <div className="pv-ratio">{d.ratio}</div>
+              {/* Single badge would misread with two clips of different ratios —
+                  the per-clip captions carry the labels instead. */}
+              {!d.videos && <div className="pv-ratio">{d.ratio}</div>}
               <div className={`pv-meta${fading ? " pv-fade" : ""}`}>
                 <h3>{d.title}</h3>
                 <p>{d.desc}</p>
