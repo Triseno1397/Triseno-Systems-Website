@@ -446,7 +446,7 @@ export default function StudioContent() {
           </div>
           <div className="reveal">
             <p>
-              Triseno started as an AI infrastructure company — and that engine never left.
+              Triseno was built on an AI-powered production pipeline, and that engine never left.
               It&apos;s how we generate more concepts, version creative for every placement, and
               turn briefs around in days. You don&apos;t pay for the technology. You pay for the
               speed, the volume, and the edge it buys you.

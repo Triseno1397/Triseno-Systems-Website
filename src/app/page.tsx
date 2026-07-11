@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Portal from "@/components/portal/Portal";
 
 export const metadata: Metadata = {
-  title: "Triseno Systems · One studio, two divisions",
+  title: "Triseno Systems · premium ad creative and conversion-built websites",
   description:
-    "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
+    "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
 };
 
 export default function Home() {

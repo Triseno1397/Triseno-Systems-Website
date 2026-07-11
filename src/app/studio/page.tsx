@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import StudioContent from "@/components/studio/StudioContent";
 
 export const metadata: Metadata = {
-  title: "Triseno Studio — Video ads people actually stop for.",
+  title: "Triseno Studio · video that sells",
   description:
-    "Triseno Studio scripts, shoots, and edits performance-built video for paid social — from UGC to cinematic brand films. Agency-grade work without the agency timeline.",
+    "Performance product ad creative for Instagram, TikTok, and YouTube. Scroll-stopping video, from UGC to cinematic brand films, delivered in days, not weeks.",
 };
 
 export default function StudioPage() {

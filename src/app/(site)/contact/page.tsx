@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import ContactContent from "@/components/sections/ContactContent";
 
 export const metadata: Metadata = {
-  title:
-    "Contact — Start with a diagnostic or scope a custom build. | Triseno Systems",
+  title: "Contact · Start a project | Triseno Systems",
   description:
-    "Request an AI Operations Audit or start a conversation about a custom build. We respond within 24 hours, often sooner.",
+    "Get in touch with Triseno. Email us, find us on Instagram, or send an inquiry: video content from the Content Studio, or a conversion-built site from the Web Design Division. We reply within one business day.",
 };
 
 export default function ContactPage() {

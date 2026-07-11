@@ -1,348 +1,438 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   PaperPlaneTilt,
   CheckCircle,
-  ChatDots,
-  Handshake,
-  FileText,
-  MagnifyingGlass,
-  Wrench,
-  ArrowRight,
+  EnvelopeSimple,
+  InstagramLogo,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import PageHero from "@/components/layout/PageHero";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import HiddenPortalSeal from "@/components/contact/HiddenPortalSeal";
 
-const howDidYouFindUs = [
-  "Instagram",
-  "Referral",
-  "Search",
-  "LinkedIn",
-  "Other",
-];
+// Direct-contact identity — shown prominently and used as the fallback everywhere.
+const EMAIL = "tristen@trisenosystems.com";
+const INSTAGRAM_URL = "https://instagram.com/trisenosystems";
+const INSTAGRAM_HANDLE = "@trisenosystems";
 
-const nextSteps = [
-  {
-    icon: ChatDots,
-    label: "We respond within 24 hours, often sooner.",
-  },
-  {
-    icon: Handshake,
-    label: "Discovery call to scope your needs",
-  },
-  {
-    icon: FileText,
-    label: "Proposal with architecture & pricing",
-  },
-];
+// Submissions post straight to the studio inbox via Web3Forms — no mail client
+// opens, no server needed, works on Vercel. Set the free access key in Vercel as
+// NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY (or paste it into the fallback below). Get one
+// in ~30s at https://web3forms.com by entering tristen@trisenosystems.com.
+const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY ?? "";
 
-type Path = "audit" | "build";
+type DivisionKey = "studio" | "web";
+
+const DIVISIONS: Record<
+  DivisionKey,
+  {
+    label: string;
+    tagline: string;
+    projectTypes: string[];
+    messageLabel: string;
+    messagePlaceholder: string;
+  }
+> = {
+  studio: {
+    label: "Content Studio",
+    tagline: "Video & creative for paid social — UGC to cinematic brand films.",
+    projectTypes: [
+      "HyperMotion Ads",
+      "Product Hero",
+      "Direct Response Ads",
+      "Product Demo",
+      "Brand Film",
+      "UGC Ads",
+      "Something else",
+    ],
+    messageLabel: "What are you looking to make?",
+    messagePlaceholder:
+      "What you're selling, where it needs to run, and any timeline in mind...",
+  },
+  web: {
+    label: "Web Design Division",
+    tagline: "Conversion-built websites — new builds, redesigns, and stores.",
+    projectTypes: [
+      "New website",
+      "Redesign",
+      "Landing page",
+      "E-commerce store",
+      "Web app",
+      "Something else",
+    ],
+    messageLabel: "Tell us about your website project",
+    messagePlaceholder:
+      "Goals, the pages you need, sites you like, and any timeline...",
+  },
+};
+
+const TIMELINES = ["ASAP / rush", "2–4 weeks", "1–2 months", "Flexible / not sure"];
 
 export default function ContactContent() {
-  const formRef = useRef<HTMLDivElement>(null);
-  const projectTypeRef = useRef<HTMLSelectElement>(null);
+  const [division, setDivision] = useState<DivisionKey>("studio");
   const [submitted, setSubmitted] = useState(false);
-  const [path, setPath] = useState<Path>("build");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const isWeb = division === "web";
+  const active = DIVISIONS[division];
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+    if (submitting) return;
+    setError(null);
 
-    fetch("/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(formData as unknown as Record<string, string>).toString(),
-    })
-      .then(() => setSubmitted(true))
-      .catch(() => setSubmitted(true));
-  };
+    if (!WEB3FORMS_ACCESS_KEY) {
+      setError(
+        `The form isn't connected yet — please email us directly at ${EMAIL}.`
+      );
+      return;
+    }
 
-  const choosePath = (next: Path) => {
-    setPath(next);
-    requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (projectTypeRef.current) {
-        projectTypeRef.current.value = next === "audit" ? "AI Operations Audit" : "Custom Build";
+    setSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: `New ${active.label} inquiry — Triseno`,
+      from_name: "Triseno website",
+      division: active.label,
+      ...Object.fromEntries(formData.entries()),
+    };
+
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setError(`Something went wrong — please email us directly at ${EMAIL}.`);
       }
-    });
+    } catch {
+      setError(`Couldn't send right now — please email us directly at ${EMAIL}.`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const inputClasses =
-    "w-full bg-navy-800/50 border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all duration-300 font-sans text-sm";
+  const inputClasses = `w-full bg-navy-800/50 border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:outline-none transition-all duration-300 font-sans text-sm ${
+    isWeb
+      ? "focus:border-[#9d5cff]/40 focus:ring-1 focus:ring-[#9d5cff]/20"
+      : "focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/20"
+  }`;
+
+  const labelClasses =
+    "block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2";
 
   return (
     <>
       <PageHero
-        eyebrow="Get started"
-        title="Let's talk architecture."
-        subtitle="Whether you need a diagnostic audit, a full system build, or just want to explore what's possible — start here."
+        eyebrow="Get in touch"
+        title="Let's start a project."
+        subtitle="Email us, find us on Instagram, or send an inquiry below — pick the team you need and we'll take it from there."
       />
 
-      {/* Two-path entry */}
-      <section className="relative py-16 md:py-20">
+      <section className="relative py-16 md:py-24">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12 lg:gap-16">
+            {/* Toggle + form */}
             <ScrollReveal>
-              <button
-                type="button"
-                onClick={() => choosePath("audit")}
-                className="group relative h-full text-left rounded-2xl border border-cyan-400/30 bg-navy-800/40 backdrop-blur-sm p-8 md:p-10 hover:border-cyan-400/60 transition-colors duration-300 cursor-pointer w-full"
-              >
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute -top-3 left-8">
-                  <span className="inline-block px-3 py-1 rounded-full bg-cyan-400 text-navy-950 text-[10px] font-mono font-bold tracking-[0.2em] uppercase">
-                    Recommended
+              <div>
+                {/* Division toggle */}
+                <div className="mb-8">
+                  <span className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-3">
+                    What can we help with?
                   </span>
-                </div>
-                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-xl bg-navy-700/60 border border-white/[0.06] mb-8">
-                  <MagnifyingGlass size={28} weight="duotone" className="text-cyan-400" />
-                </div>
-                <h3 className="text-xl md:text-2xl font-bold text-text-primary mb-4 tracking-tight">
-                  AI operations audit
-                </h3>
-                <p className="text-text-secondary leading-relaxed mb-8">
-                  The fastest way in. A focused diagnostic that identifies your highest-leverage compression opportunities before you commit to a full build.
-                </p>
-                <span className="inline-flex items-center gap-2 text-sm text-cyan-400 font-medium group-hover:text-[#00e5ff] transition-colors duration-200">
-                  Request audit
-                  <ArrowRight size={14} weight="bold" className="transition-transform duration-200 group-hover:translate-x-1" />
-                </span>
-              </button>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.1}>
-              <button
-                type="button"
-                onClick={() => choosePath("build")}
-                className="group relative h-full text-left rounded-2xl border border-white/[0.06] bg-navy-800/30 backdrop-blur-sm p-8 md:p-10 hover:border-cyan-400/30 transition-colors duration-300 cursor-pointer w-full"
-              >
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-xl bg-navy-700/60 border border-white/[0.06] mb-8">
-                  <Wrench size={28} weight="duotone" className="text-cyan-400" />
-                </div>
-                <h3 className="text-xl md:text-2xl font-bold text-text-primary mb-4 tracking-tight">
-                  Custom build conversation
-                </h3>
-                <p className="text-text-secondary leading-relaxed mb-8">
-                  Ready to scope a system? Tell us what you&apos;re building.
-                </p>
-                <span className="inline-flex items-center gap-2 text-sm text-cyan-400 font-medium group-hover:text-[#00e5ff] transition-colors duration-200">
-                  Start a conversation
-                  <ArrowRight size={14} weight="bold" className="transition-transform duration-200 group-hover:translate-x-1" />
-                </span>
-              </button>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact form */}
-      <section ref={formRef} className="relative py-16 md:py-24 scroll-mt-24">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 lg:gap-16">
-            <ScrollReveal>
-              <div className="relative rounded-2xl border border-white/[0.06] bg-navy-800/20 backdrop-blur-sm p-8 md:p-10">
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
-
-                {submitted ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <CheckCircle size={48} weight="duotone" className="text-cyan-400 mb-6" />
-                    <h3 className="text-2xl font-bold text-text-primary mb-3">Message sent</h3>
-                    <p className="text-text-secondary max-w-md">
-                      We&apos;ll review your message and get back to you within 24 hours. Looking forward to the conversation.
-                    </p>
-                  </div>
-                ) : (
-                  <form
-                    name="contact"
-                    method="POST"
-                    data-netlify="true"
-                    onSubmit={handleSubmit}
-                    className="space-y-6"
+                  <div
+                    role="tablist"
+                    aria-label="Choose a division"
+                    className="inline-flex flex-wrap gap-3"
                   >
-                    <input type="hidden" name="form-name" value="contact" />
-                    <input type="hidden" name="entry-path" value={path} />
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={!isWeb}
+                      onClick={() => setDivision("studio")}
+                      className={`px-5 py-2.5 rounded-full text-sm font-medium transition-colors duration-200 border ${
+                        !isWeb
+                          ? "bg-cyan-400 text-navy-950 border-cyan-400"
+                          : "border-white/[0.08] text-text-secondary hover:text-text-primary hover:border-cyan-400/40"
+                      }`}
+                    >
+                      Content Studio
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={isWeb}
+                      onClick={() => setDivision("web")}
+                      className={`px-5 py-2.5 rounded-full text-sm font-medium transition-colors duration-200 border ${
+                        isWeb
+                          ? "bg-[#9d5cff] text-white border-[#9d5cff]"
+                          : "border-white/[0.08] text-text-secondary hover:text-text-primary hover:border-[#9d5cff]/40"
+                      }`}
+                    >
+                      Web Design Division
+                    </button>
+                  </div>
+                  <p className="mt-3 text-sm text-text-tertiary">{active.tagline}</p>
+                </div>
 
-                    <div>
-                      <span className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-3">
-                        I&apos;m here for
-                      </span>
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setPath("audit")}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 border ${
-                            path === "audit"
-                              ? "bg-cyan-400 text-navy-950 border-cyan-400"
-                              : "border-white/[0.08] text-text-secondary hover:text-text-primary hover:border-cyan-400/40"
-                          }`}
-                        >
-                          AI operations audit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPath("build")}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 border ${
-                            path === "build"
-                              ? "bg-cyan-400 text-navy-950 border-cyan-400"
-                              : "border-white/[0.08] text-text-secondary hover:text-text-primary hover:border-cyan-400/40"
-                          }`}
-                        >
-                          Custom build
-                        </button>
-                      </div>
-                      <select
-                        ref={projectTypeRef}
-                        name="project-type"
-                        defaultValue={path === "audit" ? "AI Operations Audit" : "Custom Build"}
-                        className="hidden"
-                        aria-hidden
-                      >
-                        <option value="AI Operations Audit">AI Operations Audit</option>
-                        <option value="Custom Build">Custom Build</option>
-                      </select>
+                {/* Form card */}
+                <div className="relative rounded-2xl border border-white/[0.06] bg-navy-800/20 backdrop-blur-sm p-8 md:p-10">
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent to-transparent ${
+                      isWeb ? "via-[#9d5cff]/50" : "via-cyan-400/40"
+                    }`}
+                  />
+
+                  {submitted ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <CheckCircle
+                        size={48}
+                        weight="duotone"
+                        className={isWeb ? "text-[#b57cff] mb-6" : "text-cyan-400 mb-6"}
+                      />
+                      <h3 className="text-2xl font-bold text-text-primary mb-3">
+                        Message sent
+                      </h3>
+                      <p className="text-text-secondary max-w-md">
+                        Thanks for reaching out. We&apos;ll review your inquiry and get
+                        back to you within one business day.
+                      </p>
                     </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Honeypot — bots fill this, humans never see it. */}
+                      <input
+                        type="checkbox"
+                        name="botcheck"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        className="hidden"
+                        aria-hidden="true"
+                      />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="name" className={labelClasses}>
+                            Name
+                          </label>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            required
+                            className={inputClasses}
+                            placeholder="Your name"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="email" className={labelClasses}>
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            required
+                            className={inputClasses}
+                            placeholder="you@company.com"
+                          />
+                        </div>
+                      </div>
+
                       <div>
-                        <label htmlFor="name" className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2">
-                          Name
+                        <label htmlFor="company" className={labelClasses}>
+                          Company{" "}
+                          <span className="text-text-tertiary">(optional)</span>
                         </label>
                         <input
                           type="text"
-                          id="name"
-                          name="name"
-                          required
+                          id="company"
+                          name="company"
                           className={inputClasses}
-                          placeholder="Your name"
+                          placeholder="Your company or brand"
                         />
                       </div>
+
                       <div>
-                        <label htmlFor="email" className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2">
-                          Email
+                        <label htmlFor="project-type" className={labelClasses}>
+                          Project type
                         </label>
-                        <input
-                          type="email"
-                          id="email"
-                          name="email"
+                        <select
+                          key={division}
+                          id="project-type"
+                          name="project_type"
+                          className={`${inputClasses} appearance-none cursor-pointer`}
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            Select one
+                          </option>
+                          {active.projectTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Web Design only — makes the two forms obviously different. */}
+                      {isWeb && (
+                        <div>
+                          <label htmlFor="current-site" className={labelClasses}>
+                            Current website{" "}
+                            <span className="text-text-tertiary">(optional)</span>
+                          </label>
+                          <input
+                            type="url"
+                            id="current-site"
+                            name="current_site"
+                            className={inputClasses}
+                            placeholder="https://yoursite.com"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label htmlFor="timeline" className={labelClasses}>
+                          Timeline
+                        </label>
+                        <select
+                          id="timeline"
+                          name="timeline"
+                          className={`${inputClasses} appearance-none cursor-pointer`}
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            Select one
+                          </option>
+                          {TIMELINES.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label htmlFor="message" className={labelClasses}>
+                          {active.messageLabel}
+                        </label>
+                        <textarea
+                          id="message"
+                          name="message"
                           required
-                          className={inputClasses}
-                          placeholder="you@company.com"
+                          rows={5}
+                          className={`${inputClasses} resize-none`}
+                          placeholder={active.messagePlaceholder}
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <label htmlFor="company" className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2">
-                        Company <span className="text-text-tertiary">(optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="company"
-                        name="company"
-                        className={inputClasses}
-                        placeholder="Your company"
-                      />
-                    </div>
+                      {error && (
+                        <p className="text-sm text-red-400" role="alert">
+                          {error}
+                        </p>
+                      )}
 
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2">
-                        What are you looking to build?
-                      </label>
-                      <textarea
-                        id="message"
-                        name="message"
-                        required
-                        rows={5}
-                        className={`${inputClasses} resize-none`}
-                        placeholder="Tell us about your project, operational challenges, or what you'd like to explore..."
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="source" className="block text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-2">
-                        How did you find us?
-                      </label>
-                      <select
-                        id="source"
-                        name="source"
-                        className={`${inputClasses} appearance-none cursor-pointer`}
-                        defaultValue=""
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className={`group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-lg font-semibold text-sm tracking-wide transition-colors duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                          isWeb
+                            ? "bg-[#9d5cff] text-white hover:bg-[#b57cff]"
+                            : "bg-cyan-400 text-navy-950 hover:bg-cyan-300"
+                        }`}
                       >
-                        <option value="" disabled>
-                          Select one
-                        </option>
-                        {howDidYouFindUs.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-lg bg-cyan-400 text-navy-950 font-semibold text-sm tracking-wide hover:bg-cyan-300 transition-colors duration-300 cursor-pointer"
-                    >
-                      <span>Send message</span>
-                      <PaperPlaneTilt
-                        size={18}
-                        weight="bold"
-                        className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5"
-                      />
-                    </button>
-                  </form>
-                )}
+                        {submitting ? (
+                          <>
+                            <span>Sending</span>
+                            <CircleNotch
+                              size={18}
+                              weight="bold"
+                              className="animate-spin"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <span>Send inquiry</span>
+                            <PaperPlaneTilt
+                              size={18}
+                              weight="bold"
+                              className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5"
+                            />
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             </ScrollReveal>
 
+            {/* Direct contact — email + Instagram, front and center. */}
             <ScrollReveal delay={0.15}>
-              <div className="space-y-10 lg:pt-4">
-                <div>
-                  <h4 className="text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-3">
-                    Direct
-                  </h4>
-                  <a
-                    href="mailto:Tristen@trisenosystems.com"
-                    className="block text-lg text-text-primary hover:text-[#00e5ff] transition-colors duration-200"
-                  >
-                    Tristen@trisenosystems.com
-                  </a>
-                  <a
-                    href="https://instagram.com/trisenosystems"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-sm text-text-secondary hover:text-[#00e5ff] transition-colors duration-200"
-                  >
-                    Instagram @trisenosystems
-                  </a>
-                </div>
+              <div className="space-y-6 lg:pt-2">
+                <h4 className="text-sm font-mono text-text-secondary/80 uppercase tracking-wider">
+                  Reach us directly
+                </h4>
 
-                <div>
-                  <h4 className="text-sm font-mono text-text-secondary/80 uppercase tracking-wider mb-6">
-                    What happens next
-                  </h4>
-                  <div className="space-y-6">
-                    {nextSteps.map((step, i) => (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className="relative flex-shrink-0 mt-0.5">
-                          {i < nextSteps.length - 1 && (
-                            <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-6 bg-white/[0.06]" />
-                          )}
-                          <div className="w-8 h-8 rounded-lg bg-navy-800/60 border border-white/[0.06] flex items-center justify-center">
-                            <step.icon size={16} weight="duotone" className="text-cyan-400" />
-                          </div>
-                        </div>
-                        <p className="text-sm text-text-secondary pt-1.5">
-                          {step.label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <a
+                  href={`mailto:${EMAIL}`}
+                  className="group flex items-start gap-4 rounded-xl border border-white/[0.06] bg-navy-800/20 p-5 hover:border-cyan-400/40 transition-colors duration-200"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-navy-800/60 border border-white/[0.06] flex items-center justify-center">
+                    <EnvelopeSimple
+                      size={20}
+                      weight="duotone"
+                      className="text-cyan-400"
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-mono uppercase tracking-wider text-text-tertiary mb-1">
+                      Email
+                    </span>
+                    <span className="block text-text-primary group-hover:text-[#00e5ff] transition-colors duration-200 break-words">
+                      {EMAIL}
+                    </span>
+                  </span>
+                </a>
+
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-4 rounded-xl border border-white/[0.06] bg-navy-800/20 p-5 hover:border-cyan-400/40 transition-colors duration-200"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-navy-800/60 border border-white/[0.06] flex items-center justify-center">
+                    <InstagramLogo
+                      size={20}
+                      weight="duotone"
+                      className="text-cyan-400"
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-mono uppercase tracking-wider text-text-tertiary mb-1">
+                      Instagram
+                    </span>
+                    <span className="block text-text-primary group-hover:text-[#00e5ff] transition-colors duration-200">
+                      {INSTAGRAM_HANDLE}
+                    </span>
+                  </span>
+                </a>
+
+                <p className="text-sm text-text-tertiary leading-relaxed">
+                  We reply within one business day — often sooner.
+                </p>
               </div>
             </ScrollReveal>
           </div>

@@ -14,20 +14,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Triseno Systems · One studio, two divisions",
+    default: "Triseno Systems · premium ad creative and conversion-built websites",
     template: "%s",
   },
   description:
-    "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
+    "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
   metadataBase: new URL("https://trisenosystems.com"),
   icons: {
     icon: "/images/triseno-logo-v2.png",
     apple: "/images/triseno-logo-v2.png",
   },
   openGraph: {
-    title: "Triseno Systems · One studio, two divisions",
+    title: "Triseno Systems · premium ad creative and conversion-built websites",
     description:
-      "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
+      "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
     url: "https://trisenosystems.com",
     siteName: "Triseno Systems",
     type: "website",
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Triseno Systems · One studio, two divisions",
+    title: "Triseno Systems · premium ad creative and conversion-built websites",
     description:
-      "Triseno Studio makes cinematic, scroll-stopping product ad creative for DTC brands running paid social. The Web Design Division builds conversion-built websites. One studio, two divisions.",
+      "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
   },
   robots: {
     index: true,
