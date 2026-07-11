@@ -735,6 +735,9 @@ main a {
 .studio-page .pv-video-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); filter: blur(30px) brightness(0.45) saturate(1.15); }
 .studio-page .pv-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; z-index: 1; }
 .studio-page .pv-scrim { position:absolute; inset:0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, transparent 55%, rgba(20,16,26,0.92) 100%); }
+.studio-page .pv-sound { position: absolute; top: 18px; left: 18px; z-index: 3; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); background: rgba(10,8,14,0.55); border: 1px solid var(--hairline); backdrop-filter: blur(6px); cursor: pointer; transition: transform 220ms var(--ease), background 220ms, color 220ms, border-color 220ms; }
+.studio-page .pv-sound:hover { transform: scale(1.08); color: var(--ink-1); background: rgba(10,8,14,0.75); }
+.studio-page .pv-sound.on { color: var(--studio-a); border-color: rgba(255,138,61,0.5); background: rgba(255,138,61,0.12); }
 .studio-page .pv-play { position: absolute; top: 46%; left: 50%; transform: translate(-50%,-50%); width: 74px; height: 74px; border-radius: 50%; border: 1px solid rgba(255,138,61,0.5); display: grid; place-items: center; transition: transform 300ms var(--ease), background 300ms; z-index: 2; }
 .studio-page .make-preview:hover .pv-play { transform: translate(-50%,-50%) scale(1.08); background: rgba(255,138,61,0.12); }
 .studio-page .pv-play::after { content:""; width:0; height:0; border-left:17px solid var(--studio-a); border-top:11px solid transparent; border-bottom:11px solid transparent; margin-left:5px; }

@@ -9,6 +9,7 @@
  */
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
 
 type MakeItem = {
   n: string;
@@ -18,6 +19,7 @@ type MakeItem = {
   ratio: string;
   tags: string[];
   video?: string; // per-format demo reel; falls back to the gradient thumb when absent
+  audio?: boolean; // clip carries a soundtrack — surfaces the mute/unmute toggle
 };
 
 const MAKE: MakeItem[] = [
@@ -37,6 +39,8 @@ const MAKE: MakeItem[] = [
     desc: "Rim light, a slow push-in, a curl of steam — the cinematic beauty shot that makes the product look worth every penny. Pure Tier-1 craft, and our most reliable, best-looking work.",
     ratio: "16:9",
     tags: ["16:9 · 4:5 · 9:16", "Cinematic", "Tier-1 beauty"],
+    video: "/videos/product-hero.mp4",
+    audio: true,
   },
   {
     n: "03",
@@ -212,11 +216,13 @@ export default function StudioContent() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const mainVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState(0); // selected tab (drives .on immediately)
   const [shown, setShown] = useState(0); // content currently in the preview
   const [fading, setFading] = useState(false);
+  const [sound, setSound] = useState(false); // preview audio on/off (starts muted)
   const [sent, setSent] = useState(false); // inquiry form → email handed off
 
   // Inquiry form — one avenue for the whole division. Composes a pre-addressed
@@ -279,6 +285,12 @@ export default function StudioContent() {
     });
   }, [shown]);
 
+  // Drive mute imperatively — React's `muted` prop doesn't reliably reflect to
+  // the DOM. Only the foreground clip is unmuted; the blurred fill stays silent.
+  useEffect(() => {
+    if (mainVideoRef.current) mainVideoRef.current.muted = !sound;
+  }, [sound, shown]);
+
   // Select a format — tab highlights instantly, preview crossfades after 180ms.
   const select = (i: number) => {
     if (i === active) return;
@@ -288,6 +300,7 @@ export default function StudioContent() {
     swapTimer.current = setTimeout(() => {
       setShown(i);
       setFading(false);
+      setSound(false); // new format lands muted so switching tabs never blares audio
     }, 180);
   };
 
@@ -399,6 +412,7 @@ export default function StudioContent() {
                   />
                   {/* The ad itself, shown whole. */}
                   <video
+                    ref={mainVideoRef}
                     key={d.video}
                     className="pv-video"
                     src={d.video}
@@ -419,6 +433,21 @@ export default function StudioContent() {
                   />
                   <div className="pv-play" aria-hidden="true" />
                 </>
+              )}
+              {d.video && d.audio && (
+                <button
+                  type="button"
+                  className={`pv-sound${sound ? " on" : ""}`}
+                  aria-label={sound ? "Mute preview" : "Unmute preview"}
+                  aria-pressed={sound}
+                  onClick={() => setSound((s) => !s)}
+                >
+                  {sound ? (
+                    <SpeakerSimpleHigh size={17} weight="fill" />
+                  ) : (
+                    <SpeakerSimpleSlash size={17} weight="fill" />
+                  )}
+                </button>
               )}
               <div className="pv-ratio">{d.ratio}</div>
               <div className={`pv-meta${fading ? " pv-fade" : ""}`}>
