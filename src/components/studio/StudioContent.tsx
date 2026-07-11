@@ -83,10 +83,20 @@ const MAKE: MakeItem[] = [
       { src: "/videos/ugc-pixl-unbox.mp4", label: "ASMR unboxing" },
     ],
   },
+  {
+    n: "07",
+    title: "Apparel Try-On",
+    sm: "See it worn before they buy.",
+    desc: "The product on a real body — fit, drape, and movement in motion — so shoppers can picture themselves in it before checkout. The confidence-builder that closes the sale for fashion and apparel brands.",
+    ratio: "9:16",
+    tags: ["9:16 · 4:5", "On-model", "Fashion & apparel"],
+    video: "/videos/apparel-tryon.mp4",
+    audio: true,
+  },
 ];
 
 // Thumb hotspot varies a touch per item so the preview feels alive.
-const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%"];
+const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%", "45% 33%"];
 const thumbBg = (i: number) =>
   `radial-gradient(ellipse at ${HOTSPOTS[i]}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
