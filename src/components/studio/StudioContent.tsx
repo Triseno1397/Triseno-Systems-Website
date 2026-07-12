@@ -60,8 +60,12 @@ const MAKE: MakeItem[] = [
     title: "Product Demo",
     sm: "Obvious in 30 seconds.",
     desc: "Shows the thing actually working — crisp, result-focused demos that make the value obvious for landing pages, product detail pages, and mid-funnel retargeting.",
-    ratio: "16:9",
-    tags: ["16:9 · 1:1 · 9:16", "Master + cutdowns", "Conversion"],
+    ratio: "9:16",
+    tags: ["9:16 · 1:1 · 16:9", "Master + cutdowns", "Conversion"],
+    videos: [
+      { src: "/videos/demo-sneaker-cleaner.mp4", label: "Sneaker cleaner" },
+      { src: "/videos/demo-glass-cleaner.mp4", label: "Glass cleaner" },
+    ],
   },
   {
     n: "05",
@@ -75,13 +79,11 @@ const MAKE: MakeItem[] = [
     n: "06",
     title: "UGC Ads",
     sm: "Converts like a recommendation.",
-    desc: "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break. From ASMR unboxings to hands-on demos, across every orientation the feed serves.",
+    desc: "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break.",
     ratio: "9:16",
-    tags: ["9:16 · 16:9", "Creator-matched", "Volume"],
-    videos: [
-      { src: "/videos/ugc-watch-unbox.mp4", label: "Watch unboxing" },
-      { src: "/videos/ugc-pixl-unbox.mp4", label: "ASMR unboxing" },
-    ],
+    tags: ["9:16 · 1:1", "Creator-matched", "Volume"],
+    video: "/videos/ugc-watch-unbox.mp4",
+    audio: true,
   },
   {
     n: "07",
@@ -93,10 +95,30 @@ const MAKE: MakeItem[] = [
     video: "/videos/apparel-tryon.mp4",
     audio: true,
   },
+  {
+    n: "08",
+    title: "Visual Appeal",
+    sm: "Satisfying enough to stop the scroll.",
+    desc: "Texture, color, and motion tuned to be quietly mesmerizing — the satisfying, hypnotic visuals that hold a thumb mid-scroll and make a product impossible to look away from. Pure feed candy, engineered to earn the watch time.",
+    ratio: "9:16",
+    tags: ["9:16 · 4:5", "Satisfying", "Watch-time"],
+    video: "/videos/visual-appeal.mp4",
+    audio: true,
+  },
+  {
+    n: "09",
+    title: "ASMR Ads",
+    sm: "Sound you can feel.",
+    desc: "Close-mic'd sensory triggers — the taps, crinkles, peels, and pours that stop a muted scroll and reward the sound-on watch. Built to spike dwell time and turn pure sensory attention into intent.",
+    ratio: "16:9",
+    tags: ["16:9 · 9:16", "Trigger-rich", "Sound-on"],
+    video: "/videos/asmr-unbox.mp4",
+    audio: true,
+  },
 ];
 
 // Thumb hotspot varies a touch per item so the preview feels alive.
-const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%", "45% 33%"];
+const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%", "45% 33%", "52% 36%", "50% 34%"];
 const thumbBg = (i: number) =>
   `radial-gradient(ellipse at ${HOTSPOTS[i]}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
