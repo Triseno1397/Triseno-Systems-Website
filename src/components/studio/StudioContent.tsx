@@ -8,8 +8,10 @@
  * all video weight lives in What We Make. Styling is in globals.css (.studio-page).
  */
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
+import MarqueeFooter from "@/components/studio/MarqueeFooter";
 
 type MakeItem = {
   n: string;
@@ -129,129 +131,25 @@ const STUDIO_EMAIL = "tristen@trisenosystems.com";
 const INSTAGRAM_URL = "https://instagram.com/trisenosystems";
 const INSTAGRAM_HANDLE = "@trisenosystems";
 
-// Build a mailto: with an encoded subject + body — opens the visitor's mail
-// client pre-addressed to the studio inbox. No backend required, works on Vercel.
-const mailto = (subject: string, bodyLines: string[]) =>
-  `mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent(subject)}` +
-  `&body=${encodeURIComponent(bodyLines.join("\r\n"))}`;
+// Inquiries post straight to the studio inbox via Web3Forms — no mail client
+// opens, no server needed, works on Vercel. Set the free access key in Vercel as
+// NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY (or paste it into the fallback below). Get one
+// in ~30s at https://web3forms.com by entering tristen@trisenosystems.com.
+const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY ?? "";
 
-// One copy of the footer marquee sequence; rendered twice for a seamless wrap.
-const FOOT_WORDS = [
-  { text: "Triseno", cls: "fill" },
-  { text: "Studio", cls: "" },
-  { text: "Triseno", cls: "g" },
-  { text: "Studio", cls: "" },
+// The formats a visitor can pick, so the inquiry says what they actually want.
+const PROJECT_TYPES = [
+  "HyperMotion Ads",
+  "Product Hero",
+  "Direct Response Ads",
+  "Product Demo",
+  "Brand Film",
+  "UGC Ads",
+  "Not sure yet",
 ];
 
-function MarqueeFooter() {
-  const trackRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let x = 0;
-    const base = 0.6;
-    let vel = 0;
-    let half = track.scrollWidth / 2;
-    let last = 0;
-    let raf = 0;
-
-    const measure = () => {
-      half = track.scrollWidth / 2;
-    };
-    const onScroll = () => {
-      vel = Math.min(6, vel + 1.2);
-    };
-    const tick = (now: number) => {
-      const dt = last ? Math.min(40, now - last) : 16;
-      last = now;
-      x -= ((base + vel) * dt) / 16;
-      if (half && -x >= half) x += half;
-      track.style.transform = `translateX(${x}px)`;
-      vel *= 0.9;
-      raf = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-
-  return (
-    <footer>
-      <div className="foot-marq" aria-hidden="true">
-        <div className="foot-track" ref={trackRef}>
-          {[0, 1].map((copy) =>
-            FOOT_WORDS.map((w, i) => (
-              <Fragment key={`${copy}-${i}`}>
-                <span className={`word ${w.cls}`}>{w.text}</span>
-                <span className="star">⋯</span>
-              </Fragment>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="wrap">
-        <div className="foot-body">
-          <div className="foot-say">
-            <span className="line">
-              Let&apos;s make something <span className="grad">worth watching.</span>
-            </span>
-            <div className="contacts">
-              <a className="em" href={`mailto:${STUDIO_EMAIL}`}>
-                {STUDIO_EMAIL}
-              </a>
-              <a
-                className="em"
-                href={INSTAGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className="em-label">Instagram</span>
-                <span className="em-handle">{INSTAGRAM_HANDLE}</span>
-              </a>
-            </div>
-          </div>
-          <div className="foot-col">
-            <h4>Studio</h4>
-            <a href="#make">What we make</a>
-            <a href="#contact">Start a project</a>
-          </div>
-          <div className="foot-col">
-            <h4>Triseno</h4>
-            <a href="/">Home</a>
-            {/* Static division page in /public — plain anchor. */}
-            <a href="/web-design-division">Web Design Division</a>
-            <a href="/contact">Contact</a>
-          </div>
-        </div>
-
-        <div className="foot-bottom">
-          <span className="fmeta">© 2026 Triseno Systems</span>
-          {/* Instagram is live; TODO: wire TikTok / YouTube / LinkedIn when handles exist. */}
-          <span className="fmeta">
-            <a
-              href="https://instagram.com/trisenosystems"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Instagram
-            </a>
-            &nbsp;·&nbsp; TikTok &nbsp;·&nbsp; YouTube &nbsp;·&nbsp; LinkedIn
-          </span>
-        </div>
-      </div>
-    </footer>
-  );
-}
+// How they'd like us to follow up.
+const CONTACT_METHODS = ["Email", "Phone", "Text", "Other"];
 
 export default function StudioContent() {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -266,25 +164,50 @@ export default function StudioContent() {
   const [fading, setFading] = useState(false);
   const [sound, setSound] = useState(false); // preview audio on/off (starts muted)
   const [duoSound, setDuoSound] = useState<number | null>(null); // which dual clip is unmuted (one at a time)
-  const [sent, setSent] = useState(false); // inquiry form → email handed off
+  const [sent, setSent] = useState(false); // inquiry delivered to the inbox
+  const [sending, setSending] = useState(false); // request in flight
+  const [err, setErr] = useState<string | null>(null); // delivery failure message
 
-  // Inquiry form — one avenue for the whole division. Composes a pre-addressed
-  // email from the fields and hands it to the visitor's mail client (no backend,
-  // works on Vercel), then confirms in-place.
-  const handleInquiry = (e: React.FormEvent<HTMLFormElement>) => {
+  // Inquiry form — one avenue for the whole division. Posts the fields straight
+  // to the studio inbox via Web3Forms (no mail client, no server, works on
+  // Vercel), then confirms in-place.
+  const handleInquiry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (sending) return;
+    setErr(null);
+
+    if (!WEB3FORMS_ACCESS_KEY) {
+      setErr(`The form isn't connected yet — please email us directly at ${STUDIO_EMAIL}.`);
+      return;
+    }
+
+    setSending(true);
     const fd = new FormData(e.currentTarget);
-    const name = String(fd.get("name") || "").trim();
-    const email = String(fd.get("email") || "").trim();
-    const budget = String(fd.get("budget") || "").trim();
-    const project = String(fd.get("project") || "").trim();
+    const payload = {
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: "New project inquiry — Triseno Studio",
+      from_name: "Triseno Studio website",
+      division: "Content Studio",
+      ...Object.fromEntries(fd.entries()),
+    };
 
-    const lines = [`Name: ${name}`, `Email: ${email}`];
-    if (budget) lines.push(`Budget: ${budget}`);
-    lines.push("", "Project:", project);
-
-    window.location.href = mailto("New project inquiry — Triseno Studio", lines);
-    setSent(true);
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSent(true);
+      } else {
+        setErr(`Something went wrong — please email us directly at ${STUDIO_EMAIL}.`);
+      }
+    } catch {
+      setErr(`Couldn't send right now — please email us directly at ${STUDIO_EMAIL}.`);
+    } finally {
+      setSending(false);
+    }
   };
 
   // Nav — condense on scroll.
@@ -362,10 +285,10 @@ export default function StudioContent() {
     <div className="studio-page" ref={rootRef}>
       <nav className={`nav${scrolled ? " scrolled" : ""}`} id="nav">
         <div className="wrap">
-          <a className="back" href="/">
+          <Link className="back" href="/">
             <span className="ar" />
             Triseno
-          </a>
+          </Link>
           <span className="nav-label">
             <span className="pip" />
             Studio — Content Division
@@ -609,15 +532,25 @@ export default function StudioContent() {
 
           {sent ? (
             <div className="inquiry-sent">
-              <h3>Thanks — your email is ready to send.</h3>
+              <h3>Thanks — your inquiry is in.</h3>
               <p>
-                We just opened a pre-filled message in your mail app. Hit send and we&apos;ll
-                get back to you within one business day. If nothing opened, reach us at{" "}
+                We&apos;ve got it and we&apos;ll get back to you within one business day.
+                Prefer to reach us directly?{" "}
                 <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>.
               </p>
             </div>
           ) : (
             <form className="inquiry" onSubmit={handleInquiry}>
+              {/* Honeypot — bots fill this, humans never see it. */}
+              <input
+                type="checkbox"
+                name="botcheck"
+                tabIndex={-1}
+                autoComplete="off"
+                style={{ display: "none" }}
+                aria-hidden="true"
+              />
+
               <div className="row">
                 <div className="field">
                   <label htmlFor="iq-name">Name</label>
@@ -634,27 +567,73 @@ export default function StudioContent() {
                   />
                 </div>
               </div>
-              <div className="field">
-                <label htmlFor="iq-budget">Budget range (optional)</label>
-                <select id="iq-budget" name="budget" defaultValue="">
-                  <option value="">Not sure yet</option>
-                  <option>Under $2k</option>
-                  <option>$2k–$5k</option>
-                  <option>$5k–$10k</option>
-                  <option>$10k+</option>
-                </select>
+
+              <div className="row">
+                <div className="field">
+                  <label htmlFor="iq-phone">Phone (optional)</label>
+                  <input id="iq-phone" name="phone" type="tel" placeholder="(555) 000-0000" />
+                </div>
+                <div className="field">
+                  <label htmlFor="iq-contact">Preferred contact</label>
+                  <select id="iq-contact" name="preferred_contact" defaultValue="Email">
+                    {CONTACT_METHODS.map((m) => (
+                      <option key={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              <div className="row">
+                <div className="field">
+                  <label htmlFor="iq-type">What do you want made?</label>
+                  <select id="iq-type" name="project_type" defaultValue="">
+                    <option value="" disabled>
+                      Select a format
+                    </option>
+                    {PROJECT_TYPES.map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="iq-budget">Budget range (optional)</label>
+                  <select id="iq-budget" name="budget" defaultValue="">
+                    <option value="">Not sure yet</option>
+                    <option>Under $2k</option>
+                    <option>$2k–$5k</option>
+                    <option>$5k–$10k</option>
+                    <option>$10k+</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="field">
-                <label htmlFor="iq-project">What are you looking to make?</label>
+                <label htmlFor="iq-project">Tell us what you&apos;re looking for</label>
                 <textarea
                   id="iq-project"
                   name="project"
                   required
-                  placeholder="What you're selling, where it needs to run, and any timeline in mind..."
+                  placeholder="What you're selling, who it's for, where it needs to run (Instagram, TikTok, YouTube…), how many videos, and any timeline in mind."
                 />
               </div>
-              <button type="submit" className="btn btn-solid">
-                Send inquiry
+
+              {err && (
+                <p
+                  className="inquiry-note"
+                  role="alert"
+                  style={{ color: "#ff8a8a", textAlign: "left" }}
+                >
+                  {err}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-solid"
+                disabled={sending}
+                style={sending ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
+              >
+                {sending ? "Sending…" : "Send inquiry"}
               </button>
               <p className="inquiry-note">
                 Goes straight to our inbox — we reply within one business day.

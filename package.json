@@ -2,7 +2,7 @@
   "name": "trisenosystems",
   "version": "0.1.0",
   "private": true,
-  "description": "Marketing website for Triseno Systems (trisenosystems.com) — a premium, motion-driven site for an AI infrastructure company. Next.js 16 (App Router) + TypeScript, Tailwind CSS 4, GSAP/ScrollTrigger + Lenis, Framer Motion, and React Three Fiber.",
+  "description": "Marketing website for Triseno Systems (trisenosystems.com) — a premium, motion-driven site for a creative studio in two divisions: product ad creative for paid social, and conversion-built websites for DTC brands. Next.js 16 (App Router) + TypeScript, Tailwind CSS 4, GSAP/ScrollTrigger + Lenis, Framer Motion, and React Three Fiber.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
