@@ -9,8 +9,13 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // Not a static export. The CMS at /edit needs API routes, middleware, and a
+  // session cookie, none of which exist under `output: "export"`. The four
+  // marketing routes still prerender to static HTML — verify on every build
+  // that they show as ○ (Static) and only /edit + /api/cms are ƒ (Dynamic).
   images: {
+    // Cloudinary already serves f_auto/q_auto; layering Next's optimizer on top
+    // double-transforms and burns the Image Optimization quota for no gain.
     unoptimized: true,
   },
   turbopack: {
