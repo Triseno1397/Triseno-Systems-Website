@@ -2,53 +2,19 @@
 
 /**
  * Triseno Studio — content division page (v2, ported from Triseno Studio.html).
- * Sections: Nav · Hero · What We Make (index drives a sticky crossfade preview) ·
- * The Triseno Edge · CTA · Marquee footer.
+ * Sections: Nav · Hero · Behind the Studio · What We Make (index drives a sticky
+ * crossfade preview) · The Triseno Edge · CTA · Marquee footer.
  * The old "How it works" stepper and standalone reel are intentionally absent —
  * all video weight lives in What We Make. Styling is in globals.css (.studio-page).
  */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import MarqueeFooter from "@/components/studio/MarqueeFooter";
-import { studioFormats } from "@/content/reels";
-
-type MakeItem = {
-  n: string;
-  title: string;
-  sm: string;
-  desc: string;
-  ratio: string;
-  tags: string[];
-  hotspot: string;
-  video?: string; // per-format demo reel; falls back to the gradient thumb when absent
-  audio?: boolean; // clip carries a soundtrack — surfaces the mute/unmute toggle
-  // Two clips shown side by side in one preview (Product Demo showcase). Takes
-  // precedence over `video`; each cell has its own caption and independent unmute.
-  videos?: { src: string; label: string }[];
-};
-
-// Projected from the shared reel library (src/content/reels.json), which the Work
-// gallery also renders from. Keeps the shape this component already consumes: a
-// single-clip format exposes `video`, a multi-clip one exposes `videos` and takes
-// precedence in the preview, and a format with no clip yet (Brand Films) falls back
-// to the gradient thumb. The 01..09 numbering is positional, so reordering the
-// library renumbers the index for free.
-const MAKE: MakeItem[] = studioFormats().map((f, i) => ({
-  n: String(i + 1).padStart(2, "0"),
-  title: f.title,
-  sm: f.tagline,
-  desc: f.description,
-  ratio: f.ratio,
-  tags: f.tags,
-  hotspot: f.hotspot,
-  ...(f.clips.length > 1
-    ? { videos: f.clips.map((c) => ({ src: c.src, label: c.label ?? "" })) }
-    : f.clips.length === 1
-      ? { video: f.clips[0].src, audio: f.clips[0].audio }
-      : {}),
-}));
+import { selectMakeItems } from "@/content/reels";
+import { useReels } from "@/content/ReelsProvider";
 
 // Thumb hotspot varies a touch per item so the preview feels alive. It now travels
 // with the format in reels.json rather than a parallel array indexed by position,
@@ -56,6 +22,13 @@ const MAKE: MakeItem[] = studioFormats().map((f, i) => ({
 const thumbBg = (hotspot: string) =>
   `radial-gradient(ellipse at ${hotspot}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
+
+// The full-bleed on-set photo under "Behind the Studio". The band is reserved in
+// the layout either way — set this to the file's path once the photo lands (drop
+// it in /public/images and point here, e.g. "/images/behind-the-studio.jpg") and
+// it fills the frame with no other change.
+const FOUNDER_PHOTO: string | null = null;
+const FOUNDER_PHOTO_ALT = "Triseno's founder on set behind a professional camera rig.";
 
 // Where every Studio CTA routes. Displayed and mailed to the same address.
 const STUDIO_EMAIL = "tristen@trisenosystems.com";
@@ -84,6 +57,13 @@ const PROJECT_TYPES = [
 const CONTACT_METHODS = ["Email", "Phone", "Text", "Other"];
 
 export default function StudioContent() {
+  // Projected from the shared reel library, which the Work gallery also renders from.
+  // Keeps the shape the preview machinery already consumes: a single-clip format
+  // exposes `video`, a multi-clip one exposes `videos` and takes precedence, and a
+  // format with no clip yet (Brand Films) falls back to the gradient thumb. Read
+  // through context so the editor can swap the library live in the preview.
+  const MAKE = selectMakeItems(useReels());
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -211,7 +191,11 @@ export default function StudioContent() {
     }, 180);
   };
 
-  const d = MAKE[shown];
+  // Clamp: in the editor the library can shrink under us (delete the reel that is
+  // currently previewed) and `shown` would then index past the end and crash the
+  // preview. On the published site MAKE never changes, so this costs nothing.
+  const d = MAKE[Math.min(shown, MAKE.length - 1)];
+  if (!d) return null;
 
   return (
     <div className="studio-page" ref={rootRef}>
@@ -265,6 +249,41 @@ export default function StudioContent() {
         </div>
       </header>
 
+      {/* BEHIND THE STUDIO */}
+      <section id="behind" className="behind">
+        <div className="wrap">
+          <div className="kicker reveal">Behind the Studio</div>
+          <h2 className="sec-title reveal">Triseno was built by a camera professional.</h2>
+
+          <div className="behind-copy reveal">
+            <p>
+              Our founder spent nearly a decade behind professional cameras in Los Angeles.
+              Broadcast, live production, and large-scale shoots, including major award shows
+              and corporate productions for companies like Meta, Google, and Epic Games. Ten
+              years of one discipline: knowing which shot sells the moment, and getting it.
+            </p>
+            <p>
+              That&apos;s the entire craft of product advertising. The angle, the light, the
+              three seconds that stop a scroll. We don&apos;t guess at what converts on screen.
+              Reading a frame has been the job for ten years.
+            </p>
+            <p>
+              When a brand hands us their product, it gets the same treatment those stages got.
+              Shot with intent, built to perform, delivered like it matters. Because to the
+              person buying it, it does.
+            </p>
+          </div>
+        </div>
+
+        {/* Full-bleed on-set photo. Lives outside .wrap so it spans the viewport
+            rather than stopping at the content column. */}
+        <figure className="behind-photo reveal">
+          {FOUNDER_PHOTO && (
+            <Image src={FOUNDER_PHOTO} alt={FOUNDER_PHOTO_ALT} fill sizes="100vw" />
+          )}
+        </figure>
+      </section>
+
       {/* WHAT WE MAKE */}
       <section id="make">
         <div className="wrap">
@@ -286,6 +305,7 @@ export default function StudioContent() {
                     type="button"
                     role="tab"
                     aria-selected={on}
+                    data-cms-id={`studio:reel:${i}`}
                     className={`ix${on ? " on" : ""}`}
                     onMouseEnter={() => select(i)}
                     onFocus={() => select(i)}

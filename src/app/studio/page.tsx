@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import StudioContent from "@/components/studio/StudioContent";
+import ReelsProvider from "@/content/ReelsProvider";
 
 export const metadata: Metadata = {
   title: "Triseno Studio · video that sells",
@@ -11,5 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default function StudioPage() {
-  return <StudioContent />;
+  return (
+    <ReelsProvider>
+      <StudioContent />
+    </ReelsProvider>
+  );
 }

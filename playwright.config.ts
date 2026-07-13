@@ -39,7 +39,12 @@ export default defineConfig({
   webServer: {
     command: "npx next start -p 3111",
     url: "http://localhost:3111",
-    reuseExistingServer: true,
+    // Deliberately false. Reusing a server means that after any rebuild the suite can
+    // silently attach to a process still serving the PREVIOUS build — old chunks, old
+    // routes. The symptoms (routes 404ing, chunk-load failures, phantom 500s) look
+    // exactly like application bugs and send you debugging code that is already
+    // correct. Always start a server against the build under test.
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

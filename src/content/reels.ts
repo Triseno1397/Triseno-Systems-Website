@@ -8,6 +8,10 @@ import raw from "./reels.json";
  * Fetching it at request time would silently turn all four marketing routes dynamic
  * — losing CDN caching and billing a serverless invocation on every pageview — while
  * looking, from the outside, like it still worked. Keep it an import.
+ *
+ * The selectors below are pure functions of a document rather than of the imported
+ * module, so the editor can run the exact same projection over an unsaved draft. The
+ * preview is therefore the real page, not a lookalike.
  */
 
 export type Clip = {
@@ -43,17 +47,25 @@ export type WorkTile = {
   caption?: string;
 };
 
-const formats = raw.formats as Format[];
+export type ReelsDoc = {
+  version: number;
+  formats: Format[];
+  studioOrder: string[];
+  workTiles: WorkTile[];
+};
 
-const byId = new Map(formats.map((f) => [f.id, f]));
-
-export function getFormat(id: string): Format | undefined {
-  return byId.get(id);
-}
+/** The published library, inlined at build time. */
+export const defaultReels: ReelsDoc = {
+  version: raw.version,
+  formats: raw.formats as Format[],
+  studioOrder: raw.studioOrder as string[],
+  workTiles: raw.workTiles as WorkTile[],
+};
 
 /** Studio's "What We Make", in order. The 01..09 numbering is positional. */
-export function studioFormats(): Format[] {
-  return (raw.studioOrder as string[])
+export function selectStudioFormats(doc: ReelsDoc): Format[] {
+  const byId = new Map(doc.formats.map((f) => [f.id, f]));
+  return doc.studioOrder
     .map((id) => byId.get(id))
     .filter((f): f is Format => Boolean(f));
 }
@@ -68,14 +80,17 @@ export type ResolvedTile = {
   audio: boolean;
 };
 
-export function workTiles(): ResolvedTile[] {
-  return (raw.workTiles as WorkTile[])
-    .map((tile) => {
+export function selectWorkTiles(doc: ReelsDoc): ResolvedTile[] {
+  const byId = new Map(doc.formats.map((f) => [f.id, f]));
+  return doc.workTiles
+    .map((tile, i) => {
       const format = byId.get(tile.reel);
       const clip = format?.clips[tile.clip];
+      // A tile pointing at a deleted reel or a removed clip simply drops out rather
+      // than throwing — the editor can transiently produce that state mid-edit.
       if (!format || !clip) return null;
       return {
-        key: `${tile.reel}-${tile.clip}`,
+        key: `${tile.reel}-${tile.clip}-${i}`,
         title: tile.title ?? format.title,
         caption: tile.caption ?? clip.caption,
         ratio: format.ratio,
@@ -84,4 +99,35 @@ export function workTiles(): ResolvedTile[] {
       };
     })
     .filter((t): t is ResolvedTile => t !== null);
+}
+
+/** The shape the Studio page's preview machinery already consumes. */
+export type MakeItem = {
+  n: string;
+  title: string;
+  sm: string;
+  desc: string;
+  ratio: string;
+  tags: string[];
+  hotspot: string;
+  video?: string;
+  audio?: boolean;
+  videos?: { src: string; label: string }[];
+};
+
+export function selectMakeItems(doc: ReelsDoc): MakeItem[] {
+  return selectStudioFormats(doc).map((f, i) => ({
+    n: String(i + 1).padStart(2, "0"),
+    title: f.title,
+    sm: f.tagline,
+    desc: f.description,
+    ratio: f.ratio,
+    tags: f.tags,
+    hotspot: f.hotspot,
+    ...(f.clips.length > 1
+      ? { videos: f.clips.map((c) => ({ src: c.src, label: c.label ?? "" })) }
+      : f.clips.length === 1
+        ? { video: f.clips[0].src, audio: f.clips[0].audio }
+        : {}),
+  }));
 }

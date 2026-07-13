@@ -12,13 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import MarqueeFooter from "@/components/studio/MarqueeFooter";
-import { workTiles } from "@/content/reels";
-
-// The gallery is a view over the shared reel library (src/content/reels.json), not
-// its own list — the same nine clips used to be declared here AND in StudioContent,
-// so adding a reel meant remembering to edit two files. Order interleaves tall and
-// wide clips so the masonry reads as a varied gallery, not a uniform grid.
-const REELS = workTiles();
+import { selectWorkTiles } from "@/content/reels";
+import { useReels } from "@/content/ReelsProvider";
 
 const STUDIO_EMAIL = "tristen@trisenosystems.com";
 
@@ -31,6 +26,12 @@ const WORK_QUICK_LINKS = [
 export default function PortfolioShowcase() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  // A view over the shared reel library (src/content/reels.json). These nine clips
+  // used to be declared here AND in StudioContent, so adding a reel meant editing two
+  // files — and the two lists had already drifted. Read through context so the editor
+  // can swap the library live in the preview.
+  const REELS = selectWorkTiles(useReels());
 
   const [scrolled, setScrolled] = useState(false);
   const [soundIndex, setSoundIndex] = useState<number | null>(null); // one clip unmuted at a time
@@ -142,7 +143,7 @@ export default function PortfolioShowcase() {
             {REELS.map((reel, i) => {
               const [w, h] = reel.ratio.split(":");
               return (
-                <div className="work-tile" key={reel.key}>
+                <div className="work-tile" key={reel.key} data-cms-id={`work:tile:${i}`}>
                   <div className="work-media" style={{ aspectRatio: `${w} / ${h}` }}>
                     <video
                       ref={(el) => {
