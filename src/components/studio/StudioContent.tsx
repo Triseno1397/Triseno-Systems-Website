@@ -23,12 +23,15 @@ const thumbBg = (hotspot: string) =>
   `radial-gradient(ellipse at ${hotspot}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
 
-// The full-bleed on-set photo under "Behind the Studio". The band is reserved in
-// the layout either way — set this to the file's path once the photo lands (drop
-// it in /public/images and point here, e.g. "/images/behind-the-studio.jpg") and
-// it fills the frame with no other change.
+// The full-bleed on-set photo under "Behind the Studio". Deliberately NOT rendered
+// as an empty placeholder frame: on a site that sells visual craft, an empty photo
+// slot reads as broken and costs more trust than the reserved space buys. The slot
+// stays wired up instead — drop the file in /public/images and point this at it
+// (e.g. "/images/behind-the-studio.jpg"); the band, its full-bleed geometry, and
+// the section's spacing all switch on from here with no other change.
 const FOUNDER_PHOTO: string | null = null;
-const FOUNDER_PHOTO_ALT = "Triseno's founder on set behind a professional camera rig.";
+const FOUNDER_PHOTO_ALT =
+  "Triseno's founder on set, operating a professional cinema camera during a live production.";
 
 // Where every Studio CTA routes. Displayed and mailed to the same address.
 const STUDIO_EMAIL = "tristen@trisenosystems.com";
@@ -245,15 +248,21 @@ export default function StudioContent() {
           </div>
         </div>
         <div className="hero-scroll" aria-hidden="true">
-          ↓ What we make
+          ↓ Behind the studio
         </div>
       </header>
 
       {/* BEHIND THE STUDIO */}
-      <section id="behind" className="behind">
+      <section
+        id="behind"
+        className={`behind${FOUNDER_PHOTO ? " has-photo" : ""}`}
+        aria-labelledby="behind-title"
+      >
         <div className="wrap">
           <div className="kicker reveal">Behind the Studio</div>
-          <h2 className="sec-title reveal">Triseno was built by a camera professional.</h2>
+          <h2 className="sec-title reveal" id="behind-title">
+            Triseno was built by a camera professional.
+          </h2>
 
           <div className="behind-copy reveal">
             <p>
@@ -276,12 +285,13 @@ export default function StudioContent() {
         </div>
 
         {/* Full-bleed on-set photo. Lives outside .wrap so it spans the viewport
-            rather than stopping at the content column. */}
-        <figure className="behind-photo reveal">
-          {FOUNDER_PHOTO && (
+            rather than stopping at the content column. Absent until the file lands —
+            an empty frame would undercut the very claim this section is making. */}
+        {FOUNDER_PHOTO && (
+          <figure className="behind-photo reveal">
             <Image src={FOUNDER_PHOTO} alt={FOUNDER_PHOTO_ALT} fill sizes="100vw" />
-          )}
-        </figure>
+          </figure>
+        )}
       </section>
 
       {/* WHAT WE MAKE */}

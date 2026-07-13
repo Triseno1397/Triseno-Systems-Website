@@ -718,7 +718,11 @@ main a {
 /* BEHIND THE STUDIO — founder story + full-bleed on-set photo.
    Deliberately plain: no icons, no ornament, no motion beyond the shared reveal.
    The weight comes from the type and the air around it. */
-.studio-page .behind { padding: clamp(104px, 16vh, 200px) 0 0; }
+/* Two states. Without the photo the section closes on its own air (What We Make
+   contributes its own top padding below). With the photo it runs flush to the
+   band, which becomes the section's bottom edge. */
+.studio-page .behind { padding: clamp(104px, 16vh, 200px) 0 clamp(24px, 4vh, 56px); }
+.studio-page .behind.has-photo { padding-bottom: 0; }
 .studio-page .behind .sec-title { max-width: 20ch; }
 .studio-page .behind-copy { margin-top: clamp(40px, 5vw, 64px); max-width: 62ch; display: grid; gap: 1.6em; }
 .studio-page .behind-copy p { font-size: clamp(16px, 1.3vw, 19px); color: var(--ink-2); line-height: 1.75; }
@@ -726,9 +730,12 @@ main a {
 .studio-page .behind-copy p:first-child { color: var(--ink-1); }
 
 /* Full-bleed band for the on-set photo. The frame is reserved whether or not the
-   image exists yet, so dropping the file in never reflows the section. 100vw off a
-   centered wrap — not 100%, which would stop at the wrap's max-width. */
-.studio-page .behind-photo { position: relative; margin: clamp(72px, 10vh, 128px) 0 0; width: 100vw; left: 50%; transform: translateX(-50%); aspect-ratio: 21 / 9; background: var(--bg-raised); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); overflow: hidden; }
+   image exists yet, so dropping the file in never reflows the section.
+   Full-bleed comes from width:100% — the figure sits outside .wrap and <section>
+   already spans the viewport. Do NOT center it with left:50%/translateX(-50%):
+   this element also carries .reveal, and `.reveal.in { transform: none }` wins on
+   specificity and would strip the translate, shoving the band half a screen right. */
+.studio-page .behind-photo { position: relative; margin: clamp(72px, 10vh, 128px) 0 0; width: 100%; aspect-ratio: 21 / 9; background: var(--bg-raised); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); overflow: hidden; }
 .studio-page .behind-photo img { width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 800px){ .studio-page .behind-photo { aspect-ratio: 3 / 2; } }
 
