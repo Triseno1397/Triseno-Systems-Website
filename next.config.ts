@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
     root: projectRoot,
   },
   outputFileTracingRoot: projectRoot,
+  // The Web Design Division is still a hand-written static page in /public.
+  // Under `output: "export"` Vercel stripped the .html and served it at the
+  // clean URL; a server build serves /public verbatim, so without this rewrite
+  // /web-design-division 404s and every nav/footer/portal link to it breaks.
+  // Retire this rewrite when the page is ported to the App Router.
+  async rewrites() {
+    return [
+      {
+        source: "/web-design-division",
+        destination: "/web-design-division.html",
+      },
+    ];
+  },
   // Allow LAN/VPN hosts to load Next.js dev resources (HMR, RSC, chunks) when
   // testing on a phone. Without this, scripts get blocked and pages render
   // visually but never hydrate, so handlers like the menu button do nothing.
