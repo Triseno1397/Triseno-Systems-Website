@@ -261,7 +261,8 @@ export default function StudioContent() {
         <div className="wrap">
           <div className="kicker reveal">Behind the Studio</div>
           <h2 className="sec-title reveal" id="behind-title">
-            Triseno was built by a camera professional.
+            Triseno was built by{" "}
+            <span className="grad">a camera professional.</span>
           </h2>
 
           <div className="behind-copy reveal">

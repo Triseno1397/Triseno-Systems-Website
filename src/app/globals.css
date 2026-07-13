@@ -653,6 +653,7 @@ main a {
   --bg: #0c0a0e;          /* warm-tinted black for studio */
   --bg-raised: #14101a;
   --ink-1: #f4ece8;
+  --ink-body: #e4dad4;  /* long-form body copy: reads at near-full strength without glaring */
   --ink-2: #b3a39c;
   --ink-3: #6b5d57;
   --hairline: rgba(255,255,255,0.08);
@@ -724,10 +725,14 @@ main a {
 .studio-page .behind { padding: clamp(104px, 16vh, 200px) 0 clamp(24px, 4vh, 56px); }
 .studio-page .behind.has-photo { padding-bottom: 0; }
 .studio-page .behind .sec-title { max-width: 20ch; }
-.studio-page .behind-copy { margin-top: clamp(40px, 5vw, 64px); max-width: 62ch; display: grid; gap: 1.6em; }
-.studio-page .behind-copy p { font-size: clamp(16px, 1.3vw, 19px); color: var(--ink-2); line-height: 1.75; }
-/* The first beat carries the story — let it lead in brighter than the rest. */
-.studio-page .behind-copy p:first-child { color: var(--ink-1); }
+.studio-page .behind .sec-title .grad { background: linear-gradient(110deg, var(--studio-a), var(--studio-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* One colour for the whole story — a warm near-white that sits well clear of the
+   muted --ink-2 used for supporting copy elsewhere. This block IS the argument, so
+   it reads at full strength rather than dimming after the first beat. Set a shade
+   below --ink-1 so it stays refined instead of glaring against the near-black. */
+.studio-page .behind-copy { margin-top: clamp(44px, 5vw, 68px); max-width: 58ch; display: grid; gap: 1.45em; }
+.studio-page .behind-copy p { font-size: clamp(17px, 1.5vw, 22px); color: var(--ink-body); line-height: 1.68; letter-spacing: -0.004em; }
 
 /* Full-bleed band for the on-set photo. The frame is reserved whether or not the
    image exists yet, so dropping the file in never reflows the section.
