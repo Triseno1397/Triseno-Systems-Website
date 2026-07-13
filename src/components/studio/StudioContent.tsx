@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import MarqueeFooter from "@/components/studio/MarqueeFooter";
+import { studioFormats } from "@/content/reels";
 
 type MakeItem = {
   n: string;
@@ -20,109 +21,40 @@ type MakeItem = {
   desc: string;
   ratio: string;
   tags: string[];
+  hotspot: string;
   video?: string; // per-format demo reel; falls back to the gradient thumb when absent
   audio?: boolean; // clip carries a soundtrack — surfaces the mute/unmute toggle
-  // Two clips shown side by side in one preview (UGC showcase). Takes precedence
-  // over `video`; each cell has its own caption and independent unmute.
+  // Two clips shown side by side in one preview (Product Demo showcase). Takes
+  // precedence over `video`; each cell has its own caption and independent unmute.
   videos?: { src: string; label: string }[];
 };
 
-const MAKE: MakeItem[] = [
-  {
-    n: "01",
-    title: "HyperMotion Ads",
-    sm: "Maximum motion. No shoot day.",
-    desc: "Our flagship. Kinetic type, product-hero motion, and generative visuals cut hard to the beat — high-velocity, footage-free ads designed frame by frame. The AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
-    ratio: "9:16",
-    tags: ["9:16 · 1:1 · 16:9", "Footage-free", "AI-accelerated"],
-    video: "/videos/pickleball-hypermotion.mp4",
-  },
-  {
-    n: "02",
-    title: "Product Hero",
-    sm: "The shot that makes it look expensive.",
-    desc: "Rim light, a slow push-in, a curl of steam — the cinematic beauty shot that makes the product look worth every penny. Pure Tier-1 craft, and our most reliable, best-looking work.",
-    ratio: "16:9",
-    tags: ["16:9 · 4:5 · 9:16", "Cinematic", "Tier-1 beauty"],
-    video: "/videos/product-hero.mp4",
-    audio: true,
-  },
-  {
-    n: "03",
-    title: "Direct Response Ads",
-    sm: "Built to sell, not to admire.",
-    desc: "Fast hook, clear benefit, hard offer, unmissable CTA — structured around the click, not the applause. The workhorse a performance founder is actually shopping for.",
-    ratio: "9:16",
-    tags: ["9:16 · 1:1 · 4:5", "3–6 variants", "Performance"],
-    video: "/videos/direct-response.mp4",
-    audio: true,
-  },
-  {
-    n: "04",
-    title: "Product Demo",
-    sm: "Obvious in 30 seconds.",
-    desc: "Shows the thing actually working — crisp, result-focused demos that make the value obvious for landing pages, product detail pages, and mid-funnel retargeting.",
-    ratio: "9:16",
-    tags: ["9:16 · 1:1 · 16:9", "Master + cutdowns", "Conversion"],
-    videos: [
-      { src: "/videos/demo-sneaker-cleaner.mp4", label: "Sneaker cleaner" },
-      { src: "/videos/demo-glass-cleaner.mp4", label: "Glass cleaner" },
-    ],
-  },
-  {
-    n: "05",
-    title: "Brand Films",
-    sm: "The flagship piece.",
-    desc: "Longer, moodier, aspirational — cinematic hero pieces for the top of your site and the top of your funnel. Story, craft, and scale in a single film, and the premium upsell to everything above.",
-    ratio: "2.39:1",
-    tags: ["16:9 · 2.39:1", "Hero film + edits", "Flagship"],
-  },
-  {
-    n: "06",
-    title: "UGC Ads",
-    sm: "Converts like a recommendation.",
-    desc: "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break.",
-    ratio: "9:16",
-    tags: ["9:16 · 1:1", "Creator-matched", "Volume"],
-    video: "/videos/ugc-watch-unbox.mp4",
-    audio: true,
-  },
-  {
-    n: "07",
-    title: "Apparel Try-On",
-    sm: "See it worn before they buy.",
-    desc: "The product on a real body — fit, drape, and movement in motion — so shoppers can picture themselves in it before checkout. The confidence-builder that closes the sale for fashion and apparel brands.",
-    ratio: "9:16",
-    tags: ["9:16 · 4:5", "On-model", "Fashion & apparel"],
-    video: "/videos/apparel-tryon.mp4",
-    audio: true,
-  },
-  {
-    n: "08",
-    title: "Visual Appeal",
-    sm: "Satisfying enough to stop the scroll.",
-    desc: "Texture, color, and motion tuned to be quietly mesmerizing — the satisfying, hypnotic visuals that hold a thumb mid-scroll and make a product impossible to look away from. Pure feed candy, engineered to earn the watch time.",
-    ratio: "9:16",
-    tags: ["9:16 · 4:5", "Satisfying", "Watch-time"],
-    video: "/videos/visual-appeal.mp4",
-    audio: true,
-  },
-  {
-    n: "09",
-    title: "ASMR Ads",
-    sm: "Sound you can feel.",
-    desc: "Close-mic'd sensory triggers — the taps, crinkles, peels, and pours that stop a muted scroll and reward the sound-on watch. Built to spike dwell time and turn pure sensory attention into intent.",
-    ratio: "16:9",
-    tags: ["16:9 · 9:16", "Trigger-rich", "Sound-on"],
-    video: "/videos/asmr-unbox.mp4",
-    audio: true,
-  },
-];
+// Projected from the shared reel library (src/content/reels.json), which the Work
+// gallery also renders from. Keeps the shape this component already consumes: a
+// single-clip format exposes `video`, a multi-clip one exposes `videos` and takes
+// precedence in the preview, and a format with no clip yet (Brand Films) falls back
+// to the gradient thumb. The 01..09 numbering is positional, so reordering the
+// library renumbers the index for free.
+const MAKE: MakeItem[] = studioFormats().map((f, i) => ({
+  n: String(i + 1).padStart(2, "0"),
+  title: f.title,
+  sm: f.tagline,
+  desc: f.description,
+  ratio: f.ratio,
+  tags: f.tags,
+  hotspot: f.hotspot,
+  ...(f.clips.length > 1
+    ? { videos: f.clips.map((c) => ({ src: c.src, label: c.label ?? "" })) }
+    : f.clips.length === 1
+      ? { video: f.clips[0].src, audio: f.clips[0].audio }
+      : {}),
+}));
 
-// Thumb hotspot varies a touch per item so the preview feels alive.
-const HOTSPOTS = ["55% 32%", "40% 40%", "65% 30%", "50% 45%", "48% 38%", "58% 35%", "45% 33%", "52% 36%", "50% 34%"];
-const thumbBg = (i: number) =>
-  `radial-gradient(ellipse at ${HOTSPOTS[i]}, rgba(255,138,61,0.20), transparent 60%),` +
+// Thumb hotspot varies a touch per item so the preview feels alive. It now travels
+// with the format in reels.json rather than a parallel array indexed by position,
+// which used to silently mis-pair every hotspot the moment a reel was reordered.
+const thumbBg = (hotspot: string) =>
+  `radial-gradient(ellipse at ${hotspot}, rgba(255,138,61,0.20), transparent 60%),` +
   `repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 5px), var(--bg-raised)`;
 
 // Where every Studio CTA routes. Displayed and mailed to the same address.
@@ -454,7 +386,7 @@ export default function StudioContent() {
                 <>
                   <div
                     className={`pv-thumb${fading ? " pv-fade" : ""}`}
-                    style={{ background: thumbBg(shown) }}
+                    style={{ background: thumbBg(d.hotspot) }}
                   />
                   <div className="pv-play" aria-hidden="true" />
                 </>

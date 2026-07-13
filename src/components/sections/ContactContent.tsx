@@ -70,6 +70,9 @@ const DIVISIONS: Record<
 
 const TIMELINES = ["ASAP / rush", "2–4 weeks", "1–2 months", "Flexible / not sure"];
 
+// How the visitor would like us to follow up.
+const CONTACT_METHODS = ["Email", "Phone", "Text", "Other"];
+
 export default function ContactContent() {
   const [division, setDivision] = useState<DivisionKey>("studio");
   const [submitted, setSubmitted] = useState(false);
@@ -247,6 +250,39 @@ export default function ContactContent() {
                             className={inputClasses}
                             placeholder="you@company.com"
                           />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="phone" className={labelClasses}>
+                            Phone{" "}
+                            <span className="text-text-tertiary">(optional)</span>
+                          </label>
+                          <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            className={inputClasses}
+                            placeholder="(555) 000-0000"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="preferred-contact" className={labelClasses}>
+                            Preferred contact
+                          </label>
+                          <select
+                            id="preferred-contact"
+                            name="preferred_contact"
+                            className={`${inputClasses} appearance-none cursor-pointer`}
+                            defaultValue="Email"
+                          >
+                            {CONTACT_METHODS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 

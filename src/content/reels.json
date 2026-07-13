@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "_comment": "The single reel library. Studio's 'What We Make' and the Work gallery both render from this, so adding a reel is one edit that shows up in both places. Each format owns its clips; a clip carries its own Work-page caption because the two pages genuinely say different things about the same video (Studio sells the format, Work captions the clip). Product Demo has two clips, which is why it appears as one format on Studio and two tiles on Work.",
+  "formats": [
+    {
+      "id": "hypermotion",
+      "title": "HyperMotion Ads",
+      "tagline": "Maximum motion. No shoot day.",
+      "description": "Our flagship. Kinetic type, product-hero motion, and generative visuals cut hard to the beat — high-velocity, footage-free ads designed frame by frame. The AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 1:1 · 16:9", "Footage-free", "AI-accelerated"],
+      "hotspot": "55% 32%",
+      "clips": [
+        {
+          "src": "/videos/pickleball-hypermotion.mp4",
+          "label": null,
+          "caption": "Kinetic, footage-free, cut to the beat.",
+          "audio": false
+        }
+      ]
+    },
+    {
+      "id": "product-hero",
+      "title": "Product Hero",
+      "tagline": "The shot that makes it look expensive.",
+      "description": "Rim light, a slow push-in, a curl of steam — the cinematic beauty shot that makes the product look worth every penny. Pure Tier-1 craft, and our most reliable, best-looking work.",
+      "ratio": "16:9",
+      "tags": ["16:9 · 4:5 · 9:16", "Cinematic", "Tier-1 beauty"],
+      "hotspot": "40% 40%",
+      "clips": [
+        {
+          "src": "/videos/product-hero.mp4",
+          "label": null,
+          "caption": "The cinematic beauty shot.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "id": "direct-response",
+      "title": "Direct Response Ads",
+      "tagline": "Built to sell, not to admire.",
+      "description": "Fast hook, clear benefit, hard offer, unmissable CTA — structured around the click, not the applause. The workhorse a performance founder is actually shopping for.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 1:1 · 4:5", "3–6 variants", "Performance"],
+      "hotspot": "65% 30%",
+      "clips": [
+        {
+          "src": "/videos/direct-response.mp4",
+          "label": null,
+          "caption": "Built to sell, not to admire.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "id": "product-demo",
+      "title": "Product Demo",
+      "tagline": "Obvious in 30 seconds.",
+      "description": "Shows the thing actually working — crisp, result-focused demos that make the value obvious for landing pages, product detail pages, and mid-funnel retargeting.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 1:1 · 16:9", "Master + cutdowns", "Conversion"],
+      "hotspot": "50% 45%",
+      "clips": [
+        {
+          "src": "/videos/demo-sneaker-cleaner.mp4",
+          "label": "Sneaker cleaner",
+          "caption": "Sneaker cleaner — obvious in 30s.",
+          "audio": false
+        },
+        {
+          "src": "/videos/demo-glass-cleaner.mp4",
+          "label": "Glass cleaner",
+          "caption": "Glass cleaner — the value made plain.",
+          "audio": false
+        }
+      ]
+    },
+    {
+      "id": "brand-films",
+      "title": "Brand Films",
+      "tagline": "The flagship piece.",
+      "description": "Longer, moodier, aspirational — cinematic hero pieces for the top of your site and the top of your funnel. Story, craft, and scale in a single film, and the premium upsell to everything above.",
+      "ratio": "2.39:1",
+      "tags": ["16:9 · 2.39:1", "Hero film + edits", "Flagship"],
+      "hotspot": "48% 38%",
+      "clips": []
+    },
+    {
+      "id": "ugc",
+      "title": "UGC Ads",
+      "tagline": "Converts like a recommendation.",
+      "description": "Authentic, native-to-the-feed content — sourced, matched, and directed to feel like word of mouth instead of an ad break.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 1:1", "Creator-matched", "Volume"],
+      "hotspot": "58% 35%",
+      "clips": [
+        {
+          "src": "/videos/ugc-watch-unbox.mp4",
+          "label": null,
+          "caption": "Converts like a recommendation.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "id": "apparel-tryon",
+      "title": "Apparel Try-On",
+      "tagline": "See it worn before they buy.",
+      "description": "The product on a real body — fit, drape, and movement in motion — so shoppers can picture themselves in it before checkout. The confidence-builder that closes the sale for fashion and apparel brands.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 4:5", "On-model", "Fashion & apparel"],
+      "hotspot": "45% 33%",
+      "clips": [
+        {
+          "src": "/videos/apparel-tryon.mp4",
+          "label": null,
+          "caption": "See it worn before they buy.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "id": "visual-appeal",
+      "title": "Visual Appeal",
+      "tagline": "Satisfying enough to stop the scroll.",
+      "description": "Texture, color, and motion tuned to be quietly mesmerizing — the satisfying, hypnotic visuals that hold a thumb mid-scroll and make a product impossible to look away from. Pure feed candy, engineered to earn the watch time.",
+      "ratio": "9:16",
+      "tags": ["9:16 · 4:5", "Satisfying", "Watch-time"],
+      "hotspot": "52% 36%",
+      "clips": [
+        {
+          "src": "/videos/visual-appeal.mp4",
+          "label": null,
+          "caption": "Satisfying enough to stop the scroll.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "id": "asmr",
+      "title": "ASMR Ads",
+      "tagline": "Sound you can feel.",
+      "description": "Close-mic'd sensory triggers — the taps, crinkles, peels, and pours that stop a muted scroll and reward the sound-on watch. Built to spike dwell time and turn pure sensory attention into intent.",
+      "ratio": "16:9",
+      "tags": ["16:9 · 9:16", "Trigger-rich", "Sound-on"],
+      "hotspot": "50% 34%",
+      "clips": [
+        {
+          "src": "/videos/asmr-unbox.mp4",
+          "label": null,
+          "caption": "Sound you can feel.",
+          "audio": true
+        }
+      ]
+    }
+  ],
+
+  "studioOrder": [
+    "hypermotion",
+    "product-hero",
+    "direct-response",
+    "product-demo",
+    "brand-films",
+    "ugc",
+    "apparel-tryon",
+    "visual-appeal",
+    "asmr"
+  ],
+
+  "_workComment": "The Work gallery picks specific clips in its own order and interleaves tall and wide so the masonry reads as a varied gallery. `title` is an optional override — the Work page calls the Direct Response format simply 'Direct Response'.",
+  "workTiles": [
+    { "reel": "hypermotion", "clip": 0 },
+    { "reel": "product-hero", "clip": 0 },
+    { "reel": "direct-response", "clip": 0, "title": "Direct Response" },
+    { "reel": "ugc", "clip": 0 },
+    { "reel": "asmr", "clip": 0 },
+    { "reel": "apparel-tryon", "clip": 0 },
+    { "reel": "product-demo", "clip": 0 },
+    { "reel": "visual-appeal", "clip": 0 },
+    { "reel": "product-demo", "clip": 1 }
+  ]
+}

@@ -44,7 +44,8 @@
       "WebFetch(domain:codepen.io)",
       "WebFetch(domain:cpwebassets.codepen.io)",
       "WebSearch",
-      "Bash(curl -s -o /dev/null -w \"compile-second-hit:%{http_code}\\\\n\" http://localhost:3000/)"
+      "Bash(curl -s -o /dev/null -w \"compile-second-hit:%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(git rev-list *)"
     ]
   }
 }

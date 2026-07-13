@@ -12,28 +12,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
 import MarqueeFooter from "@/components/studio/MarqueeFooter";
+import { workTiles } from "@/content/reels";
 
-type Reel = {
-  title: string;
-  sm: string; // one-line caption
-  ratio: string; // "9:16" | "16:9" — drives the tile aspect
-  video: string;
-  audio?: boolean; // clip carries sound → show the unmute toggle
-};
-
-// Every entry maps to a real file in /public/videos. Order interleaves tall and
+// The gallery is a view over the shared reel library (src/content/reels.json), not
+// its own list — the same nine clips used to be declared here AND in StudioContent,
+// so adding a reel meant remembering to edit two files. Order interleaves tall and
 // wide clips so the masonry reads as a varied gallery, not a uniform grid.
-const REELS: Reel[] = [
-  { title: "HyperMotion Ads", sm: "Kinetic, footage-free, cut to the beat.", ratio: "9:16", video: "/videos/pickleball-hypermotion.mp4" },
-  { title: "Product Hero", sm: "The cinematic beauty shot.", ratio: "16:9", video: "/videos/product-hero.mp4", audio: true },
-  { title: "Direct Response", sm: "Built to sell, not to admire.", ratio: "9:16", video: "/videos/direct-response.mp4", audio: true },
-  { title: "UGC Ads", sm: "Converts like a recommendation.", ratio: "9:16", video: "/videos/ugc-watch-unbox.mp4", audio: true },
-  { title: "ASMR Ads", sm: "Sound you can feel.", ratio: "16:9", video: "/videos/asmr-unbox.mp4", audio: true },
-  { title: "Apparel Try-On", sm: "See it worn before they buy.", ratio: "9:16", video: "/videos/apparel-tryon.mp4", audio: true },
-  { title: "Product Demo", sm: "Sneaker cleaner — obvious in 30s.", ratio: "9:16", video: "/videos/demo-sneaker-cleaner.mp4" },
-  { title: "Visual Appeal", sm: "Satisfying enough to stop the scroll.", ratio: "9:16", video: "/videos/visual-appeal.mp4", audio: true },
-  { title: "Product Demo", sm: "Glass cleaner — the value made plain.", ratio: "9:16", video: "/videos/demo-glass-cleaner.mp4" },
-];
+const REELS = workTiles();
 
 const STUDIO_EMAIL = "tristen@trisenosystems.com";
 
@@ -157,13 +142,13 @@ export default function PortfolioShowcase() {
             {REELS.map((reel, i) => {
               const [w, h] = reel.ratio.split(":");
               return (
-                <div className="work-tile" key={`${reel.title}-${reel.video}`}>
+                <div className="work-tile" key={reel.key}>
                   <div className="work-media" style={{ aspectRatio: `${w} / ${h}` }}>
                     <video
                       ref={(el) => {
                         videoRefs.current[i] = el;
                       }}
-                      src={reel.video}
+                      src={reel.src}
                       muted
                       loop
                       autoPlay
@@ -191,7 +176,7 @@ export default function PortfolioShowcase() {
                     )}
                     <div className="work-cap">
                       <h3>{reel.title}</h3>
-                      <p>{reel.sm}</p>
+                      <p>{reel.caption}</p>
                     </div>
                   </div>
                 </div>

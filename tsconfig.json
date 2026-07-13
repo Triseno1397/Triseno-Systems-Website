@@ -30,5 +30,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // The app build must not be hostage to the test harness. `next build` typechecks
+  // everything in `include`, so leaving these here means a typing quirk in the
+  // Playwright config fails a production deploy. They are typechecked separately by
+  // tsconfig.tests.json instead.
+  "exclude": ["node_modules", "tests", "playwright.config.ts"]
 }

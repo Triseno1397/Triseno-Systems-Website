@@ -28,9 +28,13 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: process.env.BASE_URL ?? "http://localhost:3111",
-    reducedMotion: "reduce",
     ...devices["Desktop Chrome"],
+    baseURL: process.env.BASE_URL ?? "http://localhost:3111",
+    // NOT a top-level `use` key — Playwright only reads reducedMotion from
+    // contextOptions. Setting it at the top level type-errors and is silently
+    // ignored at runtime, which quietly leaves every animation running and makes
+    // the whole suite flaky for reasons that look unrelated.
+    contextOptions: { reducedMotion: "reduce" },
   },
   webServer: {
     command: "npx next start -p 3111",
