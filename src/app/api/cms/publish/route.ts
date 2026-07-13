@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/cms/guard";
-import { acquireLock, del, get, pushCapped, KEYS } from "@/lib/cms/store";
 import { commitFiles } from "@/lib/cms/github";
-import type { Draft } from "../draft/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * Validation is the gate that keeps a broken build off main. The renderer is entirely
- * data-driven, so if the data is well-formed the page cannot fail to compile — which
- * is why we can afford to publish straight to production with no preview build.
+ * Publish: validate the content, commit it to main, let Vercel deploy it.
+ *
+ * The content arrives in the request body rather than from a server-side draft store.
+ * That is the whole reason this CMS needs no database: the draft lives in the browser
+ * until he presses Publish, so there is nothing to host, nothing to sign up for, and no
+ * extra secrets. The cost is that a draft does not follow him between devices — a fair
+ * trade for a two-person tool, and revisitable later without changing anything here.
+ *
+ * There is deliberately no publish lock. A double-click cannot produce two commits:
+ * commitFiles() skips files whose content is unchanged, so the second request finds
+ * nothing to do and returns a no-op, and the underlying ref update is atomic on its
+ * parent SHA, so a genuine race fails rather than clobbering.
  */
+
 const clipSchema = z.object({
   src: z.string().min(1, "Every clip needs a video."),
   label: z.string().nullable(),
@@ -31,6 +39,13 @@ const formatSchema = z.object({
   clips: z.array(clipSchema),
 });
 
+/**
+ * Validation is what makes it safe to publish straight to production with no preview
+ * build: the renderer is entirely data-driven, so well-formed data cannot fail to
+ * compile. The referential checks matter as much as the shape ones — a studioOrder
+ * entry pointing at a deleted reel renders as a silently missing section rather than an
+ * error, which is exactly the sort of thing nobody notices until a client does.
+ */
 const reelsSchema = z
   .object({
     version: z.number(),
@@ -45,13 +60,10 @@ const reelsSchema = z
       })
     ),
   })
-  // Referential integrity. Zod alone would happily accept a studioOrder pointing at a
-  // reel that no longer exists — which renders as a silently missing section rather
-  // than an error, and is exactly the sort of thing nobody notices until a client does.
   .superRefine((doc, ctx) => {
     const ids = new Set(doc.formats.map((f) => f.id));
 
-    if (new Set(doc.formats.map((f) => f.id)).size !== doc.formats.length) {
+    if (ids.size !== doc.formats.length) {
       ctx.addIssue({ code: "custom", message: "Two reels share the same id." });
     }
 
@@ -64,7 +76,10 @@ const reelsSchema = z
     for (const tile of doc.workTiles) {
       const format = doc.formats.find((f) => f.id === tile.reel);
       if (!format) {
-        ctx.addIssue({ code: "custom", message: `Work gallery references a missing reel: ${tile.reel}` });
+        ctx.addIssue({
+          code: "custom",
+          message: `Work gallery references a missing reel: ${tile.reel}`,
+        });
       } else if (!format.clips[tile.clip]) {
         ctx.addIssue({
           code: "custom",
@@ -74,75 +89,55 @@ const reelsSchema = z
     }
   });
 
-export async function POST() {
+export async function POST(req: Request) {
   const guard = await requireSession({ mutating: true });
   if (!guard.ok) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }
 
-  // Double-click on Publish would otherwise be two commits and two builds.
-  const gotLock = await acquireLock(KEYS.publishLock, 120);
-  if (!gotLock) {
-    return NextResponse.json({ error: "A publish is already running." }, { status: 409 });
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 
+  const parsed = reelsSchema.safeParse((body as { reels?: unknown })?.reels);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "Some changes aren't valid yet.",
+        issues: parsed.error.issues.map((i) => i.message),
+      },
+      { status: 422 }
+    );
+  }
+
+  // Re-serialise from the validated object, not the raw body: this strips anything the
+  // editor may have carried along and guarantees the committed file is exactly the
+  // shape the site's loader expects.
+  const doc = parsed.data;
+  const content =
+    JSON.stringify(
+      {
+        version: doc.version,
+        formats: doc.formats,
+        studioOrder: doc.studioOrder,
+        workTiles: doc.workTiles,
+      },
+      null,
+      2
+    ) + "\n";
+
   try {
-    const draft = await get<Draft>(KEYS.draft);
-    if (!draft) {
-      return NextResponse.json({ error: "Nothing to publish." }, { status: 400 });
-    }
-
-    const parsed = reelsSchema.safeParse(draft.reels);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Some changes aren't valid yet.",
-          issues: parsed.error.issues.map((i) => i.message),
-        },
-        { status: 422 }
-      );
-    }
-
-    // Re-serialise from the validated object, not the raw draft: this strips anything
-    // the editor may have carried along and guarantees the committed file is exactly
-    // the shape the site's loader expects.
-    const doc = parsed.data;
-    const content =
-      JSON.stringify(
-        {
-          version: doc.version,
-          formats: doc.formats,
-          studioOrder: doc.studioOrder,
-          workTiles: doc.workTiles,
-        },
-        null,
-        2
-      ) + "\n";
-
     const result = await commitFiles(
       [{ path: "src/content/reels.json", content }],
       "content: publish reels via /edit"
     );
 
     if ("noop" in result) {
-      await del(KEYS.draft);
       return NextResponse.json({ ok: true, noop: true });
     }
-
-    await pushCapped(
-      KEYS.publishes,
-      {
-        commitSha: result.commitSha,
-        url: result.url,
-        changed: result.changed,
-        at: Date.now(),
-        snapshot: doc,
-      },
-      50
-    );
-
-    // The draft has landed; clear it so the editor reads from published content again.
-    await del(KEYS.draft);
 
     return NextResponse.json({
       ok: true,
@@ -152,8 +147,10 @@ export async function POST() {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  } finally {
-    await del(KEYS.publishLock);
+    // The single most likely failure in a year's time: fine-grained PATs expire.
+    const friendly = /bad credentials|401/i.test(message)
+      ? "GitHub rejected the token — it has probably expired. Generate a new GITHUB_TOKEN."
+      : message;
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }

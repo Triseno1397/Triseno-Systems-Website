@@ -1,18 +1,38 @@
 import { NextResponse } from "next/server";
-import { createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/cms/auth";
-// Node-only (scrypt). Kept in its own module so it can never reach the Edge bundle.
+import { cookies } from "next/headers";
+import {
+  createSession,
+  SESSION_COOKIE,
+  sessionCookieOptions,
+  UNLOCK_COOKIE,
+} from "@/lib/cms/auth";
+// Node-only (scrypt). Kept in its own module so it can never reach an Edge bundle.
 import { verifyPin } from "@/lib/cms/pin";
-import { checkLoginThrottle, clearLoginFailures, recordLoginFailure } from "@/lib/cms/store";
+import { checkLoginThrottle, clearLoginFailures, recordLoginFailure } from "@/lib/cms/throttle";
 import { clientIp } from "@/lib/cms/guard";
 
 // scrypt is Node-only — it does not exist on the Edge runtime.
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  // The unlock cookie is required HERE, not just on the /edit pages.
+  //
+  // This endpoint has no layout, so the layout's unlock gate does not protect it — it is
+  // reachable directly. Without this check, an attacker could ignore /edit entirely and
+  // grind the PIN against this route: 10,000 combinations, which is not a secret.
+  //
+  // With it, reaching the PIN check at all requires the 128-bit unlock key, so the PIN
+  // only ever has to stop someone who already has the bookmarked link (a borrowed laptop),
+  // not the internet. This is the check that lets the throttle be a simple in-memory one.
+  const jar = await cookies();
+  if (jar.get(UNLOCK_COOKIE)?.value !== "1") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const ip = await clientIp();
 
-  // Throttle BEFORE doing any work, so a flood costs us nothing.
-  const throttle = await checkLoginThrottle(ip);
+  // Throttle before doing any work, so a flood costs us nothing.
+  const throttle = checkLoginThrottle(ip);
   if (!throttle.allowed) {
     return NextResponse.json({ error: throttle.reason }, { status: 429 });
   }
@@ -28,7 +48,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 
-  // ~100ms by design: it is what makes online guessing of a 4-digit PIN impractical.
+  // ~100ms by design: it is what makes online guessing of a short PIN impractical.
   // If the secrets aren't configured (a fresh deploy where the Vercel env vars haven't
   // been added yet), say so plainly rather than emitting a bare 500.
   let ok: boolean;
@@ -42,12 +62,11 @@ export async function POST(req: Request) {
   }
 
   if (!ok) {
-    await recordLoginFailure(ip);
-    // Deliberately vague, and identical for "wrong PIN" and "no such user".
+    recordLoginFailure(ip);
     return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
   }
 
-  await clearLoginFailures(ip);
+  clearLoginFailures(ip);
 
   const token = await createSession();
   const res = NextResponse.json({ ok: true });

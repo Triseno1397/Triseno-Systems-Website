@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import EditorShell from "@/components/cms/EditorShell";
 import { SESSION_COOKIE, verifySession } from "@/lib/cms/auth";
-import { isPersistent } from "@/lib/cms/store";
+import { defaultReels } from "@/content/reels";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +13,7 @@ export default async function EditPage() {
   const session = await verifySession(jar.get(SESSION_COOKIE)?.value);
   if (!session) redirect("/edit/login");
 
-  return <EditorShell persistentDraft={isPersistent()} />;
+  // The currently published content. The editor diffs its local draft against this to
+  // know whether anything is actually unsaved.
+  return <EditorShell published={defaultReels} />;
 }

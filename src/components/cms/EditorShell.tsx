@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Format, ReelsDoc } from "@/content/reels";
-import { defaultReels } from "@/content/reels";
 import ReelInspector from "./ReelInspector";
 import PublishBar from "./PublishBar";
 
@@ -15,6 +14,12 @@ import PublishBar from "./PublishBar";
  * chrome would be a permanent CSS and event-handler war. An iframe gives real isolation,
  * true responsive widths for the device toggle, and — most importantly — guarantees that
  * what he sees is what visitors get, because it IS what visitors get.
+ *
+ * The draft lives in localStorage, not on a server. That is what lets this whole CMS run
+ * with no database and no third-party service: the content only leaves the browser when
+ * he presses Publish, which sends it to /api/cms/publish and straight into a git commit.
+ * The trade-off is honest and stated in the UI — a draft does not follow him to another
+ * device.
  */
 
 type Device = "mobile" | "tablet" | "desktop";
@@ -22,12 +27,11 @@ const DEVICE_WIDTH: Record<Device, number> = { mobile: 390, tablet: 768, desktop
 
 type PreviewPage = "studio" | "portfolio";
 
-export default function EditorShell({ persistentDraft }: { persistentDraft: boolean }) {
-  const [doc, setDoc] = useState<ReelsDoc>(defaultReels);
+const DRAFT_KEY = "triseno:cms:draft:reels";
+
+export default function EditorShell({ published }: { published: ReelsDoc }) {
+  const [doc, setDoc] = useState<ReelsDoc>(published);
   const [loaded, setLoaded] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const [page, setPage] = useState<PreviewPage>("studio");
   const [device, setDevice] = useState<Device>("desktop");
@@ -35,26 +39,40 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const iframeReady = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Load the working draft (or the published content if there isn't one). ── */
+  /** Anything unsaved? Compare against what is actually published, not a dirty flag —
+   *  a flag would keep claiming "unsaved" after he undid his own change by hand. */
+  const dirty = useMemo(
+    () => JSON.stringify(doc) !== JSON.stringify(published),
+    [doc, published]
+  );
+
+  /* ── Restore a draft from this browser, if there is one. ── */
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/cms/draft");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.draft?.reels) {
-            setDoc(data.draft.reels as ReelsDoc);
-            setDirty(Boolean(data.isDraft));
-            setSavedAt(data.draft.updatedAt || null);
-          }
-        }
-      } finally {
-        setLoaded(true);
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as ReelsDoc;
+        if (parsed?.formats?.length) setDoc(parsed);
       }
-    })();
+    } catch {
+      // A corrupt draft must not brick the editor — fall back to published content.
+      window.localStorage.removeItem(DRAFT_KEY);
+    }
+    setLoaded(true);
   }, []);
+
+  /* ── Persist every change locally. ── */
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      if (dirty) window.localStorage.setItem(DRAFT_KEY, JSON.stringify(doc));
+      else window.localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // Quota or private mode. The editor still works; the draft just won't survive a
+      // reload, which is better than crashing mid-edit.
+    }
+  }, [doc, dirty, loaded]);
 
   /* ── Push the document into the preview whenever it changes. ── */
   const pushToPreview = useCallback((next: ReelsDoc) => {
@@ -69,7 +87,7 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
     if (loaded) pushToPreview(doc);
   }, [doc, loaded, pushToPreview]);
 
-  /* ── Listen to the preview: it tells us when it's ready, and what got clicked. ── */
+  /* ── Listen to the preview: it says when it's ready, and what got clicked. ── */
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
@@ -101,56 +119,31 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
     return () => window.removeEventListener("message", onMessage);
   }, [doc, pushToPreview]);
 
-  /* ── Autosave, debounced. ── */
-  const scheduleSave = useCallback((next: ReelsDoc) => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        const res = await fetch("/api/cms/draft", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "x-triseno-cms": "1" },
-          body: JSON.stringify({ reels: next }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSavedAt(data.updatedAt);
-        }
-      } finally {
-        setSaving(false);
-      }
-    }, 800);
-  }, []);
-
-  const update = useCallback(
-    (next: ReelsDoc) => {
-      setDoc(next);
-      setDirty(true);
-      scheduleSave(next);
-    },
-    [scheduleSave]
-  );
-
   const updateFormat = useCallback(
     (index: number, patch: Partial<Format>) => {
-      const formats = doc.formats.map((f, i) => (i === index ? { ...f, ...patch } : f));
-      update({ ...doc, formats });
+      setDoc((d) => ({
+        ...d,
+        formats: d.formats.map((f, i) => (i === index ? { ...f, ...patch } : f)),
+      }));
     },
-    [doc, update]
+    []
   );
 
-  /* ── Reordering: studioOrder is the source of truth for the Studio page. ── */
-  const moveInStudioOrder = useCallback(
-    (formatId: string, direction: -1 | 1) => {
-      const order = [...doc.studioOrder];
+  const moveInStudioOrder = useCallback((formatId: string, direction: -1 | 1) => {
+    setDoc((d) => {
+      const order = [...d.studioOrder];
       const from = order.indexOf(formatId);
       const to = from + direction;
-      if (from < 0 || to < 0 || to >= order.length) return;
+      if (from < 0 || to < 0 || to >= order.length) return d;
       [order[from], order[to]] = [order[to], order[from]];
-      update({ ...doc, studioOrder: order });
-    },
-    [doc, update]
-  );
+      return { ...d, studioOrder: order };
+    });
+  }, []);
+
+  const discard = useCallback(() => {
+    window.localStorage.removeItem(DRAFT_KEY);
+    setDoc(published);
+  }, [published]);
 
   const orderedFormats = useMemo(() => {
     const byId = new Map(doc.formats.map((f, i) => [f.id, i]));
@@ -161,8 +154,6 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
       })
       .filter((x): x is { format: Format; index: number } => x !== null);
   }, [doc]);
-
-  const previewSrc = `/${page}?__draft=1`;
 
   if (!loaded) {
     return (
@@ -176,11 +167,15 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
   return (
     <>
       <PublishBar
+        doc={doc}
         dirty={dirty}
-        saving={saving}
-        savedAt={savedAt}
-        persistentDraft={persistentDraft}
-        onPublished={() => setDirty(false)}
+        onDiscard={discard}
+        onPublished={() => {
+          // Published content is now what's on screen; clear the local draft so the
+          // editor stops reporting unsaved changes.
+          window.localStorage.removeItem(DRAFT_KEY);
+          window.location.reload();
+        }}
       />
 
       <div className="cms-body">
@@ -279,19 +274,18 @@ export default function EditorShell({ persistentDraft }: { persistentDraft: bool
 
           <div className="cms-canvas">
             {/*
-              No onLoad handler here, deliberately. Resetting the ready flag on load
-              looks right and is a trap: `load` fires on *window load*, which on a page
-              carrying ~90MB of autoplaying video lands long after React has hydrated
-              and already posted cms:ready. It therefore clobbers the flag back to false
-              *after* the preview was ready, and every subsequent edit is silently
-              dropped — the preview freezes at its initial content and nothing errors.
-              Readiness is owned solely by the iframe's own cms:ready message, and reset
-              only when we deliberately swap pages.
+              No onLoad handler here, deliberately. Resetting the ready flag on load looks
+              right and is a trap: `load` fires on *window load*, which on a page carrying
+              ~90MB of autoplaying video lands long after React has hydrated and already
+              posted cms:ready. It therefore clobbers the flag back to false *after* the
+              preview was ready, and every subsequent edit is silently dropped — the
+              preview freezes at its initial content and nothing errors. Readiness is owned
+              solely by the iframe's own cms:ready message.
             */}
             <iframe
               ref={iframeRef}
               key={page}
-              src={previewSrc}
+              src={`/${page}?__draft=1`}
               title="Live preview"
               className="cms-frame"
               style={{ width: DEVICE_WIDTH[device] }}
