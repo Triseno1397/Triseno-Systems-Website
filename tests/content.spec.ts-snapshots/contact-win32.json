@@ -1,0 +1,214 @@
+{
+  "title": "Contact · Start a project | Triseno Systems",
+  "metaDescription": "Get in touch with Triseno. Email us, find us on Instagram, or send an inquiry: video content from the Content Studio, or a conversion-built site from the Web Design Division. We reply within one business day.",
+  "headings": [
+    {
+      "tag": "h1",
+      "text": "Let's start a project."
+    },
+    {
+      "tag": "h4",
+      "text": "Reach us directly"
+    },
+    {
+      "tag": "h4",
+      "text": "Navigation"
+    },
+    {
+      "tag": "h4",
+      "text": "Services"
+    },
+    {
+      "tag": "h4",
+      "text": "Contact"
+    }
+  ],
+  "paragraphs": [
+    "Email us, find us on Instagram, or send an inquiry below — pick the team you need and we'll take it from there.",
+    "Video & creative for paid social — UGC to cinematic brand films.",
+    "We reply within one business day — often sooner.",
+    "One studio, two divisions — video content for paid social and cinematic, conversion-built websites.",
+    "© 2026 Triseno Systems. All rights reserved.",
+    "Tristen@trisenosystems.com·Instagram @trisenosystems"
+  ],
+  "links": [
+    {
+      "text": "",
+      "href": "/"
+    },
+    {
+      "text": "Studio",
+      "href": "/studio"
+    },
+    {
+      "text": "Work",
+      "href": "/portfolio"
+    },
+    {
+      "text": "Contact",
+      "href": "/contact"
+    },
+    {
+      "text": "Web Design",
+      "href": "/web-design-division"
+    },
+    {
+      "text": "Emailtristen@trisenosystems.com",
+      "href": "mailto:tristen@trisenosystems.com"
+    },
+    {
+      "text": "Instagram@trisenosystems",
+      "href": "https://instagram.com/trisenosystems"
+    },
+    {
+      "text": "Home",
+      "href": "/"
+    },
+    {
+      "text": "Studio",
+      "href": "/studio"
+    },
+    {
+      "text": "Work",
+      "href": "/portfolio"
+    },
+    {
+      "text": "Contact",
+      "href": "/contact"
+    },
+    {
+      "text": "Web Design Division",
+      "href": "/web-design-division"
+    },
+    {
+      "text": "Paid Social Creative",
+      "href": "/studio"
+    },
+    {
+      "text": "UGC Ads",
+      "href": "/studio"
+    },
+    {
+      "text": "Short-Form Content",
+      "href": "/studio"
+    },
+    {
+      "text": "Product Video",
+      "href": "/studio"
+    },
+    {
+      "text": "Brand Films",
+      "href": "/studio"
+    },
+    {
+      "text": "Web Design",
+      "href": "/web-design-division"
+    },
+    {
+      "text": "Tristen@trisenosystems.com",
+      "href": "mailto:Tristen@trisenosystems.com"
+    },
+    {
+      "text": "Start a conversation",
+      "href": "/contact"
+    },
+    {
+      "text": "Instagram @trisenosystems",
+      "href": "https://instagram.com/trisenosystems"
+    },
+    {
+      "text": "Tristen@trisenosystems.com",
+      "href": "mailto:Tristen@trisenosystems.com"
+    },
+    {
+      "text": "Instagram @trisenosystems",
+      "href": "https://instagram.com/trisenosystems"
+    }
+  ],
+  "buttons": [
+    "Content Studio",
+    "Web Design Division",
+    "Send inquiry"
+  ],
+  "videos": [],
+  "images": [
+    {
+      "src": "/images/triseno-logo-v2.png",
+      "alt": "Triseno Systems"
+    },
+    {
+      "src": "/images/triseno-logo-v2.png",
+      "alt": ""
+    },
+    {
+      "src": "/images/triseno-logo-v2.png",
+      "alt": ""
+    },
+    {
+      "src": "/images/triseno-logo-v2.png",
+      "alt": "Triseno Systems"
+    }
+  ],
+  "fields": [
+    {
+      "name": "botcheck",
+      "type": "checkbox"
+    },
+    {
+      "name": "name",
+      "type": "text"
+    },
+    {
+      "name": "email",
+      "type": "email"
+    },
+    {
+      "name": "phone",
+      "type": "tel"
+    },
+    {
+      "name": "preferred_contact",
+      "type": "select",
+      "options": [
+        "Email",
+        "Phone",
+        "Text",
+        "Other"
+      ]
+    },
+    {
+      "name": "company",
+      "type": "text"
+    },
+    {
+      "name": "project_type",
+      "type": "select",
+      "options": [
+        "Select one",
+        "HyperMotion Ads",
+        "Product Hero",
+        "Direct Response Ads",
+        "Product Demo",
+        "Brand Film",
+        "UGC Ads",
+        "Something else"
+      ]
+    },
+    {
+      "name": "timeline",
+      "type": "select",
+      "options": [
+        "Select one",
+        "ASAP / rush",
+        "2–4 weeks",
+        "1–2 months",
+        "Flexible / not sure"
+      ]
+    },
+    {
+      "name": "message",
+      "type": "textarea"
+    }
+  ],
+  "marquee": []
+}

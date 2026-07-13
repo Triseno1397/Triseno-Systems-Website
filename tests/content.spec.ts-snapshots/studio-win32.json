@@ -1,0 +1,185 @@
+{
+  "title": "Triseno Studio · video that sells",
+  "metaDescription": "Performance product ad creative for Instagram, TikTok, and YouTube. Scroll-stopping video, from UGC to cinematic brand films, delivered in days, not weeks.",
+  "headings": [
+    {
+      "tag": "h1",
+      "text": "Video that sells\\n[[while it scrolls.]]"
+    },
+    {
+      "tag": "h2",
+      "text": "One studio. Every format the feed demands."
+    },
+    {
+      "tag": "h3",
+      "text": "HyperMotion Ads"
+    },
+    {
+      "tag": "h2",
+      "text": "Agency-grade work, [[without the agency timeline.]]"
+    },
+    {
+      "tag": "h2",
+      "text": "Let's make the ad\\nthat [[pays for itself.]]"
+    },
+    {
+      "tag": "h4",
+      "text": "Studio"
+    },
+    {
+      "tag": "h4",
+      "text": "Triseno"
+    }
+  ],
+  "paragraphs": [
+    "We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in between — from UGC to cinematic brand films. Built to convert, not just to look good.",
+    "Start where you need volume and climb to where you need polish. Every tier is built to perform on the platform it ships to — not just to look good in a portfolio.",
+    "Our flagship. Kinetic type, product-hero motion, and generative visuals cut hard to the beat — high-velocity, footage-free ads designed frame by frame. The AI engine turns a concept into a scroll-stopper in days, not a production schedule.",
+    "Triseno was built on an AI-powered production pipeline, and that engine never left. It's how we generate more concepts, version creative for every placement, and turn briefs around in days. You don't pay for the technology. You pay for the speed, the volume, and the edge it buys you.",
+    "Tell us what you're selling and where it needs to run. We'll come back with concepts and a quote — no retainer required to start.",
+    "Goes straight to our inbox — we reply within one business day.",
+    "Prefer to reach us directly?tristen@trisenosystems.com·Instagram @trisenosystems"
+  ],
+  "links": [
+    {
+      "text": "Triseno",
+      "href": "/"
+    },
+    {
+      "text": "Start a project",
+      "href": "#contact"
+    },
+    {
+      "text": "Start a project",
+      "href": "#contact"
+    },
+    {
+      "text": "See what we make",
+      "href": "#make"
+    },
+    {
+      "text": "tristen@trisenosystems.com",
+      "href": "mailto:tristen@trisenosystems.com"
+    },
+    {
+      "text": "Instagram @trisenosystems",
+      "href": "https://instagram.com/trisenosystems"
+    },
+    {
+      "text": "tristen@trisenosystems.com",
+      "href": "mailto:tristen@trisenosystems.com"
+    },
+    {
+      "text": "Instagram@trisenosystems",
+      "href": "https://instagram.com/trisenosystems"
+    },
+    {
+      "text": "What we make",
+      "href": "#make"
+    },
+    {
+      "text": "Start a project",
+      "href": "#contact"
+    },
+    {
+      "text": "Home",
+      "href": "/"
+    },
+    {
+      "text": "Web Design Division",
+      "href": "/web-design-division"
+    },
+    {
+      "text": "Contact",
+      "href": "/contact"
+    },
+    {
+      "text": "Instagram",
+      "href": "https://instagram.com/trisenosystems"
+    }
+  ],
+  "buttons": [
+    "01HyperMotion AdsMaximum motion. No shoot day.",
+    "02Product HeroThe shot that makes it look expensive.",
+    "03Direct Response AdsBuilt to sell, not to admire.",
+    "04Product DemoObvious in 30 seconds.",
+    "05Brand FilmsThe flagship piece.",
+    "06UGC AdsConverts like a recommendation.",
+    "07Apparel Try-OnSee it worn before they buy.",
+    "08Visual AppealSatisfying enough to stop the scroll.",
+    "09ASMR AdsSound you can feel.",
+    "Send inquiry"
+  ],
+  "videos": [
+    "/videos/pickleball-hypermotion.mp4",
+    "/videos/pickleball-hypermotion.mp4"
+  ],
+  "images": [],
+  "fields": [
+    {
+      "name": "botcheck",
+      "type": "checkbox"
+    },
+    {
+      "name": "name",
+      "type": "text"
+    },
+    {
+      "name": "email",
+      "type": "email"
+    },
+    {
+      "name": "phone",
+      "type": "tel"
+    },
+    {
+      "name": "preferred_contact",
+      "type": "select",
+      "options": [
+        "Email",
+        "Phone",
+        "Text",
+        "Other"
+      ]
+    },
+    {
+      "name": "project_type",
+      "type": "select",
+      "options": [
+        "Select a format",
+        "HyperMotion Ads",
+        "Product Hero",
+        "Direct Response Ads",
+        "Product Demo",
+        "Brand Film",
+        "UGC Ads",
+        "Not sure yet"
+      ]
+    },
+    {
+      "name": "budget",
+      "type": "select",
+      "options": [
+        "Not sure yet",
+        "Under $2k",
+        "$2k–$5k",
+        "$5k–$10k",
+        "$10k+"
+      ]
+    },
+    {
+      "name": "project",
+      "type": "textarea"
+    }
+  ],
+  "marquee": [
+    "Triseno",
+    "Studio",
+    "Triseno",
+    "Studio",
+    "Triseno",
+    "Studio",
+    "Triseno",
+    "Studio"
+  ]
+}
