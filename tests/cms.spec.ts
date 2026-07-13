@@ -7,7 +7,7 @@ import { test, expect, type Page } from "@playwright/test";
  * Status codes prove the door is locked. This proves the tool actually works.
  */
 
-const UNLOCK_KEY = process.env.EDIT_UNLOCK_KEY ?? "9b1d1be79954f3860026be49f6490725";
+const UNLOCK_KEY = process.env.EDIT_UNLOCK_KEY ?? "50f8fa92d3a8c0080598a1b0af8a4672";
 const PIN = "1397";
 
 /** Sign in. Each test gets a fresh browser context, so localStorage starts empty. */
