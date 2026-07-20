@@ -8,7 +8,7 @@
  * all video weight lives in What We Make. Styling is in globals.css (.studio-page).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react";
@@ -74,6 +74,7 @@ export default function StudioContent() {
   const duoVideoRefs = useRef<(HTMLVideoElement | null)[]>([]); // dual-showcase clips
 
   const [scrolled, setScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false); // drives inline (accordion) vs side-panel preview
   const [active, setActive] = useState(0); // selected tab (drives .on immediately)
   const [shown, setShown] = useState(0); // content currently in the preview
   const [fading, setFading] = useState(false);
@@ -124,6 +125,17 @@ export default function StudioContent() {
       setSending(false);
     }
   };
+
+  // Track the narrow breakpoint: below it the preview opens inline under the tapped
+  // format (accordion) so the video plays where you tapped; above it, the preview is
+  // a sticky side panel that's always in view. Mirrors the CSS breakpoint (760px).
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 760px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // Nav — condense on scroll.
   useEffect(() => {
@@ -184,6 +196,17 @@ export default function StudioContent() {
   const select = (i: number) => {
     if (i === active) return;
     setActive(i);
+    // Mobile accordion: the preview lives inline under the tapped format, so there's
+    // no fixed panel to crossfade — it remounts in its new spot. Swap immediately and
+    // let it open in place, which is the whole point (no scrolling up to the top).
+    if (isMobile) {
+      if (swapTimer.current) clearTimeout(swapTimer.current);
+      setShown(i);
+      setFading(false);
+      setSound(false); // new format lands muted so opening a tab never blares audio
+      setDuoSound(null);
+      return;
+    }
     setFading(true);
     if (swapTimer.current) clearTimeout(swapTimer.current);
     swapTimer.current = setTimeout(() => {
@@ -199,6 +222,134 @@ export default function StudioContent() {
   // preview. On the published site MAKE never changes, so this costs nothing.
   const d = MAKE[Math.min(shown, MAKE.length - 1)];
   if (!d) return null;
+
+  // The live preview. Rendered in one of two places depending on the breakpoint:
+  // a sticky side panel on desktop (always in view beside the list), or inline under
+  // the tapped format on mobile (accordion — the video plays where you tapped, so
+  // there's nothing to scroll up to). Only one instance ever mounts, so the video
+  // and audio refs below stay unambiguous.
+  const renderPreview = (inline: boolean) => (
+    <div
+      className={`make-preview${inline ? " make-preview-inline" : ""}`}
+      aria-live="polite"
+      ref={previewRef}
+    >
+      {d.videos ? (
+        <div className={`pv-video-wrap pv-duo${fading ? " pv-fade" : ""}`}>
+          {d.videos.map((clip, i) => (
+            <div className="pv-duo-cell" key={clip.src}>
+              {/* Ambient blurred fill so each clip shows whole — no cropping
+                  of the hook or CTA — regardless of its orientation. */}
+              <video
+                className="pv-duo-bg"
+                src={clip.src}
+                muted
+                loop
+                autoPlay
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+              <video
+                ref={(el) => {
+                  duoVideoRefs.current[i] = el;
+                }}
+                className="pv-duo-vid"
+                src={clip.src}
+                muted
+                loop
+                autoPlay
+                playsInline
+                preload="metadata"
+              />
+              <span className="pv-duo-cap">{clip.label}</span>
+              <button
+                type="button"
+                className={`pv-duo-sound${duoSound === i ? " on" : ""}`}
+                aria-label={duoSound === i ? `Mute ${clip.label}` : `Unmute ${clip.label}`}
+                aria-pressed={duoSound === i}
+                onClick={() => setDuoSound((s) => (s === i ? null : i))}
+              >
+                {duoSound === i ? (
+                  <SpeakerSimpleHigh size={15} weight="fill" />
+                ) : (
+                  <SpeakerSimpleSlash size={15} weight="fill" />
+                )}
+              </button>
+            </div>
+          ))}
+          {/* Bottom scrim keeps the meta legible over both clips. */}
+          <div className="pv-scrim" aria-hidden="true" />
+        </div>
+      ) : d.video ? (
+        <div className={`pv-video-wrap${fading ? " pv-fade" : ""}`}>
+          {/* Blurred fill of the same clip so a 9:16 ad fills the wide
+              frame without cropping the hook or CTA. */}
+          <video
+            className="pv-video-bg"
+            src={d.video}
+            muted
+            loop
+            autoPlay
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          {/* The ad itself, shown whole. */}
+          <video
+            ref={mainVideoRef}
+            key={d.video}
+            className="pv-video"
+            src={d.video}
+            muted
+            loop
+            autoPlay
+            playsInline
+            preload="metadata"
+          />
+          {/* Bottom scrim keeps the meta legible over the moving footage. */}
+          <div className="pv-scrim" aria-hidden="true" />
+        </div>
+      ) : (
+        <>
+          <div
+            className={`pv-thumb${fading ? " pv-fade" : ""}`}
+            style={{ background: thumbBg(d.hotspot) }}
+          />
+          <div className="pv-play" aria-hidden="true" />
+        </>
+      )}
+      {d.video && d.audio && (
+        <button
+          type="button"
+          className={`pv-sound${sound ? " on" : ""}`}
+          aria-label={sound ? "Mute preview" : "Unmute preview"}
+          aria-pressed={sound}
+          onClick={() => setSound((s) => !s)}
+        >
+          {sound ? (
+            <SpeakerSimpleHigh size={17} weight="fill" />
+          ) : (
+            <SpeakerSimpleSlash size={17} weight="fill" />
+          )}
+        </button>
+      )}
+      {/* Single badge would misread with two clips of different ratios —
+          the per-clip captions carry the labels instead. */}
+      {!d.videos && <div className="pv-ratio">{d.ratio}</div>}
+      <div className={`pv-meta${fading ? " pv-fade" : ""}`}>
+        <h3>{d.title}</h3>
+        <p>{d.desc}</p>
+        <div className="pv-tags">
+          {d.tags.map((t) => (
+            <span key={t}>{t}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="studio-page" ref={rootRef}>
@@ -311,145 +462,33 @@ export default function StudioContent() {
               {MAKE.map((f, i) => {
                 const on = active === i;
                 return (
-                  <button
-                    key={f.n}
-                    type="button"
-                    role="tab"
-                    aria-selected={on}
-                    data-cms-id={`studio:reel:${i}`}
-                    className={`ix${on ? " on" : ""}`}
-                    onMouseEnter={() => select(i)}
-                    onFocus={() => select(i)}
-                    onClick={() => select(i)}
-                  >
-                    <span className="n">{f.n}</span>
-                    <span className="t">
-                      {f.title}
-                      <span className="sm">{f.sm}</span>
-                    </span>
-                  </button>
+                  <Fragment key={f.n}>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      data-cms-id={`studio:reel:${i}`}
+                      className={`ix${on ? " on" : ""}`}
+                      onMouseEnter={() => select(i)}
+                      onFocus={() => select(i)}
+                      onClick={() => select(i)}
+                    >
+                      <span className="n">{f.n}</span>
+                      <span className="t">
+                        {f.title}
+                        <span className="sm">{f.sm}</span>
+                      </span>
+                    </button>
+                    {/* Mobile accordion: the preview opens inline right under the
+                        active format, so the video plays where you tapped. */}
+                    {isMobile && on && renderPreview(true)}
+                  </Fragment>
                 );
               })}
             </div>
 
-            <div className="make-preview" aria-live="polite" ref={previewRef}>
-              {d.videos ? (
-                <div className={`pv-video-wrap pv-duo${fading ? " pv-fade" : ""}`}>
-                  {d.videos.map((clip, i) => (
-                    <div className="pv-duo-cell" key={clip.src}>
-                      {/* Ambient blurred fill so each clip shows whole — no cropping
-                          of the hook or CTA — regardless of its orientation. */}
-                      <video
-                        className="pv-duo-bg"
-                        src={clip.src}
-                        muted
-                        loop
-                        autoPlay
-                        playsInline
-                        preload="metadata"
-                        aria-hidden="true"
-                        tabIndex={-1}
-                      />
-                      <video
-                        ref={(el) => {
-                          duoVideoRefs.current[i] = el;
-                        }}
-                        className="pv-duo-vid"
-                        src={clip.src}
-                        muted
-                        loop
-                        autoPlay
-                        playsInline
-                        preload="metadata"
-                      />
-                      <span className="pv-duo-cap">{clip.label}</span>
-                      <button
-                        type="button"
-                        className={`pv-duo-sound${duoSound === i ? " on" : ""}`}
-                        aria-label={
-                          duoSound === i ? `Mute ${clip.label}` : `Unmute ${clip.label}`
-                        }
-                        aria-pressed={duoSound === i}
-                        onClick={() => setDuoSound((s) => (s === i ? null : i))}
-                      >
-                        {duoSound === i ? (
-                          <SpeakerSimpleHigh size={15} weight="fill" />
-                        ) : (
-                          <SpeakerSimpleSlash size={15} weight="fill" />
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                  {/* Bottom scrim keeps the meta legible over both clips. */}
-                  <div className="pv-scrim" aria-hidden="true" />
-                </div>
-              ) : d.video ? (
-                <div className={`pv-video-wrap${fading ? " pv-fade" : ""}`}>
-                  {/* Blurred fill of the same clip so a 9:16 ad fills the wide
-                      frame without cropping the hook or CTA. */}
-                  <video
-                    className="pv-video-bg"
-                    src={d.video}
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    preload="metadata"
-                    aria-hidden="true"
-                    tabIndex={-1}
-                  />
-                  {/* The ad itself, shown whole. */}
-                  <video
-                    ref={mainVideoRef}
-                    key={d.video}
-                    className="pv-video"
-                    src={d.video}
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    preload="metadata"
-                  />
-                  {/* Bottom scrim keeps the meta legible over the moving footage. */}
-                  <div className="pv-scrim" aria-hidden="true" />
-                </div>
-              ) : (
-                <>
-                  <div
-                    className={`pv-thumb${fading ? " pv-fade" : ""}`}
-                    style={{ background: thumbBg(d.hotspot) }}
-                  />
-                  <div className="pv-play" aria-hidden="true" />
-                </>
-              )}
-              {d.video && d.audio && (
-                <button
-                  type="button"
-                  className={`pv-sound${sound ? " on" : ""}`}
-                  aria-label={sound ? "Mute preview" : "Unmute preview"}
-                  aria-pressed={sound}
-                  onClick={() => setSound((s) => !s)}
-                >
-                  {sound ? (
-                    <SpeakerSimpleHigh size={17} weight="fill" />
-                  ) : (
-                    <SpeakerSimpleSlash size={17} weight="fill" />
-                  )}
-                </button>
-              )}
-              {/* Single badge would misread with two clips of different ratios —
-                  the per-clip captions carry the labels instead. */}
-              {!d.videos && <div className="pv-ratio">{d.ratio}</div>}
-              <div className={`pv-meta${fading ? " pv-fade" : ""}`}>
-                <h3>{d.title}</h3>
-                <p>{d.desc}</p>
-                <div className="pv-tags">
-                  {d.tags.map((t) => (
-                    <span key={t}>{t}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* Desktop: one sticky preview beside the list, always in view. */}
+            {!isMobile && renderPreview(false)}
           </div>
         </div>
       </section>
