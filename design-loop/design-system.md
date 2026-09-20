@@ -23,6 +23,10 @@ from a screenshot or filmstrip.
 - UI line-work (borders, icons, dividers, cursor, rails) is pure white at 1px. UI is never tinted with the division hue except: active state, data readouts, focus ring.
 - Colour comes from the scene/media (3D, video, generated imagery) and from the single division hue. Max one saturated hue per frame (see D2).
 - No purple-to-blue SaaS gradients. No drop shadows on UI. Glow is allowed only on scene objects and the division glyph.
+- **Frosted-glass cards are allowed** over a rendered scene (bar.md #5 requires them): translucent, backdrop-blurred, 1px white hairline, 0 radius. They may pick up the scene's light through the blur; they may not carry their own painted hue or gradient.
+- **Chrome scrims are allowed**: a soft, neutral-black (never hued) falloff behind a chrome element so it stays legible. It must have no hard edge and no rule line. This is not a drop shadow.
+- **Type at rest is solid.** Display and body type settle to a solid fill (white, fog or ash). A gradient or mask on type is allowed only while a reveal animation is running, never as a resting style.
+- **Content never collides with chrome.** As content scrolls toward a fixed chrome element it must fade out or be masked before it reaches it — text may never print through, under, or over the lockup, rail, chevron or contact icon at any scroll position.
 
 ## 3. Type
 - **Display: Unbounded** (600–700), uppercase, tracking ≥ 0.06em, never negative. Used for headlines, menu words, chrome labels, buttons.
