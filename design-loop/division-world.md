@@ -45,6 +45,11 @@ Rules for the page:
    `--lane-right` (the rail's lane, ≥1200px only) is already applied to every `<main>` on a
    revamped route by world.css — do not add it again.
 5. Keep your own per-section motion mechanic (M1); the world is the stage, not a mechanic.
+6. **Chrome collision is handled globally.** Two fixed neutral fade bands (`.chrome-fade`, mounted by
+   `Chrome.tsx` at z 790) fade every page's content to black before it reaches the lockup, trigger,
+   chevron or contact icon. Their sizes are `--fade-top` / `--fade-bottom` (globals.css); the lanes
+   are those plus 16px. Keep anything that must be read at rest (a headline, a CTA) inside the lanes,
+   and keep page content below z 790 so it passes under the bands.
 
 ## Exports
 
