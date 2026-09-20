@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import DivisionPlaceholder from "@/components/world/DivisionPlaceholder";
-import { DIVISIONS } from "@/lib/divisions";
+import AiPage from "@/components/ai/AiPage";
+import "../ai.css";
 
 export const metadata: Metadata = {
   title: "AI Infrastructure · Triseno Systems",
-  description: "We build the intelligence layer your business runs on. Consulting, architecture and implementation.",
+  description:
+    "Multi-agent orchestration, workflow compression and decision-layer automation. Triseno Systems designs and deploys the operational intelligence layer: consulting, architecture and implementation.",
   alternates: { canonical: "/ai-infrastructure" },
-  // Placeholder until the division page is built (revamp piece 4).
-  robots: { index: false, follow: true },
+  openGraph: {
+    title: "AI Infrastructure · Triseno Systems",
+    description:
+      "We build the operational intelligence layer: multi-agent orchestration, workflow compression engines and decision-layer automation.",
+    url: "https://trisenosystems.com/ai-infrastructure",
+  },
 };
 
 export default function AiInfrastructurePage() {
-  return (
-    <DivisionPlaceholder
-      division={DIVISIONS.ai}
-      line="We build the intelligence layer your business runs on: consulting, architecture and implementation. This page is being built — the conversation is already open."
-    />
-  );
+  return <AiPage />;
 }
