@@ -21,6 +21,9 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
    ───────────────────────────────────────────────────────────────────────── */
 
 const SHOWREEL = "/videos/product-hero.mp4";
+// 11–22s: the blade, the sparks, the smoke. Outside it the clip carries a
+// baked-in brand super and an end card that would print under our headline.
+const REEL_RANGE: [number, number] = [11, 22];
 const REEL_SECONDS = 25;
 const FPS = 24;
 const F_STOPS = ["f/16", "f/11", "f/8", "f/5.6", "f/4", "f/2.8", "f/2", "f/1.4"];
@@ -83,7 +86,11 @@ export default function ExpansionHero() {
             `inset(${(y - o).toFixed(1)}px ${(x - o).toFixed(1)}px ${(y - o).toFixed(1)}px ${(x - o).toFixed(1)}px round ${rad.toFixed(1)}px)`;
 
           if (clip.current) clip.current.style.clipPath = inset(0, r);
-          if (edge.current) edge.current.style.clipPath = inset(1, r > 0 ? r + 1 : 0);
+          if (edge.current) {
+            edge.current.style.clipPath = inset(1, r > 0 ? r + 1 : 0);
+            // The hairline frames the window; at full bleed there is no frame.
+            edge.current.style.opacity = (1 - smooth((grow - 0.7) / 0.3)).toFixed(3);
+          }
           // The whole reel is visible in the small window, then fills the frame.
           if (media.current) media.current.style.transform = `scale(${Math.max(w / vw, h / vh).toFixed(4)})`;
           if (veil.current) veil.current.style.opacity = grow.toFixed(3);
@@ -102,7 +109,7 @@ export default function ExpansionHero() {
             if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,${rise}px,0)`;
           } else {
             // Mobile: the window is gone at full bleed, so the halves close up into one headline.
-            const join = s / 2 + 12;
+            const join = s / 2 + 16;
             const lift = vh * 0.12;
             if (left.current) left.current.style.transform = `translate3d(0,${((join - lift) * grow).toFixed(1)}px,0)`;
             if (right.current) right.current.style.transform = `translate3d(0,${((-join - lift) * grow).toFixed(1)}px,0)`;
@@ -181,7 +188,7 @@ export default function ExpansionHero() {
         <div ref={edge} aria-hidden="true" className="sx-hero__edge" />
         <div ref={clip} className="sx-hero__clip">
           <div ref={media} className="sx-hero__media">
-            <LazyVideo src={SHOWREEL} eager className="sx-fill" />
+            <LazyVideo src={SHOWREEL} eager range={REEL_RANGE} className="sx-fill" />
           </div>
           <div ref={veil} aria-hidden="true" className="sx-hero__veil" />
         </div>
@@ -206,7 +213,7 @@ export default function ExpansionHero() {
         </h1>
 
         <div ref={copy} className="sx-hero__copy">
-          <p className="font-sans font-light">
+          <p className="sx-hero__lede font-sans font-light">
             We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in
             between — from UGC to cinematic brand films. Built to convert, not just to look good.
           </p>
@@ -221,24 +228,16 @@ export default function ExpansionHero() {
           </div>
         </div>
 
+        {/* One slim line of camera data — no rules, no REC lamp. */}
         <div aria-hidden="true" className="sx-hero__readout font-mono">
-          <span className="sx-hero__rec">
-            <i />
-            REC
-          </span>
           <span>
             TC <b ref={tc}>00:00:00:00</b>
           </span>
-          <span className="sx-hero__readout-line" />
           <span ref={hint} className="sx-hero__hint">
             Scroll to open
           </span>
-          <span className="sx-hero__readout-line" />
           <span>
-            IRIS <b ref={stop}>f/16</b>
-          </span>
-          <span>
-            FRAME <b ref={cover}>000%</b>
+            IRIS <b ref={stop}>f/16</b> · FRAME <b ref={cover}>000%</b>
           </span>
         </div>
       </div>

@@ -73,7 +73,8 @@
 }
 
 /* ═════ 1 · SHOWREEL — scroll-expansion hero ═════ */
-.sx-hero { position: relative; height: 260dvh; }
+/* The reel is full-bleed: the hero runs under the rail lane like the world. */
+.sx-hero { position: relative; height: 260dvh; margin-right: calc(-1 * var(--lane-right)); }
 .sx-hero__stage {
   --s: min(30dvh, 21vw);
   --gap: 20px;
@@ -88,7 +89,12 @@
   background: #ffffff;
   clip-path: inset(calc(50% - var(--s) / 2 - 1px) calc(50% - var(--s) / 2 - 1px) round 50%);
 }
-.sx-hero__clip { background: #111111; }
+.sx-hero__clip {
+  background: #111111;
+  /* no hard media edge as the stage scrolls away: the reel dissolves into the world */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+}
 .sx-hero__media { position: absolute; inset: 0; transform: scale(0.3); will-change: transform; }
 .sx-hero__veil {
   position: absolute; inset: 0; opacity: 0;
@@ -131,40 +137,44 @@
 .sx-hero__readout {
   position: absolute; z-index: 3; bottom: var(--lane-bottom); height: 44px;
   left: calc(var(--gutter) + 44px + 24px); right: calc(var(--gutter) + 44px + 24px);
-  display: flex; align-items: center; gap: 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 22px;
   font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap;
 }
 .sx-hero__readout b { font-weight: 400; color: var(--hue); font-variant-numeric: tabular-nums; }
-.sx-hero__readout-line { flex: 1; height: 1px; background: #ffffff; min-width: 12px; }
-.sx-hero__rec { display: inline-flex; align-items: center; gap: 8px; }
-.sx-hero__rec i {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--hue);
-  animation: sx-rec 1.6s steps(1, end) infinite;
-}
-@keyframes sx-rec { 0% { opacity: 1; } 50% { opacity: 0.15; } 100% { opacity: 1; } }
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .sx-hero__stage { --s: min(26dvh, 17vw); --gap: 16px; --hero-fs: 4.2vw; }
 }
 @media (max-width: 767px) {
+  /* Phone hero, re-layered so nothing ever prints over anything else:
+     headline above and below the window, both inside the chrome lanes; no HUD;
+     no body paragraph (allowed on phones) — the CTA alone rests on the
+     bottom lane once the reel is full-bleed. */
   .sx-hero { height: 200dvh; } /* M5: pinned for one extra viewport only */
-  .sx-hero__stage { --s: min(34dvh, 62vw); --hero-fs: clamp(30px, 8.6vw, 44px); }
+  .sx-hero__stage { --s: min(32dvh, 60vw); --hero-fs: clamp(32px, 9vw, 42px); }
   .sx-hero__media { transform: scale(0.62); }
   .sx-hero__title {
-    grid-template-columns: 1fr; grid-template-rows: 1fr calc(var(--s) + 40px) 1fr;
-    padding-inline: 52px; text-align: center;
+    inset: var(--lane-top) 0 var(--lane-bottom);
+    grid-template-columns: 1fr; grid-template-rows: 1fr calc(var(--s) + 32px) 1fr;
+    padding-inline: var(--gutter); text-align: center;
   }
   .sx-hero__half { white-space: normal; }
   .sx-hero__half > span { display: inline; }
   .sx-hero__half--l { grid-column: 1; grid-row: 1; justify-self: center; align-self: end; text-align: center; }
   .sx-hero__half--r { grid-column: 1; grid-row: 3; justify-self: center; align-self: start; text-align: center; }
-  .sx-hero__eyebrow { right: auto; left: 50%; translate: -50% 0; bottom: calc(100% + 16px); }
-  .sx-hero__copy { width: calc(100vw - 104px); bottom: calc(var(--lane-bottom) + 44px + 12px); }
-  .sx-hero__copy > p { font-size: 16px; }
-  .sx-hero__actions { margin-top: 18px; }
+  .sx-hero__eyebrow { right: auto; left: 50%; translate: -50% 0; bottom: calc(100% + 14px); }
+  .sx-hero__readout { display: none; }
+  .sx-hero__lede { display: none; }
+  .sx-hero__copy { width: auto; bottom: var(--lane-bottom); }
+  .sx-hero__actions { margin-top: 0; }
   .sx-hero__actions > a:not(:first-child) { display: none; }
-  .sx-hero__readout { left: calc(var(--gutter) + 44px + 12px); right: calc(var(--gutter) + 44px + 12px); gap: 10px; justify-content: center; letter-spacing: 0.08em; }
-  .sx-hero__readout-line, .sx-hero__hint, .sx-hero__rec { display: none; }
+  /* the joined headline gets a soft neutral substrate over the full-bleed reel */
+  .sx-hero__veil {
+    background:
+      radial-gradient(ellipse 90% 34% at 50% 38%, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0) 28%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.86) 100%);
+  }
+}
 }
 
 /* ═════ 2 · FORMATS — filmstrip ═════ */
@@ -533,7 +543,7 @@
   .sx-hero__copy { opacity: 1; pointer-events: auto; }
   .sx-hero__half--l { transform: translate3d(-10px, -12dvh, 0); }
   .sx-hero__half--r { transform: translate3d(10px, -12dvh, 0); }
-  .sx-hero__rec i, .sx-lens__iris, .sx-film__caption { animation: none; }
+  .sx-film__caption { animation: none; }
   .sx-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
   .sx-marquee__track { animation: none; }
   .sx-marquee__set[aria-hidden="true"] { display: none; }
@@ -544,8 +554,8 @@
   .sx-gate__tick { display: none; }
 }
 @media (prefers-reduced-motion: reduce) and (max-width: 767px) {
-  .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 12px - 12dvh), 0); }
-  .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 12px) - 12dvh), 0); }
+  .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 16px - 12dvh), 0); }
+  .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 16px) - 12dvh), 0); }
 }
 
 /* 05 Brand Films, pre-delivery: the reference cut names itself on the frame,

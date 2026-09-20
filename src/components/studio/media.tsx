@@ -50,6 +50,12 @@ interface LazyVideoProps {
    * poster is what a still screenshot of the page shows. Default 0.1s.
    */
   poster?: number;
+  /**
+   * Play only [start, end] seconds of the clip, looping inside that range.
+   * Used to keep a clip's baked-in end card or brand super off a frame that
+   * carries our own type.
+   */
+  range?: [number, number];
 }
 
 export function LazyVideo({
@@ -61,6 +67,7 @@ export function LazyVideo({
   force = false,
   label,
   poster = 0.1,
+  range,
 }: LazyVideoProps) {
   const holder = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement | null>(null);
@@ -96,6 +103,27 @@ export function LazyVideo({
   }, []);
 
   const shouldPlay = near && onScreen && active && (!reduced || force);
+  const from = range?.[0];
+  const to = range?.[1];
+
+  // Loop inside the range: native `loop` would run the excluded tail.
+  useEffect(() => {
+    const v = video.current;
+    if (!v || from === undefined || to === undefined) return;
+    const clamp = () => {
+      if (v.currentTime < from - 0.25 || v.currentTime >= to) v.currentTime = from;
+    };
+    const again = () => {
+      v.currentTime = from;
+      v.play().catch(() => {});
+    };
+    v.addEventListener("timeupdate", clamp);
+    v.addEventListener("ended", again);
+    return () => {
+      v.removeEventListener("timeupdate", clamp);
+      v.removeEventListener("ended", again);
+    };
+  }, [from, to, near]);
 
   useEffect(() => {
     const v = video.current;
@@ -116,9 +144,9 @@ export function LazyVideo({
           poster={still}
           // The media fragment makes a paused clip show a real frame, not black
           // — and lands it on a frame that depicts the format (see `poster`).
-          src={`${src}#t=${poster}`}
+          src={`${src}#t=${from ?? poster}`}
           muted
-          loop
+          loop={from === undefined}
           playsInline
           preload="metadata"
           aria-label={label}
