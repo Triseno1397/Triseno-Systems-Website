@@ -3,20 +3,38 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import Aperture from "./Aperture";
-import { LazyVideo } from "./media";
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /* ─────────────────────────────────────────────────────────────────────────
-   /studio §3 — split-text line reveal with mask wipe (site-map.md).
-   Each block of copy is measured into its real rendered lines; every line
-   sits in its own mask and wipes up (clip-path + transform) in sequence when
-   the block enters. The copy is the existing "Behind the Studio" text.
-   The scene is a viewfinder: a lens window with the iris around it.
+   /studio §3 — Behind the Studio. Its own mechanic, nothing to do with the
+   hero's iris (M1): a pile of prints — stills pulled from the studio's own
+   frames — that deals itself out in depth as you scroll. Each print sits on
+   its own parallax plane, travels at its own rate and turns from the stack
+   into a fan, so the section reads as a contact sheet being spread across a
+   table. The copy beside it arrives line by line (split-line mask wipe) and
+   settles solid; on phones it is simply solid from the start.
    ───────────────────────────────────────────────────────────────────────── */
 
-const LENS_CLIP = "/videos/pickleball-hypermotion.mp4";
+interface Print {
+  src: string;
+  cap: string;
+  /** resting place in the fan: x/y offset in % of the print, rotation in deg */
+  x: number;
+  y: number;
+  r: number;
+  /** parallax depth: how far the print travels across the section */
+  depth: number;
+}
+
+const PRINTS: Print[] = [
+  { src: "/posters/apparel-tryon.jpg", cap: "02 · handheld, last light", x: -46, y: -18, r: -9, depth: 1.25 },
+  { src: "/posters/asmr-unbox.jpg", cap: "03 · close mic, locked off", x: 44, y: -30, r: 7, depth: 0.7 },
+  { src: "/posters/ugc-watch-unbox.jpg", cap: "04 · practical light", x: 38, y: 34, r: -5, depth: 1.05 },
+  { src: "/posters/product-hero.jpg", cap: "01 · rim light, slow push", x: -26, y: 26, r: 3, depth: 0.45 },
+];
 
 interface SplitLinesProps {
   as: "h2" | "p";
@@ -31,8 +49,9 @@ function SplitLines({ as, text, className, id }: SplitLinesProps) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // M5: reduced motion keeps the server-rendered text exactly as it is.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // M5: reduced motion keeps the server-rendered text exactly as it is — and
+    // so do phones, where a long paragraph mid-wipe reads as broken type.
+    if (window.matchMedia("(prefers-reduced-motion: reduce), (max-width: 767px)").matches) return;
 
     let revealed = false;
     let width = -1;
@@ -88,10 +107,10 @@ function SplitLines({ as, text, className, id }: SplitLinesProps) {
           {
             yPercent: 0,
             clipPath: "inset(0% 0% 0% 0%)",
-            duration: 1.25,
+            duration: 0.9,
             ease: "expo.out",
-            stagger: 0.085,
-            scrollTrigger: { trigger: el, start: "top 84%", once: true },
+            stagger: 0.04,
+            scrollTrigger: { trigger: el, start: "top 94%", once: true },
             onComplete: () => {
               revealed = true;
             },
@@ -132,8 +151,36 @@ const COPY = [
 ];
 
 export default function BehindReveal() {
+  const root = useRef<HTMLElement>(null);
+
+  // Deal the prints: each one travels on its own plane and turns from the
+  // stack into its place in the fan. Scrubbed, so it is scroll-driven, not timed.
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const prints = gsap.utils.toArray<HTMLElement>(".sx-print", root.current);
+        prints.forEach((el, i) => {
+          const p = PRINTS[i];
+          gsap.fromTo(
+            el,
+            { xPercent: p.x * 0.12, yPercent: 60 * p.depth, rotation: p.r * 0.2 },
+            {
+              xPercent: p.x,
+              yPercent: p.y - 40 * p.depth,
+              rotation: p.r,
+              ease: "none",
+              scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 0.6 },
+            },
+          );
+        });
+      });
+    },
+    { scope: root },
+  );
+
   return (
-    <section data-rail="Behind" className="sx-behind" aria-labelledby="sx-behind-title">
+    <section ref={root} data-rail="Behind" className="sx-behind" aria-labelledby="sx-behind-title">
       <div className="sx-behind__grid">
         <div className="sx-behind__text">
           <p className="sx-kicker font-mono">
@@ -152,24 +199,17 @@ export default function BehindReveal() {
           ))}
         </div>
 
-        {/* Viewfinder scene: stays in frame while the copy scrolls past it. */}
+        {/* Contact sheet: prints from the studio's own frames, dealt in depth. */}
         <div aria-hidden="true" className="sx-behind__scene">
-          <div className="sx-lens">
-            <span className="sx-lens__iris">
-              <Aperture size="100%" open={0.78} strokeWidth={1.25} glow />
-            </span>
-            <LazyVideo src={LENS_CLIP} className="sx-lens__glass" />
-            <span className="sx-lens__cross" />
-            <i className="sx-lens__corner sx-lens__corner--tl" />
-            <i className="sx-lens__corner sx-lens__corner--tr" />
-            <i className="sx-lens__corner sx-lens__corner--bl" />
-            <i className="sx-lens__corner sx-lens__corner--br" />
+          <div className="sx-prints">
+            {PRINTS.map((p) => (
+              <figure key={p.src} className="sx-print">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.src} alt="" loading="lazy" decoding="async" />
+                <figcaption className="font-mono">{p.cap}</figcaption>
+              </figure>
+            ))}
           </div>
-          <p className="sx-lens__readout font-mono">
-            <span>24.00 FPS</span>
-            <span>Shutter 180°</span>
-            <span>Los Angeles</span>
-          </p>
         </div>
       </div>
     </section>

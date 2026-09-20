@@ -9,7 +9,9 @@
 
 .studio-world {
   --hue: #ff8a3d;
-  --rail-safe: 72px; /* keeps copy clear of the right-edge progress rail */
+  /* The rail's lane is the foundation's padding on <main> (--lane-right), so
+     nothing here adds a second inset. */
+  --rail-safe: 0px;
   position: relative;
   background: #000000;
   color: #ffffff;
@@ -28,8 +30,7 @@
 
 /* ── shared ── */
 .sx-fill { position: absolute; inset: 0; display: block; }
-.sx-fill video,
-.sx-lens__glass video { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; }
+.sx-fill video { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; }
 /* The clip's own still, under the video: a frame is never a black rectangle
    waiting on a decode. */
 .sx-still { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -209,7 +210,12 @@
 .sx-film__now .sx-h3 { max-width: 20ch; }
 
 .sx-film__band { position: relative; flex: none; margin: 22px 0 16px; }
-.sx-film__viewport { position: relative; overflow: clip; }
+.sx-film__viewport {
+  position: relative; overflow: clip;
+  /* the strip's ends dissolve instead of stopping as bare lines at the lane */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 96%, transparent 100%);
+}
 .sx-film[data-mode="native"] .sx-film__viewport {
   overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
   scrollbar-width: none; -webkit-overflow-scrolling: touch;
@@ -229,7 +235,7 @@
 }
 .sx-film__track::before { top: 8px; }
 .sx-film__track::after { bottom: 8px; }
-.sx-film[data-mode="scrub"] .sx-film__track { padding-inline: 0; }
+.sx-film[data-mode="scrub"] .sx-film__track { padding-inline: var(--gutter); }
 .sx-film[data-mode="scrub"] .sx-film__track::before,
 .sx-film[data-mode="scrub"] .sx-film__track::after { left: -120vw; right: -120vw; }
 
@@ -243,21 +249,13 @@
   font-size: var(--fs-label); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
   opacity: 0.45; transition: opacity 700ms var(--ease-expo);
 }
-.sx-frame__edge > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.sx-frame__edge > span:last-child { flex: none; }
-.sx-frame[data-on] .sx-frame__edge { opacity: 1; color: var(--hue); }
-/* Head leader / tail: mono labels printed on the clear strip, so the world
-   shows through the ends rather than a large empty panel. */
-.sx-frame:first-child::before,
-.sx-frame:last-child::after {
-  content: "Triseno / Creative — head leader"; position: absolute; top: 50%; width: 60vw;
-  display: flex; align-items: center; gap: 14px; translate: 0 -50%; opacity: 0.4;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap;
+.sx-frame__title {
+  position: absolute; left: 0; top: 0; z-index: 2; max-width: 100%; padding: 7px 10px; pointer-events: none;
+  background: #000000; color: #ffffff;
+  font-size: var(--fs-label); line-height: 1.35; letter-spacing: 0.14em; text-transform: uppercase;
 }
-.sx-frame:first-child::before { right: calc(100% + 24px); justify-content: flex-end; padding-right: 16px; }
-.sx-frame:last-child::after { content: "End of reel — start a conversation"; left: calc(100% + 24px); padding-left: 16px; }
-.sx-film[data-mode="native"] .sx-frame:first-child::before,
-.sx-film[data-mode="native"] .sx-frame:last-child::after { display: none; }
+.sx-frame__title i { font-style: normal; opacity: 0.6; }
+.sx-frame[data-on] .sx-frame__edge { opacity: 1; color: var(--hue); }
 .sx-frame__media {
   position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0;
   overflow: hidden; background: #111111; color: #ffffff; cursor: pointer;
@@ -288,6 +286,8 @@
 .sx-slate > svg { background: #111111; border-radius: 50%; }
 
 .sx-film__gate { position: absolute; left: 50%; top: -10px; bottom: -10px; width: 1px; pointer-events: none; }
+/* scrub: the gate travels with the strip (Filmstrip.tsx writes its x) */
+.sx-film[data-mode="scrub"] .sx-film__gate { left: 0; will-change: transform; }
 .sx-film__gate::before,
 .sx-film__gate::after { content: ""; position: absolute; left: 0; width: 1px; height: 34px; background: var(--hue); }
 .sx-film__gate::before { top: 0; }
@@ -310,6 +310,9 @@
 .sx-film__count { font-size: var(--fs-label); letter-spacing: 0.16em; margin-bottom: 10px; }
 .sx-film__count b { font-weight: 400; color: var(--hue); }
 .sx-film__tagline { margin-top: 8px; font-size: var(--fs-body); line-height: 1.4; color: var(--ink-secondary); }
+.sx-film__specs { font-size: var(--fs-label); line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; }
+.sx-film__controls { margin-top: 12px; }
+.sx-film__controls:empty { display: none; }
 /* Never clamped: body copy on this page is never cut off mid-sentence. */
 .sx-film__desc {
   font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 62ch; margin-bottom: 14px;
@@ -327,7 +330,7 @@
 }
 @media (max-height: 700px) and (min-width: 768px) {
   .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(140px, 22dvh, 380px); }
-  .sx-film[data-mode="scrub"] .sx-tags { display: none; }
+  .sx-film[data-mode="scrub"] .sx-film__specs { display: none; }
 }
 @media (max-width: 767px) {
   .sx-film__stage { --film-h: 42dvh; }
@@ -366,37 +369,35 @@
 .sx-line-mask { display: block; overflow: hidden; padding-bottom: 0.1em; margin-bottom: -0.1em; }
 .sx-line { display: block; will-change: transform, clip-path; }
 
+/* The contact sheet: prints dealt in depth (BehindReveal.tsx). Black mats,
+   1px white edges, 0 radius — prints, not cards; no drop shadows (§2). */
 .sx-behind__scene {
-  --lens: min(34vw, 60dvh, 480px);
-  position: sticky; top: calc(50dvh - var(--lens) / 2 - 24px);
-  display: flex; flex-direction: column; align-items: center; gap: 22px;
+  position: sticky; top: var(--lane-top);
+  height: calc(100dvh - var(--lane-top) - var(--lane-bottom));
+  display: grid; place-items: center;
 }
-.sx-lens { position: relative; width: var(--lens); height: var(--lens); }
-.sx-lens__glass {
-  position: absolute; inset: 8.4%; border-radius: 50%; overflow: hidden; background: #111111;
-  filter: grayscale(1) contrast(1.15) brightness(0.78);
+.sx-prints { position: relative; width: min(16vw, 236px); aspect-ratio: 4 / 5; }
+.sx-print {
+  position: absolute; inset: 0; margin: 0; padding: 9px 9px 32px;
+  background: #111111; border: 1px solid #ffffff; will-change: transform;
 }
-.sx-lens__iris { position: absolute; inset: 0; z-index: 1; animation: sx-iris-turn 90s linear infinite; }
-@keyframes sx-iris-turn { to { transform: rotate(360deg); } }
-.sx-lens__cross { position: absolute; z-index: 2; left: 50%; top: 50%; width: 28px; height: 28px; translate: -50% -50%;
-  background:
-    linear-gradient(#ffffff, #ffffff) center / 100% 1px no-repeat,
-    linear-gradient(#ffffff, #ffffff) center / 1px 100% no-repeat;
+.sx-print img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sx-print figcaption {
+  position: absolute; left: 9px; right: 9px; bottom: 11px; white-space: nowrap; overflow: hidden;
+  font-size: var(--fs-label); line-height: 1; letter-spacing: 0.12em; text-transform: uppercase;
 }
-.sx-lens__corner { position: absolute; width: 22px; height: 22px; border: 0 solid #ffffff; }
-.sx-lens__corner--tl { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
-.sx-lens__corner--tr { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
-.sx-lens__corner--bl { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
-.sx-lens__corner--br { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
-.sx-lens__readout {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px;
-  font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase;
+/* resting fan for reduced motion (the scrub writes the same end state) */
+@media (prefers-reduced-motion: reduce) {
+  .sx-print:nth-child(1) { transform: translate(-46%, -18%) rotate(-9deg); }
+  .sx-print:nth-child(2) { transform: translate(44%, -30%) rotate(7deg); }
+  .sx-print:nth-child(3) { transform: translate(38%, 34%) rotate(-5deg); }
+  .sx-print:nth-child(4) { transform: translate(-26%, 26%) rotate(3deg); }
 }
-.sx-lens__readout span:first-child { color: var(--hue); }
 
 @media (max-width: 767px) {
   .sx-behind__grid { grid-template-columns: 1fr; padding-inline: var(--gutter) 60px; }
-  .sx-behind__scene { --lens: 62vw; position: relative; top: auto; order: -1; margin-bottom: 12px; }
+  .sx-behind__scene { position: relative; top: auto; order: -1; height: 360px; margin-bottom: 8px; }
+  .sx-prints { width: 36vw; }
   .sx-behind__para { max-width: none; }
 }
 
@@ -556,12 +557,4 @@
 @media (prefers-reduced-motion: reduce) and (max-width: 767px) {
   .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 16px - 12dvh), 0); }
   .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 16px) - 12dvh), 0); }
-}
-
-/* 05 Brand Films, pre-delivery: the reference cut names itself on the frame,
-   so the flagship panel reads as a deliberate assembly, not a missing asset.
-   Delete nothing here when the film lands — the note renders only for the cut. */
-.sx-frame__note {
-  position: absolute; left: 0; top: 0; z-index: 2; padding: 7px 10px; background: #000000;
-  font-size: var(--fs-label); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
 }

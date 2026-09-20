@@ -43,6 +43,11 @@ const POSTER_AT: Record<string, number> = {
  * this page, and a flat paused still is not the rendered-scene exemption, so
  * this one is graded to a single amber tone instead of being dropped.
  */
+/** Text-free stretch of a clip, where it is cut into another frame. */
+const RANGE_AT: Record<string, [number, number]> = {
+  "/videos/product-hero.mp4": [11, 22],
+};
+
 const GRADED = new Set(["/videos/pickleball-hypermotion.mp4"]);
 
 /* ── 05 BRAND FILMS — the flagship slot ──────────────────────────────────
@@ -98,6 +103,7 @@ export default function Filmstrip() {
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLOListElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
+  const gateMark = useRef<HTMLSpanElement>(null);
   // One state object: a new frame in the gate always lands muted and (under
   // reduced motion) paused, so the three values can never disagree.
   const [gate, setGate] = useState<Gate>(GATE_ZERO);
@@ -118,23 +124,27 @@ export default function Filmstrip() {
       const port = viewport.current;
       if (!section || !strip || !port) return;
 
+      // The strip travels from left-aligned to right-aligned across the
+      // section, so the frame is full at both ends; the gate glides along it
+      // and rests on each frame in turn.
       let centres: number[] = [];
-      let half = 0;
+      let travel = 0;
       const measure = () => {
         centres = Array.from(strip.children).map((el) => {
           const f = el as HTMLElement;
           return f.offsetLeft + f.offsetWidth / 2;
         });
-        half = port.clientWidth / 2;
+        travel = Math.max(0, strip.offsetWidth - port.clientWidth);
       };
       const apply = (p: number) => {
         if (!centres.length) return;
         const f = p * (count - 1);
         const i0 = Math.min(count - 1, Math.floor(f));
         const i1 = Math.min(count - 1, i0 + 1);
-        // Ease between frames so each one rests in the gate.
         const c = centres[i0] + (centres[i1] - centres[i0]) * easeInOut(f - i0);
-        strip.style.transform = `translate3d(${(half - c).toFixed(1)}px,0,0)`;
+        const t = -travel * p;
+        strip.style.transform = `translate3d(${t.toFixed(1)}px,0,0)`;
+        if (gateMark.current) gateMark.current.style.transform = `translate3d(${(c + t).toFixed(1)}px,0,0)`;
         if (bar.current) bar.current.style.transform = `scaleX(${p.toFixed(4)})`;
         setGate(gateTo(Math.round(f)));
         setMoved(p > 0.02);
@@ -159,6 +169,7 @@ export default function Filmstrip() {
         window.clearTimeout(late);
         st.kill();
         strip.style.transform = "";
+        gateMark.current?.style.removeProperty("transform");
       };
     },
     { scope: root, dependencies: [scrub, count], revertOnUpdate: true },
@@ -259,10 +270,8 @@ export default function Filmstrip() {
           <div key={`cap-${active}`} className="sx-film__caption" aria-live="polite">
             <div className="sx-film__caption-side">
               <p className="sx-film__desc font-sans font-light">{current.desc}</p>
-              <ul className="sx-tags font-mono">
-                {current.tags.map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
+              <p className="sx-film__specs font-mono">{current.tags.join("  ·  ")}</p>
+              <ul className="sx-film__controls sx-tags font-mono">
                 {reduced && (current.video || current.videos) ? (
                   <li>
                     <button
@@ -319,11 +328,15 @@ export default function Filmstrip() {
                     data-orient={r.w >= r.h ? "landscape" : "portrait"}
                     style={{ aspectRatio: `${r.w} / ${r.h}` }}
                   >
+                    {/* Edge code: number and ratio only, so it always fits. The
+                        name is printed inside the frame, where it can wrap. */}
                     <span aria-hidden="true" className="sx-frame__edge font-mono">
-                      <span>
-                        {item.n} {item.title}
-                      </span>
+                      <span>{item.n}</span>
                       <span>{item.videos ? `2 × ${item.ratio}` : item.ratio}</span>
+                    </span>
+                    <span aria-hidden="true" className="sx-frame__title font-mono">
+                      {item.title}
+                      {seq && !flagship ? <i> — reference cut, film in production</i> : null}
                     </span>
                     <button
                       type="button"
@@ -371,12 +384,12 @@ export default function Filmstrip() {
                                 active={on}
                                 force={on && manual}
                                 poster={POSTER_AT[s.src]}
+                                range={RANGE_AT[s.src]}
                                 className="sx-fill"
                               />
                               <span className="sx-frame__cap font-mono">{s.shot}</span>
                             </span>
                           ))}
-                          <span className="sx-frame__note font-mono">Reference cut — the film ships in 2.39:1</span>
                         </span>
                       ) : (
                         // No reel yet (e.g. Brand Films): a camera slate, not an empty frame.
@@ -392,7 +405,7 @@ export default function Filmstrip() {
             </ol>
           </div>
           {/* The gate: the only tinted line-work — it marks the active frame. */}
-          <span aria-hidden="true" className="sx-film__gate" />
+          <span ref={gateMark} aria-hidden="true" className="sx-film__gate" />
         </div>
 
         <div className="sx-film__foot">
