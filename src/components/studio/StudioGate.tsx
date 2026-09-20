@@ -45,12 +45,11 @@ export default function StudioGate() {
           iris.current?.setAttribute("d", aperturePath(OPEN_FROM + (OPEN_TO - OPEN_FROM) * eased));
           if (spin.current)
             spin.current.style.transform = `rotate(${(-96 + eased * 96).toFixed(2)}deg) scale(${(1.55 - eased * 0.62).toFixed(3)})`;
-          // The stop-down keeps running to the last pixel of the document, so
-          // the final screen is never two identical frames.
+          // Type at rest is solid: the body only settles into place, it is
+          // never faded. The iris does the moving, to the last pixel.
           if (body.current) {
-            const settle = Math.min(1, p / 0.72);
-            body.current.style.transform = `translate3d(0, ${((1 - settle) * 40).toFixed(1)}px, 0)`;
-            body.current.style.opacity = (0.15 + settle * 0.85).toFixed(3);
+            const settle = Math.min(1, p / 0.6);
+            body.current.style.transform = `translate3d(0, ${((1 - settle) * 32).toFixed(1)}px, 0)`;
           }
           if (tick.current) tick.current.style.transform = `scaleX(${p.toFixed(4)})`;
         };

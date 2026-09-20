@@ -49,6 +49,8 @@ export default function ProofMarquee() {
 
   return (
     <section data-rail="Proof" className="sx-proof" aria-labelledby="sx-proof-title">
+      {/* One centred column — deliberately not the heading-left / copy-right /
+          chips block the formats section uses. */}
       <header className="sx-proof__head">
         <div>
           <p className="sx-kicker font-mono">
@@ -58,19 +60,12 @@ export default function ProofMarquee() {
           <h2 id="sx-proof-title" className="sx-h2 sx-h2--wide font-display font-semibold uppercase">
             Agency-grade work, without the agency timeline.
           </h2>
-        </div>
-        <div className="sx-proof__side">
-          <p className="font-sans font-light">
+          <p className="sx-proof__lede font-sans font-light">
             Triseno was built on an AI-powered production pipeline, and that engine never left. It&apos;s how we
             generate more concepts, version creative for every placement, and turn briefs around in days. You
             don&apos;t pay for the technology. You pay for the speed, the volume, and the edge it buys you.
           </p>
-          <ul className="sx-tags font-mono">
-            <li>AI-accelerated</li>
-            <li>Concepts at volume</li>
-            <li>Multi-placement</li>
-            <li>Founder-led</li>
-          </ul>
+          <p className="sx-proof__specs font-mono">AI-accelerated / Concepts at volume / Multi-placement / Founder-led</p>
         </div>
       </header>
 

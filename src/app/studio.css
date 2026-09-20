@@ -334,13 +334,13 @@
 }
 @media (max-width: 767px) {
   .sx-film__stage { --film-h: 42dvh; }
-  .sx-film__head { padding-inline: var(--gutter) 60px; grid-template-columns: minmax(0, 1fr); }
+  .sx-film__head { padding-inline: var(--gutter); grid-template-columns: minmax(0, 1fr); }
   .sx-film__caption { grid-area: auto; order: 3; }
   /* the first (portrait) frame can reach the centre snap position at scrollLeft 0 */
   .sx-film__track { gap: 18px; padding-inline: max(9vw, calc(50vw - var(--film-h) * 0.28125)); }
   .sx-frame { max-width: none; }
   .sx-frame[data-orient="landscape"] { height: auto; width: 82vw; }
-  .sx-film__foot { padding-inline: var(--gutter) 60px; }
+  .sx-film__foot { padding-inline: var(--gutter); }
   /* Body copy is never cut off mid-sentence on a phone. */
   .sx-film__desc { display: block; -webkit-line-clamp: none; line-clamp: none; overflow: visible; }
   .sx-film__lead { margin-top: 14px; }
@@ -395,7 +395,7 @@
 }
 
 @media (max-width: 767px) {
-  .sx-behind__grid { grid-template-columns: 1fr; padding-inline: var(--gutter) 60px; }
+  .sx-behind__grid { grid-template-columns: 1fr; padding-inline: var(--gutter); }
   .sx-behind__scene { position: relative; top: auto; order: -1; height: 360px; margin-bottom: 8px; }
   .sx-prints { width: 36vw; }
   .sx-behind__para { max-width: none; }
@@ -410,9 +410,12 @@
 .sx-proof__head {
   position: relative; width: 100%; max-width: 1400px; margin: 0 auto clamp(36px, 6dvh, 64px);
   padding-inline: var(--gutter) calc(var(--gutter) + var(--rail-safe));
-  display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 28px clamp(32px, 5vw, 96px); align-items: end;
+  display: grid; justify-items: center; text-align: center;
 }
-.sx-proof__side > p { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 58ch; margin-bottom: 18px; }
+.sx-proof__head .sx-kicker { justify-content: center; }
+.sx-proof__head .sx-h2 { margin-inline: auto; }
+.sx-proof__lede { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 58ch; margin: 22px auto 0; }
+.sx-proof__specs { margin-top: 18px; font-size: var(--fs-label); line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; }
 
 .sx-proof__wall { position: relative; display: grid; gap: 20px; }
 .sx-marquee {
@@ -454,14 +457,14 @@
 }
 .sx-proof__sample { margin-left: auto; opacity: 0.6; }
 
-@media (max-width: 1023px) {
-  .sx-proof__head { grid-template-columns: 1fr; }
-}
+
 @media (max-width: 767px) {
-  .sx-proof__head { padding-inline: var(--gutter) 60px; }
-  .sx-proof__foot { padding-inline: var(--gutter) 60px; }
+  .sx-proof__head { padding-inline: var(--gutter); }
+  .sx-proof__foot { padding-inline: var(--gutter); }
   .sx-proof__sample { margin-left: 0; }
   .sx-proof__swipe { opacity: 0.6; }
+  .sx-proof { min-height: auto; }
+  .sx-proof__foot { line-height: 1.5; row-gap: 10px; }
   /* A marquee always crops its edges. On a phone that left no card readable,
      so the wall becomes a snap scroller: one whole card at a time. */
   .sx-marquee {
@@ -486,7 +489,12 @@
   /* the whole gate — CTA and cross-links included — rests inside the chrome lanes */
   padding: var(--lane-top) calc(var(--gutter) + var(--rail-safe)) var(--lane-bottom);
 }
-.sx-gate__scene { position: absolute; inset: 0; pointer-events: none; }
+.sx-gate__scene {
+  position: absolute; inset: 0; pointer-events: none;
+  /* the iris fades into the world at the stage edges — no clipping box */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
 .sx-gate__iris {
   position: absolute; left: 50%; top: 50%; width: min(112dvh, 112vw); aspect-ratio: 1;
   translate: -50% -50%; will-change: transform;
@@ -525,8 +533,8 @@
      still runs from the gate's entry to the last pixel of the document. */
   .sx-gate { height: auto; }
   .sx-gate__stage {
-    position: relative; height: auto; min-height: 100dvh;
-    padding: var(--lane-top) 60px var(--lane-bottom) var(--gutter);
+    position: relative; height: auto; min-height: auto;
+    padding: var(--lane-top) var(--gutter) var(--lane-bottom);
   }
   .sx-gate__iris { width: 150vw; }
   .sx-gate__lead { margin-block: 20px 28px; }
