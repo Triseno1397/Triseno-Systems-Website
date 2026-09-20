@@ -297,7 +297,7 @@
 .web-demo__stage {
   position: sticky; top: 0; height: 100dvh; overflow: hidden;
   display: flex; flex-direction: column; align-items: center;
-  padding: var(--lane-top) var(--gutter) calc(var(--gutter-y) + 12px);
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
 .web-demo__head { width: 100%; max-width: 1400px; display: grid; gap: 12px; margin-bottom: 20px; }
 .web-demo__head .web-eyebrow { margin-bottom: 4px; }
@@ -320,7 +320,7 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 55%, transparent) 0%, transparent 60%);
 }
 .web-demo__mirror {
-  flex: none; width: 100%; height: 12dvh; margin-top: 8px; transform-origin: 50% 0;
+  flex: none; width: 100%; height: 5dvh; margin-top: 8px; transform-origin: 50% 0;
   border: 1px solid rgba(255, 255, 255, 0.7); border-bottom: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 30%, transparent), transparent 75%);
   -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 82%);
@@ -331,13 +331,14 @@
   .web-demo { height: 340dvh; }
   .web-demo__head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; column-gap: 5vw; }
   .web-demo__head .web-eyebrow { grid-column: 1 / -1; }
-  .web-demo__device { width: min(1180px, 100%, calc((100dvh - 330px) * 1.72)); }
-  .web-demo__mirror { width: min(1180px, 100%, calc((100dvh - 330px) * 1.72)); }
+  /* device + mirror + heading rest inside the lanes (division-world.md #6) */
+  .web-demo__device { width: min(1180px, 100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
+  .web-demo__mirror { width: min(1180px, 100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
   .web-demo__viewport { aspect-ratio: 16 / 9.3; }
 }
 @media (max-width: 767px) {
   .web-demo__head .web-body { display: none; }
-  .web-demo__viewport { aspect-ratio: auto; height: min(52dvh, 120vw); }
+  .web-demo__viewport { aspect-ratio: auto; height: min(120vw, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 220px)); }
 }
 
 /* concept site inside the frame — "Hotel Quillon" (fictional) */
@@ -523,7 +524,7 @@
   display: grid; gap: 18px; width: 100%; max-width: 1400px; margin: 26px auto 0; padding: 0; list-style: none;
 }
 .web-compare__note {
-  position: relative; display: grid; gap: 6px; padding-top: 16px; opacity: 0.4;
+  position: relative; display: grid; gap: 6px; padding-top: 16px; opacity: 0.62;
   transition: opacity 600ms var(--ease-expo);
 }
 .web-compare__note::before,
@@ -547,7 +548,7 @@
 }
 @media (min-width: 1024px) {
   .web-compare__main { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); column-gap: 4vw; align-items: center; }
-  .web-compare__stack { width: min(100%, calc((100dvh - 380px) * 1.6)); min-width: min(100%, 560px); margin: 0; justify-self: end; }
+  .web-compare__stack { width: min(100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 240px) * 1.6)); min-width: min(100%, 520px); margin: 0; justify-self: end; }
   .web-compare__notes { margin-top: 0; gap: 22px; }
 }
 
@@ -619,7 +620,7 @@
 .am-prices span { padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6); border: 1px solid rgba(244, 239, 230, 0.28); border-radius: calc(var(--u) * 0.9); color: rgba(244, 239, 230, 0.8); font-size: calc(var(--u) * 1.15); }
 .am-prices b { display: block; font-weight: 600; font-size: calc(var(--u) * 1.4); color: var(--cream); }
 @container (max-width: 640px) {
-  .bm { --u: 2.1cqw; padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6) calc(var(--u) * 8.5); }
+  .bm { --u: 2.1cqw; padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6) calc(var(--u) * 2); }
   .bm-nav { flex-wrap: wrap; }
   .bm-phone { position: static; }
   .bm-boxes { grid-template-columns: 1fr; padding: calc(var(--u) * 1); gap: calc(var(--u) * 0.8); }
@@ -627,7 +628,7 @@
   .bm-boxes i { grid-row: span 2; width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4); }
   .bm-boxes span { display: none; }
   .bm-welcome { font-size: calc(var(--u) * 3); text-align: center; }
-  .am { --u: 2.2cqw; padding: calc(var(--u) * 2) calc(var(--u) * 2.2) calc(var(--u) * 8.5); }
+  .am { --u: 2.2cqw; padding: calc(var(--u) * 2) calc(var(--u) * 2.2) calc(var(--u) * 2.4); }
   .am-links, .am-trust, .am-p, .am-slot, .am-kicker { display: none; }
   .am-body { grid-template-columns: 1fr; gap: calc(var(--u) * 2); }
   .am-h { font-size: calc(var(--u) * 3.6); }
@@ -831,6 +832,12 @@
 /* ═══ 6 · GATE ═══ */
 .web-gate { display: grid; gap: 24px; align-content: center; align-items: center; max-width: calc(1400px + var(--gutter) * 2 + var(--rail)); margin: 0 auto; }
 .web-gate__object { --nest: min(52vw, 260px); display: flex; flex-direction: column; align-items: center; }
+/* Phone: the line to read and the button come first, inside the top lane; the
+   threshold object stands below them. */
+@media (max-width: 899px) {
+  .web-gate__object { order: 2; --nest: min(46vw, 200px); }
+  .web-gate__mirror { display: none; }
+}
 .web-gate__nest { position: relative; width: var(--nest); height: var(--nest); }
 .web-gate__frame {
   position: absolute; inset: calc(var(--k) * 8.2%); border: 1px solid var(--hue); will-change: transform, opacity;
@@ -858,7 +865,7 @@
 .web-gate__copy { display: grid; justify-items: start; gap: 22px; }
 .web-gate__copy .web-eyebrow { margin: 0; }
 .web-gate__title {
-  margin: 0; max-width: 15ch; font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: var(--web-display);
+  margin: 0; max-width: 15ch; font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: calc(var(--web-display) * 0.82);
   line-height: 1.14; letter-spacing: var(--web-track); text-transform: uppercase; color: #ffffff;
   overflow-wrap: break-word;
 }
