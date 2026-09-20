@@ -47,10 +47,13 @@ from a screenshot or filmstrip.
 - **M6.** Every section fills the viewport with scene or media (min-height `100dvh`); no flat empty black bands taller than 120px between sections.
 
 ## 6. Content truth (from the brand bible — hard rules)
-- No invented clients, logos, testimonials, metrics, or case numbers. Anything not real is labelled as a demo/concept in visible text.
+- The site is a showcase. Realistic filler is allowed for testimonials, case studies, client names and concept work so every component looks the way it would on a finished client site. Filler uses fictional people and fictional company names only — never a real brand, real person, or real logo that did not work with Triseno.
 - No legible fake UI or dashboards in generated imagery. Real sites/screens are real captures.
 - No on-screen text baked into generated video. No speaking AI avatars.
 - Voice: precise systems engineer. Numbers over adjectives. CTA wording: "Start a Conversation".
+
+## 6b. Components are tailored, never cloned
+- The 11 reference components from 21st.dev are inspiration for a mechanic, not a look. Each one is rebuilt in Triseno's language: division glyphs (circle / square / triangle), the division hue, Unbounded + Geist type, 0-radius hairline styling, Triseno copy, and at least one behaviour the stock demo does not have. If a section could be mistaken for the stock 21st.dev demo in a screenshot, it fails.
 
 ## 7. Build rules
 - Next.js 16 App Router, TypeScript, Tailwind 4, GSAP + ScrollTrigger, Framer Motion, Lenis, React Three Fiber. Read `node_modules/next/dist/docs/` before using a Next API.

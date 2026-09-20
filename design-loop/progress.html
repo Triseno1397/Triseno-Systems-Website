@@ -1,0 +1,121 @@
+<title>Triseno Critic Loop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600&family=Geist:wght@400;500&family=Geist+Mono:wght@400&display=swap">
+<style>
+  :root{
+    --void:#000; --panel:#0e0e0e; --line:rgba(255,255,255,.16); --white:#fff; --fog:#cfcfcf; --dim:#8a8a8a;
+    --amber:#ff8a3d; --violet:#9d5cff; --cyan:#00b4d8; --pass:#7dffb0; --fail:#ff5a6a;
+    --display:"Unbounded",ui-sans-serif,system-ui,sans-serif;
+    --body:"Geist",ui-sans-serif,system-ui,sans-serif;
+    --mono:"Geist Mono",ui-monospace,Consolas,monospace;
+  }
+  body{background:var(--void);color:var(--white);font:400 15px/1.55 var(--body);padding-inline:clamp(16px,4vw,48px);padding-block:32px 64px}
+  .wrap{max-width:1100px;margin-inline:auto;display:grid;gap:40px}
+  header{display:grid;gap:10px;border-bottom:1px solid var(--line);padding-bottom:24px}
+  .eyebrow{font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  h1{font:600 clamp(22px,4vw,34px)/1.15 var(--display);letter-spacing:.06em;text-transform:uppercase;margin:0;text-wrap:balance}
+  .sub{color:var(--fog);max-width:65ch;margin:0}
+  .stats{display:flex;flex-wrap:wrap;gap:12px 32px;font:400 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .stats b{color:var(--white);font-weight:400;font-variant-numeric:tabular-nums}
+  h2{font:600 13px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;margin:0 0 16px}
+  .pieces{display:grid;gap:16px}
+  .piece{border:1px solid var(--line);display:grid;gap:16px;padding:20px}
+  .piece[data-hue="amber"]{border-left:2px solid var(--amber)}
+  .piece[data-hue="violet"]{border-left:2px solid var(--violet)}
+  .piece[data-hue="cyan"]{border-left:2px solid var(--cyan)}
+  .piece[data-hue="white"]{border-left:2px solid var(--white)}
+  .phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+  .pname{font:600 15px/1.2 var(--display);letter-spacing:.08em;text-transform:uppercase}
+  .route{font:400 12px var(--mono);color:var(--dim)}
+  .status{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 10px;border:1px solid var(--line);color:var(--fog);white-space:nowrap}
+  .status.building{color:var(--void);background:var(--white);border-color:var(--white)}
+  .status.passed{color:var(--pass);border-color:var(--pass)}
+  .critics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .critic{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:4px}
+  .critic .who{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .verdict{font:600 13px/1 var(--display);letter-spacing:.1em}
+  .verdict.pass{color:var(--pass)} .verdict.fail{color:var(--fail)} .verdict.wait{color:var(--dim)}
+  .gap{color:var(--fog);font-size:13px}
+  .history{font:400 12px/1.6 var(--mono);color:var(--dim);margin:0;padding:0;list-style:none}
+  .history li b{color:var(--fog);font-weight:400}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px}
+  ol.bar,ul.open{margin:0;padding-left:20px;color:var(--fog);display:grid;gap:8px;font-size:14px}
+  ol.bar b,ul.open b{color:var(--white);font-weight:500}
+  footer{font:400 11px var(--mono);color:var(--dim);letter-spacing:.08em;border-top:1px solid var(--line);padding-top:16px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Design loop · trisenosystems.com revamp · bar: ohzi.io</div>
+    <h1>Builder vs three critics</h1>
+    <p class="sub">Each piece is built, rendered, then judged blind by three fresh critics. All three must pass. A fail sends the single biggest gap back to the builder. There is no round limit; the exit is winning, or you stopping the run.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section>
+    <h2>Pieces</h2>
+    <div class="pieces" id="pieces"></div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>The bar (7 mechanisms)</h2>
+      <ol class="bar">
+        <li><b>World is the page.</b> Scene fills every frame; text covers 30% or less.</li>
+        <li><b>Signature object is the nav.</b> Glyph and hue swap per destination on hover.</li>
+        <li><b>Travel, don't load.</b> 2–3s tinted warp between sections, no hard cuts.</li>
+        <li><b>One hue per world.</b> UI is white only.</li>
+        <li><b>Scroll moves the camera.</b> One short card at a time, alternating sides.</li>
+        <li><b>Skeletal chrome.</b> Five fixed elements or fewer, 1px white line-work, orb cursor, wireframe loader.</li>
+        <li><b>Every section ends in a gate.</b> Never a dead end.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Waiting on Tristen</h2>
+      <ul class="open" id="open"></ul>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = {
+  updated: "2026-09-20 · round 1 in progress",
+  open: [
+    ["21st.dev key", "Add API_KEY_21ST=… to triseno-revamp/.env.local yourself so the exact component source can be pulled. Until then components are rebuilt from their demos."],
+    ["Real testimonials", "The Creative marquee only runs real quotes. Send them, or it ships as a labelled reel marquee."],
+    ["Home-page stats", "The copy doc lists 50+ systems, 3x compression, <6 weeks. Confirm these are real before they go on the site."],
+    ["Video shots", "No Higgsfield video is generated until you approve each shot."]
+  ],
+  pieces: [
+    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:1,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]},
+    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"queued", round:0,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]},
+    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"queued", round:0,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]},
+    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"queued", round:0,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]}
+  ]
+};
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.textContent=h;return e};
+const label={wait:"—",pass:"PASS",fail:"FAIL"};
+const rounds=DATA.pieces.reduce((a,p)=>a+p.round,0), passed=DATA.pieces.filter(p=>p.status==="passed").length;
+document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Higgsfield credits spent <b>0</b></span>`;
+const root=document.getElementById("pieces");
+DATA.pieces.forEach(p=>{
+  const card=el("article","piece");card.dataset.hue=p.hue;
+  const head=el("div","phead");const l=el("div");l.append(el("div","pname",p.name),el("div","route",p.route));
+  head.append(l,el("span","status "+p.status,p.status+(p.round?` · round ${p.round}`:"")));
+  const cs=el("div","critics");
+  [["brief","Brief critic · does it do the job"],["system","System critic · design-system.md"],["craft","Craft critic · blind vs ohzi.io"]].forEach(([k,who])=>{
+    const c=el("div","critic");c.append(el("div","who",who),el("div","verdict "+p.critics[k][0],label[p.critics[k][0]]));
+    if(p.critics[k][1])c.append(el("div","gap",p.critics[k][1]));cs.append(c);});
+  card.append(head,cs);
+  if(p.history.length){const h=el("ul","history");p.history.forEach(x=>h.append(el("li",null,x)));card.append(h);}
+  root.append(card);
+});
+const open=document.getElementById("open");
+DATA.open.forEach(([b,t])=>{const li=el("li");li.append(el("b",null,b+". "),document.createTextNode(t));open.append(li);});
+document.getElementById("foot").textContent="Updated "+DATA.updated+" · token cost is not shown because it cannot be measured reliably; rounds are the honest counter.";
+</script>

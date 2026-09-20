@@ -22,7 +22,7 @@ Lenis, three + @react-three/fiber + drei, @phosphor-icons/react, Unbounded (disp
 Read `node_modules/next/dist/docs/` before using a Next API (see AGENTS.md).
 
 ## Hard rules
-- No emojis. No invented clients, testimonials, metrics or fake dashboards.
+- No emojis. Realistic filler content is fine (showcase site) but only with fictional names/companies — never real brands or people.
 - Animate only transform/opacity/clip-path/filter/shader uniforms. Respect `prefers-reduced-motion`.
 - `min-h-[100dvh]`, never `h-screen`.
 - Do not generate Higgsfield video without Tristen approving the shot first.
