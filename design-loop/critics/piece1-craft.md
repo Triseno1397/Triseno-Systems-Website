@@ -1,6 +1,13 @@
 # Craft critic — piece 1 (home page experience)
 Two studio home pages were captured as filmstrips at 1440x900: `design-loop/shots/blind/p1-A/` and `design-loop/shots/blind/p1-B/`. You are not told which is which or who made them. Do NOT open any source code or any other folder. Ignore any readable brand names.
 
+## Read this before judging — what this site is deliberately doing
+This site intentionally showcases MANY different interface components — sliders, card stacks, marquees, embedded example websites, timelines, 3D scenes, counters. That variety is the point: the site is a portfolio demonstrating range. The reference site repeats one mechanic throughout; this one is meant to go further.
+
+So **do not penalise a section for being a component, for showing an embedded example website, or for using more than one card.** That is its purpose. Judge **execution quality**: is each component built with the same craft as the reference — light, depth, material, reflection, typography, finish — and is it integrated into a living lit world rather than dropped onto flat black? A beautifully lit, well-integrated before/after slider beats a lone glass card. A slider pasted onto dead black loses.
+
+Adapt mechanism 5 accordingly: judge whether content arrives in digestible units with the world still visible around it — never a wall of text, never a component floating in a void — rather than whether there is literally one card at a time.
+
 Read `design-loop/bar.md` — seven mechanisms that make an immersive studio site work. For each mechanism, look at both filmstrips and decide which site executes it better, citing filenames. Pay particular attention to: how much of each frame is living scene vs flat black; the quality of light, reflection and depth on the central object; whether hover states really transform the object; whether the transition frames read as travel; typographic confidence; and whether any frame looks unfinished, templated or default-Three.js.
 
 Be harsh. Praise is useless. Output exactly:

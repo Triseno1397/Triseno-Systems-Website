@@ -1,4 +1,5 @@
-p1: A=ref(ohzi)  B=ours
-p2: A=ours(/studio)              B=ref(ohzi)
-p3: A=ref(ohzi)                  B=ours(/web-design-division)
-p4: A=ours(/ai-infrastructure)   B=ref(ohzi)
+ROUND 2 — folder holding OURS:
+p1: ours=A
+p2: ours=B
+p3: ours=A
+p4: ours=B

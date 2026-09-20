@@ -12,20 +12,25 @@ from a screenshot or filmstrip.
 | Triseno Studio — Creative | `/studio` | amber `#ff8a3d` (hot end `#ff4d6d` inside media only) | circle / aperture |
 | Web Design Division | `/web-design-division` | violet `#9d5cff` | square / frame |
 | AI Infrastructure | `/ai-infrastructure` | cyan data-light `#00b4d8` | triangle / node |
-| Work, Contact | `/work`, `/contact` | achromatic; each item takes the hue of the division it belongs to | — |
+| Work, Contact | `/work`, `/contact` | achromatic; each item takes the hue of the division it belongs to | white diamond (Work) / white cross (Contact) — achromatic, never hued |
 
 - **D1. You always know which division you are in.** Every division page shows, in every screenshot: the division name in the chrome (top-left lockup reads `TRISENO / <DIVISION>`), the division glyph, and only that division's hue.
 - **D2. No hue bleed.** A division's hue never appears on another division's page. The only place two division hues may share a frame is the portal menu and a gate/warp transition between worlds.
+- **Portal focus states.** On the portal, a division counts as focused while its menu word is hovered/focused OR while the camera is travelling through that division's door in the scroll sequence. Either way the scene may take that division's hue. At the very top of the page, with nothing hovered, the scene is achromatic.
 - **D3. Separate entry points.** Each division is a complete pitch on its own URL (hero → offer → proof → process → CTA), so a client sent straight to one division never needs the others. Cross-links to other divisions live only in the menu overlay and the final gate.
 
 ## 2. Colour
 - DOM canvas `#000000`; raised panel `#111111`; text `#ffffff`; secondary `#f5f5f7`; muted `#cfcfcf`. No navy or grey-blue DOM backgrounds or CSS gradients. Rendered 3D scenes are exempt: fog, haze and light in the scene may carry the active hue, and at rest they are neutral grey, never blue-grey.
 - UI line-work (borders, icons, dividers, cursor, rails) is pure white at 1px. UI is never tinted with the division hue except: active state, data readouts, focus ring.
+- **Inactive / unselected states** (resting menu words, collapsed accordion rows, dimmed non-current items) may be white at reduced opacity — the reference dims unselected menu words to ~35%. This is not an off-palette grey.
+- **Division gates use the division glyph.** A division page's final gate uses that division's own glyph (circle / square / triangle). The diamond is the portal's Work glyph, not a generic gate mark.
 - Colour comes from the scene/media (3D, video, generated imagery) and from the single division hue. Max one saturated hue per frame (see D2).
 - No purple-to-blue SaaS gradients. No drop shadows on UI. Glow is allowed only on scene objects and the division glyph.
 - **Frosted-glass cards are allowed** over a rendered scene (bar.md #5 requires them): translucent, backdrop-blurred, 1px white hairline, 0 radius. They may pick up the scene's light through the blur; they may not carry their own painted hue or gradient.
 - **Chrome scrims are allowed**: a soft, neutral-black (never hued) falloff behind a chrome element so it stays legible. It must have no hard edge and no rule line. This is not a drop shadow.
 - **Type at rest is solid.** Display and body type settle to a solid fill (white, fog or ash). A gradient or mask on type is allowed only while a reveal animation is running, never as a resting style.
+- **The world is full-bleed; the fade applies to content only.** The edge fade that protects chrome must mask the scrolling content layer, never the rendered scene — the lit world must reach every edge of the frame. No letterbox bands.
+- **The scene sits behind content, always.** No scene geometry, line, node, light column or bloom may render on top of, or through, resting type or controls. Where scene detail sits behind text, the text gets a readable substrate (frosted card, local soft scrim, or the scene is dimmed/defocused behind it).
 - **Content never collides with chrome.** As content scrolls toward a fixed chrome element it must fade out or be masked before it reaches it — text may never print through, under, or over the lockup, rail, chevron or contact icon at any scroll position.
 
 ## 3. Type
