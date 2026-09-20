@@ -4,95 +4,63 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import DivisionWorld from "@/components/world/DivisionWorld";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * The world the Web Design Division lives in.
+ * The world the Web Design Division lives in — the single swap point.
  *
- * One continuous lit volume that is mounted once and never swapped: a violet
- * wireframe floor, a vault of the same grid overhead (so the top half of the
- * frame is lit space, not black), a haze that is the scene's only light, a
- * white horizon, and a threshold beam that only exists at the gate.
+ * Base: the foundation's shared `DivisionWorld` for "web": ONE continuous lit
+ * 3D volume behind the whole page, whose camera travels with page scroll
+ * (lite, composited atmosphere on phones / reduced motion / no WebGL).
  *
- * It is camera-driven, not static: page scroll dollies the grid forward
- * (a translate inside the rotated plane, so it reads as travel), and every
- * section registers itself as a station — when a station becomes active the
- * light moves to the opposite side of the frame from that section's object,
- * the grid opens or closes, and at the gate the whole volume recolours to the
- * threshold state. Sections are objects standing in this volume.
+ * On top of it, one thin layer this division owns: STATION LIGHT. Every
+ * section registers itself with `data-station`; when a station becomes active
+ * the division's light moves to the far side of the frame from that section's
+ * object, the square glyph frames re-seat, and at the gate the volume visibly
+ * changes — the horizon opens, a threshold beam rises and the square turns on
+ * its corner. Sections are objects standing in this one world; nothing on the
+ * page paints its own background.
  *
- * Only transform / opacity animate (M4). Reduced motion: the volume renders
- * its lit resting state and nothing moves.
+ * Only transform / opacity animate (M4). Reduced motion: the resting lit state.
  */
 export default function WebWorld() {
-  const sceneRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const scene = sceneRef.current;
-      const main = scene?.parentElement;
-      if (!scene || !main) return;
+      const layer = layerRef.current;
+      const main = layer?.parentElement;
+      if (!layer || !main) return;
 
-      scene.dataset.at = "hero";
-
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        // Camera: one scrubbed value for the whole page.
-        const camera = ScrollTrigger.create({
-          trigger: main,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: (self) => scene.style.setProperty("--cam", self.progress.toFixed(4)),
-          onRefresh: (self) => scene.style.setProperty("--cam", self.progress.toFixed(4)),
-        });
-
-        // Stations: which object the light is currently lighting.
-        const stations = gsap.utils.toArray<HTMLElement>("[data-station]", main);
-        const triggers = stations.map((section) =>
-          ScrollTrigger.create({
-            trigger: section,
-            start: "top 62%",
-            end: "bottom 38%",
-            onToggle: (self) => {
-              if (self.isActive) scene.dataset.at = section.dataset.station ?? "hero";
-            },
-          }),
-        );
-
-        return () => {
-          camera.kill();
-          triggers.forEach((t) => t.kill());
-        };
-      });
+      layer.dataset.at = "hero";
+      const stations = gsap.utils.toArray<HTMLElement>("[data-station]", main);
+      const triggers = stations.map((section) =>
+        ScrollTrigger.create({
+          trigger: section,
+          start: "top 62%",
+          end: "bottom 38%",
+          onToggle: (self) => {
+            if (self.isActive) layer.dataset.at = section.dataset.station ?? "hero";
+          },
+        }),
+      );
+      return () => triggers.forEach((t) => t.kill());
     },
-    { scope: sceneRef },
+    { scope: layerRef },
   );
 
   return (
-    <div ref={sceneRef} aria-hidden="true" className="web-scene" data-at="hero">
-      <div className="web-scene__vault">
-        <div className="web-scene__plane">
-          <div className="web-scene__grid">
-            <i className="web-scene__tiles" />
-          </div>
-        </div>
+    <>
+      <DivisionWorld division="web" />
+      <div ref={layerRef} aria-hidden="true" className="web-scene" data-at="hero">
+        <span className="web-scene__haze" />
+        <span className="web-scene__ring web-scene__ring--in" />
+        <span className="web-scene__ring web-scene__ring--out" />
+        <span className="web-scene__beam" />
+        <span className="web-scene__horizon" />
       </div>
-
-      <span className="web-scene__haze" />
-      <span className="web-scene__ring web-scene__ring--in" />
-      <span className="web-scene__ring web-scene__ring--out" />
-      <span className="web-scene__beam" />
-      <span className="web-scene__horizon" />
-
-      <div className="web-scene__floor">
-        <div className="web-scene__plane">
-          <div className="web-scene__grid">
-            <i className="web-scene__tiles" />
-          </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
