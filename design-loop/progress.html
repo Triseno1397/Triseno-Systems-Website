@@ -82,24 +82,24 @@
 
 <script>
 const DATA = {
-  updated: "2026-09-21 · round 2 built on all four pieces, production build clean, round 2 critics starting",
-  headline: "Round 2 is built. The critics are now judging it as a showcase of range, not as proof of past work, per your correction: the website is the demo.",
+  updated: "2026-09-21 · round 2 judged (12/12, all FAIL), round 3 building",
+  headline: "Round 2 moved the failures from missing fundamentals to layering and polish. The 3D worlds now exist; the critics are catching them drawing over text, going dark on phones, and letterboxing the frame.",
   open: [
     ["21st.dev limit", "Your plan allows 2 component downloads a day. Two exact sources are in; the other nine are rebuilt from their demos and tailored to Triseno anyway."],
     ["Video shots", "No Higgsfield video is generated until you approve each shot. Nothing spent yet."],
     ["Brand film", "Proposed: a fictional performance-car film, 15s in 21:9. A 480p draft costs 45 credits, the 1080p final 180. Waiting on your go. Until then the slot shows a reference cut of your existing footage."]
   ],
   pieces: [
-    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"judging", round:2,
+    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:3,
      critics:{brief:["fail","Mobile is broken: a button runs off screen and fixed chrome covers the copy."],system:["fail","No colourless rest state, oversized cursor, too many type sizes, black gaps on mobile."],craft:["fail","Lost to the reference 0-7. Glyphs float in a black void where the reference has a lit place."]},
      history:["R1 built: type check + production build pass, 0 console errors","R1: all three critics failed it","R2 interrupted by the usage limit partway; rescued and committed","R2 built: soft corner scrims, reserved rail lane, two-line mobile lockup, shared DivisionWorld, one-word-at-a-time headline"]},
-    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"judging", round:2,
+    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"building", round:3,
      critics:{brief:["fail","The header prints over body copy, and on mobile it swallows the Start a Conversation button."],system:["fail","Chrome collisions, an amber gradient wash on the page background, cyan footage on an amber page."],craft:["fail","Lost 1-6. Reads as stacked document blocks with media punched in, not one camera move."]},
      history:["R1 built: 5 sections, 9 formats, 10 testimonials","R1: all three critics failed it","R1: flagship Brand Films panel is an empty slate; real brand names in the founder bio","R2 built: brand names removed, flagship reference cut, one amber world behind the page, mobile swipe testimonials"]},
-    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"judging", round:2,
+    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"building", round:3,
      critics:{brief:["fail","On a phone the before/after collapses into an unreadable fragment, and the industry previews vanish entirely."],system:["fail","Every display headline is set at zero letter-spacing; ~290px black gaps on mobile."],craft:["fail","Lost 0-7. A document scrolling over a static wireframe backdrop."]},
      history:["R1 built: 6 sections, live HTML concept mocks, keyboard-accessible compare","R1: all three critics failed it","R1: the first screen shows a diagram, not a website","R2 built: 0.1em display tracking, website in the first screen, tap-toggle before/after on phones, mobile concept carousel"]},
-    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"judging", round:2,
+    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"building", round:3,
      critics:{brief:["fail","Body copy scrolls through the header at a third of all positions; a web-design card sits on the AI page."],system:["fail","The lockup collides white-on-white with headlines; black bands of 126-146px; mobile lockup hits the menu trigger."],craft:["fail","Lost 1-6. A dense dark-mode document with a faint wireframe behind it."]},
      history:["R1 built: 7 sections, lattice hero, 5-step orbital process","R1 credit: the mechanism and process read as specific and honest","R1: 3x contradicts the page's own 40hrs-to-12min claim","R1 credit: hue discipline clean across all 30 frames; exactly 5 chrome elements; tracking measured in spec","R2 built: web card removed, both speed figures cut, one card per screen, odometer counts only what the page draws"]}
   ]
@@ -108,7 +108,7 @@ const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=nu
 const label={wait:"—",pass:"PASS",fail:"FAIL"};
 const rounds=DATA.pieces.reduce((a,p)=>a+p.round,0), passed=DATA.pieces.filter(p=>p.status==="passed").length;
 document.getElementById("headline").textContent=DATA.headline;
-document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Pages failed <b>4 / 4</b></span><span>Higgsfield credits spent <b>0</b></span>`;
+document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Rounds judged <b>2</b></span><span>Pages passed <b>0 / 4</b></span><span>Higgsfield credits spent <b>0</b></span>`;
 const root=document.getElementById("pieces");
 DATA.pieces.forEach(p=>{
   const card=el("article","piece");card.dataset.hue=p.hue;
