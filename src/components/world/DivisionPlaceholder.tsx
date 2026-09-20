@@ -19,7 +19,7 @@ interface DivisionPlaceholderProps {
 export default function DivisionPlaceholder({ division, line, children }: DivisionPlaceholderProps) {
   return (
     <main className="placeholder-world relative bg-black text-white">
-      <div aria-hidden="true" className="placeholder-world__scene">
+      <div aria-hidden="true" data-world-layer="" className="placeholder-world__scene">
         <DivisionWorld division={division.key} />
         {/* the world draws this glyph at architectural scale once the canvas is
             up; until then (and on the lite path) it is drawn here */}

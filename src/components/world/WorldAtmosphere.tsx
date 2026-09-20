@@ -32,6 +32,7 @@ export default function WorldAtmosphere({
       style={{ ["--atmos-hue" as string]: hue } as CSSProperties}
     >
       <span className="world-atmos__sky" />
+      <span className="world-atmos__shaft" />
       <span className="world-atmos__bloom" />
       <span className="world-atmos__slabs" />
       <span className="world-atmos__horizon" />

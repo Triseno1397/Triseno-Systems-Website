@@ -12,6 +12,7 @@ import {
   type DivisionKey,
 } from "@/lib/divisions";
 import Glyph from "./Glyph";
+import ContentFade from "./ContentFade";
 import { WarpLink, useWarp } from "./WarpProvider";
 import { lockScroll, scrollToTop } from "./SmoothScroll";
 
@@ -67,11 +68,10 @@ export default function Chrome() {
 
   return (
     <>
-      {/* Content never collides with chrome: page content fades out through
-          these neutral edge bands before it can reach the lockup, the trigger,
-          the chevron or the contact icon (world.css .chrome-fade). */}
-      <div aria-hidden="true" className="chrome-fade chrome-fade--top" />
-      <div aria-hidden="true" className="chrome-fade chrome-fade--bottom" />
+      {/* Content never collides with chrome: page content is masked to
+          transparent before it can reach the lockup, the trigger, the chevron
+          or the contact icon. Only content — the world stays full-bleed. */}
+      <ContentFade />
       <MorphNav
         division={division}
         compact={compact && !menuOpen}

@@ -7,6 +7,11 @@
    Imported by src/app/layout.tsx after globals.css.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* The page never rubber-bands: elastic overscroll translates the whole
+   viewport — fixed chrome included — and opens a flat black gap at the edge. */
+html[data-world-chrome],
+html[data-world-chrome] body { overscroll-behavior: none; }
+
 /* Lenis */
 html.lenis,
 html.lenis body { height: auto; }
@@ -77,48 +82,51 @@ html[data-warping] .chrome-btn,
 html[data-warping] .progress-rail { opacity: 0; pointer-events: none; }
 
 /* ── CONTENT NEVER COLLIDES WITH CHROME (design-system §2) ─────────────────
-   Technique: VIEWPORT-EDGE FADE BANDS. Two fixed, full-width, neutral-black
-   falloffs sit above every page's content and below the chrome:
-     top    — solid black through the lockup / menu-trigger zone, then an eased
-              falloff to exactly 0 (no hard edge, no rule line);
-     bottom — the same, mirrored, covering the chevron and contact icon.
-   Anything that scrolls toward a corner element has faded out completely
-   before it reaches it, on every page, at every breakpoint, whatever the
-   content is (white headline, bright video frame, light mock site). The bands
-   are sized from the chrome's own geometry below, so they grow with it.
-   The right-edge rail gets a lane instead (`--lane-right`, ≥1200px, applied
-   to <main>) and is hidden where there is no room for one.
-   A small neutral pool sits behind the rail only; there are no corner pools,
-   because a pool lying over resting type reads as gradient type. */
-.chrome-fade {
-  position: fixed; left: 0; right: 0; z-index: 790;
-  pointer-events: none;
-  transition: opacity 700ms var(--ease-expo);
-}
-.chrome-fade--top {
-  top: 0; height: var(--fade-top);
-  background: linear-gradient(
+   Technique: a CONTENT-ONLY viewport mask. ContentFade.tsx marks every direct
+   child of <main> that is page content with [data-fade] and keeps --fade-y
+   equal to how far the viewport top sits below that element's top. The mask
+   below is one viewport tall, positioned at --fade-y, so it stays pinned to
+   the viewport while the content scrolls through it:
+     top    — transparent through the lockup / menu-trigger zone, then eased
+              up to fully opaque by --fade-top;
+     bottom — the same, mirrored, over the chevron and the contact icon.
+   Content dissolves before it can reach any corner element, on every page and
+   breakpoint, whatever it is. World layers (position: fixed under <main>, or
+   data-world-layer) are never masked and nothing is painted over the scene,
+   so the world stays full-bleed to every edge of the frame.
+   The rail gets a lane instead (`--lane-right`, >=1200px) and is hidden where
+   there is no room for one. */
+html[data-content-fade] main > [data-fade] {
+  --content-mask: linear-gradient(
     180deg,
-    #000 0%, #000 var(--fade-top-solid),
-    rgba(0, 0, 0, 0.86) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.22),
-    rgba(0, 0, 0, 0.55) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.48),
-    rgba(0, 0, 0, 0.2) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.74),
-    rgba(0, 0, 0, 0) 100%
+    transparent 0,
+    transparent var(--fade-top-solid),
+    rgba(0, 0, 0, 0.14) calc(var(--fade-top-solid) + (var(--fade-top) - var(--fade-top-solid)) * 0.26),
+    rgba(0, 0, 0, 0.46) calc(var(--fade-top-solid) + (var(--fade-top) - var(--fade-top-solid)) * 0.52),
+    rgba(0, 0, 0, 0.8) calc(var(--fade-top-solid) + (var(--fade-top) - var(--fade-top-solid)) * 0.78),
+    #000 var(--fade-top),
+    #000 calc(100% - var(--fade-bottom)),
+    rgba(0, 0, 0, 0.8) calc(100% - var(--fade-bottom-solid) - (var(--fade-bottom) - var(--fade-bottom-solid)) * 0.78),
+    rgba(0, 0, 0, 0.46) calc(100% - var(--fade-bottom-solid) - (var(--fade-bottom) - var(--fade-bottom-solid)) * 0.52),
+    rgba(0, 0, 0, 0.14) calc(100% - var(--fade-bottom-solid) - (var(--fade-bottom) - var(--fade-bottom-solid)) * 0.26),
+    transparent calc(100% - var(--fade-bottom-solid)),
+    transparent 100%
   );
+  -webkit-mask-image: var(--content-mask);
+  mask-image: var(--content-mask);
+  /* one viewport tall, three viewports wide (content that overhangs its box
+     sideways is never clipped), pinned to the viewport by --fade-y */
+  -webkit-mask-size: calc(100% + 200vw) var(--fade-vh, 100vh);
+  mask-size: calc(100% + 200vw) var(--fade-vh, 100vh);
+  -webkit-mask-position: -100vw var(--fade-y, 0px);
+  mask-position: -100vw var(--fade-y, 0px);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-clip: no-clip;
+  mask-clip: no-clip;
 }
-.chrome-fade--bottom {
-  bottom: 0; height: var(--fade-bottom);
-  background: linear-gradient(
-    0deg,
-    #000 0%, #000 var(--fade-bottom-solid),
-    rgba(0, 0, 0, 0.86) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.22),
-    rgba(0, 0, 0, 0.55) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.48),
-    rgba(0, 0, 0, 0.2) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.74),
-    rgba(0, 0, 0, 0) 100%
-  );
-}
-html[data-warping] .chrome-fade { opacity: 0; }
-html:has(.portal-world[data-capture]) .chrome-fade { display: none; }
+/* the warp tunnel and poster captures show the page bare */
+html:has(.portal-world[data-capture]) main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
 
 /* neutral pool behind the rail: centred on it, fully faded inside its own box */
 .chrome-scrim {
@@ -365,8 +373,6 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.5) 80%, rgba(0, 0, 0, 0.66) 100%);
 }
 /* a door only takes its hue while it owns the viewport (D2) */
-.lite-door .world-atmos { filter: grayscale(1) brightness(0.8); transition: filter 900ms var(--ease-expo); }
-.lite-door[data-lit] .world-atmos { filter: none; }
 .lite-door .door-card { margin: 0 var(--gutter) var(--lane-bottom); max-width: 520px; }
 /* the portal object, standing in the lite world: the door's glyph at scale,
    lit in its hue while the door owns the viewport, with a reflection on the
@@ -386,7 +392,6 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 }
 .lite-door .lite-glyph { filter: grayscale(1) brightness(0.75); transition: filter 900ms var(--ease-expo); }
 .lite-door[data-lit] .lite-glyph { filter: none; }
-.lite-backdrop .lite-glyph { top: 40%; left: auto; right: var(--gutter); transform: none; width: min(34vw, 200px); opacity: 0.55; }
 .portal-gate__rain { height: 38%; }
 
 /* poster capture (?capture=…): the bare scene */
@@ -408,49 +413,54 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 .world-atmos--fixed { position: fixed; }
 .world-atmos > span { position: absolute; display: block; }
 
-/* sky: black overhead, warming into the hue as it nears the horizon */
+/* sky: deep overhead, lifting into a lit haze as it nears the horizon */
 .world-atmos__sky {
   inset: 0 0 42% 0;
   background:
-    radial-gradient(130% 92% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 24%, transparent) 0%, transparent 66%),
-    linear-gradient(180deg, #050506 0%, #0a0a0c 50%, #151518 100%);
+    radial-gradient(130% 96% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 36%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, #08080b 0%, #101015 44%, #1e1e25 100%);
+}
+/* a volumetric shaft of the key light falling from above onto the floor */
+.world-atmos__shaft {
+  left: 50%; top: -6%; width: 120%; height: 112%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(9% 70% at 50% 0%, rgba(255, 255, 255, 0.16), transparent 100%),
+    radial-gradient(26% 86% at 50% 0%, color-mix(in srgb, var(--atmos-hue) 26%, transparent) 0%, transparent 100%);
 }
 /* the bloom sitting on the horizon, where the corridor leads */
 .world-atmos__bloom {
-  left: 50%; bottom: 36%; width: 150%; height: 44%;
+  left: 50%; bottom: 34%; width: 150%; height: 50%;
   transform: translateX(-50%);
-  background: radial-gradient(
-    46% 100% at 50% 100%,
-    color-mix(in srgb, var(--atmos-hue) 56%, transparent) 0%,
-    color-mix(in srgb, var(--atmos-hue) 18%, transparent) 38%,
-    transparent 76%
-  );
-}
-/* distant silhouetted forms standing on the horizon: three rows of slabs at
-   three heights and three periods, dissolving upward into the haze */
-.world-atmos__slabs {
-  left: -6%; right: -6%; bottom: 42%; height: 30%;
-  background-image:
-    repeating-linear-gradient(90deg, #060609 0 22px, transparent 22px 79px),
-    repeating-linear-gradient(90deg, #08080c 0 13px, transparent 13px 52px),
-    repeating-linear-gradient(90deg, #050507 0 37px, transparent 37px 127px);
-  background-size: 100% 34%, 100% 62%, 100% 100%;
-  background-position: 0 100%, 0 100%, 0 100%;
-  background-repeat: no-repeat;
-  -webkit-mask-image: linear-gradient(0deg, #000 8%, rgba(0, 0, 0, 0.5) 46%, transparent 100%);
-  mask-image: linear-gradient(0deg, #000 8%, rgba(0, 0, 0, 0.5) 46%, transparent 100%);
-}
-.world-atmos__horizon {
-  left: 0; right: 0; bottom: 42%; height: 3px;
   background:
-    linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--atmos-hue) 55%, transparent) 20%,
-      color-mix(in srgb, var(--atmos-hue) 90%, #ffffff 12%) 50%,
-      color-mix(in srgb, var(--atmos-hue) 55%, transparent) 80%, transparent 100%);
+    radial-gradient(16% 38% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 70%, #ffffff 30%) 0%, transparent 100%),
+    radial-gradient(48% 100% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 72%, transparent) 0%, color-mix(in srgb, var(--atmos-hue) 24%, transparent) 40%, transparent 78%);
+}
+/* distant silhouetted forms standing against the lit horizon: three rows of
+   slabs at three heights and three periods, dissolving upward into the haze */
+.world-atmos__slabs {
+  left: -6%; right: -6%; bottom: 42%; height: 32%;
+  background-image:
+    repeating-linear-gradient(90deg, #040406 0 26px, transparent 26px 139px),
+    repeating-linear-gradient(90deg, transparent 0 61px, #050508 61px 79px, transparent 79px 197px),
+    repeating-linear-gradient(90deg, transparent 0 17px, #030304 17px 71px, transparent 71px 263px),
+    repeating-linear-gradient(90deg, transparent 0 140px, #020203 140px 186px, transparent 186px 331px);
+  background-size: 100% 22%, 100% 48%, 100% 71%, 100% 100%;
+  background-position: 13px 100%, 0 100%, 41px 100%, 0 100%;
+  background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(0deg, #000 8%, rgba(0, 0, 0, 0.62) 50%, transparent 100%);
+  mask-image: linear-gradient(0deg, #000 8%, rgba(0, 0, 0, 0.62) 50%, transparent 100%);
+}
+/* the horizon is a soft band of light, never a line: it can sit behind copy
+   without ever reading as a rule through it */
+.world-atmos__horizon {
+  left: -10%; right: -10%; bottom: calc(42% - 22px); height: 44px;
+  background: radial-gradient(50% 50% at 50% 50%, color-mix(in srgb, var(--atmos-hue) 46%, transparent) 0%, transparent 100%);
 }
 .world-atmos__haze {
   left: -34%; right: -34%; bottom: 37%; height: 24%;
   background:
-    radial-gradient(48% 58% at 30% 52%, rgba(255, 255, 255, 0.05), transparent 72%),
+    radial-gradient(48% 58% at 30% 52%, rgba(255, 255, 255, 0.08), transparent 72%),
     radial-gradient(38% 70% at 74% 42%, color-mix(in srgb, var(--atmos-hue) 13%, transparent), transparent 72%);
   animation: atmos-drift 44s ease-in-out infinite alternate;
 }
@@ -462,7 +472,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
    ripples by the mask */
 .world-atmos__floor {
   left: 0; right: 0; bottom: 0; height: 42%; overflow: hidden;
-  background: linear-gradient(180deg, #141417 0%, #0b0b0d 46%, #060607 100%);
+  background: linear-gradient(180deg, #202027 0%, #111115 46%, #0a0a0c 100%);
 }
 .world-atmos__grid {
   position: absolute; left: -6%; right: -6%; top: 0; height: 62%;
@@ -480,9 +490,9 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   transform: translateX(-50%);
   background: radial-gradient(
     44% 58% at 50% 0%,
-    color-mix(in srgb, var(--atmos-hue) 50%, transparent) 0%,
-    color-mix(in srgb, var(--atmos-hue) 14%, transparent) 40%,
-    transparent 80%
+    color-mix(in srgb, var(--atmos-hue) 70%, transparent) 0%,
+    color-mix(in srgb, var(--atmos-hue) 22%, transparent) 42%,
+    transparent 82%
   );
   -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, rgba(0, 0, 0, 0.3) 3px 8px);
   mask-image: repeating-linear-gradient(0deg, #000 0 3px, rgba(0, 0, 0, 0.3) 3px 8px);

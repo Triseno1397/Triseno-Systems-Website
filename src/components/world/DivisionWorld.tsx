@@ -136,6 +136,7 @@ export default function DivisionWorld({
   return (
     <div
       aria-hidden="true"
+      data-world-layer=""
       data-division={division}
       data-mode={mode}
       className={`division-world ${className}`}

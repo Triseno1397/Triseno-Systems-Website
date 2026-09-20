@@ -86,6 +86,9 @@ export default function PortalPage() {
   const [hot, setHot] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [capture, setCapture] = useState(false);
+  // lite world: the one fixed backdrop takes the hue of the door that owns the
+  // viewport, and is white light everywhere else (D2)
+  const [liteHue, setLiteHue] = useState(WHITE);
   // Arriving through the warp: the tunnel is already covering the screen, so it
   // holds until the world is drawn instead of handing over to a second loader.
   const [viaWarp] = useState(
@@ -279,8 +282,12 @@ export default function PortalPage() {
     if (mode !== "lite") return;
     const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-lite-door]"));
     const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.target.toggleAttribute("data-lit", e.intersectionRatio > 0.6)),
-      { threshold: [0, 0.6, 1] },
+      (entries) => {
+        entries.forEach((e) => e.target.toggleAttribute("data-lit", e.intersectionRatio > 0.55));
+        const lit = panels.findIndex((p) => p.hasAttribute("data-lit"));
+        setLiteHue(lit >= 0 ? DOOR_ITEMS[lit].hue : WHITE);
+      },
+      { threshold: [0, 0.55, 1] },
     );
     panels.forEach((p) => io.observe(p));
     return () => io.disconnect();
@@ -336,8 +343,17 @@ export default function PortalPage() {
 
       {/* The world: one fixed canvas behind every section. */}
       {mode === "full" ? (
-        <div className="fixed inset-0 z-0" data-scene-ready={ready ? "" : undefined}>
+        <div className="fixed inset-0 z-0" data-world-layer="" data-scene-ready={ready ? "" : undefined}>
           <PortalScene onReady={() => setReady(true)} onEnter={travel} />
+        </div>
+      ) : null}
+
+      {/* Lite world (phone / reduced motion / no WebGL): ONE lit place, fixed
+          and full-bleed behind every section, so there is never dead black
+          between door cards. */}
+      {mode === "lite" ? (
+        <div className="fixed inset-0 z-0" data-world-layer="" aria-hidden="true">
+          <WorldAtmosphere hue={liteHue} />
         </div>
       ) : null}
 
@@ -348,7 +364,6 @@ export default function PortalPage() {
         aria-label="Triseno Systems"
         className={full ? "relative z-10 h-[200dvh]" : "relative z-10 min-h-[100dvh] overflow-hidden"}
       >
-        {mode === "lite" ? <LiteHeroBackdrop active={active} /> : null}
 
         <div
           ref={heroInnerRef}
@@ -424,9 +439,7 @@ export default function PortalPage() {
             <div key={door.key} data-lite-door="" className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
               {/* the lit place, composited in CSS — it takes the door's hue only
                   while that door owns the viewport (D2) */}
-              <WorldAtmosphere hue={door.hue} />
               <LiteGlyph kind={door.glyph} hue={door.hue} />
-              <div aria-hidden="true" className="lite-door__shade absolute inset-0" />
               <div className="door-card door-card--static relative">
                 <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
               </div>
@@ -451,8 +464,6 @@ export default function PortalPage() {
       >
         {mode === "lite" ? (
           <>
-            <WorldAtmosphere />
-            <div aria-hidden="true" className="lite-door__shade absolute inset-0" />
             <div aria-hidden="true" className="portal-gate__rain absolute inset-x-0 bottom-0">
               <BeamsCollision floor={0.78} xRange={[0.06, 0.8]} />
             </div>
@@ -493,21 +504,6 @@ function DoorCardBody({ index }: { index: number }) {
         {copy.cta}
       </GhostButton>
     </>
-  );
-}
-
-/* Lite hero backdrop (mobile / reduced motion / no WebGL): the same place the
-   3D world renders, composited in CSS. Achromatic at rest (design-system §1) —
-   the portal has no hue of its own — so nothing here is preselected. */
-function LiteHeroBackdrop({ active }: { active: number }) {
-  // the signature object in white light, morphing with the headline
-  const item = MENU_ITEMS[active];
-  return (
-    <div aria-hidden="true" className="lite-backdrop absolute inset-0">
-      <WorldAtmosphere />
-      <LiteGlyph key={item.glyph} kind={item.glyph} hue={WHITE} />
-      <div className="lite-backdrop__shade absolute inset-0" />
-    </div>
   );
 }
 
