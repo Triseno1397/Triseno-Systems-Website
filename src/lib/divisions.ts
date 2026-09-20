@@ -31,7 +31,6 @@ export const DIVISIONS: Record<DivisionKey, Division> = {
     route: "/web-design-division",
     hue: "#9d5cff",
     glyph: "square",
-    external: true,
   },
   ai: { key: "ai", name: "AI Infrastructure", route: "/ai-infrastructure", hue: "#00b4d8", glyph: "triangle" },
   work: { key: "work", name: "Work", route: "/work", hue: WHITE, glyph: "diamond" },
@@ -72,7 +71,7 @@ export function divisionForHref(href: string): Division {
  * chrome, orb cursor and smooth scroll; legacy pages keep their own navigation
  * until their piece of the revamp lands. The warp transition is global.
  */
-const REVAMPED = ["/", "/ai-infrastructure", "/work"];
+const REVAMPED = ["/", "/ai-infrastructure", "/work", "/web-design-division", "/studio"];
 
 export function isRevampedRoute(pathname: string): boolean {
   return REVAMPED.includes(pathname);
