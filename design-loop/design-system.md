@@ -50,7 +50,8 @@ from a screenshot or filmstrip.
 - The site is a showcase. Realistic filler is allowed for testimonials, case studies, client names and concept work so every component looks the way it would on a finished client site. Filler uses fictional people and fictional company names only — never a real brand, real person, or real logo that did not work with Triseno.
 - No legible fake UI or dashboards in generated imagery. Real sites/screens are real captures.
 - No on-screen text baked into generated video. No speaking AI avatars.
-- Voice: precise systems engineer. Numbers over adjectives. CTA wording: "Start a Conversation".
+- Voice: precise systems engineer. Numbers over adjectives.
+- CTA wording comes from the brand bible's approved set: "Start a Conversation" (the default), "Start with a diagnostic" (AI Infrastructure entry point), "Let's talk architecture". A page may lead with whichever fits its buyer; every page must offer "Start a Conversation" somewhere.
 
 ## 6b. Components are tailored, never cloned
 - The 11 reference components from 21st.dev are inspiration for a mechanic, not a look. Each one is rebuilt in Triseno's language: division glyphs (circle / square / triangle), the division hue, Unbounded + Geist type, 0-radius hairline styling, Triseno copy, and at least one behaviour the stock demo does not have. If a section could be mistaken for the stock 21st.dev demo in a screenshot, it fails.

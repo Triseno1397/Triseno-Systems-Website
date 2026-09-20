@@ -40,6 +40,7 @@
   .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px}
   ol.bar,ul.open{margin:0;padding-left:20px;color:var(--fog);display:grid;gap:8px;font-size:14px}
   ol.bar b,ul.open b{color:var(--white);font-weight:500}
+  .verdict-line{margin:0;padding:12px 16px;border-left:2px solid var(--fail);background:rgba(255,90,106,.07);color:var(--white);max-width:72ch;font-size:14px}
   footer{font:400 11px var(--mono);color:var(--dim);letter-spacing:.08em;border-top:1px solid var(--line);padding-top:16px}
 </style>
 
@@ -48,6 +49,7 @@
     <div class="eyebrow">Design loop · trisenosystems.com revamp · bar: ohzi.io</div>
     <h1>Builder vs three critics</h1>
     <p class="sub">Each piece is built, rendered, then judged blind by three fresh critics. All three must pass. A fail sends the single biggest gap back to the builder. There is no round limit; the exit is winning, or you stopping the run.</p>
+    <p class="verdict-line" id="headline"></p>
     <div class="stats" id="stats"></div>
   </header>
 
@@ -80,26 +82,33 @@
 
 <script>
 const DATA = {
-  updated: "2026-09-20 · piece 1 round 1 judged, pieces 2-4 building",
+  updated: "2026-09-21 · round 1 complete — 12 of 12 critic verdicts in, all FAIL. Round 2 building.",
+  headline: "One finding sank all four pages: the sections sit on flat black instead of inside a lit world. A shared world is being built now.",
   open: [
-    ["21st.dev limit", "Free plan allows 2 component downloads a day. Two are in; the rest are being rebuilt from their demos and tailored to Triseno anyway."],
-        ["Video shots", "No Higgsfield video is generated until you approve each shot."]
+    ["21st.dev limit", "Your plan allows 2 component downloads a day. Two exact sources are in; the other nine are rebuilt from their demos and tailored to Triseno anyway."],
+    ["Video shots", "No Higgsfield video is generated until you approve each shot. Nothing spent yet."],
+    ["Brand-film reel", "The Creative page's flagship format has no footage and currently shows an empty slate. Send a brand film, or it gets cut as a format."]
   ],
   pieces: [
-    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:1,
-     critics:{brief:["fail","Mobile layout is broken: a button overflows the screen and fixed chrome covers the copy."],system:["wait","judging"],craft:["fail","Lost to ohzi.io 0-7. Glyphs float in a black void; the reference is a lit, depth-of-field place."]}, history:["R1 built: type check + production build pass, 0 console errors","R1 brief FAIL: mobile overflow; Work hover leaves headline on AI; cursor disc hides letters","R1 craft FAIL: needs a rendered environment per hue, glass material, real warp arc, glass cards"]},
-    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"building", round:1,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]},
-    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"building", round:1,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]},
-    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"building", round:1,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]}
+    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:2,
+     critics:{brief:["fail","Mobile is broken: a button runs off screen and fixed chrome covers the copy."],system:["fail","No colourless rest state, oversized cursor, too many type sizes, black gaps on mobile."],craft:["fail","Lost to the reference 0-7. Glyphs float in a black void where the reference has a lit place."]},
+     history:["R1 built: type check + production build pass, 0 console errors","R1: all three critics failed it","R2 interrupted by the usage limit partway; rescued and committed","R2 now fixing chrome collisions and building the shared lit world"]},
+    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"building", round:2,
+     critics:{brief:["fail","The header prints over body copy, and on mobile it swallows the Start a Conversation button."],system:["fail","Chrome collisions, an amber gradient wash on the page background, cyan footage on an amber page."],craft:["fail","Lost 1-6. Reads as stacked document blocks with media punched in, not one camera move."]},
+     history:["R1 built: 5 sections, 9 formats, 10 testimonials","R1: all three critics failed it","R1: flagship Brand Films panel is an empty slate; real brand names in the founder bio","R2 fixing content and adopting the shared world"]},
+    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"building", round:2,
+     critics:{brief:["fail","On a phone the before/after collapses into an unreadable fragment, and the industry previews vanish entirely."],system:["fail","Every display headline is set at zero letter-spacing; ~290px black gaps on mobile."],craft:["fail","Lost 0-7. A document scrolling over a static wireframe backdrop."]},
+     history:["R1 built: 6 sections, live HTML concept mocks, keyboard-accessible compare","R1: all three critics failed it","R1: the first screen shows a diagram, not a website","R2 fixing mobile proof and adopting the shared world"]},
+    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"building", round:2,
+     critics:{brief:["fail","Body copy scrolls through the header at a third of all positions; a web-design card sits on the AI page."],system:["fail","The lockup collides white-on-white with headlines; black bands of 126-146px; mobile lockup hits the menu trigger."],craft:["fail","Lost 1-6. A dense dark-mode document with a faint wireframe behind it."]},
+     history:["R1 built: 7 sections, lattice hero, 5-step orbital process","R1 credit: the mechanism and process read as specific and honest","R1: 3x contradicts the page's own 40hrs-to-12min claim","R1 credit: hue discipline clean across all 30 frames; exactly 5 chrome elements; tracking measured in spec","R2 cutting density and adopting the shared world"]}
   ]
 };
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.textContent=h;return e};
 const label={wait:"—",pass:"PASS",fail:"FAIL"};
 const rounds=DATA.pieces.reduce((a,p)=>a+p.round,0), passed=DATA.pieces.filter(p=>p.status==="passed").length;
-document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Higgsfield credits spent <b>0</b></span>`;
+document.getElementById("headline").textContent=DATA.headline;
+document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Pages failed <b>4 / 4</b></span><span>Higgsfield credits spent <b>0</b></span>`;
 const root=document.getElementById("pieces");
 DATA.pieces.forEach(p=>{
   const card=el("article","piece");card.dataset.hue=p.hue;

@@ -1080,6 +1080,9 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   const floor = useMemo(() => makeFloorMaps(), []);
   // never render above the device's own pixel ratio; cap at 1.5 and fall to 1 if frames drop
   const [maxDpr, setMaxDpr] = useState(1.5);
+  // "H" pins the high tier so headless/software-GPU captures show what a real
+  // GPU renders; without it PerformanceMonitor degrades to "low" within a second.
+  const pinHigh = DBG.includes("H");
   const [tier, setTier] = useState<Tier>(DBG.includes("l") ? "low" : "high");
   const dpr = DBG.includes("r") ? 0.5 : Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, maxDpr);
   useEffect(
@@ -1104,18 +1107,20 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         scene.fog = new THREE.Fog("#0a0a0a", 6, 58);
       }}
     >
-      <PerformanceMonitor
-        ms={200}
-        iterations={6}
-        threshold={0.8}
-        bounds={() => [24, 50]}
-        flipflops={2}
-        onDecline={() => {
-          setMaxDpr(1);
-          setTier("low");
-        }}
-        onFallback={() => setTier("low")}
-      />
+      {pinHigh ? null : (
+        <PerformanceMonitor
+          ms={200}
+          iterations={6}
+          threshold={0.8}
+          bounds={() => [24, 50]}
+          flipflops={2}
+          onDecline={() => {
+            setMaxDpr(1);
+            setTier("low");
+          }}
+          onFallback={() => setTier("low")}
+        />
+      )}
       <TierContext.Provider value={tier}>
       <ambientLight intensity={0.05} />
       <Environment resolution={256} frames={1}>

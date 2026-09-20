@@ -11,16 +11,21 @@ await p.waitForTimeout(1200); await p.screenshot({ path: out + '00-first-paint.p
 await p.waitForTimeout(6000); await p.screenshot({ path: out + '01-hero.png' });
 await p.mouse.move(700, 450);
 let i = 2, last = -1;
-for (let n = 0; n < 40; n++) {
-  await p.mouse.wheel(0, 600); await p.waitForTimeout(1300);
-  const y = await p.evaluate(() => Math.round(window.scrollY));
-  await p.screenshot({ path: out + String(i++).padStart(2, '0') + `-scroll-y${y}.png` });
-  if (y === last) break; last = y;
-}
-const m = await b.newPage({ ...devices['iPhone 13'] });
-await m.goto(base + route, { waitUntil: 'domcontentloaded' }); await m.waitForTimeout(6000);
-const h = await m.evaluate(() => document.documentElement.scrollHeight);
-const ow = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-for (let k = 0; k < 10; k++) { await m.evaluate(([k, h]) => window.scrollTo(0, Math.round((h - 800) * k / 9)), [k, h]); await m.waitForTimeout(1200); await m.screenshot({ path: out + `mobile-${String(k).padStart(2, '0')}.png` }); }
+try {
+  for (let n = 0; n < 40; n++) {
+    await p.mouse.wheel(0, 600); await p.waitForTimeout(1300);
+    const y = await p.evaluate(() => Math.round(window.scrollY));
+    await p.screenshot({ path: out + String(i++).padStart(2, '0') + `-scroll-y${y}.png` });
+    if (y === last) break; last = y;
+  }
+} catch (e) { errs.push('DESKTOP CAPTURE ABORTED: ' + String(e).slice(0, 90)); }
+let h = 'n/a', ow = 'n/a';
+try {
+  const m = await b.newPage({ ...devices['iPhone 13'] });
+  await m.goto(base + route, { waitUntil: 'domcontentloaded' }); await m.waitForTimeout(6000);
+  h = await m.evaluate(() => document.documentElement.scrollHeight);
+  ow = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  for (let k = 0; k < 10; k++) { await m.evaluate(([k, h]) => window.scrollTo(0, Math.round((h - 800) * k / 9)), [k, h]); await m.waitForTimeout(1200); await m.screenshot({ path: out + `mobile-${String(k).padStart(2, '0')}.png` }); }
+} catch (e) { errs.push('MOBILE CAPTURE ABORTED: ' + String(e).slice(0, 90)); }
 fs.writeFileSync(out + 'notes.txt', `console errors: ${errs.join(' | ') || 'none'}\nmobile horizontal overflow px: ${ow}\npage height mobile: ${h}`);
 await b.close(); console.log('ok', name, errs.length, 'errors, overflow', ow);
