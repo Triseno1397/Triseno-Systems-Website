@@ -116,17 +116,16 @@ export default function StudioGate() {
               Instagram @trisenosystems
             </a>
           </p>
+          <nav aria-label="Other Triseno divisions" className="sx-gate__cross font-mono">
+            <span>Other divisions</span>
+            {others.map((d) => (
+              <WarpLink key={d.key} href={d.route} className="world-underline">
+                <Glyph kind={d.glyph} size={12} strokeWidth={1.25} />
+                {d.key === "web" ? "Web Design Division" : d.name}
+              </WarpLink>
+            ))}
+          </nav>
         </div>
-
-        <nav aria-label="Other Triseno divisions" className="sx-gate__cross font-mono">
-          <span>Other divisions</span>
-          {others.map((d) => (
-            <WarpLink key={d.key} href={d.route} className="world-underline">
-              <Glyph kind={d.glyph} size={12} strokeWidth={1.25} />
-              {d.key === "web" ? "Web Design Division" : d.name}
-            </WarpLink>
-          ))}
-        </nav>
       </div>
     </section>
   );

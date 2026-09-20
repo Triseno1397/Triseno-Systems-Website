@@ -249,12 +249,56 @@ export default function Filmstrip() {
               platform it ships to — not just to look good in a portfolio.
             </p>
           </div>
-          <div key={active} className="sx-film__now" aria-hidden={moved ? undefined : "true"}>
+          <div key={`now-${active}`} className="sx-film__now" aria-hidden={moved ? undefined : "true"}>
             <p className="sx-film__count font-mono">
               <b>{current.n}</b> / {pad(count)} — in the gate
             </p>
             <h3 className="sx-h3 font-display font-semibold uppercase">{current.title}</h3>
             <p className="sx-film__tagline font-sans">{current.sm}</p>
+          </div>
+          <div key={`cap-${active}`} className="sx-film__caption" aria-live="polite">
+            <div className="sx-film__caption-side">
+              <p className="sx-film__desc font-sans font-light">{current.desc}</p>
+              <ul className="sx-tags font-mono">
+                {current.tags.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+                {reduced && (current.video || current.videos) ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="sx-sound"
+                      aria-pressed={manual}
+                      onClick={() => setGate((g) => ({ ...g, manual: !g.manual }))}
+                    >
+                      {manual ? (
+                        <Pause size={14} weight="light" aria-hidden="true" />
+                      ) : (
+                        <Play size={14} weight="light" aria-hidden="true" />
+                      )}
+                      {manual ? "Pause clip" : "Play clip"}
+                    </button>
+                  </li>
+                ) : null}
+                {canHear ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="sx-sound"
+                      aria-pressed={soundOn}
+                      onClick={() => setGate((g) => ({ ...g, sound: !g.sound }))}
+                    >
+                      {soundOn ? (
+                        <SpeakerSimpleHigh size={14} weight="light" aria-hidden="true" />
+                      ) : (
+                        <SpeakerSimpleSlash size={14} weight="light" aria-hidden="true" />
+                      )}
+                      {soundOn ? "Sound on" : "Sound off"}
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            </div>
           </div>
         </header>
 
@@ -354,50 +398,6 @@ export default function Filmstrip() {
         <div className="sx-film__foot">
           <div className="sx-film__progress" aria-hidden="true">
             <span ref={bar} />
-          </div>
-          <div key={active} className="sx-film__caption" aria-live="polite">
-            <div className="sx-film__caption-side">
-              <p className="sx-film__desc font-sans font-light">{current.desc}</p>
-              <ul className="sx-tags font-mono">
-                {current.tags.map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
-                {reduced && (current.video || current.videos) ? (
-                  <li>
-                    <button
-                      type="button"
-                      className="sx-sound"
-                      aria-pressed={manual}
-                      onClick={() => setGate((g) => ({ ...g, manual: !g.manual }))}
-                    >
-                      {manual ? (
-                        <Pause size={14} weight="light" aria-hidden="true" />
-                      ) : (
-                        <Play size={14} weight="light" aria-hidden="true" />
-                      )}
-                      {manual ? "Pause clip" : "Play clip"}
-                    </button>
-                  </li>
-                ) : null}
-                {canHear ? (
-                  <li>
-                    <button
-                      type="button"
-                      className="sx-sound"
-                      aria-pressed={soundOn}
-                      onClick={() => setGate((g) => ({ ...g, sound: !g.sound }))}
-                    >
-                      {soundOn ? (
-                        <SpeakerSimpleHigh size={14} weight="light" aria-hidden="true" />
-                      ) : (
-                        <SpeakerSimpleSlash size={14} weight="light" aria-hidden="true" />
-                      )}
-                      {soundOn ? "Sound on" : "Sound off"}
-                    </button>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
           </div>
         </div>
       </div>

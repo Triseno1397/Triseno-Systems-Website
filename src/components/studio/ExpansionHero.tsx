@@ -95,8 +95,11 @@ export default function ExpansionHero() {
 
           const drift = grow * 10;
           if (vw >= 768) {
-            if (left.current) left.current.style.transform = `translate3d(${(-drift).toFixed(1)}px,0,0)`;
-            if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,0,0)`;
+            // At full bleed the headline lifts so the copy and CTA below it
+            // rest inside the chrome lane, clear of the bottom fade band.
+            const rise = (-vh * 0.12 * grow).toFixed(1);
+            if (left.current) left.current.style.transform = `translate3d(${(-drift).toFixed(1)}px,${rise}px,0)`;
+            if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,${rise}px,0)`;
           } else {
             // Mobile: the window is gone at full bleed, so the halves close up into one headline.
             const join = s / 2 + 12;
