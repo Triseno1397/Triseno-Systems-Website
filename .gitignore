@@ -54,3 +54,7 @@ next-env.d.ts
 
 # design-loop captures
 design-loop/shots/
+
+# builder scratch scripts
+tmp-*.mjs
+.*.mjs
