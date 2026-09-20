@@ -159,13 +159,16 @@ export function GlassLoop({
             clearcoatRoughness={0.08}
           />
         ) : (
+          // far glass: lighter body and stronger reflections so, out of
+          // refraction range, the loop still reads as glass catching the
+          // light rather than a dark lump
           <meshPhysicalMaterial
-            color="#1b1b1e"
-            metalness={0.2}
-            roughness={0.08}
+            color="#34343c"
+            metalness={0.15}
+            roughness={0.05}
             transparent
-            opacity={0.55}
-            envMapIntensity={1.6}
+            opacity={0.62}
+            envMapIntensity={2.6}
             clearcoat={1}
             clearcoatRoughness={0.08}
           />

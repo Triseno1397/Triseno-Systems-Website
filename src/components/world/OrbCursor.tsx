@@ -64,8 +64,8 @@ export default function OrbCursor() {
       if (hit && (hit.textContent ?? "").trim()) {
         const r = hit.getBoundingClientRect();
         if (r.height <= 160 && r.width <= 900) {
-          const leftX = r.left - 20;
-          dock = { x: leftX >= 12 ? leftX : r.right + 20, y: r.top + r.height / 2 };
+          const leftX = r.left - 26;
+          dock = { x: leftX >= 12 ? leftX : r.right + 26, y: r.top + r.height / 2 };
         }
       }
       const hot = !!hit || root.hasAttribute("data-cursor-hot");
@@ -80,13 +80,20 @@ export default function OrbCursor() {
     const onDown = () => (targetScale *= 0.8);
     const onUp = () => (targetScale = dock ? 0.45 : orb.hasAttribute("data-hot") ? 1.12 : 1);
 
-    const loop = () => {
-      const k = reduced ? 1 : 0.22;
+    let prev = performance.now();
+    const loop = (now: number) => {
+      // time-based easing: the orb arrives on wall-clock time even when the
+      // page can only draw a few frames a second, so a docked ring is always
+      // beside the word, never caught half-way across its letters
+      const dt = Math.min(0.25, Math.max(0, (now - prev) / 1000));
+      prev = now;
+      const k = reduced ? 1 : 1 - Math.exp(-dt * 16);
+      const ks = reduced ? 1 : 1 - Math.exp(-dt * 11);
       const gx = dock ? dock.x : tx;
       const gy = dock ? dock.y : ty;
       x += (gx - x) * k;
       y += (gy - y) * k;
-      scale += (targetScale - scale) * (reduced ? 1 : 0.16);
+      scale += (targetScale - scale) * ks;
       const tf = `translate3d(${x - SIZE / 2}px, ${y - SIZE / 2}px, 0) scale(${scale.toFixed(3)})`;
       orb.style.transform = tf;
       raf = requestAnimationFrame(loop);

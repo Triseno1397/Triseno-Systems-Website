@@ -302,7 +302,7 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 .hrotate { position: relative; display: inline-flex; align-items: center; gap: 0.3em; max-width: 100%; }
 .hrotate__glyph { position: relative; display: inline-block; flex: none; width: 0.56em; height: 0.56em; margin-bottom: 0.1em; }
 .hrotate__word { position: relative; display: inline-block; min-width: 0; clip-path: inset(0 -100vw 0 -100vw); }
-.hrotate__line { position: relative; display: inline-flex; flex-wrap: wrap; padding-bottom: 0.14em; line-height: 1.08; }
+.hrotate__line { position: relative; display: inline-flex; flex-wrap: wrap; column-gap: 0.34em; padding-bottom: 0.14em; line-height: 1.08; }
 .hrotate__group { display: inline-flex; white-space: nowrap; }
 .hrotate__char { display: inline-block; will-change: transform; }
 .hrotate__space { display: inline-block; width: 0.34em; }
@@ -576,6 +576,11 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   /* The portal hero headline is the display line of the hero frame: it takes
      the full column (a long line wraps between words, never inside one). */
   .portal-headline { font-size: clamp(30px, 11.4vw, 50px); }
+  /* a wrapped word keeps a clean left edge (the gap between words is a flex
+     column-gap, so a wrapped line never starts indented) and the glyph sits
+     on the last line, beside the word it belongs to */
+  .hrotate { align-items: flex-end; }
+  .hrotate__glyph { margin-bottom: 0.36em; }
 
   /* The lockup stays STACKED at every scroll position on a phone. Collapsed to
      one line it would run "TRISENO / AI INFRASTRUCTURE" edge to edge and drop

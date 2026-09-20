@@ -61,7 +61,6 @@ function Line({
     <span className="hrotate__line" data-phase={phase}>
       {text.split(" ").map((w, wi) => (
         <span key={wi} className="hrotate__group">
-          {wi > 0 ? <span className="hrotate__space" /> : null}
           {Array.from(w).map((ch) => {
             const i = n++;
             return (

@@ -28,7 +28,7 @@ export function Horizon() {
         side: THREE.BackSide,
         depthWrite: false,
         fog: false,
-        uniforms: { uLight: { value: new THREE.Color(WHITE) } },
+        uniforms: { uLight: { value: new THREE.Color(WHITE) }, uBoost: { value: new THREE.Vector2(1, 0) } },
         vertexShader: /* glsl */ `
           varying vec3 vDir;
           void main() {
@@ -38,6 +38,7 @@ export function Horizon() {
         `,
         fragmentShader: /* glsl */ `
           uniform vec3 uLight;
+          uniform vec2 uBoost;
           varying vec3 vDir;
           void main() {
             float h = max(vDir.y, 0.0);
@@ -45,7 +46,7 @@ export function Horizon() {
             float band = exp(-h * 26.0) * 0.26 + exp(-h * 5.5) * 0.07;
             // brighter where the corridor leads (down -z)
             float ahead = pow(max(-vDir.z, 0.0), 3.0) * 0.75 + 0.25;
-            vec3 c = (uLight * 0.9 + 0.035) * band * ahead;
+            vec3 c = (uLight * 0.9 + 0.035) * band * ahead * uBoost.x;
             gl_FragColor = vec4(c, 1.0);
           }
         `,
@@ -55,6 +56,7 @@ export function Horizon() {
   useEffect(() => () => mat.dispose(), [mat]);
   useFrame((state) => {
     mat.uniforms.uLight.value.copy(env.light);
+    mat.uniforms.uBoost.value.set(1 + 0.75 * env.white, 0);
     ref.current?.position.copy(state.camera.position);
   });
   return (
@@ -108,7 +110,7 @@ export function Haze({ texture }: { texture: THREE.Texture }) {
     layers.forEach((m, i) => {
       // nearer layers slide faster as the camera moves: parallax without moving geometry
       if (m.map) m.map.offset.x = t * HAZE_LAYERS[i].s + cam.z * (0.02 / (i + 1));
-      m.color.copy(env.light).multiplyScalar(0.3).addScalar(0.02);
+      m.color.copy(env.light).multiplyScalar(0.3 * (1 - 0.35 * env.white)).addScalar(0.02 * (1 - env.white * 0.5));
     });
   });
   return (
@@ -296,7 +298,7 @@ export function KeyLight() {
     if (point.current) {
       point.current.position.set(f.x, f.y, f.z + 0.4);
       point.current.color.copy(env.light);
-      point.current.intensity = 34;
+      point.current.intensity = 34 * (1 + 0.9 * env.white);
     }
     if (pool.current) {
       // a pool of the object's light thrown onto the wet floor beneath it
@@ -304,8 +306,12 @@ export function KeyLight() {
       target.position.set(f.x, 0, f.z + 1.6);
       target.updateMatrixWorld();
       pool.current.color.copy(env.light);
+      pool.current.intensity = 110 * (1 + 0.8 * env.white);
     }
-    if (back.current) back.current.color.copy(env.light).addScalar(0.06);
+    if (back.current) {
+      back.current.color.copy(env.light).addScalar(0.06);
+      back.current.intensity = 0.55 * (1 + 1.4 * env.white);
+    }
   });
   return (
     <>

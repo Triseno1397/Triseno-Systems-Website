@@ -81,9 +81,12 @@ function EnvDirector() {
     }
     env.light.copy(dip.update(step, target));
     env.level = dip.level;
+    // white light is lit harder, never greyer (see env.white)
+    env.white += ((dip.hex === WHITE ? 1 : 0) - env.white) * (1 - Math.exp(-step * 5));
 
     // Haze never goes black: at the bottom of a dip it is dim neutral grey.
-    fogColor.copy(env.light).multiplyScalar(0.085).addScalar(0.012);
+    // Under white light the fog is deeper so the blacks stay black.
+    fogColor.copy(env.light).multiplyScalar(0.085 * (1 - 0.45 * env.white)).addScalar(0.012);
     if (scene.fog) (scene.fog as THREE.Fog).color.copy(fogColor);
   });
   return null;
@@ -169,7 +172,7 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
       group.current.rotation.x = (Math.sin(t * 0.27) * 0.05 * still - portalState.py * 0.08) * (1 - warp);
     }
     // the glow is a billboard — it has to be gone before the camera reaches it
-    haloMat.opacity = 0.12 * (1 - Math.min(1, Math.max(0, portalState.hero / 0.45))) * (1 - warp);
+    haloMat.opacity = (0.12 + 0.1 * env.white) * (1 - Math.min(1, Math.max(0, portalState.hero / 0.45))) * (1 - warp);
     halo.current?.lookAt(state.camera.position);
 
     if (portalState.doors <= 0) env.focus.set(0, RING_Y, 0);
@@ -324,7 +327,9 @@ function GateObject() {
 
   useFrame((state) => {
     const g = portalState.gate;
-    const e = smooth(0.12, 0.8, g);
+    // the morph is quick and decisive: the gate reads as a clean triangle or a
+    // clean cross, never as a long in-between lump
+    const e = smooth(0.3, 0.55, g);
     if (Math.abs(e - last.current) > 0.002) {
       last.current = e;
       for (let i = 0; i < N * 2; i++) cur[i] = from[i] + (to[i] - from[i]) * e;

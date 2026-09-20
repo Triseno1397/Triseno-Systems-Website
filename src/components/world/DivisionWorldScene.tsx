@@ -70,6 +70,7 @@ function EnvDirector({ hue }: { hue: string }) {
     const e = level.current * level.current * (3 - 2 * level.current);
     env.light.copy(target).multiplyScalar(0.35 + 0.65 * e);
     env.level = e;
+    env.white = hue.toLowerCase() === "#ffffff" ? 1 : 0;
     fogColor.copy(env.light).multiplyScalar(0.085).addScalar(0.012);
     if (scene.fog) (scene.fog as THREE.Fog).color.copy(fogColor);
   });

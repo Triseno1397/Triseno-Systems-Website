@@ -46,7 +46,7 @@ export function useWarp(): WarpApi {
   return useContext(WarpContext);
 }
 
-const T_IN = 750; // cover ramps up
+const T_IN = 520; // cover ramps up (ease-out: ~97% by 360ms)
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
@@ -157,11 +157,17 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       titleRef.current?.removeAttribute("data-show");
       window.dispatchEvent(new CustomEvent(WARP_EVENT, { detail: { href, key: target.key } }));
 
+      // Warp time advances by at most one 1/20s step per DRAWN frame. On a
+      // real device (60fps) that is plain wall-clock time; on a machine that
+      // can only draw a few frames a second while the destination world boots,
+      // the arc still plays every beat — tunnel, title card, dissolve —
+      // instead of jumping straight to the landed page.
       const start = performance.now();
       let navigated = false;
       let titled = false;
       let outStart = 0;
       let last = start;
+      let t = 0;
 
       const finish = () => {
         window.removeEventListener("resize", resize);
@@ -172,9 +178,11 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       };
 
       const frame = (now: number) => {
-        const t = Math.max(0, now - start);
-        const dt = Math.min(48, Math.max(0, now - last)) / 16.67;
+        const step = Math.min(50, Math.max(0, now - last));
+        t += step;
+        const dt = Math.min(48, step) / 16.67;
         last = now;
+        const wall = now - start;
 
         if (!navigated && t >= (reduced ? 420 : T_NAV)) {
           navigated = true;
@@ -195,12 +203,14 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
           // own loader) by setting data-world-loading until its first frames are drawn.
           const worldLoading = document.documentElement.hasAttribute("data-world-loading");
           const ready = arrivedRef.current && !worldLoading && t >= (reduced ? 600 : T_MIN_HOLD);
-          if (ready || t >= T_GIVE_UP) outStart = now;
+          if (ready || wall >= T_GIVE_UP) outStart = t;
         }
 
         const inK = clamp01(t / (reduced ? 400 : T_IN));
-        const outK = outStart ? clamp01((now - outStart) / (reduced ? 450 : T_OUT)) : 0;
-        const cover = easeInOutCubic(inK) * (1 - easeInOutCubic(outK));
+        const outK = outStart ? clamp01((t - outStart) / (reduced ? 450 : T_OUT)) : 0;
+        // the cover closes fast and fully: the old page is gone, not ghosted,
+        // by the time the tunnel is up to speed
+        const cover = (1 - Math.pow(1 - inK, 3)) * (1 - easeInOutCubic(outK));
         const speed = reduced ? 0 : 0.0025 + 0.05 * easeInOutCubic(inK) * (1 - easeOutExpo(outK) * 0.94);
 
         if (titleRef.current) {

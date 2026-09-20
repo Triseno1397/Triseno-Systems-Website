@@ -45,11 +45,18 @@ Rules for the page:
    `--lane-right` (the rail's lane, ≥1200px only) is already applied to every `<main>` on a
    revamped route by world.css — do not add it again.
 5. Keep your own per-section motion mechanic (M1); the world is the stage, not a mechanic.
-6. **Chrome collision is handled globally.** Two fixed neutral fade bands (`.chrome-fade`, mounted by
-   `Chrome.tsx` at z 790) fade every page's content to black before it reaches the lockup, trigger,
-   chevron or contact icon. Their sizes are `--fade-top` / `--fade-bottom` (globals.css); the lanes
-   are those plus 16px. Keep anything that must be read at rest (a headline, a CTA) inside the lanes,
-   and keep page content below z 790 so it passes under the bands.
+6. **Chrome collision is handled globally — content only, the world stays full-bleed.**
+   `ContentFade` (mounted by `Chrome.tsx`) gives every direct child of `<main>` that is content a
+   viewport-pinned vertical mask (`[data-fade]` in world.css): transparent through the chrome zone at
+   the top and bottom, fully opaque inside the lanes. Nothing is painted over the scene.
+   What a page must do:
+   - Mount its world layer as a **direct child of `<main>` with `position: fixed`** (DivisionWorld,
+     AiWorld, WebWorld, StudioBackdrop all already do). Fixed direct children — or anything with
+     `data-world-layer` — are never masked. A backdrop placed *inside* a section is content and will
+     fade at the edges; move it out or mark it `data-world-layer`.
+   - Put sections (or their pin-spacers) as direct children of `<main>`; GSAP pinning is fine.
+   - Opt an element out with `data-no-fade` only if it is not text (e.g. a full-bleed media band).
+   - Keep must-read-at-rest content inside `--lane-top` / `--lane-bottom` (band + 16px).
 
 ## Exports
 

@@ -19,6 +19,13 @@ export const env = {
   light: new THREE.Color(WHITE),
   /** 0..1 brightness envelope used for the dip between two hues */
   level: 1,
+  /**
+   * 0..1 — how achromatic the world is right now. At 1 (white light: the
+   * portal at rest, WORK, CONTACT) the world is lit harder, not greyer: hotter
+   * key and rim light, a brighter horizon, deeper fog and less haze wash, so
+   * colourless reads as a premium high-contrast pass, never as desaturated.
+   */
+  white: 1,
   /** world position of whatever is in focus (DOF target, key light) */
   focus: new THREE.Vector3(0, 1.95, 0),
 };
