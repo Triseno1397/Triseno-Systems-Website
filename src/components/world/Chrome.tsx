@@ -67,6 +67,11 @@ export default function Chrome() {
 
   return (
     <>
+      {/* Content never collides with chrome: page content fades out through
+          these neutral edge bands before it can reach the lockup, the trigger,
+          the chevron or the contact icon (world.css .chrome-fade). */}
+      <div aria-hidden="true" className="chrome-fade chrome-fade--top" />
+      <div aria-hidden="true" className="chrome-fade chrome-fade--bottom" />
       <MorphNav
         division={division}
         compact={compact && !menuOpen}
@@ -118,12 +123,6 @@ function MorphNav({
       data-compact={compact ? "" : undefined}
       style={{ ["--word-w" as string]: `${wordWidth}px`, ["--div-w" as string]: `${divisionWidth}px` }}
     >
-      {/* Soft corner scrims — not a bar and not a box: elliptical pools of shade
-          that fade to nothing, so the lockup and the trigger stay readable over
-          a white headline, a bright video frame or a light mock site. */}
-      <span aria-hidden="true" className="chrome-scrim chrome-scrim--tl" />
-      <span aria-hidden="true" className="chrome-scrim chrome-scrim--tr" />
-
       <div className="relative mx-auto flex items-start justify-between px-[var(--gutter)]">
         <WarpLink
           href="/"
@@ -309,7 +308,6 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
       aria-label={up ? "Back to top" : "Back to portal"}
       className="chrome-btn chrome-btn--bl fixed bottom-[var(--gutter-y)] left-[var(--gutter)] z-[800]"
     >
-      <span aria-hidden="true" className="chrome-scrim chrome-scrim--bl" />
       {up ? <CaretUp size={24} weight="light" /> : <CaretLeft size={24} weight="light" />}
     </button>
   );
@@ -324,7 +322,6 @@ function ContactIcon() {
       aria-label="Contact — start a conversation"
       className="chrome-btn chrome-btn--br fixed bottom-[var(--gutter-y)] right-[var(--gutter)] z-[800]"
     >
-      <span aria-hidden="true" className="chrome-scrim chrome-scrim--br" />
       <EnvelopeSimple size={24} weight="light" />
     </WarpLink>
   );

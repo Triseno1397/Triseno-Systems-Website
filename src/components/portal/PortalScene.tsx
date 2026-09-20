@@ -40,6 +40,7 @@ import {
   makeGlowTexture,
   makeHazeTexture,
 } from "@/components/world/scene/textures";
+import { WARP_EVENT } from "@/components/world/WarpProvider";
 import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState } from "./portalState";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -443,9 +444,28 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
     [glow, haze, floor],
   );
 
+  // Once the warp tunnel fully covers the screen the portal is invisible, so
+  // it stops rendering: every frame of GPU goes to the tunnel and to the
+  // destination world booting underneath it, and the travel plays at its full
+  // length instead of stuttering through a heavy scene nobody can see.
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const onWarp = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => setPaused(true), 820);
+    };
+    window.addEventListener(WARP_EVENT, onWarp);
+    return () => {
+      window.removeEventListener(WARP_EVENT, onWarp);
+      window.clearTimeout(t);
+    };
+  }, []);
+
   return (
     <Canvas
       flat // no tone mapping: a division hue must reach the screen as that hue
+      frameloop={paused ? "never" : "always"}
       dpr={dpr}
       gl={{ antialias: false, powerPreference: "high-performance", alpha: false, preserveDrawingBuffer: false }}
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}

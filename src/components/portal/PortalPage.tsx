@@ -348,14 +348,14 @@ export default function PortalPage() {
         aria-label="Triseno Systems"
         className={full ? "relative z-10 h-[200dvh]" : "relative z-10 min-h-[100dvh] overflow-hidden"}
       >
-        {mode === "lite" ? <LiteHeroBackdrop /> : null}
+        {mode === "lite" ? <LiteHeroBackdrop active={active} /> : null}
 
         <div
           ref={heroInnerRef}
           data-leaving={leaving ? "" : undefined}
           className={`portal-hero ${
             full ? "pointer-events-none fixed inset-0" : "relative min-h-[100dvh]"
-          } mx-auto flex max-w-[1400px] flex-col justify-between px-[var(--gutter)] pb-[calc(var(--gutter-y)+64px)] pt-[clamp(104px,15dvh,160px)]`}
+          } mx-auto flex max-w-[1400px] flex-col justify-between px-[var(--gutter)] pb-[var(--lane-bottom)] pt-[max(var(--lane-top),15dvh)]`}
         >
           <div className="pointer-events-none">
             <h1 className="portal-headline font-display font-bold uppercase">
@@ -386,7 +386,7 @@ export default function PortalPage() {
 
           <p
             aria-hidden="true"
-            className="scroll-tick chrome-label pointer-events-none absolute bottom-[var(--gutter-y)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 font-mono text-white"
+            className="scroll-tick chrome-label pointer-events-none absolute bottom-[calc(var(--fade-bottom)+8px)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 font-mono text-white"
           >
             <span>Scroll to explore</span>
             <span className="scroll-tick__line" />
@@ -396,7 +396,7 @@ export default function PortalPage() {
 
       {/* ── 2. Three doors ───────────────────────────────────────────── */}
       {full ? (
-        <section ref={doorsRef} data-rail="Doors" aria-label="Three divisions" className="relative z-10 h-[460dvh]">
+        <section ref={doorsRef} data-rail="Doors" aria-label="Three divisions" className="relative z-10 h-[400dvh]">
           <div className="pointer-events-none fixed inset-0 mx-auto max-w-[1400px] px-[var(--gutter)]">
             {DOOR_ITEMS.map((door, i) => (
               <div
@@ -425,6 +425,7 @@ export default function PortalPage() {
               {/* the lit place, composited in CSS — it takes the door's hue only
                   while that door owns the viewport (D2) */}
               <WorldAtmosphere hue={door.hue} />
+              <LiteGlyph kind={door.glyph} hue={door.hue} />
               <div aria-hidden="true" className="lite-door__shade absolute inset-0" />
               <div className="door-card door-card--static relative">
                 <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
@@ -498,11 +499,26 @@ function DoorCardBody({ index }: { index: number }) {
 /* Lite hero backdrop (mobile / reduced motion / no WebGL): the same place the
    3D world renders, composited in CSS. Achromatic at rest (design-system §1) —
    the portal has no hue of its own — so nothing here is preselected. */
-function LiteHeroBackdrop() {
+function LiteHeroBackdrop({ active }: { active: number }) {
+  // the signature object in white light, morphing with the headline
+  const item = MENU_ITEMS[active];
   return (
     <div aria-hidden="true" className="lite-backdrop absolute inset-0">
       <WorldAtmosphere />
+      <LiteGlyph key={item.glyph} kind={item.glyph} hue={WHITE} />
       <div className="lite-backdrop__shade absolute inset-0" />
     </div>
+  );
+}
+
+/* A glyph standing in the lite world, with its reflection on the wet floor. */
+function LiteGlyph({ kind, hue }: { kind: (typeof MENU_ITEMS)[number]["glyph"]; hue: string }) {
+  return (
+    <span aria-hidden="true" className="lite-glyph">
+      <Glyph kind={kind} size="100%" color={hue} strokeWidth={1.6} glow />
+      <span className="lite-glyph__reflect">
+        <Glyph kind={kind} size="100%" color={hue} strokeWidth={1.6} />
+      </span>
+    </span>
   );
 }

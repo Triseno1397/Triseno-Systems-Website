@@ -258,11 +258,12 @@ export function WetFloor({ maps, z = -40 }: { maps: FloorMaps; z?: number }) {
       <planeGeometry args={[240, 260]} />
       <MeshReflectorMaterial
         key={high ? "hi" : "lo"}
-        // The mirror re-renders the whole scene every frame, so its buffer is
-        // the single most expensive thing in any world. 640 + a wide blur still
-        // reads as wet ground and costs roughly a third of a 1024 buffer.
-        resolution={high ? 640 : 256}
-        blur={high ? [300, 110] : [160, 60]}
+        // The mirror re-renders the whole scene every frame. At 640 the wet
+        // ground read as visibly pixelated, so the high tier is back at 1024;
+        // the cost is recovered elsewhere (one refracting object at a time,
+        // 0.4-scale depth of field, and no scene rendering under a warp).
+        resolution={high ? 1024 : 384}
+        blur={high ? [400, 140] : [200, 80]}
         mixBlur={1}
         mixStrength={38}
         mixContrast={1.05}

@@ -39,22 +39,25 @@ html.has-orb * { cursor: none !important; }
   transition: opacity 500ms var(--ease-expo);
 }
 .orb-cursor > span { position: absolute; inset: 0; border-radius: 50%; }
+/* Clear glass: whatever is behind is softened and DESATURATED, never filled
+   with the scene's hue (the displacement lens sampled the lit object and read
+   as a solid amber / cyan disc, so it is gone). */
 .orb-cursor__glass {
   border: 1px solid #ffffff;
-  -webkit-backdrop-filter: blur(1px) brightness(1.3) contrast(1.1);
-  backdrop-filter: blur(1px) brightness(1.3) contrast(1.1);
+  -webkit-backdrop-filter: blur(2px) saturate(0.25) brightness(1.08);
+  backdrop-filter: blur(2px) saturate(0.25) brightness(1.08);
+  transition: opacity 400ms var(--ease-expo);
 }
-/* Chromium: true refraction through the displacement map in OrbCursor.tsx. */
-@supports (backdrop-filter: url(#orb-lens)) {
-  .orb-cursor__glass { backdrop-filter: url(#orb-lens) brightness(1.22) contrast(1.06); }
-}
+/* docked beside a word: a bare 1px ring, nothing lensed, nothing covered */
+.orb-cursor[data-docked] .orb-cursor__glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.orb-cursor[data-docked] .orb-cursor__spec { opacity: 0; }
 .orb-cursor__spec {
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 24%),
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.2) 100%);
   opacity: 0.8; transition: opacity 500ms var(--ease-expo);
 }
-.orb-cursor[data-hot] .orb-cursor__spec { opacity: 1; }
+.orb-cursor[data-hot]:not([data-docked]) .orb-cursor__spec { opacity: 1; }
 html[data-warping] .orb-cursor { opacity: 0 !important; }
 
 /* ── loader ── */
@@ -73,91 +76,59 @@ html[data-warping] .morph-nav,
 html[data-warping] .chrome-btn,
 html[data-warping] .progress-rail { opacity: 0; pointer-events: none; }
 
-/* ── CHROME LEGIBILITY ──────────────────────────────────────────────────
-   Fixed chrome prints over whatever scrolls under it, and a division page is
-   white type on a dark scene — so white-on-white collisions are guaranteed
-   unless something is done. Two things are, and neither draws a box:
-
-   1. SCRIM. Each chrome element carries an elliptical radial scrim anchored to
-      its own corner (or edge, for the rail) that reaches ~0.9 black at the
-      element and fades to exactly 0 well before mid-frame. It is a soft pool
-      of shade, not a bar: it never draws a straight edge across the scene and
-      never crops the 3D object the way a nav bar with a full-width rule does.
-      At 0.9 black even a white headline, a bright video frame or a light mock
-      site behind it drops to ~10% luminance, so white line-work and a
-      hue-tinted glyph both stay readable at every scroll position.
-
-   2. LANES. Content keeps out of the chrome's zone: `--lane-top`,
-      `--lane-bottom` and `--lane-right` are reserved on every revamped route,
-      and the right lane is applied to the page itself so the progress rail can
-      never overprint a word.
-
-   The scrims themselves sit at z-index -1 inside their own chrome element, so
-   they paint above page content and below the white line-work.  */
-.chrome-scrim {
-  position: fixed;
-  z-index: -1;
+/* ── CONTENT NEVER COLLIDES WITH CHROME (design-system §2) ─────────────────
+   Technique: VIEWPORT-EDGE FADE BANDS. Two fixed, full-width, neutral-black
+   falloffs sit above every page's content and below the chrome:
+     top    — solid black through the lockup / menu-trigger zone, then an eased
+              falloff to exactly 0 (no hard edge, no rule line);
+     bottom — the same, mirrored, covering the chevron and contact icon.
+   Anything that scrolls toward a corner element has faded out completely
+   before it reaches it, on every page, at every breakpoint, whatever the
+   content is (white headline, bright video frame, light mock site). The bands
+   are sized from the chrome's own geometry below, so they grow with it.
+   The right-edge rail gets a lane instead (`--lane-right`, ≥1200px, applied
+   to <main>) and is hidden where there is no room for one.
+   A small neutral pool sits behind the rail only; there are no corner pools,
+   because a pool lying over resting type reads as gradient type. */
+.chrome-fade {
+  position: fixed; left: 0; right: 0; z-index: 790;
   pointer-events: none;
+  transition: opacity 700ms var(--ease-expo);
 }
-.chrome-scrim--tl {
-  top: 0; left: 0;
-  width: min(620px, 92vw); height: 210px;
-  background: radial-gradient(
-    118% 128% at 4% 2%,
-    rgba(0, 0, 0, 0.94) 0%,
-    rgba(0, 0, 0, 0.87) 36%,
-    rgba(0, 0, 0, 0.5) 58%,
-    rgba(0, 0, 0, 0.16) 76%,
-    rgba(0, 0, 0, 0) 88%
+.chrome-fade--top {
+  top: 0; height: var(--fade-top);
+  background: linear-gradient(
+    180deg,
+    #000 0%, #000 var(--fade-top-solid),
+    rgba(0, 0, 0, 0.86) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.22),
+    rgba(0, 0, 0, 0.55) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.48),
+    rgba(0, 0, 0, 0.2) calc(var(--fade-top-solid) + (100% - var(--fade-top-solid)) * 0.74),
+    rgba(0, 0, 0, 0) 100%
   );
 }
-.chrome-scrim--tr {
-  top: 0; right: 0;
-  width: min(300px, 56vw); height: 150px;
-  background: radial-gradient(
-    112% 132% at 96% 2%,
-    rgba(0, 0, 0, 0.9) 0%,
-    rgba(0, 0, 0, 0.66) 28%,
-    rgba(0, 0, 0, 0.3) 54%,
-    rgba(0, 0, 0, 0) 82%
+.chrome-fade--bottom {
+  bottom: 0; height: var(--fade-bottom);
+  background: linear-gradient(
+    0deg,
+    #000 0%, #000 var(--fade-bottom-solid),
+    rgba(0, 0, 0, 0.86) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.22),
+    rgba(0, 0, 0, 0.55) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.48),
+    rgba(0, 0, 0, 0.2) calc(var(--fade-bottom-solid) + (100% - var(--fade-bottom-solid)) * 0.74),
+    rgba(0, 0, 0, 0) 100%
   );
 }
-.chrome-scrim--bl,
-.chrome-scrim--br {
-  bottom: 0;
-  width: 260px; height: 190px;
-}
-.chrome-scrim--bl {
-  left: 0;
-  background: radial-gradient(
-    118% 128% at 2% 98%,
-    rgba(0, 0, 0, 0.9) 0%,
-    rgba(0, 0, 0, 0.62) 30%,
-    rgba(0, 0, 0, 0.26) 56%,
-    rgba(0, 0, 0, 0) 82%
-  );
-}
-.chrome-scrim--br {
-  right: 0;
-  background: radial-gradient(
-    118% 128% at 98% 98%,
-    rgba(0, 0, 0, 0.9) 0%,
-    rgba(0, 0, 0, 0.62) 30%,
-    rgba(0, 0, 0, 0.26) 56%,
-    rgba(0, 0, 0, 0) 82%
-  );
+html[data-warping] .chrome-fade { opacity: 0; }
+html:has(.portal-world[data-capture]) .chrome-fade { display: none; }
+
+/* neutral pool behind the rail: centred on it, fully faded inside its own box */
+.chrome-scrim {
+  position: absolute; z-index: -1; pointer-events: none;
 }
 .chrome-scrim--rail {
-  top: 50%; right: 0;
-  width: 150px; height: min(560px, 74dvh);
-  transform: translateY(-50%);
-  background: radial-gradient(
-    64% 58% at 100% 50%,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.7) 32%,
-    rgba(0, 0, 0, 0.3) 60%,
-    rgba(0, 0, 0, 0) 84%
-  );
+  top: 50%; left: 50%;
+  width: 200px; height: 130%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0.22) 72%, rgba(0, 0, 0, 0) 100%);
 }
 
 /* The right lane only exists where the rail is shown, and the page is inset by
@@ -314,40 +285,44 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 .text-rotate__space { display: inline-block; width: 0.34em; }
 .text-rotate__rule { position: absolute; left: 0; right: 0.08em; bottom: 0; height: 1px; background: #ffffff; transform-origin: left center; }
 
-/* Sequenced headline rotate (HeadlineRotate.tsx): the outgoing word lifts out
-   completely before the incoming word is laid out, so only one word is ever in
-   flow and two lines can never print through each other at any width. */
-.hrotate { position: relative; display: inline-flex; align-items: center; gap: 0.3em; white-space: nowrap; max-width: 100%; }
+/* Headline roll (HeadlineRotate.tsx): the outgoing and incoming word move
+   together through ONE vertical clip box. The old word rises out as a block;
+   the new word's letters rise in 120ms behind it, from 1.45em down. With an
+   expo-out curve that lag keeps every incoming letter below the outgoing
+   block at every instant (even a two-line outgoing word on a phone), so the
+   two words never share a pixel — and one of them is always on screen. */
+.hrotate { position: relative; display: inline-flex; align-items: center; gap: 0.3em; max-width: 100%; }
 .hrotate__glyph { position: relative; display: inline-block; flex: none; width: 0.56em; height: 0.56em; margin-bottom: 0.1em; }
-.hrotate__word { position: relative; display: inline-block; min-height: 1.24em; }
-.hrotate__line { position: relative; display: inline-flex; padding-bottom: 0.14em; }
-.hrotate__mask { display: inline-block; overflow: hidden; line-height: 1.08; }
+.hrotate__word { position: relative; display: inline-block; min-width: 0; clip-path: inset(0 -100vw 0 -100vw); }
+.hrotate__line { position: relative; display: inline-flex; flex-wrap: wrap; padding-bottom: 0.14em; line-height: 1.08; }
+.hrotate__group { display: inline-flex; white-space: nowrap; }
 .hrotate__char { display: inline-block; will-change: transform; }
 .hrotate__space { display: inline-block; width: 0.34em; }
 .hrotate__rule { position: absolute; left: 0; right: 0.08em; bottom: 0; height: 1px; background: #ffffff; transform-origin: left center; }
+.hrotate__out { position: absolute; left: 0; top: 0; width: max-content; max-width: calc(100vw - 2 * var(--gutter)); animation: hrotate-out 700ms var(--ease-expo) both; }
 
 .hrotate__line[data-phase="in"] .hrotate__char {
-  animation: hrotate-in 620ms var(--ease-expo) both;
-  animation-delay: calc(var(--i) * 24ms);
+  animation: hrotate-in 700ms var(--ease-expo) both;
+  animation-delay: calc(120ms + var(--i) * 22ms);
 }
-/* the word leaves as one piece — a decisive lift, no stagger, so the swap can
-   never be caught half-out when the next word is laid out */
-.hrotate__line[data-phase="out"] .hrotate__char { animation: hrotate-out 420ms var(--ease-expo) both; }
-.hrotate__line[data-phase="in"] .hrotate__rule { animation: hrotate-rule-in 900ms var(--ease-expo) 120ms both; }
-.hrotate__line[data-phase="out"] .hrotate__rule { animation: hrotate-rule-out 420ms var(--ease-expo) both; }
+.hrotate__line[data-phase="in"] .hrotate__rule { animation: hrotate-rule-in 900ms var(--ease-expo) 260ms both; }
 .hrotate__glyph[data-phase="in"] { animation: hrotate-glyph-in 900ms var(--ease-expo) both; }
-.hrotate__glyph[data-phase="out"] { animation: hrotate-glyph-out 420ms var(--ease-expo) both; }
 
-@keyframes hrotate-in { from { transform: translate3d(0, 105%, 0); } to { transform: translate3d(0, 0, 0); } }
-@keyframes hrotate-out { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -105%, 0); } }
+@keyframes hrotate-in { from { transform: translate3d(0, 1.45em, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes hrotate-out { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -100%, 0); } }
 @keyframes hrotate-rule-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes hrotate-rule-out { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @keyframes hrotate-glyph-in { from { opacity: 0; transform: scale(0.4) rotate(-120deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-@keyframes hrotate-glyph-out { from { opacity: 1; transform: scale(1) rotate(0deg); } to { opacity: 0; transform: scale(0.4) rotate(120deg); } }
 
 /* menu: the three divisions carry their glyph; WORK and CONTACT sit apart, below a hairline */
 .portal-menu__group { display: flex; flex-direction: column; gap: 0.3em; }
 .portal-menu__rule { display: block; width: 56px; height: 1px; background: #ffffff; margin: 20px 0 18px; }
+/* Short screens and phones: the sub line goes so the headline and the menu both
+   stay clear of the edge fade bands (and, on a phone, so the hero frame has no
+   body text competing with the display line). */
+@media (max-height: 820px), (max-width: 767px) {
+  .portal-sub { display: none; }
+  .portal-menu__rule { margin: 14px 0 12px; }
+}
 .portal-word {
   display: inline-flex; align-items: center; line-height: 1.15; letter-spacing: 0.08em; color: #ffffff; opacity: 0.62;
   transform: translate3d(0, 0, 0);
@@ -380,18 +355,38 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 .door-card__title { line-height: 1.14; letter-spacing: 0.08em; }
 
 /* gate: copy owns the left column, the gate object owns the right */
+.portal-gate { padding-top: var(--lane-top); padding-bottom: var(--lane-bottom); }
 .portal-gate__copy { width: min(620px, 46%); }
 .gate-title { font-size: var(--fs-display); line-height: 1.06; letter-spacing: 0.08em; }
 
 /* lite world (mobile / reduced motion / no WebGL): the composited atmosphere */
 .lite-backdrop__shade,
 .lite-door__shade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.78) 74%, rgba(0, 0, 0, 0.94) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.5) 80%, rgba(0, 0, 0, 0.66) 100%);
 }
 /* a door only takes its hue while it owns the viewport (D2) */
 .lite-door .world-atmos { filter: grayscale(1) brightness(0.8); transition: filter 900ms var(--ease-expo); }
 .lite-door[data-lit] .world-atmos { filter: none; }
-.lite-door .door-card { margin: 0 var(--gutter) calc(var(--gutter-y) + 76px); max-width: 520px; }
+.lite-door .door-card { margin: 0 var(--gutter) var(--lane-bottom); max-width: 520px; }
+/* the portal object, standing in the lite world: the door's glyph at scale,
+   lit in its hue while the door owns the viewport, with a reflection on the
+   wet floor below it */
+.lite-glyph {
+  position: absolute; left: 50%; top: 20%;
+  width: min(58vw, 300px); aspect-ratio: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.lite-glyph svg { width: 100%; height: 100%; }
+.lite-glyph__reflect {
+  position: absolute; left: 0; right: 0; top: 104%; height: 100%;
+  transform: scaleY(-0.55); transform-origin: top center; opacity: 0.35;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+}
+.lite-door .lite-glyph { filter: grayscale(1) brightness(0.75); transition: filter 900ms var(--ease-expo); }
+.lite-door[data-lit] .lite-glyph { filter: none; }
+.lite-backdrop .lite-glyph { top: 40%; left: auto; right: var(--gutter); transform: none; width: min(34vw, 200px); opacity: 0.55; }
 .portal-gate__rain { height: 38%; }
 
 /* poster capture (?capture=…): the bare scene */
@@ -417,8 +412,8 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 .world-atmos__sky {
   inset: 0 0 42% 0;
   background:
-    radial-gradient(130% 92% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 15%, transparent) 0%, transparent 64%),
-    linear-gradient(180deg, #000 0%, #030304 54%, #08080a 100%);
+    radial-gradient(130% 92% at 50% 100%, color-mix(in srgb, var(--atmos-hue) 24%, transparent) 0%, transparent 66%),
+    linear-gradient(180deg, #050506 0%, #0a0a0c 50%, #151518 100%);
 }
 /* the bloom sitting on the horizon, where the corridor leads */
 .world-atmos__bloom {
@@ -426,9 +421,9 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   transform: translateX(-50%);
   background: radial-gradient(
     46% 100% at 50% 100%,
-    color-mix(in srgb, var(--atmos-hue) 38%, transparent) 0%,
-    color-mix(in srgb, var(--atmos-hue) 12%, transparent) 36%,
-    transparent 74%
+    color-mix(in srgb, var(--atmos-hue) 56%, transparent) 0%,
+    color-mix(in srgb, var(--atmos-hue) 18%, transparent) 38%,
+    transparent 76%
   );
 }
 /* distant silhouetted forms standing on the horizon: three rows of slabs at
@@ -467,7 +462,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
    ripples by the mask */
 .world-atmos__floor {
   left: 0; right: 0; bottom: 0; height: 42%; overflow: hidden;
-  background: linear-gradient(180deg, #0a0a0c 0%, #050506 40%, #000 100%);
+  background: linear-gradient(180deg, #141417 0%, #0b0b0d 46%, #060607 100%);
 }
 .world-atmos__grid {
   position: absolute; left: -6%; right: -6%; top: 0; height: 62%;
@@ -485,9 +480,9 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   transform: translateX(-50%);
   background: radial-gradient(
     44% 58% at 50% 0%,
-    color-mix(in srgb, var(--atmos-hue) 34%, transparent) 0%,
-    color-mix(in srgb, var(--atmos-hue) 9%, transparent) 38%,
-    transparent 78%
+    color-mix(in srgb, var(--atmos-hue) 50%, transparent) 0%,
+    color-mix(in srgb, var(--atmos-hue) 14%, transparent) 40%,
+    transparent 80%
   );
   -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, rgba(0, 0, 0, 0.3) 3px 8px);
   mask-image: repeating-linear-gradient(0deg, #000 0 3px, rgba(0, 0, 0, 0.3) 3px 8px);
@@ -505,7 +500,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 }
 .world-atmos__vignette {
   inset: 0;
-  background: radial-gradient(118% 96% at 50% 46%, transparent 36%, rgba(0, 0, 0, 0.5) 76%, rgba(0, 0, 0, 0.88) 100%);
+  background: radial-gradient(120% 100% at 50% 46%, transparent 44%, rgba(0, 0, 0, 0.34) 80%, rgba(0, 0, 0, 0.62) 100%);
 }
 @keyframes atmos-drift {
   from { transform: translate3d(-3.5%, 0, 0); }
@@ -568,6 +563,9 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
      can never be wider than the viewport (no horizontal overflow). Tracking
      stays at 0.08em — well over the 0.06em floor. */
   :root { --fs-display: clamp(26px, 7.8vw, 44px); }
+  /* The portal hero headline is the display line of the hero frame: it takes
+     the full column (a long line wraps between words, never inside one). */
+  .portal-headline { font-size: clamp(30px, 11.4vw, 50px); }
 
   /* The lockup stays STACKED at every scroll position on a phone. Collapsed to
      one line it would run "TRISENO / AI INFRASTRUCTURE" edge to edge and drop
@@ -581,18 +579,12 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
     max-width: 100%; overflow: hidden;
   }
   /* the rule sits under the stacked pair, never through the division name */
-  .morph-nav__rule { top: 57px; width: 100%; }
+  .morph-nav__rule { top: 57px; width: max(var(--word-w), var(--div-w)); }
   .morph-nav[data-compact] .morph-nav__word { transform: translate3d(0, 18px, 0); }
   .morph-nav[data-compact] .morph-nav__division { transform: translate3d(0, 38px, 0); }
   .morph-nav__trigger { transform: translate3d(0, 10px, 0); }
   .morph-nav[data-compact] .morph-nav__trigger { transform: translate3d(0, 6px, 0); }
 
-  /* the corner scrims cover the full width of the phone so scrolling copy
-     dissolves under the chrome instead of colliding with it */
-  .chrome-scrim--tl { width: 100vw; height: 168px;
-    background: radial-gradient(150% 170% at 0% 0%, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.9) 44%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0) 94%); }
-  .chrome-scrim--tr { width: 62vw; height: 132px; }
-  .chrome-scrim--bl, .chrome-scrim--br { width: 62vw; height: 150px; }
 
   .ghost-btn { display: block; letter-spacing: 0.14em; }
   .ghost-btn__layer { padding: 16px 18px; gap: 12px; }
@@ -603,7 +595,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   .portal-world .scroll-tick { display: none; }
   .portal-word { opacity: 0.9; }
   .door-card { padding: 20px; }
-  .portal-gate { justify-content: flex-end; padding-bottom: calc(var(--gutter-y) + 34dvh); }
+  .portal-gate { justify-content: flex-end; padding-top: var(--lane-top); padding-bottom: calc(var(--lane-bottom) + 18dvh); }
   .portal-gate__copy { width: 100%; }
 
   .world-section { padding-left: var(--gutter); padding-right: var(--gutter); }
@@ -615,7 +607,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   .placeholder-world__glyph,
   .world-atmos__haze,
   .world-atmos__dust { animation: none; }
-  .hrotate__char, .hrotate__rule, .hrotate__glyph { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .hrotate__char, .hrotate__rule, .hrotate__glyph, .hrotate__out { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .world-loader[data-leaving] { clip-path: inset(0 0 0 0); }
   .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
   .world-menu, .world-menu__link, .world-menu__glyph, .portal-word, .ghost-btn__fill,
