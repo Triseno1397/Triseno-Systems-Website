@@ -28,13 +28,51 @@
   --color-web-a: #00e5ff;
   --color-web-b: #9d5cff;
 
+  /* Revamp tokens (design-system §2) */
+  --color-void: #000000;
+  --color-panel: #111111;
+  --color-ink: #ffffff;
+  --color-ink-2: #f5f5f7;
+  --color-ink-3: #cfcfcf;
+  --color-hue-creative: #ff8a3d;
+  --color-hue-web: #9d5cff;
+  --color-hue-ai: #00b4d8;
+
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-unbounded);
+
+  /* One easing family (M3): expo/power3-out decelerations. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-power3: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 /* ─── CSS Custom Properties ─── */
 :root {
+  /* Revamp foundation (design-system §2–4). Legacy tokens below stay until
+     /studio, /portfolio, /contact and /edit are rebuilt. */
+  --void: #000000;
+  --panel: #111111;
+  --ink: #ffffff;
+  --ink-secondary: #f5f5f7;
+  --ink-muted: #cfcfcf;
+  --line: #ffffff;
+  --hue-creative: #ff8a3d;
+  --hue-creative-hot: #ff4d6d;
+  --hue-web: #9d5cff;
+  --hue-ai: #00b4d8;
+  --hue: #ffffff; /* the current surface's single hue; overridden per world */
+  --radius: 0px;
+  --gutter: clamp(20px, 3vw, 44px);
+  --gutter-y: clamp(20px, 3vh, 36px);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-power3: cubic-bezier(0.33, 1, 0.68, 1);
+  --fs-display: clamp(34px, 4.7vw, 84px);
+  --fs-mid: clamp(20px, 2.1vw, 34px);
+  --fs-body: 17px;
+  --fs-label: 12px;
+
   --bg-primary: #0a0e1a;
   --bg-secondary: #0d1224;
   --bg-surface: #111828;
@@ -69,7 +107,7 @@
 }
 
 body {
-  background: var(--bg-primary);
+  background: var(--void);
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -445,7 +483,7 @@ main a {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--void);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -455,193 +493,6 @@ main a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-secondary);
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   SPLIT PORTAL HOMEPAGE  (ported from "Triseno Split Homepage.html")
-   Scoped under .portal-page so the full-screen portal owns its own
-   tokens and overflow without leaking into the rest of the app.
-   ═══════════════════════════════════════════════════════════════════ */
-.portal-page {
-  --navy-950: #0a0e1a;
-  --ink-1: #e8edf5;
-  --ink-2: #8892a8;
-  --ink-3: #4a5568;
-  --hairline: rgba(255, 255, 255, 0.07);
-  --web-a: #00e5ff;
-  --web-b: #9d5cff;
-  --studio-a: #ff8a3d;
-  --studio-b: #ff4d6d;
-  --sans: var(--font-geist-sans), system-ui, sans-serif;
-  --mono: var(--font-geist-mono), ui-monospace, monospace;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-
-  position: relative;
-  min-height: 100dvh;
-  background: var(--navy-950);
-  color: var(--ink-1);
-  font-family: var(--sans);
-  overflow: hidden;
-}
-.portal-page a { color: inherit; text-decoration: none; }
-
-/* custom cursor */
-.portal-page .cursor { position: fixed; top: 0; left: 0; z-index: 200; pointer-events: none; mix-blend-mode: screen; will-change: transform; }
-.portal-page .cursor .ring { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); transform: translate(-50%,-50%); transition: width 350ms var(--ease), height 350ms var(--ease), border-color 350ms, background 350ms; }
-.portal-page .cursor .dot { position: absolute; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: #fff; transform: translate(-50%,-50%); }
-.portal-page.cursor-studio .cursor .ring { border-color: var(--studio-a); background: rgba(255,138,61,0.08); width: 64px; height: 64px; }
-.portal-page.cursor-web .cursor .ring { border-color: var(--web-a); background: rgba(0,229,255,0.08); width: 64px; height: 64px; }
-@media (hover: none) { .portal-page .cursor { display: none; } }
-
-/* NAV */
-.portal-page .nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 80;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 84px; padding: 0 clamp(20px, 4vw, 48px);
-  pointer-events: none;
-}
-.portal-page .nav > * { pointer-events: auto; }
-.portal-page .nav-mark { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 9px; }
-.portal-page .nav-mark .dot { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--studio-a), var(--web-b)); box-shadow: 0 0 12px rgba(157,92,255,0.5); }
-.portal-page .nav-book {
-  font-size: 13px; font-weight: 500; color: var(--navy-950); background: var(--ink-1);
-  padding: 10px 18px; border-radius: 999px; transition: transform 200ms var(--ease), background 200ms;
-}
-.portal-page .nav-book:hover { background: #fff; transform: translateY(-1px); }
-
-/* PORTAL */
-.portal-page .portal { display: flex; height: 100vh; height: 100dvh; width: 100%; }
-.portal-page .panel {
-  position: relative; flex: 1 1 50%; overflow: hidden; cursor: pointer;
-  display: flex; align-items: center;
-  transition: flex-grow 800ms var(--ease), flex-basis 800ms var(--ease);
-}
-@media (hover: hover) and (min-width: 861px) {
-  .portal-page .portal.ready:hover .panel { flex-basis: 40%; }
-  .portal-page .portal.ready .panel:hover { flex-basis: 60%; }
-  .portal-page .portal.ready:hover .panel:not(:hover) .panel-title { opacity: 0.45; }
-  .portal-page .portal.ready:hover .panel:not(:hover) .panel-bg { filter: saturate(0.6) brightness(0.7); }
-}
-.portal-page .panel-bg { position: absolute; inset: -8%; z-index: 0; transition: filter 800ms var(--ease); will-change: transform; }
-.portal-page .panel-bg::after { content: ""; position: absolute; inset: 0; }
-
-.portal-page .panel-studio .panel-bg {
-  background:
-    radial-gradient(ellipse 90% 75% at 32% 38%, rgba(255,138,61,0.24) 0%, transparent 56%),
-    radial-gradient(ellipse 75% 95% at 12% 72%, rgba(255,77,109,0.18) 0%, transparent 56%),
-    linear-gradient(135deg, #1c0f12 0%, #130c14 58%, var(--navy-950) 100%);
-}
-.portal-page .panel-studio .panel-bg::after { background: linear-gradient(90deg, rgba(10,14,26,0.05) 0%, rgba(10,14,26,0.5) 100%); }
-
-.portal-page .panel-web .panel-bg {
-  background:
-    radial-gradient(ellipse 90% 75% at 68% 38%, rgba(0,229,255,0.18) 0%, transparent 56%),
-    radial-gradient(ellipse 75% 95% at 88% 72%, rgba(157,92,255,0.18) 0%, transparent 56%),
-    linear-gradient(225deg, #0a1624 0%, #0c1026 58%, var(--navy-950) 100%);
-}
-.portal-page .panel-web .panel-bg::after { background: linear-gradient(270deg, rgba(10,14,26,0.05) 0%, rgba(10,14,26,0.5) 100%); }
-
-/* motion layers */
-.portal-page .film-frames { position: absolute; inset: 0; opacity: 0.55; z-index: 1; will-change: transform; }
-.portal-page .film-frames .bar { position: absolute; left: -20%; width: 140%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,138,61,0.55), transparent); }
-.portal-page .web-grid {
-  position: absolute; inset: -5%; opacity: 0.4; z-index: 1; will-change: transform;
-  background-image: linear-gradient(rgba(0,229,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.08) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: radial-gradient(ellipse 70% 80% at 78% 50%, #000 0%, transparent 76%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 78% 50%, #000 0%, transparent 76%);
-}
-.portal-page .particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.portal-page .particles span { position: absolute; border-radius: 50%; will-change: transform, opacity; }
-.portal-page .panel-studio .particles span { background: rgba(255,160,90,0.7); box-shadow: 0 0 8px rgba(255,138,61,0.6); }
-.portal-page .panel-web .particles span { background: rgba(120,230,255,0.7); box-shadow: 0 0 8px rgba(0,229,255,0.6); }
-
-.portal-page .panel-inner { position: relative; z-index: 3; width: 100%; padding: 0 clamp(28px, 5.5vw, 96px); display: flex; flex-direction: column; }
-.portal-page .panel-studio .panel-inner { align-items: flex-start; text-align: left; }
-.portal-page .panel-web .panel-inner { align-items: flex-end; text-align: right; }
-
-.portal-page .panel-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 11px; }
-.portal-page .panel-studio .panel-eyebrow { color: var(--studio-a); }
-.portal-page .panel-web .panel-eyebrow { color: var(--web-a); flex-direction: row-reverse; }
-.portal-page .panel-eyebrow .pip { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
-
-.portal-page .panel-title { font-size: clamp(36px, 5vw, 76px); font-weight: 600; line-height: 0.96; letter-spacing: -0.035em; max-width: 12ch; transition: opacity 700ms var(--ease); }
-.portal-page .panel-title .line { display: block; overflow: hidden; }
-.portal-page .panel-title .char { display: inline-block; will-change: transform; }
-/* Gradient must live on the .char spans too — once the title is split into
-   per-letter inline-block spans, background-clip:text on the parent .grad no
-   longer paints onto the children, so the letters would render transparent. */
-.portal-page .panel-studio .panel-title .grad,
-.portal-page .panel-studio .panel-title .grad .char { background: linear-gradient(110deg, var(--studio-a), var(--studio-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.portal-page .panel-web .panel-title .grad,
-.portal-page .panel-web .panel-title .grad .char { background: linear-gradient(110deg, var(--web-a), var(--web-b)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.portal-page .panel-sub { margin-top: 22px; font-size: clamp(14px, 1.1vw, 17px); line-height: 1.5; color: var(--ink-2); max-width: 32ch; }
-.portal-page .panel-enter { margin-top: 38px; display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-1); padding: 14px 24px; border: 1px solid var(--hairline); border-radius: 999px; transition: border-color 250ms var(--ease), background 250ms; will-change: transform; }
-.portal-page .panel-enter .label { display: inline-block; will-change: transform; }
-.portal-page .panel-studio .panel-enter:hover { border-color: rgba(255,138,61,0.55); background: rgba(255,138,61,0.09); }
-.portal-page .panel-web .panel-enter:hover { border-color: rgba(0,229,255,0.55); background: rgba(0,229,255,0.09); }
-.portal-page .panel-enter .arr { width: 18px; height: 1px; background: currentColor; position: relative; }
-.portal-page .panel-enter .arr::after { content:""; position:absolute; right:0; top:50%; width:6px; height:6px; border-top:1px solid currentColor; border-right:1px solid currentColor; transform: translateY(-50%) rotate(45deg); }
-
-/* center seam + wordmark */
-.portal-page .seam { position: absolute; left: 50%; top: 0; bottom: 0; z-index: 5; width: 1px; transform: translateX(-50%) scaleY(0); transform-origin: center; background: linear-gradient(180deg, transparent, rgba(255,255,255,0.16) 28%, rgba(255,255,255,0.16) 72%, transparent); pointer-events: none; transition: opacity 500ms var(--ease); }
-.portal-page .seam-badge { position: absolute; left: 50%; top: 50%; z-index: 6; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; transition: opacity 400ms var(--ease); }
-.portal-page .seam-badge .mark { font-weight: 700; font-size: 14px; letter-spacing: 0.04em; background: var(--navy-950); padding: 9px 17px; border-radius: 999px; border: 1px solid var(--hairline); display: flex; align-items: center; gap: 8px; }
-.portal-page .seam-badge .mark .dot { width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(135deg, var(--studio-a), var(--web-b)); }
-.portal-page .seam-badge .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-3); }
-.portal-page .portal.ready:hover .seam, .portal-page .portal.ready:hover .seam-badge { opacity: 0.2; }
-
-/* corner meta */
-.portal-page .corner { position: fixed; bottom: 26px; z-index: 70; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); pointer-events: none; }
-.portal-page .corner.left { left: clamp(20px, 4vw, 48px); }
-.portal-page .corner.right { right: clamp(20px, 4vw, 48px); }
-
-/* exit transition — a themed curtain that wipes in from the clicked side and
-   carries the destination's atmosphere, so entering a division feels seamless */
-.portal-page .portal-exit { position: fixed; inset: 0; z-index: 145; pointer-events: none; opacity: 0; transform: translateX(-100%); display: grid; place-items: center; will-change: transform, opacity; }
-.portal-page .portal-exit.pe-studio {
-  background:
-    radial-gradient(ellipse 70% 60% at 40% 32%, rgba(255,138,61,0.28) 0%, transparent 58%),
-    radial-gradient(ellipse 60% 70% at 78% 78%, rgba(255,77,109,0.20) 0%, transparent 58%),
-    linear-gradient(160deg, #1a0f12 0%, #120b13 55%, #0c0a0e 100%);
-}
-.portal-page .portal-exit.pe-web {
-  background:
-    radial-gradient(ellipse 70% 60% at 60% 32%, rgba(0,229,255,0.22) 0%, transparent 58%),
-    radial-gradient(ellipse 60% 70% at 22% 78%, rgba(157,92,255,0.20) 0%, transparent 58%),
-    linear-gradient(200deg, #0a1624 0%, #0c1026 55%, var(--navy-950) 100%);
-}
-.portal-page .pe-label { display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: clamp(11px, 1.4vw, 14px); letter-spacing: 0.34em; text-transform: uppercase; color: rgba(255,255,255,0.92); opacity: 0; }
-.portal-page .pe-label .pe-arr { width: 20px; height: 1px; background: currentColor; position: relative; }
-.portal-page .pe-label .pe-arr::after { content: ""; position: absolute; right: 0; top: 50%; width: 6px; height: 6px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; transform: translateY(-50%) rotate(45deg); }
-.portal-page.pe-active .cursor { opacity: 0; }
-
-/* intro curtain — "Forge" reveal */
-.portal-page .curtain { position: fixed; inset: 0; z-index: 150; background: var(--navy-950); display: grid; place-items: center; overflow: hidden; }
-.portal-page .curtain::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 50% 50% at 50% 48%, rgba(90,140,200,0.10), transparent 70%); }
-.portal-page .curtain .stage { position: relative; display: flex; flex-direction: column; align-items: center; }
-.portal-page .curtain .bloom { position: absolute; left: 50%; top: 42%; width: min(640px, 92vw); height: min(640px, 92vw); transform: translate(-50%,-50%); pointer-events: none; background: radial-gradient(circle, rgba(130,175,225,0.28) 0%, rgba(130,175,225,0.06) 32%, transparent 60%); opacity: 0; will-change: opacity, transform; }
-.portal-page .curtain .mark-wrap { position: relative; width: min(46vw, 360px); }
-.portal-page .curtain .c-logo { width: 100%; display: block; filter: drop-shadow(0 0 26px rgba(120,170,220,0.22)); will-change: transform, opacity, filter; }
-.portal-page .curtain .sheen { position: absolute; inset: 0; -webkit-mask-image: url("/images/triseno-logo-v2.png"); mask-image: url("/images/triseno-logo-v2.png"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.9) 50%, transparent 58%); background-size: 260% 100%; background-position: 210% 0; mix-blend-mode: screen; pointer-events: none; opacity: 0; }
-.portal-page .curtain .dust { position: absolute; left: 6%; top: 30%; width: 40%; height: 45%; pointer-events: none; }
-.portal-page .curtain .dust span { position: absolute; border-radius: 50%; background: rgba(210,225,245,0.9); will-change: transform, opacity; opacity: 0; }
-.portal-page .curtain .c-underline { margin-top: 26px; height: 2px; width: 0; border-radius: 2px; background: linear-gradient(90deg, var(--studio-a), var(--web-b)); }
-.portal-page .curtain .c-descriptor { margin-top: 18px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.42em; text-transform: uppercase; color: var(--ink-3); padding-left: 0.42em; opacity: 0; }
-
-/* mobile: stacked */
-@media (max-width: 860px) {
-  .portal-page { overflow: visible; }
-  .portal-page .portal { flex-direction: column; height: auto; }
-  .portal-page .panel { flex: none; height: 56vh; min-height: 360px; }
-  .portal-page .panel-web .panel-inner { align-items: flex-start; text-align: left; }
-  .portal-page .panel-web .panel-eyebrow { flex-direction: row; }
-  .portal-page .seam, .portal-page .seam-badge { display: none; }
-  .portal-page .corner { display: none; }
-  .portal-page .cursor { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .portal-page *, .portal-page *::before, .portal-page *::after { animation: none !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

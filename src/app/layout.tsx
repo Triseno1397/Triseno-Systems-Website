@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Unbounded } from "next/font/google";
+import WorldShell from "@/components/world/WorldShell";
 import "./globals.css";
+import "./world.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,13 +14,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Display face (design-system §3): headlines, menu words, chrome labels, buttons.
+const unbounded = Unbounded({
+  variable: "--font-unbounded",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "Triseno Systems · premium ad creative and conversion-built websites",
+    default: "Triseno Systems · ad creative, web design, AI infrastructure",
     template: "%s",
   },
   description:
-    "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
+    "Triseno Systems is three separate divisions: ad creative for paid social, custom conversion-built websites, and AI infrastructure for business operations.",
   metadataBase: new URL("https://trisenosystems.com"),
   alternates: {
     canonical: "/",
@@ -37,15 +47,17 @@ export const metadata: Metadata = {
     "DTC web design",
     "ecommerce website design",
     "video ad studio",
+    "AI infrastructure consulting",
+    "AI systems implementation",
   ],
   icons: {
     icon: "/images/triseno-logo-v2.png",
     apple: "/images/triseno-logo-v2.png",
   },
   openGraph: {
-    title: "Triseno Systems · premium ad creative and conversion-built websites",
+    title: "Triseno Systems · ad creative, web design, AI infrastructure",
     description:
-      "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
+      "Triseno Systems is three separate divisions: ad creative for paid social, custom conversion-built websites, and AI infrastructure for business operations.",
     url: "https://trisenosystems.com",
     siteName: "Triseno Systems",
     type: "website",
@@ -61,9 +73,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Triseno Systems · premium ad creative and conversion-built websites",
+    title: "Triseno Systems · ad creative, web design, AI infrastructure",
     description:
-      "Premium product ad creative for paid social plus cinematic, conversion-built websites for DTC brands. Days, not weeks. One studio, two divisions.",
+      "Triseno Systems is three separate divisions: ad creative for paid social, custom conversion-built websites, and AI infrastructure for business operations.",
   },
   robots: {
     index: true,
@@ -84,7 +96,7 @@ const structuredData = {
       url: "https://trisenosystems.com",
       logo: "https://trisenosystems.com/images/triseno-logo-v2.png",
       description:
-        "A creative studio in two divisions: premium product ad creative for paid social, and cinematic, conversion-built websites for DTC brands.",
+        "Three separate divisions: product ad creative for paid social, custom conversion-built websites, and AI infrastructure consulting, architecture and implementation.",
       email: "Tristen@trisenosystems.com",
       sameAs: ["https://instagram.com/trisenosystems"],
     },
@@ -111,6 +123,14 @@ const structuredData = {
       description:
         "Cinematic, conversion-built websites for DTC and ecommerce brands.",
     },
+    {
+      "@type": "ProfessionalService",
+      name: "Triseno AI Infrastructure",
+      url: "https://trisenosystems.com/ai-infrastructure",
+      parentOrganization: { "@id": "https://trisenosystems.com/#organization" },
+      description:
+        "AI infrastructure consulting, architecture and implementation — the intelligence layer a business runs on.",
+    },
   ],
 };
 
@@ -122,17 +142,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${unbounded.variable}`}
     >
-      {/* Root layout owns only <html>, fonts, <body>, and metadata. Global
-          nav/footer chrome lives in the (site) route group so the full-screen
-          portal (/) and the warm Studio page (/studio) can supply their own. */}
+      {/* Root layout owns <html>, fonts, <body>, metadata and the WorldShell
+          (warp transition everywhere; chrome/cursor/smooth scroll on revamped
+          routes). Legacy chrome still lives in the (site) route group. */}
       <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        {children}
+        <WorldShell>{children}</WorldShell>
       </body>
     </html>
   );
