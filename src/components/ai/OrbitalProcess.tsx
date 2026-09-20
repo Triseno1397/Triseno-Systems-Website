@@ -144,6 +144,7 @@ export default function OrbitalProcess() {
       ref={sectionRef}
       data-rail="Process"
       data-world-side="left"
+      data-dof="full"
       aria-labelledby="ai-process-title"
       className="ai-section relative z-10"
     >
@@ -269,10 +270,12 @@ export default function OrbitalProcess() {
               <button type="button" className="ai-mini-btn" onClick={() => lock(active + 1)} aria-label="Next step">
                 <ArrowRight size={16} weight="light" aria-hidden="true" />
               </button>
-              <button type="button" className="ai-mini-btn ai-mini-btn--wide" onClick={release} disabled={!locked}>
-                <Play size={14} weight="light" aria-hidden="true" />
-                <span>Resume orbit</span>
-              </button>
+              {locked ? (
+                <button type="button" className="ai-mini-btn ai-mini-btn--wide" onClick={release}>
+                  <Play size={14} weight="light" aria-hidden="true" />
+                  <span>Resume orbit</span>
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

@@ -5,48 +5,45 @@ import CapabilityDiagram from "./CapabilityDiagram";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
 
 /**
- * 2. Capabilities — spotlight cards (site-map mechanic), now ONE card per
- * viewport instead of a bento wall. Each capability owns a full frame and one
- * glass card that holds its copy and its diagram side by side, so the type is
- * always on a readable substrate and never laid over the drawing it describes.
- * Cards alternate left / right and push the lattice to the opposite side of
- * the frame, so the world moves with the reading order.
+ * 2. Capabilities — spotlight cards in a bento (site-map mechanic; the 21st.dev
+ * spotlight-card component, tailored). ONE frame, not six clones.
  *
- * The spotlight is still the mechanic: at rest a card is four corner ticks; the
- * 1px border and the cyan hairline field exist only inside the travelling light
- * (clip-path circles). With no pointer the light scans the on-screen card on
- * its own, and the card under the light flips IDLE -> LIVE. Touch devices get
- * full borders (CSS).
+ * At rest a card is four corner ticks, its diagram and its name. A light
+ * travels over the bento — the pointer, or on its own when idle — and inside
+ * its radius the 1px white border and a cyan hairline field appear
+ * (clip-path circles; the field is line-work, never a colour wash).
+ *
+ * Beyond the stock demo: exactly one card is ever LIVE (the one nearest the
+ * light), its diagram comes up to full strength, and its description is read
+ * out in the single caption line under the bento. So the frame carries six
+ * names and six drawings but only ever one paragraph — the light decides which.
+ * Touch devices have no light: every card shows full borders and its own
+ * description, and the caption is not rendered. Reduced motion: the light rests
+ * on the first card.
  */
-const RADIUS = 320;
+const RADIUS = 300;
 
 export default function Capabilities() {
-  const rootRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const capIndexRef = useRef<HTMLElement>(null);
+  const capTitleRef = useRef<HTMLSpanElement>(null);
+  const capBodyRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    const section = sectionRef.current;
+    const grid = gridRef.current;
+    if (!section || !grid) return;
     const hover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!hover) return;
 
-    const frames = Array.from(root.querySelectorAll<HTMLElement>(".ai-cap"));
-    const onScreen = new Set<HTMLElement>();
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const el = entry.target as HTMLElement;
-          if (entry.isIntersecting) onScreen.add(el);
-          else onScreen.delete(el);
-        });
-      },
-      { threshold: 0 },
-    );
-    frames.forEach((f) => io.observe(f));
-
-    if (!hover) return () => io.disconnect();
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ai-card"));
+    const rings = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__ring"));
+    const fields = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__field"));
 
     let raf = 0;
+    let visible = false;
     let px = -9999;
     let py = -9999;
     let x = 0;
@@ -54,6 +51,14 @@ export default function Capabilities() {
     let started = false;
     let lastMove = 0;
     let last = performance.now();
+    let live = -1;
+
+    const readOut = (i: number) => {
+      const cap = CAPABILITIES[i];
+      if (capIndexRef.current) capIndexRef.current.textContent = String(i + 1).padStart(2, "0");
+      if (capTitleRef.current) capTitleRef.current.textContent = cap.title;
+      if (capBodyRef.current) capBodyRef.current.textContent = cap.body;
+    };
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
@@ -64,20 +69,24 @@ export default function Capabilities() {
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!onScreen.size) return;
+      if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-
-      const idle = px < 0 || now - lastMove > 4000;
+      const g = grid.getBoundingClientRect();
+      const inside = px >= g.left - 60 && px <= g.right + 60 && py >= g.top - 60 && py <= g.bottom + 60;
+      const idle = !inside || now - lastMove > 4000;
       let tx = px;
       let ty = py;
       if (idle) {
-        const t = now / 1000;
-        tx = window.innerWidth * (0.5 + 0.34 * Math.sin(t * 0.29));
-        ty = window.innerHeight * (0.5 + 0.26 * Math.sin(t * 0.43 + 0.8));
         if (reduced) {
-          tx = window.innerWidth * 0.5;
-          ty = window.innerHeight * 0.45;
+          const r0 = cards[0].getBoundingClientRect();
+          tx = r0.left + r0.width / 2;
+          ty = r0.top + r0.height / 2;
+        } else {
+          // a slow lissajous over the bento, so every card gets its turn
+          const t = now / 1000;
+          tx = g.left + g.width * (0.5 + 0.44 * Math.sin(t * 0.23));
+          ty = g.top + g.height * (0.5 + 0.36 * Math.sin(t * 0.37 + 0.8));
         }
       }
       if (!started) {
@@ -89,20 +98,32 @@ export default function Capabilities() {
       x += (tx - x) * k;
       y += (ty - y) * k;
 
-      onScreen.forEach((section) => {
-        const card = section.querySelector<HTMLElement>(".ai-card");
-        if (!card) return;
-        const ring = card.querySelector<HTMLElement>(".ai-card__ring");
-        const field = card.querySelector<HTMLElement>(".ai-card__field");
+      let nearest = -1;
+      let nearestD = Infinity;
+      cards.forEach((card, i) => {
         const r = card.getBoundingClientRect();
         const lx = x - r.left;
         const ly = y - r.top;
+        const ring = rings[i];
+        const field = fields[i];
         if (ring) ring.style.clipPath = `circle(${RADIUS}px at ${lx.toFixed(1)}px ${ly.toFixed(1)}px)`;
-        if (field) field.style.clipPath = `circle(${RADIUS - 44}px at ${(lx - 1).toFixed(1)}px ${(ly - 1).toFixed(1)}px)`;
-        card.toggleAttribute("data-live", lx > -40 && ly > -40 && lx < r.width + 40 && ly < r.height + 40);
+        if (field) field.style.clipPath = `circle(${RADIUS - 50}px at ${lx.toFixed(1)}px ${ly.toFixed(1)}px)`;
+        const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+        if (d < nearestD) {
+          nearestD = d;
+          nearest = i;
+        }
       });
+      if (nearest !== live) {
+        if (live >= 0) cards[live].removeAttribute("data-live");
+        live = nearest;
+        cards[live].setAttribute("data-live", "");
+        readOut(live);
+      }
     };
 
+    const io = new IntersectionObserver(([entry]) => (visible = entry.isIntersecting), { threshold: 0 });
+    io.observe(section);
     window.addEventListener("pointermove", onMove, { passive: true });
     raf = requestAnimationFrame(frame);
     return () => {
@@ -115,67 +136,71 @@ export default function Capabilities() {
   const total = String(CAPABILITIES.length).padStart(2, "0");
 
   return (
-    <div ref={rootRef} id="capabilities">
-      {CAPABILITIES.map((cap, i) => {
-        const side = i % 2 === 0 ? "left" : "right";
-        return (
-          <section
-            key={cap.id}
-            data-rail="Capabilities"
-            data-side={side}
-            data-world-side={side === "left" ? "right" : "left"}
-            aria-labelledby={`ai-cap-${cap.id}`}
-            className="ai-cap relative z-10"
-          >
-            <div className="ai-wrap">
-              {i === 0 ? (
-                <header className="ai-cap__head">
-                  <p className="ai-label">
-                    <b>02</b> / Capabilities
-                  </p>
-                  <h2 className="ai-h2 font-display font-semibold uppercase">{CAPABILITIES_INTRO.title}</h2>
-                </header>
-              ) : null}
+    <section
+      ref={sectionRef}
+      id="capabilities"
+      data-rail="Capabilities"
+      data-world-side="right"
+      data-dof="full"
+      aria-labelledby="ai-cap-title"
+      className="ai-section ai-caps relative z-10"
+    >
+      <div className="ai-wrap">
+        <div ref={gridRef} className="ai-bento">
+          <header className="ai-bento__head">
+            <p className="ai-label">
+              <b>02</b> / Capabilities
+            </p>
+            <h2 id="ai-cap-title" className="ai-h2 font-display font-semibold uppercase">
+              {CAPABILITIES_INTRO.title}
+            </h2>
+            <p className="ai-body">{CAPABILITIES_INTRO.body}</p>
+          </header>
 
-              <article className="ai-card">
-                <span aria-hidden="true" className="ai-card__ring" />
-                <div className="ai-card__panel">
-                  <span aria-hidden="true" className="ai-card__field" />
-                  <span aria-hidden="true" className="ai-card__tick ai-card__tick--tl" />
-                  <span aria-hidden="true" className="ai-card__tick ai-card__tick--tr" />
-                  <span aria-hidden="true" className="ai-card__tick ai-card__tick--bl" />
-                  <span aria-hidden="true" className="ai-card__tick ai-card__tick--br" />
+          {CAPABILITIES.map((cap, i) => (
+            <article key={cap.id} className="ai-card">
+              <span aria-hidden="true" className="ai-card__ring" />
+              <div className="ai-card__panel">
+                <span aria-hidden="true" className="ai-card__field" />
+                <span aria-hidden="true" className="ai-card__tick ai-card__tick--tl" />
+                <span aria-hidden="true" className="ai-card__tick ai-card__tick--tr" />
+                <span aria-hidden="true" className="ai-card__tick ai-card__tick--bl" />
+                <span aria-hidden="true" className="ai-card__tick ai-card__tick--br" />
 
-                  <p className="ai-card__meta ai-label">
-                    <span>
-                      <b>{String(i + 1).padStart(2, "0")}</b> / {total} &nbsp;{cap.tag}
-                    </span>
-                    <span aria-hidden="true" className="ai-card__status">
-                      <i>Idle</i>
-                      <i>Live</i>
-                    </span>
-                  </p>
-
-                  {/* diagram and copy are side by side inside the one card, so
-                      the type never sits on top of the thing it describes */}
-                  <div className="ai-card__grid">
-                    <div className="ai-card__copy">
-                      <h3 id={`ai-cap-${cap.id}`} className="ai-h3 font-display font-semibold uppercase">
-                        {cap.title}
-                      </h3>
-                      <p className="ai-body ai-card__body">{cap.body}</p>
-                    </div>
-                    <figure className="ai-card__figure">
-                      <CapabilityDiagram kind={cap.id} />
-                      <figcaption className="ai-label ai-card__note">Illustrative</figcaption>
-                    </figure>
-                  </div>
+                <p className="ai-card__meta ai-label">
+                  <span>
+                    <b>{String(i + 1).padStart(2, "0")}</b> / {total}
+                  </span>
+                  <span aria-hidden="true" className="ai-card__status">
+                    <i>Idle</i>
+                    <i>Live</i>
+                  </span>
+                </p>
+                <div className="ai-card__figure">
+                  <CapabilityDiagram kind={cap.id} />
                 </div>
-              </article>
-            </div>
-          </section>
-        );
-      })}
-    </div>
+                <h3 className="ai-h3 font-display font-semibold uppercase">{cap.title}</h3>
+                {/* on pointer devices this is read out in the caption instead */}
+                <p className="ai-body ai-card__body">{cap.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p aria-hidden="true" className="ai-bento__caption">
+          <span className="ai-label">
+            <b ref={capIndexRef}>01</b> / Live &nbsp;·&nbsp; Diagrams illustrative
+          </span>
+          <span className="ai-bento__read">
+            <span ref={capTitleRef} className="ai-h3 font-display font-semibold uppercase">
+              {CAPABILITIES[0].title}
+            </span>
+            <span ref={capBodyRef} className="ai-body">
+              {CAPABILITIES[0].body}
+            </span>
+          </span>
+        </p>
+      </div>
+    </section>
   );
 }

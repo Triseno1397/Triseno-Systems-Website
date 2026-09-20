@@ -246,21 +246,29 @@ export const STATS: Stat[] = [
   { parts: [0, 6], text: "6", label: "Capabilities, one system each" },
 ];
 
+/**
+ * Why Triseno as a two-state comparison. The "vendor" column describes the
+ * generic alternative a buyer is weighing, not any named company.
+ */
 export const WHY = {
   title: "Why Triseno",
-  label: "AI infrastructure for operations, intelligence and scale",
-  blocks: [
+  label: "Why Triseno",
+  states: ["Typical AI vendor", "Triseno"] as const,
+  rows: [
     {
-      title: "Outcome-Tied Pricing",
-      body: "Our fees attach to numbers you already track: revenue recovered, cycle times compressed. You see the result before you pay for it.",
+      topic: "Pricing",
+      vendor: "Per-seat licence, whatever the outcome",
+      triseno: "Fees tied to numbers you already track",
     },
     {
-      title: "Infrastructure, Not Features",
-      body: "Most vendors sell you a tool. We build the orchestration and decision logic underneath it. Features deprecate. Infrastructure compounds.",
+      topic: "Scope",
+      vendor: "A tool bolted onto your stack",
+      triseno: "The orchestration layer underneath it",
     },
     {
-      title: "Broadcast-Grade Reliability",
-      body: "Architected for environments where downtime is not an option. Every agent has fallback logic. Every pipeline has monitoring.",
+      topic: "Failure",
+      vendor: "A support ticket and a wait",
+      triseno: "Fallback logic built into every agent",
     },
   ],
 };
@@ -270,5 +278,4 @@ export const GATE = {
   body: "Start with the AI Operations Audit: a focused diagnostic that finds your highest-leverage opportunities before you commit to a build.",
   primary: "Start with a diagnostic",
   secondary: "Start a Conversation",
-  tick: "Scroll to explore",
 };

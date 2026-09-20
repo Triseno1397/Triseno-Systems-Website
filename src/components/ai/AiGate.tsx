@@ -14,8 +14,7 @@ import { GATE } from "./content";
  * focus the diagnostic button and the same outline (the foundation's coherent
  * glyph sampling) morphs into the plus glyph of Contact and drains to white,
  * echoed by the hairline copies behind it — the world recolours toward the
- * destination before you travel. One ghost button names the next destination
- * with a tick beneath it. The two cross-division links are the only place on
+ * destination before you travel. One ghost button names the next destination. The two cross-division links are the only place on
  * this page another division may be named (D3), and they are set in the same
  * Unbounded uppercase as every other link on the page.
  */
@@ -88,7 +87,7 @@ export default function AiGate() {
     <section
       data-rail="Gate"
       data-rail-next="Contact"
-      data-world-side="left"
+      data-world-side="right"
       aria-labelledby="ai-gate-title"
       className="ai-gate relative z-10 min-h-[100dvh] overflow-hidden"
     >
@@ -125,10 +124,6 @@ export default function AiGate() {
             <span>{GATE.secondary}</span>
           </WarpLink>
         </div>
-        <p aria-hidden="true" className="ai-gate__tick ai-label">
-          <i />
-          <span>{GATE.tick}</span>
-        </p>
 
         <nav aria-label="Other Triseno divisions" className="ai-gate__cross">
           <span className="ai-label">Other divisions</span>

@@ -97,7 +97,6 @@ function geometry(mobile: boolean): Geometry {
 
 export default function Compression() {
   const stageRef = useRef<HTMLDivElement>(null);
-  const stepsRef = useRef<HTMLSpanElement>(null);
   const layersRef = useRef<HTMLSpanElement>(null);
   const [mobile, setMobile] = useState<boolean | null>(null);
 
@@ -121,14 +120,14 @@ export default function Compression() {
       const q = gsap.utils.selector(stage);
       const stepEls = q<SVGGElement>(".ai-flow__step");
 
-      // The readout describes the diagram and nothing else: how many manual
-      // steps have been drawn, and how many layers they have collapsed into.
-      // No time, cost or multiple is claimed anywhere on this page.
+      // The readout describes the diagram and nothing else. The left figure is
+      // the process (always twelve steps); the right one is how many layers
+      // those steps currently occupy: twelve before the collapse, two after.
+      // It never reads as nonsense ("00 -> 12") at any scroll position, and no
+      // time, cost or multiple is claimed anywhere on this page.
       const readout = (time: number) => {
-        const drawK = Math.min(1, time / 2.6);
         const squeeze = Math.min(1, Math.max(0, (time - 3) / 2.2));
         const eased = squeeze * squeeze * (3 - 2 * squeeze);
-        if (stepsRef.current) stepsRef.current.textContent = String(Math.round(12 * drawK)).padStart(2, "0");
         if (layersRef.current) layersRef.current.textContent = String(Math.round(12 - 10 * eased)).padStart(2, "0");
         stage.toggleAttribute("data-compressed", time >= 5.2);
       };
@@ -138,7 +137,7 @@ export default function Compression() {
       // A — the manual process draws, one step at a time
       tl.fromTo(q(".ai-flow__path"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 2.6 }, 0);
       stepEls.forEach((el, i) => {
-        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 }, (2.6 * i) / 11 - (i === 0 ? 0 : 0.12));
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.1 }, (2.6 * i) / 11 - (i === 0 ? 0 : 0.05));
       });
 
       // B — twelve steps collapse into five nodes on two layers
@@ -186,6 +185,7 @@ export default function Compression() {
     <section
       data-rail="Compression"
       data-world-side="right"
+      data-dof="full"
       aria-labelledby="ai-flow-title"
       className="ai-compress relative z-10"
     >
@@ -198,13 +198,13 @@ export default function Compression() {
             <h2 id="ai-flow-title" className="ai-h2 mt-5 font-display font-semibold uppercase">
               {COMPRESSION.title}
             </h2>
-            <p className="ai-body mt-6 max-w-[42ch]">{COMPRESSION.body}</p>
+            <p className="ai-body mt-6 max-w-[42ch] max-md:hidden">{COMPRESSION.body}</p>
 
             <dl className="ai-readout" aria-label="Twelve manual steps collapse into two layers">
               <div>
                 <dt className="ai-label">Steps to layers</dt>
                 <dd aria-hidden="true">
-                  <span ref={stepsRef}>12</span>
+                  <span>12</span>
                   <i>→</i>
                   <span ref={layersRef} className="ai-readout__hot">
                     02

@@ -135,6 +135,7 @@ export default function Industries() {
       ref={sectionRef}
       data-rail="Industries"
       data-world-side="right"
+      data-dof="full"
       aria-labelledby="ai-ind-title"
       className="ai-section relative z-10"
     >

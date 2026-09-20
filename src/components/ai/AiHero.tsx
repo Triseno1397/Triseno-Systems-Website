@@ -99,7 +99,8 @@ export default function AiHero() {
           ))}
         </h1>
 
-        <p className="ai-body mt-6 max-w-[44ch]">{HERO.sub}</p>
+        {/* phone: display must be >= 2.5x body, so the sub line is dropped there */}
+        <p className="ai-body mt-6 max-w-[44ch] max-md:hidden">{HERO.sub}</p>
 
         <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-5">
           <GhostButton href="/contact">Start with a diagnostic</GhostButton>

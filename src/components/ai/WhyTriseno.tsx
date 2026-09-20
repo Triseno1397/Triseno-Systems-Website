@@ -4,61 +4,97 @@ import { useEffect, useRef, useState } from "react";
 import { STATS, STATS_NOTE, WHY } from "./content";
 
 /**
- * 6. Why Triseno — three reasons, one per column, on a frame of their own.
- *
- * R2: the headline figures that used to sit here ("50+ systems", "3x
- * compression") are gone. The odometer now has its own frame (AiStats below)
- * and counts what the page draws, not results.
- *
- * Mechanic: each column's hairline rule draws in from the left on entry
- * (transform only, staggered), which is not used anywhere else on the page.
+ * 7. Why Triseno — a two-state switch (a mechanic used nowhere else on the
+ * page). One control flips all three rows between what a typical AI vendor
+ * offers and what Triseno builds; each statement is replaced by a clip-path
+ * wipe, row by row. When the section first comes into view it shows the
+ * vendor state for a beat and then flips to Triseno on its own, so the
+ * mechanism is visible without a click; any click takes over. At rest the type
+ * is solid white — the wipe only masks while it runs. Reduced motion: it rests
+ * on Triseno and swaps instantly.
  */
 export default function WhyTriseno() {
-  const ref = useRef<HTMLUListElement>(null);
-  const [on, setOn] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+  const touched = useRef(false);
+  const [state, setState] = useState<0 | 1>(0);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let timer = 0;
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setOn(true);
-          io.disconnect();
-        }
+        if (!entry.isIntersecting) return;
+        io.disconnect();
+        timer = window.setTimeout(() => {
+          if (!touched.current) setState(1);
+        }, reduced ? 0 : 1100);
       },
-      { threshold: 0.25 },
+      { threshold: 0.45 },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      window.clearTimeout(timer);
+    };
   }, []);
+
+  const choose = (next: 0 | 1) => {
+    touched.current = true;
+    setState(next);
+  };
 
   return (
     <section
+      ref={ref}
       data-rail="Why"
       data-world-side="right"
+      data-dof="full"
       aria-labelledby="ai-why-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
-        <header className="ai-head ai-head--single">
-          <p className="ai-label">
-            <b>07</b> / {WHY.label}
-          </p>
-          <h2 id="ai-why-title" className="ai-h2 font-display font-semibold uppercase">
-            {WHY.title}
-          </h2>
+        <header className="ai-why__head">
+          <div className="grid gap-4">
+            <p className="ai-label">
+              <b>07</b> / Compare
+            </p>
+            <h2 id="ai-why-title" className="ai-h2 font-display font-semibold uppercase">
+              {WHY.title}
+            </h2>
+          </div>
+          <div role="radiogroup" aria-label="Compare" className="ai-switch" data-state={state}>
+            <span aria-hidden="true" className="ai-switch__thumb" />
+            {WHY.states.map((label, i) => (
+              <button
+                key={label}
+                type="button"
+                role="radio"
+                aria-checked={state === i}
+                className="ai-switch__opt"
+                onClick={() => choose(i as 0 | 1)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </header>
 
-        <ul ref={ref} className="ai-why" data-on={on ? "" : undefined}>
-          {WHY.blocks.map((block, i) => (
-            <li key={block.title} style={{ ["--i" as string]: i }}>
-              <span aria-hidden="true" className="ai-why__rule" />
-              <p className="ai-label">
-                <b>{String(i + 1).padStart(2, "0")}</b>
+        <ul className="ai-why" data-state={state} aria-live="polite">
+          {WHY.rows.map((row, i) => (
+            <li key={row.topic} className="ai-why__row" style={{ ["--i" as string]: i }}>
+              <p className="ai-label ai-why__topic">
+                <b>{String(i + 1).padStart(2, "0")}</b> / {row.topic}
               </p>
-              <h3 className="ai-h3 mt-5 font-display font-semibold uppercase">{block.title}</h3>
-              <p className="ai-body mt-4 max-w-[38ch]">{block.body}</p>
+              <p className="ai-why__cell">
+                <span className="ai-why__say ai-why__say--vendor" aria-hidden={state !== 0}>
+                  {row.vendor}
+                </span>
+                <span className="ai-why__say ai-why__say--triseno" aria-hidden={state !== 1}>
+                  {row.triseno}
+                </span>
+              </p>
             </li>
           ))}
         </ul>
@@ -102,6 +138,7 @@ export function AiStats() {
     <section
       data-rail="Counts"
       data-world-side="left"
+      data-dof="full"
       aria-labelledby="ai-counts-title"
       className="ai-section relative z-10"
     >
