@@ -781,7 +781,20 @@
 .web-range__rail::-webkit-scrollbar { display: none; }
 .web-range__slides { display: flex; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .web-range__slide { flex: 0 0 min(86vw, 420px); scroll-snap-align: start; }
-.web-browser--slide { width: 100%; }
+/* Style tile: the concept edge to edge, and a footer in its own paper and
+   ink — brand in its display voice, and its palette. Depicted content. */
+.web-tile { margin: 0; border: 1px solid #ffffff; background: #000000; }
+.web-tile__rail {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; background: var(--paper); color: var(--ink);
+}
+.web-tile__face { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); line-height: 1.2; }
+.web-tile__face--serif { font-family: var(--concept-serif); letter-spacing: 0.02em; }
+.web-tile__face--cond { font-family: var(--concept-cond); letter-spacing: 0.04em; text-transform: uppercase; }
+.web-tile__face--sans { font-family: var(--concept-sans); font-weight: 600; letter-spacing: -0.01em; }
+.web-tile__face--sans-italic { font-family: var(--concept-sans); font-weight: 700; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; }
+.web-tile__sw { display: flex; flex: none; gap: 4px; }
+.web-tile__sw i { display: block; width: 14px; height: 14px; border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent); }
 .web-range__main { display: grid; gap: 30px; }
 .web-range__dock { display: none; }
 
@@ -791,7 +804,6 @@
   .web-range__rail { display: none; }
   .web-range__main { grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr); column-gap: 4vw; align-items: start; }
   .web-range__dock { display: block; position: sticky; top: var(--lane-top); }
-  .web-range__dock .web-browser { width: 100%; }
   .web-range__window { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #000000; }
   .web-range__reel { display: flex; flex-direction: column; height: 800%; transition: transform 750ms var(--ease-expo); will-change: transform; }
   .web-range__reel > .web-range__comp { flex: 0 0 12.5%; aspect-ratio: auto; }

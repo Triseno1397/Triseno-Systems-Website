@@ -1,13 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { RANGE } from "./RangeComps";
+import { RANGE, type RangeItem } from "./RangeComps";
 
 /**
  * Range — hover-swap gallery, section 05, standing in the world.
  *
- * DESKTOP: industries in display type down the left, and a DOCKED browser
- * frame in its own column on the right. Hovering or focusing a row runs the
+ * Presentation: STYLE TILES, not browser windows (the demo section already
+ * owns the browser frame). Each concept is shown edge to edge as a design
+ * board: the site, and under it a footer in the concept's own paper and ink
+ * carrying its brand in its own display voice and its palette swatches — the
+ * range is argued in type and colour, not in window chrome.
+ *
+ * DESKTOP: industries in display type down the left, and a DOCKED style
+ * tile in its own column on the right. Hovering or focusing a row runs the
  * reel of concept sites to that industry (one transform on the reel). The
  * panel is docked rather than cursor-following on purpose: a panel that
  * follows the cursor lands on top of the very words it is illustrating.
@@ -105,21 +111,13 @@ export default function RangeGallery() {
                 slideRefs.current[i] = el;
               }}
             >
-              <div className="web-browser web-browser--slide">
-                <span className="web-browser__bar">
-                  <span aria-hidden="true" className="web-browser__dots">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                  <span className="web-browser__url">{slug(entry.brand)}</span>
-                  <span className="web-browser__tag">Concept</span>
-                </span>
+              <figure className="web-tile">
                 <div className="web-range__comp">{entry.comp}</div>
-              </div>
+                <TileRail item={entry} />
+              </figure>
               <p className="web-range__caption">
                 <span>
-                  {String(i + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
+                  Concept {String(i + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
                   {entry.industry}
                 </span>
                 <span>{entry.note}</span>
@@ -163,16 +161,7 @@ export default function RangeGallery() {
 
         {/* Desktop: the docked frame. Its own column, so it covers nothing. */}
         <div className="web-range__dock" aria-hidden="true">
-          <div className="web-browser" data-on={active !== null ? "" : undefined}>
-            <span className="web-browser__bar">
-              <span aria-hidden="true" className="web-browser__dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="web-browser__url">{slug(item.brand)}</span>
-              <span className="web-browser__tag">Concept</span>
-            </span>
+          <figure className="web-tile" data-on={active !== null ? "" : undefined}>
             <div className="web-range__window">
               <div className="web-range__reel" style={reelStyle}>
                 {RANGE.map((entry) => (
@@ -182,10 +171,11 @@ export default function RangeGallery() {
                 ))}
               </div>
             </div>
-          </div>
+            <TileRail item={item} />
+          </figure>
           <p className="web-range__caption">
             <span>
-              {String(shown + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
+              Concept {String(shown + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
               {item.industry}
             </span>
             <span>{item.note}</span>
@@ -196,7 +186,20 @@ export default function RangeGallery() {
   );
 }
 
-/** Fictional brand → fictional address bar, so the frame reads as a browser. */
-function slug(brand: string) {
-  return `${brand.toLowerCase().replace(/[^a-z0-9]+/g, "")}.example`;
+/**
+ * The style tile's footer: depicted content in the concept's own paper and
+ * ink — its brand in its display voice, and its palette.
+ */
+function TileRail({ item }: { item: RangeItem }) {
+  const [paper, ink] = item.palette;
+  return (
+    <figcaption className="web-tile__rail" style={{ "--paper": paper, "--ink": ink } as CSSProperties}>
+      <span className={`web-tile__face web-tile__face--${item.face}`}>{item.brand}</span>
+      <span className="web-tile__sw" role="img" aria-label={`Palette: ${item.palette.join(", ")}`}>
+        {item.palette.map((c) => (
+          <i key={c} style={{ background: c }} />
+        ))}
+      </span>
+    </figcaption>
+  );
 }

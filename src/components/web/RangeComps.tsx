@@ -10,6 +10,10 @@ export interface RangeItem {
   industry: string;
   brand: string;
   note: string;
+  /** the concept's own display voice, shown on its style tile */
+  face: "serif" | "cond" | "sans" | "sans-italic";
+  /** the concept's own palette: paper, ink, then accents (depicted content) */
+  palette: string[];
   comp: ReactNode;
 }
 
@@ -18,6 +22,8 @@ export const RANGE: RangeItem[] = [
     industry: "Restaurants",
     brand: "Mesa Tordo",
     note: "Reservation first",
+    face: "serif",
+    palette: ["#17110d", "#f2e6d3", "#c4572b", "#e0793a"],
     comp: (
       <div className="rc rc-rest">
         <span className="rc-rest__nav">
@@ -42,6 +48,8 @@ export const RANGE: RangeItem[] = [
     industry: "Construction",
     brand: "Ironvale Build",
     note: "Bid request",
+    face: "cond",
+    palette: ["#f2c230", "#111111", "#f5f5f0"],
     comp: (
       <div className="rc rc-con">
         <span className="rc-con__stripe" aria-hidden="true" />
@@ -66,6 +74,8 @@ export const RANGE: RangeItem[] = [
     industry: "Med spa",
     brand: "Solenne Aesthetics",
     note: "Consult booking",
+    face: "serif",
+    palette: ["#f3e6df", "#4a2f2a", "#b9776a", "#d9a292"],
     comp: (
       <div className="rc rc-spa">
         <span className="rc-spa__arch" aria-hidden="true" />
@@ -84,6 +94,8 @@ export const RANGE: RangeItem[] = [
     industry: "Law",
     brand: "Harrow & Pike LLP",
     note: "Case review intake",
+    face: "serif",
+    palette: ["#f6f1e7", "#14213d", "#8a6d2f", "#5c6785"],
     comp: (
       <div className="rc rc-law">
         <span className="rc-law__top">
@@ -110,6 +122,8 @@ export const RANGE: RangeItem[] = [
     industry: "E-commerce",
     brand: "Tavo Supply",
     note: "Product grid",
+    face: "sans",
+    palette: ["#ecebe6", "#1b1b1b", "#2f4f46", "#c8a36a"],
     comp: (
       <div className="rc rc-shop">
         <span className="rc-shop__top">
@@ -138,6 +152,8 @@ export const RANGE: RangeItem[] = [
     industry: "Fitness",
     brand: "Kilo Club",
     note: "Class schedule",
+    face: "cond",
+    palette: ["#0b0b0b", "#d6ff3f", "#ffffff"],
     comp: (
       <div className="rc rc-fit">
         <span className="rc-fit__h">Kilo Club</span>
@@ -161,6 +177,8 @@ export const RANGE: RangeItem[] = [
     industry: "Real estate",
     brand: "Alder & Quay Estates",
     note: "Listing search",
+    face: "sans",
+    palette: ["#e9eef0", "#12252b", "#3d7a5c", "#9cc3d6"],
     comp: (
       <div className="rc rc-home">
         <span className="rc-home__img" aria-hidden="true">
@@ -186,6 +204,8 @@ export const RANGE: RangeItem[] = [
     industry: "Automotive",
     brand: "Caliber Nine Detailing",
     note: "Quote builder",
+    face: "sans-italic",
+    palette: ["#0d0d0f", "#f2f2f2", "#e31b23", "#bdbdbd"],
     comp: (
       <div className="rc rc-auto">
         <span className="rc-auto__lines" aria-hidden="true" />
