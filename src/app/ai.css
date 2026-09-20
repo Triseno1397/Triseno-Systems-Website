@@ -18,7 +18,7 @@
 
 .ai-world {
   --cyan: #00b4d8;
-  --ai-display: clamp(28px, 5.1vw, 90px);
+  --ai-display: clamp(28px, 4.8vw, 86px);
   --ai-h2: clamp(23px, 3.3vw, 56px);
   --ai-readout: clamp(20px, 2.2vw, 38px);
   --ai-body: 17px;
@@ -62,11 +62,15 @@
   .ai-wrap { padding-right: calc(var(--gutter) + 36px); }
 }
 /* top padding keeps headlines and key figures out of the fixed chrome zone */
+/* Everything that must be read at rest sits inside the chrome lanes: the
+   foundation's fixed fade bands (--fade-top / --fade-bottom) turn content to
+   black before it reaches the lockup, trigger, chevron and contact icon, and
+   the lanes are those bands plus 16px (division-world.md point 6). */
 .ai-section {
   display: flex; align-items: center; min-height: 100dvh;
-  padding-block: clamp(124px, 17dvh, 190px) clamp(80px, 10dvh, 124px);
+  padding-block: var(--lane-top) var(--lane-bottom);
 }
-.ai-head { display: grid; gap: 20px; margin-bottom: clamp(40px, 6.5dvh, 80px); }
+.ai-head { display: grid; gap: 16px; margin-bottom: clamp(28px, 4dvh, 52px); }
 @media (min-width: 1024px) {
   .ai-head { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); column-gap: 64px; align-items: end; }
   .ai-head > .ai-label { grid-column: 1 / -1; }
@@ -99,16 +103,14 @@
 .ai-textlink:hover > svg { transform: translate3d(0, 4px, 0); }
 
 /* ── 1. hero: spotlight ── */
+.ai-hero__inner { padding-block: var(--lane-top) var(--lane-bottom); }
+/* solid white at rest, always (design-system §2) */
 .ai-hero__title {
-  position: relative; width: fit-content; max-width: 100%;
-  font-size: var(--ai-display); line-height: 1.05; letter-spacing: 0.08em;
-}
-.ai-hero__ink {
-  position: absolute; inset: 0; color: var(--cyan); pointer-events: none;
-  clip-path: circle(0px at 0px 0px); will-change: clip-path;
+  position: relative; width: fit-content; max-width: 100%; color: #ffffff;
+  font-size: var(--ai-display); line-height: 1.04; letter-spacing: 0.08em;
 }
 .ai-hero__readout {
-  display: flex; flex-wrap: wrap; gap: 10px 32px; margin-top: clamp(36px, 7dvh, 84px); padding-top: 18px;
+  display: flex; flex-wrap: wrap; gap: 10px 32px; margin-top: clamp(24px, 4dvh, 44px); padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 .ai-hero__readout b { margin-left: 8px; font-variant-numeric: tabular-nums; }
@@ -121,7 +123,7 @@
    the thing it describes, and the lattice slides to the far side (AiWorld). */
 .ai-cap {
   display: flex; align-items: center; min-height: 100dvh;
-  padding-block: clamp(124px, 17dvh, 190px) clamp(80px, 10dvh, 124px);
+  padding-block: var(--lane-top) var(--lane-bottom);
 }
 .ai-cap__head { display: grid; gap: 16px; margin-bottom: clamp(24px, 4dvh, 44px); max-width: 32ch; }
 @media (min-width: 1024px) {
@@ -231,7 +233,7 @@
 /* ── 3. workflow compression: scroll-scrubbed line draw ── */
 .ai-compress__stage {
   display: flex; align-items: center; min-height: 100dvh;
-  padding-block: clamp(118px, 16dvh, 180px) clamp(64px, 9dvh, 104px);
+  padding-block: var(--lane-top) var(--lane-bottom);
 }
 .ai-compress__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: center; }
 @media (min-width: 1024px) {
@@ -250,7 +252,7 @@
 }
 .ai-compress__figure { position: relative; }
 .ai-flow {
-  display: block; width: 100%; height: auto; max-height: 74dvh; overflow: visible;
+  display: block; width: 100%; height: auto; max-height: calc(100dvh - var(--lane-top) - var(--lane-bottom) - 40px); overflow: visible;
   font-family: var(--font-geist-mono), monospace; letter-spacing: 0.12em;
 }
 @media (max-width: 767px) {
@@ -275,7 +277,7 @@
 @media (min-width: 1024px) {
   .ai-process { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
-.ai-orbit { position: relative; width: min(100%, 540px, 58dvh); aspect-ratio: 1; margin-inline: auto; }
+.ai-orbit { position: relative; width: min(100%, 500px, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 150px)); aspect-ratio: 1; margin-inline: auto; }
 @media (max-width: 767px) {
   .ai-orbit { width: min(100%, 320px); margin-block: 4px 20px; }
 }
@@ -309,19 +311,19 @@
 .ai-orbit__node[data-active] .ai-orbit__num { color: var(--cyan); }
 
 .ai-step {
-  position: relative; display: flex; flex-direction: column; min-height: 520px;
-  padding: clamp(24px, 2.4vw, 40px); border: 1px solid #ffffff; background: var(--ai-panel);
+  position: relative; display: flex; flex-direction: column; min-height: min(480px, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 130px));
+  padding: clamp(22px, 2.1vw, 32px); border: 1px solid #ffffff; background: var(--ai-panel);
   backdrop-filter: blur(18px) saturate(0.6);
   -webkit-backdrop-filter: blur(18px) saturate(0.6);
 }
-.ai-step__meta { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 18px; margin-bottom: 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+.ai-step__meta { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
 .ai-step__state { opacity: 0.6; }
 .ai-step[data-locked] .ai-step__state { opacity: 1; color: var(--cyan); }
 .ai-step__body { animation: ai-step-in 700ms var(--ease-expo) both; }
 @keyframes ai-step-in { from { opacity: 0; transform: translate3d(0, 18px, 0); } }
-.ai-step__list { display: grid; gap: 10px; margin-top: 14px; }
+.ai-step__list { display: grid; gap: 6px; margin-top: 10px; }
 .ai-step__list > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: baseline; }
-.ai-step__nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 32px; }
+.ai-step__nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 22px; }
 .ai-mini-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
   height: 44px; min-width: 44px; padding-inline: 14px; overflow: hidden;
@@ -344,10 +346,10 @@
 .ai-row { position: relative; border-bottom: 1px solid #ffffff; }
 .ai-row__trigger {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px; align-items: center; gap: 16px;
-  width: 100%; padding-block: clamp(18px, 2.8dvh, 32px); text-align: left; color: #ffffff;
+  width: 100%; padding-block: clamp(12px, 1.6dvh, 18px); text-align: left; color: #ffffff;
 }
 .ai-row__title {
-  font-size: var(--ai-h2); line-height: 1.12; letter-spacing: 0.08em; opacity: 0.4;
+  font-size: var(--ai-readout); line-height: 1.12; letter-spacing: 0.08em; opacity: 0.4;
   transform: translate3d(0, 0, 0);
   transition: opacity 600ms var(--ease-expo), transform 800ms var(--ease-expo);
 }
@@ -360,7 +362,7 @@
 .ai-row__sign > i:last-child { transform: rotate(90deg); }
 .ai-row[data-open] .ai-row__sign > i:last-child { transform: rotate(0deg); }
 .ai-row__panel {
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 4px 0 40px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 4px 0 24px;
   animation: ai-row-in 900ms var(--ease-expo) both;
 }
 @media (min-width: 1024px) {
@@ -374,23 +376,19 @@
   align-self: start; padding: 18px 20px 16px; border: 1px solid #ffffff; background: var(--ai-panel);
   backdrop-filter: blur(18px) saturate(0.6);
   -webkit-backdrop-filter: blur(18px) saturate(0.6);
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1.9; color: #ffffff;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1.7; color: #ffffff;
 }
 .ai-log__head { display: flex; justify-content: space-between; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
-.ai-log__head > span:last-child { opacity: 0.6; }
-.ai-log__lines > li { display: grid; grid-template-columns: 64px minmax(0, 1fr); min-height: 1.9em; letter-spacing: 0.04em; }
+.ai-log__lines > li { display: grid; grid-template-columns: 64px minmax(0, 1fr); min-height: 1.7em; letter-spacing: 0.04em; }
 .ai-log__t { opacity: 0; }
 .ai-log__lines > li[data-started] .ai-log__t { opacity: 0.5; }
 .ai-log__text { white-space: pre-wrap; }
 .ai-log__agent { color: var(--cyan); }
 .ai-log__caret { display: inline-block; width: 7px; height: 13px; margin-left: 2px; vertical-align: -2px; background: var(--cyan); animation: ai-caret 1s steps(1) infinite; }
 @keyframes ai-caret { 50% { opacity: 0; } }
-.ai-log__foot {
-  display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3); opacity: 0; transition: opacity 600ms var(--ease-expo);
-}
-.ai-log__foot[data-on] { opacity: 1; }
-.ai-log__dot { flex: none; width: 6px; height: 6px; background: var(--cyan); }
+.ai-log__state { display: inline-flex; align-items: center; gap: 8px; opacity: 0.6; }
+.ai-log__state[data-on] { opacity: 1; color: var(--cyan); }
+.ai-log__dot { flex: none; width: 6px; height: 6px; background: currentColor; }
 
 /* ── 6. counts: odometer (its own frame, so nothing crowds the numbers) ── */
 .ai-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px 32px; padding-top: 36px; border-top: 1px solid #ffffff; }
@@ -431,7 +429,7 @@
 .ai-why[data-on] .ai-why__rule { transform: scaleX(1); }
 
 /* ── 8. gate: a gate, not a footer ── */
-.ai-gate { display: flex; align-items: center; padding-block: clamp(124px, 17dvh, 190px) clamp(96px, 12dvh, 140px); }
+.ai-gate { display: flex; align-items: center; padding-block: var(--lane-top) var(--lane-bottom); }
 .ai-gate__figure {
   --gate-ink: #00b4d8;
   position: absolute; top: 50%; right: max(4vw, calc(50% - 660px)); width: min(52vw, 700px); height: auto;
@@ -465,7 +463,7 @@
   .ai-dg-set { animation: none !important; opacity: 0; }
   .ai-dg-set[data-first] { opacity: 1; }
   .ai-world__canvas, .ai-poster, .ai-card__status > i, .ai-orbit__arc, .ai-orbit__name,
-  .ai-mini-btn::before, .ai-row__title, .ai-row__sign > i, .ai-log__foot, .ai-why__rule,
+  .ai-mini-btn::before, .ai-row__title, .ai-row__sign > i, .ai-why__rule,
   .ai-textlink > span::after, .ai-textlink > svg {
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }

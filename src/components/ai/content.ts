@@ -209,18 +209,6 @@ export const INDUSTRIES: Industry[] = [
     ],
   },
   {
-    title: "Creative & Media Tech",
-    full: "Creative Production & Media Technology",
-    body: "Asset management intelligence and pipeline automation for creative teams at scale, built to raise throughput without moving quality.",
-    log: [
-      ["ingest", "new assets fingerprinted and versioned"],
-      ["tagger", "scenes, products and usage rights labelled"],
-      ["pipeline", "deliverable specs resolved per platform"],
-      ["render", "variants queued, naming convention applied"],
-      ["review", "approval link sent to creative lead"],
-    ],
-  },
-  {
     title: "Technology & SaaS",
     full: "Technology & SaaS Companies",
     body: "Intelligence pushed deeper into the product and the operations around it: internal tooling, onboarding compression, support architecture.",

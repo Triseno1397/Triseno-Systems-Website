@@ -56,8 +56,11 @@ function AgentLog({ industry, run }: { industry: Industry; run: boolean }) {
   return (
     <div className="ai-log" role="img" aria-label={`Illustrative agent log: ${industry.log.map(([, m]) => m).join("; ")}.`}>
       <p className="ai-log__head ai-label">
-        <span>Agent log</span>
-        <span>Illustrative</span>
+        <span>Agent log / Illustrative</span>
+        <span className="ai-log__state" data-on={done ? "" : undefined}>
+          <span className="ai-log__dot" />
+          {done ? "Cycle complete" : "Running"}
+        </span>
       </p>
       <ol aria-hidden="true" className="ai-log__lines">
         {lines.map((line, i) => {
@@ -77,10 +80,6 @@ function AgentLog({ industry, run }: { industry: Industry; run: boolean }) {
           );
         })}
       </ol>
-      <p className="ai-log__foot ai-label" data-on={done ? "" : undefined}>
-        <span className="ai-log__dot" />
-        <span>Cycle complete / every decision logged</span>
-      </p>
     </div>
   );
 }

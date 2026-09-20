@@ -8,23 +8,24 @@ import { getLenis } from "@/components/world/SmoothScroll";
 import { DIVISIONS } from "@/lib/divisions";
 import { canRunWebGL } from "./AiWorld";
 import { HERO } from "./content";
-import { buildLattice, latticeState, pointerTarget } from "./lattice";
+import { buildLattice, latticeState } from "./lattice";
 
 /**
  * 1. Hero — interactive 3D + spotlight.
- * The 3D lattice is the fixed world behind the page (AiPage owns it). This
- * section owns the headline half of the spotlight: the light itself is grey
- * haze rendered inside the scene, and here the same pointer re-inks the
- * headline in cyan inside the light's radius (clip-path only). The base
- * headline is plain server-rendered white text — it is the LCP element.
+ * The spotlight is scene light: the pointer (or an idle roaming point) lights
+ * the lattice's nodes cyan and sends pulses along its edges, inside the world
+ * (AiWorld). The headline is solid white server-rendered text at all times —
+ * it is the LCP element, and display type is never tinted with the hue
+ * (design-system §2: type at rest is solid; hue only on active state, data
+ * readouts and focus). R2 removed the old cyan re-ink of the headline.
+ * The live readout under the CTA counts the scene's own nodes, edges, lit
+ * nodes and pulses.
  */
 export default function AiHero() {
   /** true once the WebGL lattice is the thing on screen, so the live counters
    *  in the readout are describing something the reader can actually see */
   const [live, setLive] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const inkRef = useRef<HTMLSpanElement>(null);
   const litRef = useRef<HTMLSpanElement>(null);
   const pulsesRef = useRef<HTMLSpanElement>(null);
 
@@ -44,61 +45,23 @@ export default function AiHero() {
     };
   }, []);
 
+  /* the readout's live counters, sampled from the scene four times a second */
   useEffect(() => {
     const section = sectionRef.current;
-    const title = titleRef.current;
-    const ink = inkRef.current;
-    if (!section || !title || !ink) return;
-
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const place = (cx: number, cy: number) => {
-      const r = title.getBoundingClientRect();
-      const radius = Math.min(230, Math.max(110, window.innerWidth * 0.13));
-      ink.style.clipPath = `circle(${radius.toFixed(0)}px at ${(cx - r.left).toFixed(1)}px ${(cy - r.top).toFixed(1)}px)`;
-    };
-
-    if (reduced) {
-      // final state: the light rests on the headline
-      const r = title.getBoundingClientRect();
-      place(r.left + r.width * 0.3, r.top + r.height * 0.45);
-      return;
-    }
-
-    let raf = 0;
+    if (!section || !live) return;
     let visible = true;
-    let x = window.innerWidth * 0.3;
-    let y = window.innerHeight * 0.45;
-    let last = performance.now();
-    let readoutClock = 0;
-
     const io = new IntersectionObserver(([entry]) => (visible = entry.isIntersecting), { threshold: 0 });
     io.observe(section);
-
-    const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
+    const id = window.setInterval(() => {
       if (!visible) return;
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const wide = window.innerWidth / Math.max(1, window.innerHeight) > 1.25;
-      const aim = pointerTarget(now, wide);
-      const k = 1 - Math.exp(-dt * (aim.idle ? 1.6 : 7));
-      x += (((aim.x + 1) / 2) * window.innerWidth - x) * k;
-      y += (((1 - aim.y) / 2) * window.innerHeight - y) * k;
-      place(x, y);
-
-      readoutClock += dt;
-      if (readoutClock > 0.25) {
-        readoutClock = 0;
-        if (litRef.current) litRef.current.textContent = String(latticeState.lit).padStart(2, "0");
-        if (pulsesRef.current) pulsesRef.current.textContent = String(latticeState.pulses).padStart(2, "0");
-      }
-    };
-    raf = requestAnimationFrame(frame);
+      if (litRef.current) litRef.current.textContent = String(latticeState.lit).padStart(2, "0");
+      if (pulsesRef.current) pulsesRef.current.textContent = String(latticeState.pulses).padStart(2, "0");
+    }, 250);
     return () => {
-      cancelAnimationFrame(raf);
+      window.clearInterval(id);
       io.disconnect();
     };
-  }, []);
+  }, [live]);
 
   const lattice = buildLattice();
 
@@ -122,32 +85,23 @@ export default function AiHero() {
       aria-label="AI Infrastructure"
       className="ai-hero relative z-10 min-h-[100dvh] overflow-hidden"
     >
-      <div className="ai-hero__inner relative mx-auto flex min-h-[100dvh] w-full max-w-[1400px] flex-col justify-center px-[var(--gutter)] pb-[calc(var(--gutter-y)+64px)] pt-[clamp(132px,19dvh,200px)]">
-        <p className="ai-label mb-7 flex items-center gap-3">
+      <div className="ai-hero__inner relative mx-auto flex min-h-[100dvh] w-full max-w-[1400px] flex-col justify-center px-[var(--gutter)]">
+        <p className="ai-label mb-5 flex items-center gap-3">
           <Glyph kind="triangle" size={14} color={DIVISIONS.ai.hue} strokeWidth={1.25} glow />
           <span>{HERO.label}</span>
         </p>
 
-        <h1 ref={titleRef} className="ai-hero__title font-display font-bold uppercase">
-          <span className="block">
-            {HERO.headline.map((line) => (
-              <span key={line} className="block">
-                {line}{" "}
-              </span>
-            ))}
-          </span>
-          <span ref={inkRef} aria-hidden="true" className="ai-hero__ink">
-            {HERO.headline.map((line) => (
-              <span key={line} className="block">
-                {line}
-              </span>
-            ))}
-          </span>
+        <h1 className="ai-hero__title font-display font-bold uppercase">
+          {HERO.headline.map((line) => (
+            <span key={line} className="block">
+              {line}{" "}
+            </span>
+          ))}
         </h1>
 
-        <p className="ai-body mt-8 max-w-[44ch]">{HERO.sub}</p>
+        <p className="ai-body mt-6 max-w-[44ch]">{HERO.sub}</p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
+        <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-5">
           <GhostButton href="/contact">Start with a diagnostic</GhostButton>
           <a href="#capabilities" onClick={toCapabilities} className="ai-textlink">
             <span>Explore what we build</span>
