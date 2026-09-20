@@ -80,22 +80,20 @@
 
 <script>
 const DATA = {
-  updated: "2026-09-20 · round 1 in progress",
+  updated: "2026-09-20 · piece 1 round 1 judged, pieces 2-4 building",
   open: [
-    ["21st.dev key", "Add API_KEY_21ST=… to triseno-revamp/.env.local yourself so the exact component source can be pulled. Until then components are rebuilt from their demos."],
-    ["Real testimonials", "The Creative marquee only runs real quotes. Send them, or it ships as a labelled reel marquee."],
-    ["Home-page stats", "The copy doc lists 50+ systems, 3x compression, <6 weeks. Confirm these are real before they go on the site."],
-    ["Video shots", "No Higgsfield video is generated until you approve each shot."]
+    ["21st.dev limit", "Free plan allows 2 component downloads a day. Two are in; the rest are being rebuilt from their demos and tailored to Triseno anyway."],
+        ["Video shots", "No Higgsfield video is generated until you approve each shot."]
   ],
   pieces: [
     {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:1,
+     critics:{brief:["fail","Mobile layout is broken: a button overflows the screen and fixed chrome covers the copy."],system:["wait","judging"],craft:["fail","Lost to ohzi.io 0-7. Glyphs float in a black void; the reference is a lit, depth-of-field place."]}, history:["R1 built: type check + production build pass, 0 console errors","R1 brief FAIL: mobile overflow; Work hover leaves headline on AI; cursor disc hides letters","R1 craft FAIL: needs a rendered environment per hue, glass material, real warp arc, glass cards"]},
+    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"building", round:1,
      critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]},
-    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"queued", round:0,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]},
-    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"queued", round:0,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]},
-    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"queued", round:0,
-     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:[]}
+    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"building", round:1,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]},
+    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"building", round:1,
+     critics:{brief:["wait",""],system:["wait",""],craft:["wait",""]}, history:["R1 builder started"]}
   ]
 };
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.textContent=h;return e};

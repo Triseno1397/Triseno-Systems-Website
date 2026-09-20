@@ -8,7 +8,7 @@ from a screenshot or filmstrip.
 ## 1. Structure: one portal, three separate worlds
 | Surface | Route | Hue (the ONLY saturated colour allowed there) | Glyph |
 |---|---|---|---|
-| Portal (home) | `/` | none of its own — achromatic; the signature object borrows the hovered division's hue | — |
+| Portal (home) | `/` | none of its own. At rest (nothing hovered, auto-rotation included) the scene is achromatic: white light, grey haze. While a division word is hovered/focused the object AND its environment light (floor spill, haze) take that division's hue | — |
 | Triseno Studio — Creative | `/studio` | amber `#ff8a3d` (hot end `#ff4d6d` inside media only) | circle / aperture |
 | Web Design Division | `/web-design-division` | violet `#9d5cff` | square / frame |
 | AI Infrastructure | `/ai-infrastructure` | cyan data-light `#00b4d8` | triangle / node |
@@ -19,7 +19,7 @@ from a screenshot or filmstrip.
 - **D3. Separate entry points.** Each division is a complete pitch on its own URL (hero → offer → proof → process → CTA), so a client sent straight to one division never needs the others. Cross-links to other divisions live only in the menu overlay and the final gate.
 
 ## 2. Colour
-- Canvas `#000000`; raised panel `#111111`; text `#ffffff`; secondary `#f5f5f7`; muted `#cfcfcf`. No navy, no grey-blue page backgrounds.
+- DOM canvas `#000000`; raised panel `#111111`; text `#ffffff`; secondary `#f5f5f7`; muted `#cfcfcf`. No navy or grey-blue DOM backgrounds or CSS gradients. Rendered 3D scenes are exempt: fog, haze and light in the scene may carry the active hue, and at rest they are neutral grey, never blue-grey.
 - UI line-work (borders, icons, dividers, cursor, rails) is pure white at 1px. UI is never tinted with the division hue except: active state, data readouts, focus ring.
 - Colour comes from the scene/media (3D, video, generated imagery) and from the single division hue. Max one saturated hue per frame (see D2).
 - No purple-to-blue SaaS gradients. No drop shadows on UI. Glow is allowed only on scene objects and the division glyph.
@@ -28,7 +28,7 @@ from a screenshot or filmstrip.
 - **Display: Unbounded** (600–700), uppercase, tracking ≥ 0.06em, never negative. Used for headlines, menu words, chrome labels, buttons.
 - **Body: Geist Sans** (400), sentence case, 16–18px, line-height 1.5, max line length 62ch. **Data: Geist Mono** for counters, labels, agent logs.
 - Hairline contrast pairing: a 600–700 headline is paired with 100–400 supporting text; hierarchy comes from weight and size, not colour.
-- Display size ≥ 4× body size on hero frames. At most 3 type sizes visible in one frame.
+- Display size ≥ 4× body size on hero frames. Content uses at most 3 type sizes per frame; all chrome and mono labels share one further small size (12–13px). The lockup wordmark counts as chrome.
 - Banned: Inter, Roboto, Arial, system fonts, emojis, Lucide icons (Phosphor only, thin/light weight).
 
 ## 4. Shape and chrome
