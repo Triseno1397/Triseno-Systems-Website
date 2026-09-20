@@ -46,7 +46,8 @@ from a screenshot or filmstrip.
 - **M5.** `prefers-reduced-motion`: every section renders its final state, fully readable, with no scroll-jacking. Mobile (< 768px): no pinned section longer than 2 viewport heights; 3D scenes fall back to video/poster.
 - **M6.** Every section fills the viewport with scene or media (min-height `100dvh`); no flat empty black bands taller than 120px between sections.
 
-## 6. Content truth (from the brand bible — hard rules)
+## 6. Content
+- **The site IS the demo.** Every section exists to showcase a component, interaction or piece of craft. It is never a proof page: no section is judged on whether it proves past results, and no section asks for or depends on real client work. Testimonials, stats, case studies and concept sites are component demonstrations.
 - The site is a showcase. Realistic filler is allowed for testimonials, case studies, client names and concept work so every component looks the way it would on a finished client site. Filler uses fictional people and fictional company names only — never a real brand, real person, or real logo that did not work with Triseno.
 - No legible fake UI or dashboards in generated imagery. Real sites/screens are real captures.
 - No on-screen text baked into generated video. No speaking AI avatars.

@@ -43,6 +43,13 @@ interface LazyVideoProps {
   /** Play even when motion is reduced — only ever set by an explicit click. */
   force?: boolean;
   label?: string;
+  /**
+   * Seconds into the clip that a *paused* frame should show. Some clips open on
+   * an establishing wide that does not depict the format the frame is labelled
+   * with (apparel try-on opens on a drone shot of a street), and the paused
+   * poster is what a still screenshot of the page shows. Default 0.1s.
+   */
+  poster?: number;
 }
 
 export function LazyVideo({
@@ -53,9 +60,14 @@ export function LazyVideo({
   sound = false,
   force = false,
   label,
+  poster = 0.1,
 }: LazyVideoProps) {
   const holder = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement | null>(null);
+  // Every clip ships a still at the same path under /posters. A frame off the
+  // centre of the strip therefore shows real work from the moment it is on
+  // screen, instead of a black rectangle waiting on a 6–15MB decode.
+  const still = `/posters/${src.split("/").pop()?.replace(/\.mp4$/, ".jpg")}`;
   const [near, setNear] = useState(eager);
   const [onScreen, setOnScreen] = useState(false);
   const reduced = useMediaQuery(REDUCED);
@@ -96,11 +108,15 @@ export function LazyVideo({
 
   return (
     <div ref={holder} className={className}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={still} alt="" aria-hidden="true" className="sx-still" loading="lazy" decoding="async" />
       {near ? (
         <video
           ref={video}
-          // The media fragment makes a paused clip show a real frame, not black.
-          src={`${src}#t=0.1`}
+          poster={still}
+          // The media fragment makes a paused clip show a real frame, not black
+          // — and lands it on a frame that depicts the format (see `poster`).
+          src={`${src}#t=${poster}`}
           muted
           loop
           playsInline

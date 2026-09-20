@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown } from "@phosphor-icons/react";
 import GhostButton from "@/components/ui/GhostButton";
 import Glyph from "@/components/world/Glyph";
 import { getLenis } from "@/components/world/SmoothScroll";
 import { DIVISIONS } from "@/lib/divisions";
+import { canRunWebGL } from "./AiWorld";
 import { HERO } from "./content";
 import { buildLattice, latticeState, pointerTarget } from "./lattice";
 
@@ -17,12 +18,31 @@ import { buildLattice, latticeState, pointerTarget } from "./lattice";
  * headline in cyan inside the light's radius (clip-path only). The base
  * headline is plain server-rendered white text — it is the LCP element.
  */
-export default function AiHero({ live }: { live: boolean }) {
+export default function AiHero() {
+  /** true once the WebGL lattice is the thing on screen, so the live counters
+   *  in the readout are describing something the reader can actually see */
+  const [live, setLive] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const inkRef = useRef<HTMLSpanElement>(null);
   const litRef = useRef<HTMLSpanElement>(null);
   const pulsesRef = useRef<HTMLSpanElement>(null);
+
+  /* subscribe to the same two queries AiWorld uses, so the readout only claims
+     live counters when the WebGL lattice is really the thing on screen */
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const small = window.matchMedia("(max-width: 767px)");
+    const webgl = canRunWebGL();
+    const decide = () => setLive(!reduced.matches && !small.matches && webgl);
+    decide();
+    reduced.addEventListener("change", decide);
+    small.addEventListener("change", decide);
+    return () => {
+      reduced.removeEventListener("change", decide);
+      small.removeEventListener("change", decide);
+    };
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -98,6 +118,7 @@ export default function AiHero({ live }: { live: boolean }) {
     <section
       ref={sectionRef}
       data-rail="Layer"
+      data-world-side="right"
       aria-label="AI Infrastructure"
       className="ai-hero relative z-10 min-h-[100dvh] overflow-hidden"
     >
@@ -124,7 +145,7 @@ export default function AiHero({ live }: { live: boolean }) {
           </span>
         </h1>
 
-        <p className="ai-body mt-8 max-w-[56ch]">{HERO.sub}</p>
+        <p className="ai-body mt-8 max-w-[44ch]">{HERO.sub}</p>
 
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
           <GhostButton href="/contact">Start with a diagnostic</GhostButton>
@@ -142,9 +163,6 @@ export default function AiHero({ live }: { live: boolean }) {
           <span>
             Edges <b>{lattice.edges.length / 2}</b>
           </span>
-          <span>
-            Layers <b>03</b>
-          </span>
           {live ? (
             <>
               <span>
@@ -154,7 +172,11 @@ export default function AiHero({ live }: { live: boolean }) {
                 Pulses <b ref={pulsesRef}>00</b>
               </span>
             </>
-          ) : null}
+          ) : (
+            <span>
+              Layers <b>03</b>
+            </span>
+          )}
         </p>
       </div>
     </section>

@@ -115,19 +115,29 @@ export default function StackCards() {
           const next = cards[i + 1];
           if (!inner) return;
           const depth = total - 1 - i;
-          gsap.to(inner, {
-            scale: 1 - Math.min(depth, 4) * 0.035,
-            filter: "brightness(0.5)",
-            ease: "none",
-            scrollTrigger: {
-              trigger: next,
-              // From the moment the next sheet touches this one until it has stuck on top of it.
-              start: () => `top ${parseFloat(getComputedStyle(card).top) + inner.offsetHeight}px`,
-              end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
-              scrub: true,
-              invalidateOnRefresh: true,
+          // fromTo with an explicit brightness(1) start: tweening `filter` from
+          // the computed `none` lets GSAP read the start as brightness(0), which
+          // drives the sheet to black instead of to 0.82.
+          gsap.fromTo(
+            inner,
+            { scale: 1, filter: "brightness(1)" },
+            {
+              scale: 1 - Math.min(depth, 4) * 0.03,
+              // Sheets settle back into the tray but never become unreadable:
+              // a card can sit half-uncovered for a whole viewport of scroll.
+              filter: "brightness(0.82)",
+              ease: "none",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: next,
+                // From the moment the next sheet touches this one until it has stuck on top of it.
+                start: () => `top ${parseFloat(getComputedStyle(card).top) + inner.offsetHeight}px`,
+                end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
+                scrub: true,
+                invalidateOnRefresh: true,
+              },
             },
-          });
+          );
         });
       });
     },
@@ -135,7 +145,7 @@ export default function StackCards() {
   );
 
   return (
-    <section ref={rootRef} data-rail="Deliverables" className="web-section web-stack">
+    <section ref={rootRef} data-rail="Deliverables" data-station="stack" className="web-section web-stack">
       <div className="web-stack__aside">
         <p className="web-eyebrow">
           <span className="web-sq" aria-hidden="true" />

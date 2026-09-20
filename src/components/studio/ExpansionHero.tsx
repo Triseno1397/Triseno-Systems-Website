@@ -189,9 +189,10 @@ export default function ExpansionHero() {
 
         <h1 id="sx-hero-title" className="sx-hero__title font-display font-bold uppercase">
           <span ref={left} className="sx-hero__half sx-hero__half--l">
+            {/* D1: reads exactly like the chrome lockup — TRISENO / CREATIVE. */}
             <span className="sx-hero__eyebrow font-mono font-normal">
               <Aperture size={14} strokeWidth={1.25} glow />
-              Triseno Studio
+              Triseno / Creative
             </span>
             <span>Video</span> <span>that</span> <span>sells</span>
           </span>

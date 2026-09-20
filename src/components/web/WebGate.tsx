@@ -25,7 +25,10 @@ export default function WebGate() {
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.fromTo(
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: rootRef.current, start: "top 55%", once: true },
+        });
+        tl.fromTo(
           ".web-gate__nest--main .web-gate__frame",
           { scale: 1.7, opacity: 0 },
           {
@@ -34,8 +37,16 @@ export default function WebGate() {
             duration: 1.6,
             ease: "expo.out",
             stagger: { each: 0.11, from: "end" },
-            scrollTrigger: { trigger: rootRef.current, start: "top 55%", once: true },
           },
+          0,
+        );
+        // The threshold: the division's square turns on its corner and gives up
+        // its hue, because the next room — Contact — is achromatic.
+        tl.fromTo(
+          ".web-gate__core",
+          { rotate: 0, scale: 0.3, opacity: 0 },
+          { rotate: 45, scale: 1, opacity: 1, duration: 1.5, ease: "expo.out" },
+          0.7,
         );
       });
     },
@@ -43,7 +54,13 @@ export default function WebGate() {
   );
 
   return (
-    <section ref={rootRef} data-rail="Gate" data-rail-next="Contact" className="web-section web-gate">
+    <section
+      ref={rootRef}
+      data-rail="Gate"
+      data-rail-next="Contact"
+      data-station="gate"
+      className="web-section web-gate"
+    >
       <div aria-hidden="true" className="web-gate__object">
         <div className="web-gate__nest web-gate__nest--main">
           {Array.from({ length: FRAMES }, (_, i) => (
@@ -53,6 +70,7 @@ export default function WebGate() {
               style={{ "--k": i, opacity: 1 - i * 0.13 } as CSSProperties}
             />
           ))}
+          <span className="web-gate__core" />
         </div>
         <div className="web-gate__mirror">
           <div className="web-gate__nest">
@@ -79,6 +97,10 @@ export default function WebGate() {
         </p>
         <div className="web-gate__actions">
           <GhostButton href="/contact">Start a Conversation</GhostButton>
+          <span aria-hidden="true" className="web-gate__tick">
+            <i />
+            Threshold — Contact
+          </span>
         </div>
         <nav aria-label="Other Triseno divisions" className="web-gate__cross">
           <span>Other divisions</span>

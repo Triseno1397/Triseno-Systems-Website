@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pause, Play } from "@phosphor-icons/react";
 import Aperture from "./Aperture";
+import { useMediaQuery } from "./media";
 import { TESTIMONIALS, type Testimonial } from "./testimonials";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -42,11 +43,12 @@ function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
 
 export default function ProofMarquee() {
   const [paused, setPaused] = useState(false);
+  // Under 768px the rows are a snap scroller, not a marquee, so there is
+  // nothing to pause — the wall is swiped a whole card at a time instead.
+  const wide = useMediaQuery("(min-width: 768px)");
 
   return (
     <section data-rail="Proof" className="sx-proof" aria-labelledby="sx-proof-title">
-      <div aria-hidden="true" className="sx-glow sx-glow--high" />
-
       <header className="sx-proof__head">
         <div>
           <p className="sx-kicker font-mono">
@@ -93,15 +95,21 @@ export default function ProofMarquee() {
       </div>
 
       <div className="sx-proof__foot font-mono">
-        <button type="button" className="sx-sound" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
-          {paused ? (
-            <Play size={14} weight="light" aria-hidden="true" />
-          ) : (
-            <Pause size={14} weight="light" aria-hidden="true" />
-          )}
-          {paused ? "Resume wall" : "Pause wall"}
-        </button>
-        <span>Hover a row to hold it</span>
+        {wide ? (
+          <>
+            <button type="button" className="sx-sound" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
+              {paused ? (
+                <Play size={14} weight="light" aria-hidden="true" />
+              ) : (
+                <Pause size={14} weight="light" aria-hidden="true" />
+              )}
+              {paused ? "Resume wall" : "Pause wall"}
+            </button>
+            <span>Hover a row to hold it</span>
+          </>
+        ) : (
+          <span className="sx-proof__swipe">Swipe a row — one card at a time</span>
+        )}
         <span className="sx-proof__sample">Showcase set — sample client names</span>
       </div>
     </section>

@@ -13,8 +13,14 @@
   position: relative;
   background: #000000;
   color: #ffffff;
-  overflow-x: clip;
+  isolation: isolate;
 }
+/* The world: one rendered soundstage behind every section, page scroll as its
+   camera. Sections sit on top of it and own no background of their own, so the
+   page never cuts to a flat black band (M6, bar.md 1). The DOM canvas itself
+   stays true black — the amber is scene light inside the render (§2). */
+.sx-world { position: fixed; inset: 0; z-index: 0; display: block; pointer-events: none; }
+.studio-world__stations { position: relative; z-index: 1; }
 .studio-world ::selection { background: #ffffff; color: #000000; }
 .studio-world :focus-visible { outline: 1px solid var(--hue); outline-offset: 5px; }
 :where(.studio-world) :where(h1, h2, h3, p, ul, ol, figure, blockquote) { margin: 0; padding: 0; }
@@ -23,7 +29,10 @@
 /* ── shared ── */
 .sx-fill { position: absolute; inset: 0; display: block; }
 .sx-fill video,
-.sx-lens__glass video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sx-lens__glass video { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; }
+/* The clip's own still, under the video: a frame is never a black rectangle
+   waiting on a decode. */
+.sx-still { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
 
 .sx-kicker {
   display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
@@ -45,11 +54,23 @@
 .sx-sound:hover,
 .sx-sound[aria-pressed="true"] { background: #ffffff; color: #000000; }
 
-.sx-glow { position: absolute; inset: 0; pointer-events: none; }
-.sx-glow--low { background: radial-gradient(ellipse 75% 46% at 50% 104%, color-mix(in srgb, var(--hue) 24%, transparent) 0%, transparent 70%); }
-.sx-glow--side { background: radial-gradient(ellipse 46% 52% at 76% 46%, color-mix(in srgb, var(--hue) 20%, transparent) 0%, transparent 72%); }
-.sx-glow--high { background: radial-gradient(ellipse 90% 42% at 50% 66%, color-mix(in srgb, var(--hue) 18%, transparent) 0%, transparent 70%); }
-.sx-glow--gate { background: radial-gradient(ellipse 58% 52% at 50% 50%, color-mix(in srgb, var(--hue) 28%, transparent) 0%, transparent 70%); }
+/* Copy sits over a lit world, so each block of text carries its own black
+   scrim. Black only — no DOM gradient ever carries the division hue (§2). */
+.sx-film__intro,
+.sx-film__now,
+.sx-film__caption,
+.sx-behind__text,
+.sx-proof__head > div,
+.sx-gate__body { position: relative; }
+.sx-film__intro::before,
+.sx-film__now::before,
+.sx-film__caption::before,
+.sx-behind__text::before,
+.sx-proof__head > div::before,
+.sx-gate__body::before {
+  content: ""; position: absolute; inset: -26px -44px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.66) 54%, rgba(0, 0, 0, 0) 80%);
+}
 
 /* ═════ 1 · SHOWREEL — scroll-expansion hero ═════ */
 .sx-hero { position: relative; height: 260dvh; }
@@ -147,22 +168,33 @@
 }
 
 /* ═════ 2 · FORMATS — filmstrip ═════ */
-.sx-film { position: relative; background: #000000; }
+.sx-film { position: relative; }
 .sx-film[data-mode="scrub"] { height: calc(100dvh + (var(--frames) - 1) * var(--step)); }
 .sx-film__stage {
-  --film-h: clamp(240px, 42dvh, 560px);
+  --film-h: clamp(220px, 38dvh, 520px);
   position: relative; min-height: 100dvh; overflow: clip;
   display: flex; flex-direction: column;
-  padding-top: 88px; padding-bottom: var(--gutter-y);
+  padding-top: 76px; padding-bottom: var(--gutter-y);
 }
 .sx-film[data-mode="scrub"] .sx-film__stage { position: sticky; top: 0; height: 100dvh; }
 
 .sx-film__head {
   position: relative; flex: none; width: 100%; max-width: 1400px; margin-inline: auto;
   padding-inline: var(--gutter) calc(var(--gutter) + var(--rail-safe));
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 46ch); gap: 24px clamp(32px, 6vw, 120px); align-items: end;
+  display: grid; align-items: end;
 }
-.sx-film__lead { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); }
+/* The offer states itself once; the moment the strip runs it hands the top of
+   the frame to whichever format is in the gate, so the masthead never repeats
+   itself down three consecutive scroll positions. */
+.sx-film__intro,
+.sx-film__now { grid-area: 1 / 1; transition: opacity 700ms var(--ease-expo), transform 900ms var(--ease-expo); }
+.sx-film__now { opacity: 0; transform: translate3d(0, 18px, 0); pointer-events: none; }
+.sx-film[data-moved] .sx-film__intro { opacity: 0; transform: translate3d(0, -18px, 0); pointer-events: none; }
+.sx-film[data-moved] .sx-film__now { opacity: 1; transform: none; pointer-events: auto; }
+.sx-film__lead {
+  font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 62ch; margin-top: 18px;
+}
+.sx-film__now .sx-h3 { max-width: 20ch; }
 
 .sx-film__band { position: relative; flex: none; margin: 22px 0 16px; }
 .sx-film__viewport { position: relative; overflow: clip; }
@@ -202,20 +234,16 @@
 .sx-frame__edge > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sx-frame__edge > span:last-child { flex: none; }
 .sx-frame[data-on] .sx-frame__edge { opacity: 1; color: var(--hue); }
-/* Head leader / tail: the strip never starts or ends on empty black. */
+/* Head leader / tail: mono labels printed on the clear strip, so the world
+   shows through the ends rather than a large empty panel. */
 .sx-frame:first-child::before,
 .sx-frame:last-child::after {
-  content: "Triseno Studio — head leader"; position: absolute; top: -1px; bottom: -1px; width: 64vw;
-  display: flex; align-items: flex-end; padding: 14px 16px; border: 1px solid #ffffff; opacity: 0.45;
+  content: "Triseno / Creative — head leader"; position: absolute; top: 50%; width: 60vw;
+  display: flex; align-items: center; gap: 14px; translate: 0 -50%; opacity: 0.4;
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap;
-  background:
-    radial-gradient(circle at center, transparent 0, transparent calc(var(--film-h) * 0.3 - 1px), #ffffff calc(var(--film-h) * 0.3 - 1px), #ffffff calc(var(--film-h) * 0.3), transparent calc(var(--film-h) * 0.3)),
-    linear-gradient(90deg, transparent calc(50% - 0.5px), #ffffff calc(50% - 0.5px), #ffffff calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    linear-gradient(0deg, transparent calc(50% - 0.5px), #ffffff calc(50% - 0.5px), #ffffff calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    #111111;
 }
-.sx-frame:first-child::before { right: calc(100% + 28px); justify-content: flex-end; }
-.sx-frame:last-child::after { content: "End of reel — start a conversation"; left: calc(100% + 28px); }
+.sx-frame:first-child::before { right: calc(100% + 24px); justify-content: flex-end; padding-right: 16px; }
+.sx-frame:last-child::after { content: "End of reel — start a conversation"; left: calc(100% + 24px); padding-left: 16px; }
 .sx-film[data-mode="native"] .sx-frame:first-child::before,
 .sx-film[data-mode="native"] .sx-frame:last-child::after { display: none; }
 .sx-frame__media {
@@ -225,6 +253,13 @@
 }
 .sx-frame[data-on] .sx-frame__media { filter: grayscale(0) brightness(1); }
 .sx-frame__duo { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #ffffff; }
+/* The flagship anamorphic frame: three shots cut as one film. */
+.sx-frame__seq { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #ffffff; }
+/* A clip shot in another division's hue is graded to the one hue this page is
+   allowed to carry (D2) rather than dropped from the strip. */
+.sx-frame[data-on] .sx-frame__media[data-grade="amber"] {
+  filter: grayscale(1) sepia(0.92) saturate(2.5) hue-rotate(-16deg) brightness(1.04) contrast(1.05);
+}
 .sx-frame__cell { position: relative; display: block; overflow: hidden; background: #111111; }
 .sx-frame__cap {
   position: absolute; left: 0; bottom: 0; padding: 7px 10px; background: #000000;
@@ -235,7 +270,6 @@
   background:
     linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.3) calc(50% - 0.5px), rgba(255, 255, 255, 0.3) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
     linear-gradient(0deg, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.3) calc(50% - 0.5px), rgba(255, 255, 255, 0.3) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    radial-gradient(ellipse at center, color-mix(in srgb, var(--hue) 22%, transparent) 0%, transparent 64%),
     #111111;
   font-size: var(--fs-label); letter-spacing: 0.16em; text-transform: uppercase; text-align: center;
 }
@@ -254,7 +288,7 @@
 .sx-film__progress { position: relative; height: 1px; background: rgba(255, 255, 255, 0.25); margin-bottom: 20px; }
 .sx-film__progress > span { position: absolute; inset: 0; background: #ffffff; transform: scaleX(0); transform-origin: left center; }
 .sx-film__caption {
-  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px clamp(24px, 5vw, 96px); align-items: start;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start;
   animation: sx-caption-in 700ms var(--ease-expo) both;
 }
 @keyframes sx-caption-in {
@@ -264,44 +298,44 @@
 .sx-film__count { font-size: var(--fs-label); letter-spacing: 0.16em; margin-bottom: 10px; }
 .sx-film__count b { font-weight: 400; color: var(--hue); }
 .sx-film__tagline { margin-top: 8px; font-size: var(--fs-body); line-height: 1.4; color: var(--ink-secondary); }
+/* Never clamped: body copy on this page is never cut off mid-sentence. */
 .sx-film__desc {
   font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 62ch; margin-bottom: 14px;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden;
 }
 
 @media (min-width: 768px) {
   /* reduced motion / CMS preview on desktop: no pin, so the strip can be taller */
   .sx-film[data-mode="native"] .sx-film__stage { --film-h: clamp(260px, 50dvh, 620px); }
 }
-@media (max-height: 820px) and (min-width: 768px) {
+@media (max-height: 960px) and (min-width: 768px) {
   .sx-film[data-mode="scrub"] .sx-film__lead { display: none; }
-  .sx-film[data-mode="scrub"] .sx-film__head { grid-template-columns: 1fr; }
-  .sx-film[data-mode="scrub"] .sx-h2 { max-width: none; }
-  .sx-film[data-mode="scrub"] .sx-film__desc { -webkit-line-clamp: 2; line-clamp: 2; }
+}
+@media (max-height: 820px) and (min-width: 768px) {
+  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(190px, 32dvh, 460px); }
 }
 @media (max-height: 700px) and (min-width: 768px) {
-  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(190px, 34dvh, 520px); padding-top: 72px; }
+  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(170px, 28dvh, 420px); padding-top: 68px; }
   .sx-film[data-mode="scrub"] .sx-tags { display: none; }
 }
-@media (max-width: 1023px) {
-  .sx-film__head { grid-template-columns: 1fr; }
-}
 @media (max-width: 767px) {
-  .sx-film__stage { --film-h: 50dvh; padding-top: 76px; padding-bottom: calc(var(--gutter-y) + 64px); }
+  .sx-film__stage { --film-h: 42dvh; padding-top: 72px; padding-bottom: calc(var(--gutter-y) + 56px); }
   .sx-film__head { padding-inline: var(--gutter) 60px; }
   /* the first (portrait) frame can reach the centre snap position at scrollLeft 0 */
   .sx-film__track { gap: 18px; padding-inline: max(9vw, calc(50vw - var(--film-h) * 0.28125)); }
   .sx-frame { max-width: none; }
   .sx-frame[data-orient="landscape"] { height: auto; width: 82vw; }
   .sx-film__foot { padding-inline: var(--gutter) 60px; }
-  .sx-film__caption { grid-template-columns: 1fr; }
-  .sx-film__desc { -webkit-line-clamp: 6; line-clamp: 6; }
+  /* Body copy is never cut off mid-sentence on a phone. */
+  .sx-film__desc { display: block; -webkit-line-clamp: none; line-clamp: none; overflow: visible; }
+  .sx-film__lead { margin-top: 14px; }
+  .sx-film[data-mode="native"] .sx-film__foot { flex: none; }
 }
 
 /* ═════ 3 · BEHIND — split-line mask reveal ═════ */
 .sx-behind {
-  position: relative; min-height: 100dvh; overflow: clip; background: #000000;
-  padding-block: clamp(120px, 18dvh, 210px) clamp(40px, 6dvh, 72px);
+  position: relative; min-height: 100dvh; overflow: clip;
+  /* M6: the world runs straight through, so the lead-in is scene, not a band. */
+  padding-block: clamp(72px, 11dvh, 128px) clamp(32px, 5dvh, 56px);
 }
 .sx-behind__grid {
   position: relative; width: 100%; max-width: 1400px; margin-inline: auto;
@@ -311,8 +345,9 @@
 }
 .sx-behind__title { font-size: clamp(30px, 4vw, 72px); line-height: 1.08; letter-spacing: 0.08em; }
 .sx-behind__rule { display: block; height: 1px; background: #ffffff; margin-block: clamp(32px, 5dvh, 56px); }
+/* §3: one body size on the page — 17px / 1.5, max 62ch. */
 .sx-behind__para {
-  font-size: var(--fs-mid); line-height: 1.42; color: var(--ink-secondary); max-width: 40ch;
+  font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 58ch;
 }
 .sx-behind__para + .sx-behind__para { margin-top: 1.5em; }
 .sx-line-mask { display: block; overflow: hidden; padding-bottom: 0.1em; margin-bottom: -0.1em; }
@@ -354,9 +389,9 @@
 
 /* ═════ 4 · PROOF — testimonial marquee ═════ */
 .sx-proof {
-  position: relative; min-height: 100dvh; overflow: clip; background: #000000;
+  position: relative; min-height: 100dvh; overflow: clip;
   display: flex; flex-direction: column; justify-content: center;
-  padding-block: 104px calc(var(--gutter-y) + 16px);
+  padding-block: 112px calc(var(--gutter-y) + 16px);
 }
 .sx-proof__head {
   position: relative; width: 100%; max-width: 1400px; margin: 0 auto clamp(36px, 6dvh, 64px);
@@ -411,17 +446,31 @@
 @media (max-width: 767px) {
   .sx-proof { padding-bottom: calc(var(--gutter-y) + 64px); }
   .sx-proof__head { padding-inline: var(--gutter) 60px; }
-  .sx-card { width: 78vw; padding: 20px; }
   .sx-proof__foot { padding-inline: var(--gutter) 60px; }
-  .sx-proof__foot > span:not(.sx-proof__sample) { display: none; }
   .sx-proof__sample { margin-left: 0; }
+  .sx-proof__swipe { opacity: 0.6; }
+  /* A marquee always crops its edges. On a phone that left no card readable,
+     so the wall becomes a snap scroller: one whole card at a time. */
+  .sx-marquee {
+    overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+    scrollbar-width: none; -webkit-mask-image: none; mask-image: none;
+    scroll-padding-inline: var(--gutter);
+  }
+  .sx-marquee::-webkit-scrollbar { display: none; }
+  .sx-marquee__track { animation: none; width: max-content; }
+  .sx-marquee__set { padding-inline: var(--gutter); gap: 14px; }
+  .sx-marquee__set[aria-hidden="true"] { display: none; }
+  .sx-card { width: min(84vw, 360px); padding: 20px; scroll-snap-align: center; }
 }
 
 /* ═════ 5 · GATE ═════ */
-.sx-gate {
-  position: relative; min-height: 100dvh; overflow: clip; background: #000000;
+/* The iris keeps stopping down to the last pixel of the document, so the page
+   never ends on two identical frames. */
+.sx-gate { position: relative; height: 180dvh; }
+.sx-gate__stage {
+  position: sticky; top: 0; height: 100dvh; overflow: clip;
   display: grid; place-items: center; text-align: center;
-  padding: 140px calc(var(--gutter) + var(--rail-safe)) calc(var(--gutter-y) + 110px);
+  padding: 120px calc(var(--gutter) + var(--rail-safe)) calc(var(--gutter-y) + 104px);
 }
 .sx-gate__scene { position: absolute; inset: 0; pointer-events: none; }
 .sx-gate__iris {
@@ -432,12 +481,19 @@
   position: absolute; left: 0; right: 0; top: 50%; height: 1px; opacity: 0.5;
   background: linear-gradient(90deg, transparent, #ffffff 22%, transparent 40%, transparent 60%, #ffffff 78%, transparent);
 }
-.sx-gate__body { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
-.sx-gate__body::before {
-  content: ""; position: absolute; inset: -18% -24%; z-index: -1; pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.62) 45%, rgba(0, 0, 0, 0) 72%);
+.sx-gate__body {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;
+  will-change: transform, opacity;
 }
 .sx-gate .sx-kicker { justify-content: center; margin-bottom: 26px; }
+.sx-gate__tick {
+  display: flex; align-items: center; gap: 14px; margin-top: 24px;
+  font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.6;
+}
+.sx-gate__tick-rail { position: relative; display: block; width: 92px; height: 1px; background: rgba(255, 255, 255, 0.28); }
+.sx-gate__tick-rail > span {
+  position: absolute; inset: 0; background: var(--hue); transform: scaleX(0); transform-origin: left center;
+}
 .sx-gate__title { font-size: clamp(34px, 5vw, 84px); line-height: 1.06; letter-spacing: 0.08em; max-width: 15ch; }
 .sx-gate__lead { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 52ch; margin-block: 26px 38px; }
 .sx-gate__direct,
@@ -454,7 +510,8 @@
 .sx-gate__cross > a { display: inline-flex; align-items: center; gap: 10px; }
 
 @media (max-width: 767px) {
-  .sx-gate { padding: 130px 60px calc(var(--gutter-y) + 150px) var(--gutter); }
+  .sx-gate { height: 165dvh; }
+  .sx-gate__stage { padding: 110px 60px calc(var(--gutter-y) + 140px) var(--gutter); }
   .sx-gate__iris { width: 150vw; }
   .sx-gate__cross { bottom: calc(var(--gutter-y) + 56px); left: var(--gutter); right: var(--gutter); }
 }
@@ -474,9 +531,21 @@
   .sx-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
   .sx-marquee__track { animation: none; }
   .sx-marquee__set[aria-hidden="true"] { display: none; }
-  .sx-frame__media, .sx-frame__edge, .sx-card__iris, .sx-card__note { transition-duration: 1ms !important; }
+  .sx-frame__media, .sx-frame__edge, .sx-card__iris, .sx-card__note,
+  .sx-film__intro, .sx-film__now { transition-duration: 1ms !important; }
+  .sx-gate { height: auto; }
+  .sx-gate__stage { position: relative; height: auto; min-height: 100dvh; }
+  .sx-gate__tick { display: none; }
 }
 @media (prefers-reduced-motion: reduce) and (max-width: 767px) {
   .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 12px - 12dvh), 0); }
   .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 12px) - 12dvh), 0); }
+}
+
+/* 05 Brand Films, pre-delivery: the reference cut names itself on the frame,
+   so the flagship panel reads as a deliberate assembly, not a missing asset.
+   Delete nothing here when the film lands — the note renders only for the cut. */
+.sx-frame__note {
+  position: absolute; left: 0; top: 0; z-index: 2; padding: 7px 10px; background: #000000;
+  font-size: var(--fs-label); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
 }

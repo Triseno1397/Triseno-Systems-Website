@@ -1,16 +1,24 @@
 # Brief critic — piece 4: AI Infrastructure (`/ai-infrastructure`)
-Judge the screenshots in `design-loop/shots/ours/p4/`. Do NOT open any source code. Ignore beauty entirely.
+Judge the screenshots in `design-loop/shots/ours/p4/`. Do NOT open any source code. Ignore whether you personally like the look.
 
-This division sells **AI infrastructure consulting, architecture and implementation** to operations leaders: multi-agent orchestration, workflow compression, decision-layer automation. The buyer is a sceptical operations or technology executive who has been pitched AI hype before. Judge only whether the page does that job:
-1. Within the first screen, is it unmistakable this is AI infrastructure for operations (not a chatbot vendor, not a creative studio)? Does the chrome say which division you are in?
-2. Does the page explain the mechanism — what is actually built (agent roles, pipelines, compression) — rather than adjectives? Point to where.
-3. Is the engagement process legible: how a project runs from diagnosis to deployment? Count the steps and check they are readable, not just decorative.
-4. Are the capabilities distinguishable from one another, or do they blur into interchangeable cards?
-5. Does it survive a sceptic: is any number or claim shown, and is it presented honestly (not fake dashboards, not invented client logos)?
-6. Does it end with a clear next step?
-7. Anything broken: blank/black frames, unreadable small text, clipped or overlapping content, dead scroll positions, mobile problems (`mobile-*.png`).
+## What this website is for — read this first
+This site IS the demo. Triseno builds websites for clients in every industry. When a prospect asks "can I see your work?", the owner sends them this site. There is no portfolio of past client work and there never will be — the site itself is the proof of skill. So a visitor must scroll it and come away thinking **"they can build anything."**
 
+That means you do NOT judge whether the page proves results, shows past clients, or backs up claims. Testimonials, stats, case studies and example websites on this page are **demonstrations of a component** (a testimonial marquee, an odometer, a before/after slider), filled with realistic fictional content. Judge them as components, never as evidence.
+
+This page is the **AI Infrastructure** division (cyan). A prospect for AI consulting and implementation lands here directly.
+
+## Judge only this
+1. **Range.** List every section and name the primary interaction or motion mechanic each one demonstrates. Are they genuinely different from one another, or does the page repeat the same trick (e.g. three sections that are all "text fades up over a card")? Name any repeats.
+2. **Showcase value.** For each section: would a prospect watching it think "I want that on my site"? Or is it a generic block any template would have? Name the weakest section.
+3. **Does it read as finished work?** A demo that looks half-built sells the opposite of skill. Flag any section that reads as unfinished, empty, placeholder, broken, or like a raw component demo dropped onto a page.
+4. **Division identity.** Is it unmistakable within the first screen which division this is and what it offers? Does the chrome name it?
+5. **Does the demo break anywhere?** Clipped or overlapping text, text unreadable over media, blank or black frames, dead scroll positions where nothing is on screen, mobile problems (`mobile-*.png`). On a demo site, a visible bug is the worst possible failure — it tells the prospect the builder is careless.
+6. **Ending.** Does it close with a clear way to start a conversation?
+
+Note: diagrams here are illustrative demonstrations of how a system could be built. Judge whether they are clear and visually impressive as components, not whether they prove results.
 Be harsh. Praise is not useful. Output exactly:
 VERDICT: PASS or FAIL
-BIGGEST GAP: one sentence naming the single most damaging failure (or "none").
+BIGGEST GAP: one sentence naming the single change that would most improve this page as a showcase (or "none").
+RANGE: the list from point 1, one line per section: "section — mechanic".
 EVIDENCE: up to 6 bullets, each citing a screenshot filename.

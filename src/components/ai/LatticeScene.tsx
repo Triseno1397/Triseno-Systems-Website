@@ -56,7 +56,20 @@ const SPOT_FRAG = /* glsl */ `
     gl_FragColor = vec4(vec3(a * a * uStrength), 1.0);
   }
 `;
+// The room: a wide, very soft neutral wash that sits behind the lattice so the
+// world reads as a lit space rather than a wireframe floating in a void. Grey
+// only — the hue stays on the nodes and edges (design-system 2).
+const ROOM_FRAG = /* glsl */ `
+  varying vec2 vUv;
+  uniform float uStrength;
+  void main() {
+    vec2 p = (vUv - 0.5) * vec2(1.0, 1.45);
+    float a = smoothstep(0.62, 0.0, length(p));
+    gl_FragColor = vec4(vec3(pow(a, 1.35) * uStrength), 1.0);
+  }
+`;
 const SPOT_DISTANCE = 9.5;
+const ROOM_DISTANCE = 15.5;
 
 interface Pulse {
   edge: number;
@@ -88,6 +101,8 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
   const group = useRef<THREE.Group>(null);
   const nodes = useRef<THREE.InstancedMesh>(null);
   const spot = useRef<THREE.Mesh>(null);
+  const room = useRef<THREE.Mesh>(null);
+  const side = useRef(latticeState.side);
   const { camera, size, gl } = useThree();
 
   const sim = useMemo(() => {
@@ -169,7 +184,20 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
       new THREE.ShaderMaterial({
         vertexShader: SPOT_VERT,
         fragmentShader: SPOT_FRAG,
-        uniforms: { uStrength: { value: 0.2 } },
+        uniforms: { uStrength: { value: 0.4 } },
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [],
+  );
+  const roomMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: SPOT_VERT,
+        fragmentShader: ROOM_FRAG,
+        uniforms: { uStrength: { value: 0.24 } },
         transparent: true,
         depthWrite: false,
         depthTest: false,
@@ -198,8 +226,9 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
       pulseMat.dispose();
       edgeMat.dispose();
       spotMat.dispose();
+      roomMat.dispose();
     },
-    [edgeGeo, haloGeo, pulseGeo, frames, haloMat, pulseMat, edgeMat, spotMat],
+    [edgeGeo, haloGeo, pulseGeo, frames, haloMat, pulseMat, edgeMat, spotMat, roomMat],
   );
 
   const tmp = useMemo(
@@ -235,10 +264,22 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
       spot.current.quaternion.copy(camera.quaternion);
     }
 
+    /* the object slides to whichever side the current section's card is not on */
+    const wantSide = wide ? latticeState.side : 0;
+    side.current += (wantSide - side.current) * (1 - Math.exp(-dt * 1.5));
+    const ox = side.current * (wide ? 3.1 : 0);
+
+    /* the room wash follows the object so the frame is lit, never a flat void */
+    if (room.current) {
+      tmp.v.set(side.current * 0.52, wide ? 0.02 : 0.16, 0.5).unproject(camera).sub(camera.position).normalize();
+      room.current.position.copy(camera.position).addScaledVector(tmp.v, ROOM_DISTANCE);
+      room.current.quaternion.copy(camera.quaternion);
+    }
+
     /* the whole object breathes and leans toward the pointer */
-    g.position.set(wide ? 2.7 : 0, wide ? 0.15 : 0.9, 0);
+    g.position.set(ox, wide ? 0.05 : 0.7, 0);
     g.rotation.set(0.05 - sim.py * 0.05, -0.44 + Math.sin(t * 0.12) * 0.12 + sim.px * 0.09, 0);
-    g.scale.setScalar((wide ? 1.12 : 0.8) * (1 + Math.sin(t * 0.55) * 0.014));
+    g.scale.setScalar((wide ? 1.2 : 1.0) * (1 + Math.sin(t * 0.55) * 0.014));
     g.updateMatrixWorld();
 
     const { cur, intensity, bump, quats, hot } = sim;
@@ -273,7 +314,7 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
       tmp.s.setScalar(1 + v * 0.7);
       tmp.m.compose(tmp.p, quats[i], tmp.s);
       mesh.setMatrixAt(i, tmp.m);
-      const grey = lattice.layer[i] === 1 ? 0.62 : 0.34;
+      const grey = lattice.layer[i] === 1 ? 0.7 : 0.44;
       tmp.c.setRGB(grey, grey, grey).lerp(CYAN, Math.min(1, v * 1.15));
       mesh.setColorAt(i, tmp.c);
     }
@@ -296,7 +337,7 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
       ePos[o + 4] = cur[b * 3 + 1];
       ePos[o + 5] = cur[b * 3 + 2];
       const mid = lattice.layer[a] === 1 && lattice.layer[b] === 1;
-      const g0 = mid ? 0.2 : 0.11;
+      const g0 = mid ? 0.42 : 0.24;
       for (let s = 0; s < 2; s++) {
         const v = s === 0 ? intensity[a] : intensity[b];
         const fade = 1 - v * 0.6;
@@ -382,8 +423,11 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
 
   return (
     <>
+      <mesh ref={room} material={roomMat} renderOrder={-2} frustumCulled={false}>
+        <planeGeometry args={[42, 30]} />
+      </mesh>
       <mesh ref={spot} material={spotMat} renderOrder={-1} frustumCulled={false}>
-        <planeGeometry args={[6.4, 6.4]} />
+        <planeGeometry args={[7.6, 7.6]} />
       </mesh>
       <group ref={group}>
       <instancedMesh ref={nodes} args={[undefined, undefined, count]} frustumCulled={false}>
@@ -398,7 +442,7 @@ function LatticeObject({ onReady }: { onReady?: () => void }) {
           <lineBasicMaterial
             color={f.mid ? "#00b4d8" : "#ffffff"}
             transparent
-            opacity={f.mid ? 0.55 : 0.16}
+            opacity={f.mid ? 0.62 : 0.26}
             depthWrite={false}
           />
         </lineLoop>
@@ -416,7 +460,7 @@ export default function LatticeScene({ onReady }: { onReady?: () => void }) {
       camera={{ position: [0, 2.3, 10.4], fov: 36, near: 0.1, far: 60 }}
       onCreated={({ scene, camera }) => {
         scene.background = new THREE.Color("#000000");
-        scene.fog = new THREE.Fog("#000000", 8.5, 17);
+        scene.fog = new THREE.Fog("#000000", 11.5, 26);
         camera.lookAt(0, 0.1, 0);
       }}
       style={{ pointerEvents: "none" }}

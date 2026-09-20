@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { TextRotate, type RotateWord } from "@/components/ui/TextRotate";
+import HeadlineRotate, { type RotateWord } from "@/components/world/HeadlineRotate";
 import GhostButton from "@/components/ui/GhostButton";
 import BeamsCollision from "@/components/ui/BeamsCollision";
 import Glyph from "@/components/world/Glyph";
 import Loader from "@/components/world/Loader";
+import WorldAtmosphere from "@/components/world/WorldAtmosphere";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -347,7 +348,7 @@ export default function PortalPage() {
         aria-label="Triseno Systems"
         className={full ? "relative z-10 h-[200dvh]" : "relative z-10 min-h-[100dvh] overflow-hidden"}
       >
-        {mode === "lite" ? <LiteHeroBackdrop active={active} /> : null}
+        {mode === "lite" ? <LiteHeroBackdrop /> : null}
 
         <div
           ref={heroInnerRef}
@@ -363,10 +364,10 @@ export default function PortalPage() {
                 Infrastructure.
               </span>
               <span aria-hidden="true" className="block">
-                <TextRotate words={lineOne} index={active} showGlyph={false} showRule={false} />
+                <HeadlineRotate words={lineOne} index={active} showGlyph={false} showRule={false} />
               </span>
               <span aria-hidden="true" className="block">
-                <TextRotate words={lineTwo} index={active} />
+                <HeadlineRotate words={lineTwo} index={active} />
               </span>
             </h1>
             <p className="portal-sub mt-6 max-w-[46ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
@@ -419,19 +420,14 @@ export default function PortalPage() {
         </section>
       ) : (
         <section data-rail="Doors" aria-label="Three divisions" className="relative z-10">
-          {DOOR_ITEMS.map((door, i) => (
+          {DOOR_ITEMS.map((door) => (
             <div key={door.key} data-lite-door="" className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/images/portal/door-${i}.jpg`}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="lite-door__poster absolute inset-0 h-full w-full object-cover"
-              />
+              {/* the lit place, composited in CSS — it takes the door's hue only
+                  while that door owns the viewport (D2) */}
+              <WorldAtmosphere hue={door.hue} />
               <div aria-hidden="true" className="lite-door__shade absolute inset-0" />
               <div className="door-card door-card--static relative">
-                <DoorCardBody index={i} />
+                <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
               </div>
             </div>
           ))}
@@ -454,8 +450,7 @@ export default function PortalPage() {
       >
         {mode === "lite" ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/portal/gate.jpg" alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+            <WorldAtmosphere />
             <div aria-hidden="true" className="lite-door__shade absolute inset-0" />
             <div aria-hidden="true" className="portal-gate__rain absolute inset-x-0 bottom-0">
               <BeamsCollision floor={0.78} xRange={[0.06, 0.8]} />
@@ -500,25 +495,13 @@ function DoorCardBody({ index }: { index: number }) {
   );
 }
 
-/* Lite hero backdrop (mobile / reduced motion / no WebGL): posters rendered from
-   the real 3D world, one per division glyph, in the resting white light. They
-   cross-fade with the headline. */
-function LiteHeroBackdrop({ active }: { active: number }) {
-  const shown = active < 3 ? active : 0;
+/* Lite hero backdrop (mobile / reduced motion / no WebGL): the same place the
+   3D world renders, composited in CSS. Achromatic at rest (design-system §1) —
+   the portal has no hue of its own — so nothing here is preselected. */
+function LiteHeroBackdrop() {
   return (
     <div aria-hidden="true" className="lite-backdrop absolute inset-0">
-      {[0, 1, 2].map((i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={`/images/portal/hero-${i}.jpg`}
-          alt=""
-          decoding="async"
-          fetchPriority={i === 0 ? "high" : "low"}
-          className="lite-backdrop__poster absolute inset-0 h-full w-full object-cover"
-          data-on={i === shown ? "" : undefined}
-        />
-      ))}
+      <WorldAtmosphere />
       <div className="lite-backdrop__shade absolute inset-0" />
     </div>
   );

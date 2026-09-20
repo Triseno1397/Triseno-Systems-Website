@@ -57,6 +57,14 @@ export default function Chrome() {
     return () => lockScroll(false);
   }, [menuOpen]);
 
+  // Marks the routes that carry the world chrome, so the chrome's reserved
+  // lanes (world.css) only inset pages that actually have chrome on them.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-world-chrome", "");
+    return () => root.removeAttribute("data-world-chrome");
+  }, []);
+
   return (
     <>
       <MorphNav
@@ -110,6 +118,11 @@ function MorphNav({
       data-compact={compact ? "" : undefined}
       style={{ ["--word-w" as string]: `${wordWidth}px`, ["--div-w" as string]: `${divisionWidth}px` }}
     >
+      {/* Soft corner scrims — not a bar and not a box: elliptical pools of shade
+          that fade to nothing, so the lockup and the trigger stay readable over
+          a white headline, a bright video frame or a light mock site. */}
+      <span aria-hidden="true" className="chrome-scrim chrome-scrim--tl" />
+      <span aria-hidden="true" className="chrome-scrim chrome-scrim--tr" />
 
       <div className="relative mx-auto flex items-start justify-between px-[var(--gutter)]">
         <WarpLink
@@ -296,6 +309,7 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
       aria-label={up ? "Back to top" : "Back to portal"}
       className="chrome-btn chrome-btn--bl fixed bottom-[var(--gutter-y)] left-[var(--gutter)] z-[800]"
     >
+      <span aria-hidden="true" className="chrome-scrim chrome-scrim--bl" />
       {up ? <CaretUp size={24} weight="light" /> : <CaretLeft size={24} weight="light" />}
     </button>
   );
@@ -310,6 +324,7 @@ function ContactIcon() {
       aria-label="Contact — start a conversation"
       className="chrome-btn chrome-btn--br fixed bottom-[var(--gutter-y)] right-[var(--gutter)] z-[800]"
     >
+      <span aria-hidden="true" className="chrome-scrim chrome-scrim--br" />
       <EnvelopeSimple size={24} weight="light" />
     </WarpLink>
   );
@@ -381,6 +396,7 @@ function ProgressRail({ pathname }: { pathname: string }) {
       aria-hidden="true"
       className="progress-rail pointer-events-none fixed right-[var(--gutter)] top-1/2 z-[800] flex w-[44px] -translate-y-1/2 flex-col items-center gap-4 text-white"
     >
+      <span aria-hidden="true" className="chrome-scrim chrome-scrim--rail" />
       <span className="font-mono text-[12px] tracking-[0.1em]">
         {String(labels.index).padStart(2, "0")}
       </span>

@@ -135,18 +135,18 @@ export default function Industries() {
     <section
       ref={sectionRef}
       data-rail="Industries"
+      data-world-side="right"
       aria-labelledby="ai-ind-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
-        <header className="ai-head">
+        <header className="ai-head ai-head--single">
           <p className="ai-label">
             <b>05</b> / Industries
           </p>
           <h2 id="ai-ind-title" className="ai-h2 font-display font-semibold uppercase">
             {INDUSTRIES_INTRO.title}
           </h2>
-          <p className="ai-body max-w-[58ch]">{INDUSTRIES_INTRO.body}</p>
         </header>
 
         <ul className="ai-rows">
@@ -189,7 +189,7 @@ export default function Industries() {
                   >
                     <div>
                       <p className="ai-label">{industry.full}</p>
-                      <p className="ai-body mt-4 max-w-[62ch]">{industry.body}</p>
+                      <p className="ai-body mt-4 max-w-[48ch]">{industry.body}</p>
                     </div>
                     <AgentLog industry={industry} run={seen} />
                   </div>

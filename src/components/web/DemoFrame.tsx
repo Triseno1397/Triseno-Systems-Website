@@ -4,7 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import ConceptSite, { CONCEPT_SECTIONS } from "./ConceptSite";
+import ConceptSite from "./ConceptSite";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,7 +17,6 @@ gsap.registerPlugin(ScrollTrigger);
  *   on the reflective floor and tilts up (perspective rotateX, scrubbed);
  * - once upright the scroll keeps going INSIDE the frame: the concept site
  *   travels through its viewport (the stock card is a still image);
- * - a mono readout names the section of the concept site currently in view;
  * - the site is live HTML/CSS sized in container units, so it is crisp at any
  *   frame size. Fictional brand, labelled as a concept.
  * Reduced motion: frame upright, its viewport scrolls natively, nothing pinned.
@@ -27,9 +26,6 @@ export default function DemoFrame() {
   const deviceRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
-  const indexRef = useRef<HTMLSpanElement>(null);
-  const nameRef = useRef<HTMLSpanElement>(null);
-  const pctRef = useRef<HTMLSpanElement>(null);
 
   useGSAP(
     () => {
@@ -51,22 +47,6 @@ export default function DemoFrame() {
         if (!root || !device || !viewport || !page) return;
 
         const travel = () => Math.max(0, page.scrollHeight - viewport.clientHeight);
-        let last = -1;
-        const readout = () => {
-          const y = -(gsap.getProperty(page, "y") as number);
-          const probe = y + viewport.clientHeight * 0.5;
-          const blocks = Array.from(page.querySelectorAll<HTMLElement>("[data-concept-section]"));
-          let idx = 0;
-          blocks.forEach((b, i) => {
-            if (b.offsetTop <= probe) idx = i;
-          });
-          const t = travel();
-          if (pctRef.current) pctRef.current.textContent = String(Math.round(t ? (y / t) * 100 : 0)).padStart(3, "0");
-          if (idx === last) return;
-          last = idx;
-          if (indexRef.current) indexRef.current.textContent = String(idx + 1).padStart(2, "0");
-          if (nameRef.current) nameRef.current.textContent = CONCEPT_SECTIONS[idx] ?? "";
-        };
 
         const tl = gsap.timeline({
           defaults: { ease: "none" },
@@ -76,8 +56,6 @@ export default function DemoFrame() {
             end: "bottom bottom",
             scrub: 0.6,
             invalidateOnRefresh: true,
-            onUpdate: readout,
-            onRefresh: readout,
           },
         });
 
@@ -97,7 +75,7 @@ export default function DemoFrame() {
   );
 
   return (
-    <section ref={rootRef} id="web-demo" data-rail="Demo" className="web-demo">
+    <section ref={rootRef} id="web-demo" data-rail="Demo" data-station="demo" className="web-demo">
       <div className="web-demo__stage">
         <header className="web-demo__head">
           <p className="web-eyebrow">
@@ -113,14 +91,14 @@ export default function DemoFrame() {
 
         <div className="web-demo__rig">
           <div ref={deviceRef} className="web-demo__device">
-            <div className="web-demo__bar">
-              <span aria-hidden="true" className="web-demo__dots">
+            <div className="web-browser__bar">
+              <span aria-hidden="true" className="web-browser__dots">
                 <i />
                 <i />
                 <i />
               </span>
-              <span className="web-demo__url">hotelquillon.example</span>
-              <span className="web-demo__tag">Concept</span>
+              <span className="web-browser__url">hotelquillon.example</span>
+              <span className="web-browser__tag">Concept</span>
             </div>
             <div
               ref={viewportRef}
@@ -137,16 +115,6 @@ export default function DemoFrame() {
           </div>
           <span aria-hidden="true" className="web-demo__mirror" />
         </div>
-
-        <p className="web-demo__readout" aria-hidden="true">
-          <span>
-            Section <span ref={indexRef}>01</span>/{String(CONCEPT_SECTIONS.length).padStart(2, "0")} —{" "}
-            <span ref={nameRef}>{CONCEPT_SECTIONS[0]}</span>
-          </span>
-          <span className="web-readout-hue">
-            Scroll <span ref={pctRef}>000</span>%
-          </span>
-        </p>
       </div>
     </section>
   );

@@ -4,40 +4,37 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { RANGE } from "./RangeComps";
 
 /**
- * Range — hover-swap gallery. Industries in display type; on a fine pointer a
- * framed preview panel trails the cursor and its reel of concept comps swaps
- * to the hovered row (one transform on the reel, one on the panel). Keyboard
- * focus docks the panel beside the focused row. On touch there is no panel:
- * tapping a row opens its comp inline beneath it.
+ * Range — hover-swap gallery, section 05, standing in the world.
+ *
+ * DESKTOP: industries in display type down the left, and a DOCKED browser
+ * frame in its own column on the right. Hovering or focusing a row runs the
+ * reel of concept sites to that industry (one transform on the reel). The
+ * panel is docked rather than cursor-following on purpose: a panel that
+ * follows the cursor lands on top of the very words it is illustrating.
+ *
+ * PHONE: there is no hover, so the concept sites are not hidden behind one —
+ * they are the section. A full-width snap carousel of the eight sites sits
+ * under the heading, and tapping an industry in the list below runs the
+ * carousel to it. The argument of this section is the work, so on the device
+ * most prospects use, the work is what is on screen.
  */
-
-const PANEL_W = 440;
-const PANEL_H = 330;
 
 export default function RangeGallery() {
   const [active, setActiveRaw] = useState<number | null>(null);
-  // The reel keeps showing the last comp while the panel closes.
+  /** The reel keeps showing the last site while the panel settles. */
   const [shown, setShown] = useState(0);
-  const [open, setOpen] = useState<number | null>(null);
   const [fine, setFine] = useState(true);
 
-  const panelRef = useRef<HTMLDivElement>(null);
-  const target = useRef({ x: 0, y: 0 });
-  const current = useRef({ x: 0, y: 0 });
-  const placed = useRef(false);
-  const raf = useRef(0);
-  const reduced = useRef(false);
+  const railRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<Array<HTMLLIElement | null>>([]);
 
   useEffect(() => {
-    const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+    // Matches the CSS dock query exactly.
+    const mq = window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)");
     const sync = () => setFine(mq.matches);
     sync();
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     mq.addEventListener("change", sync);
-    return () => {
-      mq.removeEventListener("change", sync);
-      cancelAnimationFrame(raf.current);
-    };
+    return () => mq.removeEventListener("change", sync);
   }, []);
 
   const activate = useCallback((i: number) => {
@@ -46,132 +43,160 @@ export default function RangeGallery() {
   }, []);
   const release = useCallback((i: number) => setActiveRaw((v) => (v === i ? null : v)), []);
 
-  const aim = useCallback((x: number, y: number) => {
-    const w = Math.min(PANEL_W, window.innerWidth * 0.34);
-    const h = (w / PANEL_W) * PANEL_H;
-    const tx = Math.min(Math.max(16, x + 28), window.innerWidth - w - 84);
-    const ty = Math.min(Math.max(72, y - h * 0.5), window.innerHeight - h - 24);
-    target.current = { x: tx, y: ty };
-    if (!placed.current) {
-      placed.current = true;
-      current.current = { x: tx, y: ty };
-    }
-    if (raf.current) return;
+  /** Phone: keep the list in step with whichever site the carousel has landed on. */
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || fine) return;
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const mid = rail.scrollLeft + rail.clientWidth / 2;
+      let idx = 0;
+      slideRefs.current.forEach((slide, i) => {
+        if (slide && slide.offsetLeft <= mid) idx = i;
+      });
+      setShown(idx);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(read);
+    };
+    rail.addEventListener("scroll", onScroll, { passive: true });
+    read();
+    return () => {
+      rail.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, [fine]);
 
-    function step() {
-      const panel = panelRef.current;
-      if (!panel) {
-        raf.current = 0;
-        return;
-      }
-      const k = reduced.current ? 1 : 0.14;
-      const c = current.current;
-      c.x += (target.current.x - c.x) * k;
-      c.y += (target.current.y - c.y) * k;
-      panel.style.transform = `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`;
-      const rest = Math.abs(target.current.x - c.x) + Math.abs(target.current.y - c.y);
-      raf.current = rest > 0.3 ? requestAnimationFrame(step) : 0;
-    }
-    raf.current = requestAnimationFrame(step);
-  }, []);
-
-  const onListMove = (e: React.PointerEvent<HTMLOListElement>) => {
-    if (e.pointerType === "touch" || !fine) return;
-    aim(e.clientX, e.clientY);
+  const runTo = (i: number) => {
+    const rail = railRef.current;
+    const slide = slideRefs.current[i];
+    if (!rail || !slide) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    rail.scrollTo({ left: slide.offsetLeft - rail.offsetLeft, behavior: reduced ? "auto" : "smooth" });
   };
 
-  const onRowFocus = (i: number, el: HTMLElement) => {
-    activate(i);
-    if (!fine) return;
-    // Keyboard: dock the panel beside the focused row.
-    if (el.matches(":focus-visible")) {
-      const r = el.getBoundingClientRect();
-      aim(r.left + r.width * 0.56, r.top + r.height * 0.5);
-    }
-  };
-
-  const reelStyle = {
-    transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)`,
-  } as CSSProperties;
+  const reelStyle = { transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)` } as CSSProperties;
+  const item = RANGE[shown];
 
   return (
-    <section data-rail="Range" className="web-section web-range">
+    <section data-rail="Range" data-station="range" className="web-section web-range">
       <header className="web-range__head">
         <h2 className="web-eyebrow">
           <span className="web-sq" aria-hidden="true" />
           05 — Range — any industry, its own voice
         </h2>
         <p className="web-body">
-          Eight concept directions, eight layouts, eight typographic voices.{" "}
-          <span className="web-hover-only">Hover a row.</span>
-          <span className="web-touch-only">Tap a row.</span> Fictional brands, labelled as concepts.
+          Eight concept directions, eight layouts, eight typographic voices.
+          <span className="web-hover-only"> Hover a row to run the frame.</span>
+          <span className="web-touch-only"> Swipe the frames, or tap an industry.</span> Fictional brands,
+          labelled as concepts.
         </p>
       </header>
 
-      <ol className="web-range__list" data-active={active !== null ? "" : undefined} onPointerMove={onListMove}>
-        {RANGE.map((item, i) => {
-          const isOpen = !fine && open === i;
-          return (
-            <li key={item.industry} className="web-range__item">
+      {/* Phone: the work itself, full width and swipeable. */}
+      <div className="web-range__rail" ref={railRef}>
+        <ol className="web-range__slides">
+          {RANGE.map((entry, i) => (
+            <li
+              key={entry.industry}
+              className="web-range__slide"
+              ref={(el) => {
+                slideRefs.current[i] = el;
+              }}
+            >
+              <div className="web-browser web-browser--slide">
+                <span className="web-browser__bar">
+                  <span aria-hidden="true" className="web-browser__dots">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="web-browser__url">{slug(entry.brand)}</span>
+                  <span className="web-browser__tag">Concept</span>
+                </span>
+                <div className="web-range__comp">{entry.comp}</div>
+              </div>
+              <p className="web-range__caption">
+                <span>
+                  {String(i + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
+                  {entry.industry}
+                </span>
+                <span>{entry.note}</span>
+              </p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="web-range__main">
+        <ol className="web-range__list" data-active={active !== null ? "" : undefined}>
+          {RANGE.map((entry, i) => (
+            <li key={entry.industry} className="web-range__item">
               <button
                 type="button"
                 className="web-range__row"
-                data-lit={active === i || isOpen ? "" : undefined}
-                aria-expanded={fine ? undefined : isOpen}
+                data-lit={(fine ? active === i : shown === i) ? "" : undefined}
                 onPointerEnter={(e) => {
-                  if (e.pointerType === "touch") return;
+                  if (e.pointerType === "touch" || !fine) return;
                   activate(i);
-                  aim(e.clientX, e.clientY);
                 }}
                 onPointerLeave={(e) => {
-                  if (e.pointerType !== "touch") release(i);
+                  if (e.pointerType !== "touch" && fine) release(i);
                 }}
-                onFocus={(e) => onRowFocus(i, e.currentTarget)}
-                onBlur={() => release(i)}
+                onFocus={() => fine && activate(i)}
+                onBlur={() => fine && release(i)}
                 onClick={() => {
-                  if (!fine) setOpen((v) => (v === i ? null : i));
+                  if (!fine) runTo(i);
                 }}
               >
                 <span className="web-range__n">{String(i + 1).padStart(2, "0")}</span>
-                <span className="web-range__word">{item.industry}</span>
+                <span className="web-range__word">{entry.industry}</span>
                 <span className="web-range__meta">
-                  <span>{item.brand}</span>
-                  <span>{item.note}</span>
+                  <span>{entry.brand}</span>
+                  <span>{entry.note}</span>
                 </span>
               </button>
-              {isOpen ? (
-                <div className="web-range__inline">
-                  <span className="web-range__concept">Concept — {item.brand}</span>
-                  <div className="web-range__comp">{item.comp}</div>
-                </div>
-              ) : null}
             </li>
-          );
-        })}
-      </ol>
+          ))}
+        </ol>
 
-      {fine ? (
-        <div
-          ref={panelRef}
-          aria-hidden="true"
-          className="web-range__panel"
-          data-on={active !== null ? "" : undefined}
-        >
-          <div className="web-range__panel-inner">
-            <div className="web-range__reel" style={reelStyle}>
-              {RANGE.map((item) => (
-                <div key={item.industry} className="web-range__comp">
-                  {item.comp}
-                </div>
-              ))}
+        {/* Desktop: the docked frame. Its own column, so it covers nothing. */}
+        <div className="web-range__dock" aria-hidden="true">
+          <div className="web-browser" data-on={active !== null ? "" : undefined}>
+            <span className="web-browser__bar">
+              <span aria-hidden="true" className="web-browser__dots">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="web-browser__url">{slug(item.brand)}</span>
+              <span className="web-browser__tag">Concept</span>
+            </span>
+            <div className="web-range__window">
+              <div className="web-range__reel" style={reelStyle}>
+                {RANGE.map((entry) => (
+                  <div key={entry.industry} className="web-range__comp">
+                    {entry.comp}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-          <span className="web-range__concept web-range__concept--panel">
-            Concept {String(shown + 1).padStart(2, "0")}/{String(RANGE.length).padStart(2, "0")} —{" "}
-            {RANGE[shown].brand}
-          </span>
+          <p className="web-range__caption">
+            <span>
+              {String(shown + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
+              {item.industry}
+            </span>
+            <span>{item.note}</span>
+          </p>
         </div>
-      ) : null}
+      </div>
     </section>
   );
+}
+
+/** Fictional brand → fictional address bar, so the frame reads as a browser. */
+function slug(brand: string) {
+  return `${brand.toLowerCase().replace(/[^a-z0-9]+/g, "")}.example`;
 }

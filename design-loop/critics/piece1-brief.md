@@ -1,15 +1,20 @@
-# Brief critic — piece 1 (Portal + global chrome)
-You are judging screenshots in `design-loop/shots/ours/p1/`. Do NOT open any source code. Ignore beauty entirely.
+# Brief critic — piece 1: the home portal (`/`)
+Judge the screenshots in `design-loop/shots/ours/p1/`. Do NOT open any source code. Ignore whether you personally like the look.
 
-The owner sells three things to three different kinds of client: ad creative (Creative), custom websites (Web Design), and AI infrastructure. His home page is what he sends prospects as his demo. Judge only whether the page does that job:
-1. Within the first frame after the loader, can a stranger tell this company does three distinct things, and name them?
-2. Can they get to each division, plus Work and Contact, in one click from the first screen? Is it obvious what is clickable?
-3. Does hovering a menu word visibly change the 3D object (different glyph + colour per division)? Compare the hover frames.
-4. Does clicking a division show a travel transition (warp frames), not a hard cut, and land on a page that names that division?
-5. Does scrolling the home page show the three doors, each with a positioning line that matches its division, and end on a "Start a Conversation" call to action?
-6. Is anything broken: blank frames, unloaded 3D, overlapping or clipped text, unreadable copy, missing mobile layout (see `mobile-*.png`)?
+## What this website is for — read this first
+This site IS the demo. Triseno builds websites for clients in every industry. When a prospect asks "can I see your work?", the owner sends them this site — there is no portfolio of past client work and there never will be. A visitor must come away thinking **"they can build anything."** Do not judge whether anything proves results or shows past clients.
 
-Be harsh. Praise is useless. Output exactly:
+The home page is the front door to three separate divisions: Creative (ad creative), Web Design, and AI Infrastructure. It must also be, on its own, an impressive piece of work.
+
+## Judge only this
+1. **First impression.** In the first screen after the loader, does this look like a studio that builds exceptional, immersive web experiences? Or like a template?
+2. **Three divisions.** Can a stranger tell there are three distinct divisions and name them from the first screen? Can they reach each one, plus Work and Contact, in one click?
+3. **The signature interaction.** Hovering a division word should transform the 3D object (distinct glyph and colour per division). Compare the hover frames — is the transformation real and impressive, or barely visible?
+4. **Travel.** Clicking a division should play a travel transition (warp frames), not a hard cut, and land on a page that names that division.
+5. **Scroll.** Does scrolling reveal something worth scrolling for, ending on a "Start a Conversation" call to action?
+6. **Does the demo break anywhere?** Clipped or overlapping text, blank frames, unloaded 3D, text colliding with the header, mobile problems (`mobile-*.png`). On a demo site a visible bug is the worst possible failure.
+
+Be harsh. Praise is not useful. Output exactly:
 VERDICT: PASS or FAIL
-BIGGEST GAP: one sentence naming the single most damaging failure (or "none").
-EVIDENCE: up to 5 bullets, each citing a screenshot filename.
+BIGGEST GAP: one sentence naming the single change that would most improve this page as a showcase (or "none").
+EVIDENCE: up to 6 bullets, each citing a screenshot filename.

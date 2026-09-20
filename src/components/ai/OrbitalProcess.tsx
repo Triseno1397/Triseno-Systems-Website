@@ -143,18 +143,18 @@ export default function OrbitalProcess() {
     <section
       ref={sectionRef}
       data-rail="Process"
+      data-world-side="left"
       aria-labelledby="ai-process-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
-        <header className="ai-head">
+        <header className="ai-head ai-head--single">
           <p className="ai-label">
-            <b>04</b> / Process
+            <b>04</b> / Process &nbsp;·&nbsp; {PROCESS_INTRO.body}
           </p>
           <h2 id="ai-process-title" className="ai-h2 font-display font-semibold uppercase">
             {PROCESS_INTRO.title}
           </h2>
-          <p className="ai-body max-w-[58ch]">{PROCESS_INTRO.body}</p>
         </header>
 
         <div className="ai-process">

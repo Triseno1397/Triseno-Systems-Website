@@ -47,9 +47,9 @@ function draw(w: number, h: number): Drawn {
   const { f, r, u } = cameraBasis();
   const ry = -0.44;
   const rx = 0.05;
-  const scale = wide ? 1.12 : 0.8;
-  const ox = wide ? 2.7 : 0;
-  const oy = wide ? 0.15 : 0.9;
+  const scale = wide ? 1.2 : 1.0;
+  const ox = wide ? 3.1 : 0;
+  const oy = wide ? 0.05 : 1.15;
   const cy = Math.cos(ry);
   const sy = Math.sin(ry);
   const cx = Math.cos(rx);
@@ -144,18 +144,29 @@ export default function LatticePoster({ hidden = false }: { hidden?: boolean }) 
       preserveAspectRatio="xMidYMid slice"
       fill="none"
     >
+      <defs>
+        {/* the room: the same neutral wash the WebGL scene renders, so the
+            poster is a lit space too and never a flat void */}
+        <radialGradient id="ai-poster-room" cx="50%" cy="44%" r="104%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.26" />
+          <stop offset="38%" stopColor="#ffffff" stopOpacity="0.2" />
+          <stop offset="72%" stopColor="#ffffff" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.03" />
+        </radialGradient>
+      </defs>
+      <rect x="0" y="0" width={drawn.w} height={drawn.h} fill="url(#ai-poster-room)" />
       {drawn.frames.map((fr, i) => (
         <path
           key={i}
           d={fr.d}
           stroke={fr.mid ? "#00b4d8" : "#ffffff"}
-          strokeOpacity={fr.mid ? 0.55 : 0.16}
+          strokeOpacity={fr.mid ? 0.62 : 0.26}
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
         />
       ))}
-      <path d={drawn.base} stroke="#ffffff" strokeOpacity="0.2" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-      <path d={drawn.nodes} fill="#ffffff" fillOpacity="0.5" />
+      <path d={drawn.base} stroke="#ffffff" strokeOpacity="0.32" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      <path d={drawn.nodes} fill="#ffffff" fillOpacity="0.6" />
       <path d={drawn.lit} stroke="#00b4d8" strokeOpacity="0.9" strokeWidth="1" vectorEffect="non-scaling-stroke" />
       <path d={drawn.litNodes} fill="#00b4d8" className="ai-poster__lit" />
     </svg>

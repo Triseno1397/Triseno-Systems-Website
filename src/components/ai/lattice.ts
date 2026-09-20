@@ -100,6 +100,13 @@ export const latticeState = {
   /** live counters for the hero readout */
   lit: 0,
   pulses: 0,
+  /**
+   * Which side of the frame the object should occupy: -1 left, +1 right.
+   * Sections write this as they come on screen so the world slides away from
+   * whichever side the copy card is on (bar.md rule 5) and the backdrop keeps
+   * moving across what used to be hard cuts between sections.
+   */
+  side: 1,
 };
 
 /**

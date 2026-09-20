@@ -1,89 +1,36 @@
 "use client";
 
-import { useRef, type CSSProperties } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
+import { useState, type CSSProperties } from "react";
 import GhostButton from "@/components/ui/GhostButton";
 import { getLenis } from "@/components/world/SmoothScroll";
 
 /**
- * Triseno shutter text.
+ * Triseno shutter text — section 01, standing in the world.
  *
- * Mechanical starting point: 21st.dev "hero shutter text"
- * (design-loop/21st/hero-shutter-text.json) — a word cut into clip-path slices
- * that slide. Everything else is this division's own:
- * - the WHOLE headline block is cut into nine horizontal bands (not three
- *   slices per letter), so the cut lines run across all three lines of type;
- * - the bands open out of the division glyph: a square frame whose slats flip
- *   open first, then release a violet hairline scan edge that crosses the
- *   headline; every band trails the edge by its own lag, so the reveal front
- *   is a stepped shutter, not a wipe;
- * - hovering / focusing / tapping the frame closes and re-opens the shutter
- *   (the stock demo needs a refresh button);
- * - a mono readout counts the scan; one decelerating ease, <= 2.5s (M3);
- * - reduced motion and no-JS render the finished headline.
+ * Mechanical starting point: 21st.dev "hero shutter text" (a word cut into
+ * clip-path slices that slide). Everything else is this division's own:
+ * - the WHOLE headline block is cut into nine horizontal bands, so the cut
+ *   lines run across all three lines of type;
+ * - at first paint the headline sits behind a CLOSED violet shutter — nine
+ *   slats filling the block — which collapses band by band as the type slides
+ *   in. Nothing is ever a blank hole waiting for JavaScript: the animation is
+ *   CSS and is already running on the first painted frame;
+ * - the same shutter runs over the hero's second object: a browser frame with
+ *   a live concept site inside it, so the first screen of a page that sells
+ *   websites shows a website;
+ * - clicking either object re-runs the shutter.
+ * Reduced motion and no-JS render the finished headline and the finished site.
  */
 
 const LINES = ["Design that", "moves", "people."];
 const BANDS = 9;
-// Seconds each band trails the scan edge — uneven on purpose (stepped front).
-const LAG = [0.0, 0.2, 0.07, 0.27, 0.12, 0.32, 0.03, 0.22, 0.15];
+/** ms each band trails the one before — uneven on purpose (stepped front). */
+const LAG = [0, 190, 70, 260, 120, 310, 30, 215, 150];
 
 export default function ShutterHero() {
-  const rootRef = useRef<HTMLElement>(null);
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
-  const readoutRef = useRef<HTMLSpanElement>(null);
-
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const root = rootRef.current;
-        if (!root) return;
-        const bands = gsap.utils.toArray<HTMLElement>(".web-shutter__band", root);
-        const slats = gsap.utils.toArray<HTMLElement>(".web-frame__slat", root);
-        const scan = root.querySelector<HTMLElement>(".web-shutter__scan");
-        const count = { v: 0 };
-        const paint = () => {
-          if (readoutRef.current) readoutRef.current.textContent = String(Math.round(count.v)).padStart(3, "0");
-        };
-
-        // Arriving through the warp: wait until the tunnel has thinned out.
-        const viaWarp = document.documentElement.hasAttribute("data-warping");
-        const tl = gsap.timeline({ delay: viaWarp ? 1.1 : 0.25, defaults: { ease: "power3.inOut" } });
-
-        tl.fromTo(
-          slats,
-          { scaleY: 0.9 },
-          { scaleY: 0.035, duration: 0.7, ease: "expo.out", stagger: 0.045 },
-          0,
-        );
-        tl.fromTo(scan, { xPercent: 100, opacity: 1 }, { xPercent: 0, duration: 1.5 }, 0.2);
-        tl.fromTo(count, { v: 0 }, { v: 100, duration: 1.5, onUpdate: paint }, 0.2);
-        bands.forEach((band, i) => {
-          tl.fromTo(
-            band,
-            { "--l": "100%", x: i % 2 ? 44 : -44 },
-            { "--l": "0%", x: 0, duration: 1.5 },
-            0.2 + LAG[i % LAG.length],
-          );
-        });
-        tl.to(scan, { opacity: 0, duration: 0.45, ease: "power3.out" }, 1.75);
-        tlRef.current = tl;
-        return () => {
-          tlRef.current = null;
-        };
-      });
-    },
-    { scope: rootRef },
-  );
-
-  const replay = () => {
-    const tl = tlRef.current;
-    if (!tl || tl.isActive()) return;
-    tl.delay(0);
-    tl.restart();
-  };
+  // Remounting the shutter restarts the CSS animation — no JS timeline to sync.
+  const [run, setRun] = useState(0);
+  const replay = () => setRun((v) => v + 1);
 
   const toDemo = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const target = document.getElementById("web-demo");
@@ -98,11 +45,7 @@ export default function ShutterHero() {
   };
 
   return (
-    <section ref={rootRef} data-rail="Hero" className="web-section web-hero">
-      <noscript>
-        <style>{`.web-shutter__band{--l:0%!important}`}</style>
-      </noscript>
-
+    <section data-rail="Hero" data-station="hero" className="web-section web-hero">
       <div className="web-hero__grid">
         <div className="web-hero__copy">
           <p className="web-eyebrow">
@@ -110,7 +53,7 @@ export default function ShutterHero() {
             Triseno / Web Design Division — no templates
           </p>
 
-          <div className="web-shutter" data-state="pre">
+          <div key={`t${run}`} className="web-shutter">
             <h1 className="web-shutter__text web-shutter__text--base">
               {LINES.map((line) => (
                 <span key={line} className="block">
@@ -127,6 +70,8 @@ export default function ShutterHero() {
                   {
                     "--t": `${((i / BANDS) * 100).toFixed(4)}%`,
                     "--b": `${(100 - ((i + 1) / BANDS) * 100).toFixed(4)}%`,
+                    "--lag": `${LAG[i % LAG.length]}ms`,
+                    "--dx": i % 2 ? "40px" : "-40px",
                   } as CSSProperties
                 }
               >
@@ -139,9 +84,11 @@ export default function ShutterHero() {
                 </div>
               </div>
             ))}
-            <div aria-hidden="true" className="web-shutter__scan">
-              <i />
-            </div>
+            <span aria-hidden="true" className="web-shutter__slats">
+              {Array.from({ length: BANDS }, (_, i) => (
+                <i key={i} style={{ "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties} />
+              ))}
+            </span>
           </div>
 
           <p className="web-lede">
@@ -150,7 +97,8 @@ export default function ShutterHero() {
           </p>
           <div className="web-hero__actions">
             <GhostButton href="/contact">Start a Conversation</GhostButton>
-            <a href="#web-demo" onClick={toDemo} className="web-textlink world-underline">
+            <a href="#web-demo" onClick={toDemo} className="web-subaction">
+              <span className="web-subaction__rule" aria-hidden="true" />
               See the demo
             </a>
           </div>
@@ -159,37 +107,81 @@ export default function ShutterHero() {
         <div className="web-hero__object">
           <button
             type="button"
-            className="web-frame"
-            onPointerEnter={(e) => {
-              if (e.pointerType !== "touch") replay();
-            }}
-            onFocus={replay}
+            key={`s${run}`}
+            className="web-hero__site"
             onClick={replay}
-            aria-label="Replay the headline shutter"
+            aria-label="Concept site for Vale and Hollis. Replay the shutter."
           >
-            <span aria-hidden="true" className="web-frame__slats">
-              {Array.from({ length: BANDS }, (_, i) => (
-                <i key={i} className="web-frame__slat" />
-              ))}
+            <span className="web-browser__bar">
+              <span aria-hidden="true" className="web-browser__dots">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="web-browser__url">valeandhollis.example</span>
+              <span className="web-browser__tag">Concept</span>
             </span>
-            <span aria-hidden="true" className="web-frame__tag web-frame__tag--tl">
-              {String(BANDS).padStart(2, "0")} bands
-            </span>
-            <span aria-hidden="true" className="web-frame__tag web-frame__tag--br">
-              scan <span ref={readoutRef}>100</span>%
+            <span className="web-hero__site-view">
+              <HeroSite />
+              <span aria-hidden="true" className="web-shutter__slats web-shutter__slats--site">
+                {Array.from({ length: BANDS }, (_, i) => (
+                  <i key={i} style={{ "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties} />
+                ))}
+              </span>
             </span>
           </button>
-          <span aria-hidden="true" className="web-frame__mirror" />
-          <p aria-hidden="true" className="web-frame__hint">
-            <span className="web-hover-only">Hover the frame</span>
-            <span className="web-touch-only">Tap the frame</span> — re-shutter
-          </p>
+          <span aria-hidden="true" className="web-hero__mirror" />
         </div>
       </div>
-
-      <div aria-hidden="true" className="web-hero__tick scroll-tick">
-        <span className="scroll-tick__line" />
-      </div>
     </section>
+  );
+}
+
+/**
+ * Concept site shown inside the hero's browser frame — fictional landscape
+ * architecture practice. Live HTML/CSS in container units, so it stays crisp
+ * at any frame size. Depicted content: it carries its own palette and serif
+ * voice (design-system §2, mocks inside device frames are exempt).
+ */
+function HeroSite() {
+  return (
+    <span className="hs">
+      <span className="hs-nav">
+        <span className="hs-logo">Vale &amp; Hollis</span>
+        <span className="hs-links">
+          <span>Gardens</span>
+          <span>Practice</span>
+          <span>Journal</span>
+        </span>
+        <span className="hs-cta">Book a site visit</span>
+      </span>
+      <span className="hs-body">
+        <span className="hs-copy">
+          <span className="hs-kicker">Landscape architecture · Est. 2009</span>
+          <span className="hs-h">
+            Gardens that look <em>older</em> than the house.
+          </span>
+          <span className="hs-p">
+            Planting plans, hard landscaping and ten-year maintenance, drawn for one plot at a time.
+          </span>
+        </span>
+        <span className="hs-art" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+      </span>
+      <span className="hs-facts">
+        <span>
+          <b>140</b>gardens built
+        </span>
+        <span>
+          <b>3 wks</b>to first drawing
+        </span>
+        <span>
+          <b>10 yr</b>planting plan
+        </span>
+      </span>
+    </span>
   );
 }

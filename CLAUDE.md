@@ -1,8 +1,13 @@
 # CLAUDE.md — Triseno Systems Website (revamp branch)
 
 ## Project
-trisenosystems.com is Tristen's live demo for clients. It must show range: every section uses a
-different motion mechanic, inside an immersive, ohzi.io-style world.
+**The website IS the demo.** When a prospect asks Tristen for his work, he sends this site. Its only job
+is to showcase a wide range of distinct components, interactions and craft, so a visitor thinks "they
+can build anything." It is NOT a proof page: never add or ask for past client sites, case studies as
+evidence, or real results. Testimonials, stats, concept sites and case studies appear only as
+demonstrations of a component, filled with realistic fictional content.
+
+Every section uses a different motion mechanic, inside an immersive, ohzi.io-style world.
 
 Triseno Systems has **three separate divisions**, each with its own page, hue, glyph and client base.
 Never blend them:

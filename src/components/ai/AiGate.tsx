@@ -9,11 +9,15 @@ import { glyphPoints } from "@/lib/glyph-path";
 import { GATE } from "./content";
 
 /**
- * 7. Gate — the division glyph announces where the button goes. At rest it is
- * the cyan triangle. Hover or focus the diagnostic button and the same outline
- * (the foundation's coherent glyph sampling) morphs into the plus glyph of
- * Contact and drains to white, echoed by the hairline copies behind it.
- * Both CTAs travel by the foundation warp.
+ * 7. Gate — the division glyph announces where the button goes (bar.md rule 7),
+ * not a footer. At rest it is the cyan triangle filling the frame. Hover or
+ * focus the diagnostic button and the same outline (the foundation's coherent
+ * glyph sampling) morphs into the plus glyph of Contact and drains to white,
+ * echoed by the hairline copies behind it — the world recolours toward the
+ * destination before you travel. One ghost button names the next destination
+ * with a tick beneath it. The two cross-division links are the only place on
+ * this page another division may be named (D3), and they are set in the same
+ * Unbounded uppercase as every other link on the page.
  */
 
 const SAMPLES = 360;
@@ -84,6 +88,7 @@ export default function AiGate() {
     <section
       data-rail="Gate"
       data-rail-next="Contact"
+      data-world-side="left"
       aria-labelledby="ai-gate-title"
       className="ai-gate relative z-10 min-h-[100dvh] overflow-hidden"
     >
@@ -107,29 +112,30 @@ export default function AiGate() {
         <p className="ai-label">
           <b>07</b> / Next: Contact
         </p>
-        <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[18ch] font-display font-semibold uppercase">
+        <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">
           {GATE.title}
         </h2>
-        <p className="ai-body mt-6 max-w-[54ch]">{GATE.body}</p>
+        <p className="ai-body mt-6 max-w-[48ch]">{GATE.body}</p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
+        <div className="ai-gate__cta">
           <span ref={ctaRef}>
             <GhostButton href="/contact">{GATE.primary}</GhostButton>
           </span>
           <WarpLink href="/contact" className="ai-textlink">
             <span>{GATE.secondary}</span>
           </WarpLink>
-          <a href={`mailto:${GATE.email}`} className="ai-textlink ai-textlink--mono">
-            <span>{GATE.email}</span>
-          </a>
         </div>
+        <p aria-hidden="true" className="ai-gate__tick ai-label">
+          <i />
+          <span>{GATE.tick}</span>
+        </p>
 
-        <nav aria-label="Other Triseno divisions" className="ai-gate__cross ai-label">
-          <span>Other divisions</span>
-          <WarpLink href={DIVISIONS.creative.route} className="ai-textlink ai-textlink--mono">
+        <nav aria-label="Other Triseno divisions" className="ai-gate__cross">
+          <span className="ai-label">Other divisions</span>
+          <WarpLink href={DIVISIONS.creative.route} className="ai-textlink">
             <span>Creative</span>
           </WarpLink>
-          <WarpLink href={DIVISIONS.web.route} className="ai-textlink ai-textlink--mono">
+          <WarpLink href={DIVISIONS.web.route} className="ai-textlink">
             <span>Web Design</span>
           </WarpLink>
         </nav>

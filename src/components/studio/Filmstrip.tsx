@@ -28,6 +28,44 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const STEP_VH = 46; // vertical scroll per frame in scrub mode
 
+/**
+ * Seconds a *paused* frame should sit on. Some clips open on an establishing
+ * wide that contradicts the format the frame is labelled with — apparel
+ * try-on opens on a drone shot of a street — and the paused poster is what a
+ * still screenshot of this page shows.
+ */
+const POSTER_AT: Record<string, number> = {
+  "/videos/apparel-tryon.mp4": 2.6,
+};
+
+/**
+ * Clips shot in another division's hue. D2 allows exactly one saturated hue on
+ * this page, and a flat paused still is not the rendered-scene exemption, so
+ * this one is graded to a single amber tone instead of being dropped.
+ */
+const GRADED = new Set(["/videos/pickleball-hypermotion.mp4"]);
+
+/* ── 05 BRAND FILMS — the flagship slot ──────────────────────────────────
+   The film is in production. Until it is delivered the widest panel on the
+   page runs a reference cut: three shots from the studio's own footage in one
+   2.39:1 frame, labelled as a reference cut so it reads as a deliberate
+   assembly rather than a missing asset.
+
+   TO SWAP IN THE DELIVERED FILM — one line:
+     drop  public/videos/brand-film.mp4   (+ public/posters/brand-film.jpg)
+     set   FLAGSHIP_FILM = "/videos/brand-film.mp4"
+   The frame then plays it full-bleed in exactly the shape every other format
+   uses, and the reference cut below is ignored.                            */
+const FLAGSHIP_FILM: string | null = null;
+
+const SEQUENCES: Record<string, { src: string; shot: string }[]> = {
+  "Brand Films": [
+    { src: "/videos/product-hero.mp4", shot: "01 · cold open" },
+    { src: "/videos/apparel-tryon.mp4", shot: "02 · the street" },
+    { src: "/videos/direct-response.mp4", shot: "03 · the moment" },
+  ],
+};
+
 const pad = (n: number) => String(n).padStart(2, "0");
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
@@ -63,6 +101,9 @@ export default function Filmstrip() {
   // One state object: a new frame in the gate always lands muted and (under
   // reduced motion) paused, so the three values can never disagree.
   const [gate, setGate] = useState<Gate>(GATE_ZERO);
+  // Once the strip is running the section masthead hands the frame over to the
+  // format currently in the gate, so no two scroll positions share a headline.
+  const [moved, setMoved] = useState(false);
   // The editor can delete the reel that is currently in the gate.
   const active = Math.min(gate.index, Math.max(0, count - 1));
   const soundOn = gate.sound;
@@ -96,6 +137,7 @@ export default function Filmstrip() {
         strip.style.transform = `translate3d(${(half - c).toFixed(1)}px,0,0)`;
         if (bar.current) bar.current.style.transform = `scaleX(${p.toFixed(4)})`;
         setGate(gateTo(Math.round(f)));
+        setMoved(p > 0.02);
       };
 
       measure();
@@ -143,6 +185,7 @@ export default function Filmstrip() {
         }
       });
       setGate(gateTo(best));
+      setMoved(port.scrollLeft > 24);
       const max = port.scrollWidth - port.clientWidth;
       if (bar.current) bar.current.style.transform = `scaleX(${(max > 0 ? port.scrollLeft / max : 0).toFixed(4)})`;
     };
@@ -183,15 +226,17 @@ export default function Filmstrip() {
       id="formats"
       data-rail="Formats"
       data-mode={scrub ? "scrub" : "native"}
+      data-moved={moved ? "" : undefined}
       className="sx-film"
       style={{ ["--frames" as string]: count, ["--step" as string]: `${STEP_VH}vh` } as CSSProperties}
       aria-labelledby="sx-film-title"
     >
       <div className="sx-film__stage">
-        <div aria-hidden="true" className="sx-glow sx-glow--low" />
-
         <header className="sx-film__head">
-          <div>
+          {/* The masthead states the offer once, then steps aside for the frame
+              that is actually in the gate — the top of the frame changes with
+              the strip instead of repeating down the whole section. */}
+          <div className="sx-film__intro">
             <p className="sx-kicker font-mono">
               <Aperture size={14} strokeWidth={1.25} glow />
               What we make
@@ -199,11 +244,18 @@ export default function Filmstrip() {
             <h2 id="sx-film-title" className="sx-h2 font-display font-semibold uppercase">
               One studio. Every format the feed demands.
             </h2>
+            <p className="sx-film__lead font-sans font-light">
+              Start where you need volume and climb to where you need polish. Every tier is built to perform on the
+              platform it ships to — not just to look good in a portfolio.
+            </p>
           </div>
-          <p className="sx-film__lead font-sans font-light">
-            Start where you need volume and climb to where you need polish. Every tier is built to perform on the
-            platform it ships to — not just to look good in a portfolio.
-          </p>
+          <div key={active} className="sx-film__now" aria-hidden={moved ? undefined : "true"}>
+            <p className="sx-film__count font-mono">
+              <b>{current.n}</b> / {pad(count)} — in the gate
+            </p>
+            <h3 className="sx-h3 font-display font-semibold uppercase">{current.title}</h3>
+            <p className="sx-film__tagline font-sans">{current.sm}</p>
+          </div>
         </header>
 
         <div className="sx-film__band">
@@ -212,6 +264,9 @@ export default function Filmstrip() {
               {items.map((item, i) => {
                 const r = ratioOf(item);
                 const on = i === active;
+                const bare = !item.video && !item.videos;
+                const flagship = bare && SEQUENCES[item.title] ? FLAGSHIP_FILM : null;
+                const seq = bare ? SEQUENCES[item.title] : undefined;
                 return (
                   <li
                     key={`${item.title}-${i}`}
@@ -229,6 +284,7 @@ export default function Filmstrip() {
                     <button
                       type="button"
                       className="sx-frame__media"
+                      data-grade={item.video && GRADED.has(item.video) ? "amber" : undefined}
                       data-cms-id={`studio:reel:${i}`}
                       aria-label={`${item.n} of ${pad(count)} — ${item.title}`}
                       aria-current={on ? "true" : undefined}
@@ -238,7 +294,13 @@ export default function Filmstrip() {
                         <span className="sx-frame__duo">
                           {item.videos.map((clip) => (
                             <span key={clip.src} className="sx-frame__cell">
-                              <LazyVideo src={clip.src} active={on} force={on && manual} className="sx-fill" />
+                              <LazyVideo
+                                src={clip.src}
+                                active={on}
+                                force={on && manual}
+                                poster={POSTER_AT[clip.src]}
+                                className="sx-fill"
+                              />
                               {clip.label ? <span className="sx-frame__cap font-mono">{clip.label}</span> : null}
                             </span>
                           ))}
@@ -249,8 +311,29 @@ export default function Filmstrip() {
                           active={on}
                           force={on && manual}
                           sound={on && soundOn}
+                          poster={POSTER_AT[item.video]}
                           className="sx-fill"
                         />
+                      ) : flagship ? (
+                        // The delivered film, in the same shape as every other format.
+                        <LazyVideo src={flagship} active={on} force={on && manual} sound={on && soundOn} className="sx-fill" />
+                      ) : seq ? (
+                        // The flagship, pre-delivery: one anamorphic frame cut as three shots.
+                        <span className="sx-frame__seq">
+                          {seq.map((s) => (
+                            <span key={s.src} className="sx-frame__cell">
+                              <LazyVideo
+                                src={s.src}
+                                active={on}
+                                force={on && manual}
+                                poster={POSTER_AT[s.src]}
+                                className="sx-fill"
+                              />
+                              <span className="sx-frame__cap font-mono">{s.shot}</span>
+                            </span>
+                          ))}
+                          <span className="sx-frame__note font-mono">Reference cut — the film ships in 2.39:1</span>
+                        </span>
                       ) : (
                         // No reel yet (e.g. Brand Films): a camera slate, not an empty frame.
                         <span className="sx-slate">
@@ -273,13 +356,6 @@ export default function Filmstrip() {
             <span ref={bar} />
           </div>
           <div key={active} className="sx-film__caption" aria-live="polite">
-            <div className="sx-film__caption-main">
-              <p className="sx-film__count font-mono">
-                <b>{current.n}</b> / {pad(count)}
-              </p>
-              <h3 className="sx-h3 font-display font-semibold uppercase">{current.title}</h3>
-              <p className="sx-film__tagline font-sans">{current.sm}</p>
-            </div>
             <div className="sx-film__caption-side">
               <p className="sx-film__desc font-sans font-light">{current.desc}</p>
               <ul className="sx-tags font-mono">

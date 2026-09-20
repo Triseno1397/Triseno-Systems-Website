@@ -11,9 +11,17 @@ gsap.registerPlugin(ScrollTrigger);
  * 3. Workflow compression — scroll-scrubbed SVG line draw.
  * Scroll draws a 12-step manual process as one long hairline, then collapses
  * the twelve steps into five nodes on two layers. The mono readout is driven by
- * the same scrub: hours accumulate while the line draws, then fall to minutes
- * as it compresses. Pinned for 2.2 viewports on desktop, 1 on mobile (M5);
- * reduced motion skips the pin and renders the compressed system.
+ * the same scrub and counts the diagram: steps drawn, then layers they collapse
+ * into. Pinned for 1.6 viewports on desktop, 1 on mobile (M5); reduced motion
+ * skips the pin and renders the compressed system.
+ *
+ * R2 timing: the payoff has to be readable wherever a reader stops, so the
+ * collapse is front-loaded and the resolved two-layer system holds for the last
+ * ~40% of the scrub, and the readout never shows placeholder dashes.
+ *
+ * R2 truth: this section shows a mechanism, not a result. There is no time,
+ * cost or multiple anywhere in it — the owner has not measured one, so the page
+ * does not claim one.
  */
 
 interface Geometry {
@@ -87,15 +95,8 @@ function geometry(mobile: boolean): Geometry {
   };
 }
 
-function formatNow(minutes: number): string {
-  if (minutes >= 120) return `${(minutes / 60).toFixed(1)} hrs`;
-  return `${Math.round(minutes)} min`;
-}
-
 export default function Compression() {
   const stageRef = useRef<HTMLDivElement>(null);
-  const beforeRef = useRef<HTMLSpanElement>(null);
-  const afterRef = useRef<HTMLSpanElement>(null);
   const stepsRef = useRef<HTMLSpanElement>(null);
   const layersRef = useRef<HTMLSpanElement>(null);
   const [mobile, setMobile] = useState<boolean | null>(null);
@@ -120,43 +121,44 @@ export default function Compression() {
       const q = gsap.utils.selector(stage);
       const stepEls = q<SVGGElement>(".ai-flow__step");
 
+      // The readout describes the diagram and nothing else: how many manual
+      // steps have been drawn, and how many layers they have collapsed into.
+      // No time, cost or multiple is claimed anywhere on this page.
       const readout = (time: number) => {
-        const drawK = Math.min(1, time / 4);
-        const squeeze = Math.min(1, Math.max(0, (time - 4.6) / 2.8));
-        if (beforeRef.current) beforeRef.current.textContent = `${(40 * drawK).toFixed(drawK < 1 ? 1 : 0)} hrs`;
+        const drawK = Math.min(1, time / 2.6);
+        const squeeze = Math.min(1, Math.max(0, (time - 3) / 2.2));
+        const eased = squeeze * squeeze * (3 - 2 * squeeze);
         if (stepsRef.current) stepsRef.current.textContent = String(Math.round(12 * drawK)).padStart(2, "0");
-        if (afterRef.current) {
-          const eased = squeeze * squeeze * (3 - 2 * squeeze);
-          afterRef.current.textContent = time < 4.6 ? "-- min" : formatNow(2400 * Math.pow(12 / 2400, eased));
-        }
-        if (layersRef.current) layersRef.current.textContent = time < 7.4 ? "--" : "02";
-        stage.toggleAttribute("data-compressed", time >= 7.4);
+        if (layersRef.current) layersRef.current.textContent = String(Math.round(12 - 10 * eased)).padStart(2, "0");
+        stage.toggleAttribute("data-compressed", time >= 5.2);
       };
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: () => readout(tl.time()) });
 
       // A — the manual process draws, one step at a time
-      tl.fromTo(q(".ai-flow__path"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 4 }, 0);
+      tl.fromTo(q(".ai-flow__path"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 2.6 }, 0);
       stepEls.forEach((el, i) => {
-        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3 }, (4 * i) / 11 - (i === 0 ? 0 : 0.15));
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.25 }, (2.6 * i) / 11 - (i === 0 ? 0 : 0.12));
       });
 
       // B — twelve steps collapse into five nodes on two layers
       stepEls.forEach((el, i) => {
         const from = geo.steps[i];
         const to = geo.system[COMPRESSION.collapseTo[i]];
-        tl.to(el, { x: to[0] - from[0], y: to[1] - from[1], duration: 2, ease: "power3.inOut" }, 4.6 + i * 0.07);
-        tl.to(el.querySelector("text"), { opacity: 0, duration: 0.9 }, 5 + i * 0.07);
-        tl.to(el, { opacity: 0, duration: 0.4 }, 7.1 + i * 0.03);
+        tl.to(el, { x: to[0] - from[0], y: to[1] - from[1], duration: 1.6, ease: "power3.inOut" }, 3 + i * 0.045);
+        tl.to(el.querySelector("text"), { opacity: 0, duration: 0.7 }, 3.2 + i * 0.045);
+        tl.to(el, { opacity: 0, duration: 0.35 }, 4.7 + i * 0.02);
       });
-      tl.to(q(".ai-flow__path"), { opacity: 0.14, duration: 1.6 }, 4.6);
+      tl.to(q(".ai-flow__path"), { opacity: 0.16, duration: 1.2 }, 3);
 
-      // C — the 2-layer system draws in
-      tl.fromTo(q(".ai-flow__layer"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1.4, stagger: 0.25 }, 6.4);
-      tl.fromTo(q(".ai-flow__node"), { opacity: 0 }, { opacity: 1, duration: 0.6, stagger: 0.08 }, 7.1);
-      tl.fromTo(q(".ai-flow__link"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1, stagger: 0.1 }, 7.5);
-      tl.fromTo(q(".ai-flow__tag"), { opacity: 0 }, { opacity: 1, duration: 0.6 }, 7.6);
-      tl.to({}, { duration: 1 }, 9);
+      // C — the 2-layer system draws in, then holds for the rest of the scrub
+      tl.fromTo(q(".ai-flow__layer"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1.1, stagger: 0.18 }, 3.4);
+      tl.fromTo(q(".ai-flow__node"), { opacity: 0 }, { opacity: 1, duration: 0.5, stagger: 0.06 }, 4.3);
+      tl.fromTo(q(".ai-flow__link"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 0.8, stagger: 0.07 }, 4.6);
+      tl.fromTo(q(".ai-flow__tag"), { opacity: 0 }, { opacity: 1, duration: 0.5 }, 4.4);
+      // the resolved system is the last 40% of the scrub, so wherever the
+      // reader settles past the middle they are looking at the payoff
+      tl.to({}, { duration: 3.4 }, 5.2);
 
       if (reduced) {
         tl.progress(1);
@@ -169,7 +171,7 @@ export default function Compression() {
       ScrollTrigger.create({
         trigger: stage,
         start: "top top",
-        end: mobile ? "+=100%" : "+=220%",
+        end: mobile ? "+=95%" : "+=160%",
         pin: true,
         scrub: 0.4,
         animation: tl,
@@ -183,6 +185,7 @@ export default function Compression() {
   return (
     <section
       data-rail="Compression"
+      data-world-side="right"
       aria-labelledby="ai-flow-title"
       className="ai-compress relative z-10"
     >
@@ -195,19 +198,9 @@ export default function Compression() {
             <h2 id="ai-flow-title" className="ai-h2 mt-5 font-display font-semibold uppercase">
               {COMPRESSION.title}
             </h2>
-            <p className="ai-body mt-6 max-w-[46ch] max-md:hidden">{COMPRESSION.body}</p>
+            <p className="ai-body mt-6 max-w-[42ch]">{COMPRESSION.body}</p>
 
-            <dl className="ai-readout" aria-label="Forty hours compressed to twelve minutes; twelve steps to two layers">
-              <div>
-                <dt className="ai-label">Cycle time</dt>
-                <dd aria-hidden="true">
-                  <span ref={beforeRef}>40 hrs</span>
-                  <i>→</i>
-                  <span ref={afterRef} className="ai-readout__hot">
-                    12 min
-                  </span>
-                </dd>
-              </div>
+            <dl className="ai-readout" aria-label="Twelve manual steps collapse into two layers">
               <div>
                 <dt className="ai-label">Steps to layers</dt>
                 <dd aria-hidden="true">
@@ -275,22 +268,6 @@ export default function Compression() {
             <p className="ai-label ai-compress__note">{COMPRESSION.note}</p>
           </div>
         </div>
-      </div>
-
-      {/* what gets compressed — outside the pin so the pinned frame stays one viewport */}
-      <div className="ai-wrap ai-compress__after">
-        <p className="ai-body max-w-[46ch] md:hidden">{COMPRESSION.body}</p>
-        <p className="ai-label">What gets compressed</p>
-        <ul className="ai-compress__list">
-          {COMPRESSION.compressed.map((item, i) => (
-            <li key={item}>
-              <span className="ai-label">
-                <b>{String(i + 1).padStart(2, "0")}</b>
-              </span>
-              <span className="ai-body">{item}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );

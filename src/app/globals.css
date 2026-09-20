@@ -66,6 +66,14 @@
   --radius: 0px;
   --gutter: clamp(20px, 3vw, 44px);
   --gutter-y: clamp(20px, 3vh, 36px);
+
+  /* Chrome safe zones (design-system §4). The five fixed chrome elements own
+     these lanes; page content keeps out of them so nothing is ever printed on
+     top of body copy, a headline or a button. `--lane-right` is the progress
+     rail's lane and only exists at widths where the rail is shown. */
+  --lane-top: clamp(84px, 10dvh, 116px);
+  --lane-bottom: clamp(76px, 9dvh, 104px);
+  --lane-right: 0px;
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-power3: cubic-bezier(0.33, 1, 0.68, 1);
   --fs-display: clamp(32px, 4.6vw, 84px);

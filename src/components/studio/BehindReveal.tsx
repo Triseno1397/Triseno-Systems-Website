@@ -126,7 +126,7 @@ function SplitLines({ as, text, className, id }: SplitLinesProps) {
 }
 
 const COPY = [
-  "Our founder spent nearly a decade behind professional cameras in Los Angeles. Broadcast, live production, and large-scale shoots, including major award shows and corporate productions for companies like Meta, Google, and Epic Games. Ten years of one discipline: knowing which shot sells the moment, and getting it.",
+  "Our founder spent nearly a decade behind professional cameras in Los Angeles. Broadcast, live production, and large-scale shoots — nationally televised award shows, stadium events, and corporate stages for global technology brands. Ten years of one discipline: knowing which shot sells the moment, and getting it.",
   "That's the entire craft of product advertising. The angle, the light, the three seconds that stop a scroll. We don't guess at what converts on screen. Reading a frame has been the job for ten years.",
   "When a brand hands us their product, it gets the same treatment those stages got. Shot with intent, built to perform, delivered like it matters. Because to the person buying it, it does.",
 ];
@@ -134,8 +134,6 @@ const COPY = [
 export default function BehindReveal() {
   return (
     <section data-rail="Behind" className="sx-behind" aria-labelledby="sx-behind-title">
-      <div aria-hidden="true" className="sx-glow sx-glow--side" />
-
       <div className="sx-behind__grid">
         <div className="sx-behind__text">
           <p className="sx-kicker font-mono">

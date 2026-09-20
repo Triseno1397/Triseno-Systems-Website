@@ -196,27 +196,6 @@ function Retainer() {
   );
 }
 
-function Web() {
-  return (
-    <svg className="ai-dg" viewBox="0 0 240 110" role="img" aria-label="A page wireframe assembling block by block">
-      <rect className="ai-dg__line" x="20" y="8" width="200" height="94" />
-      <path className="ai-dg__line" d="M20 22 H220" />
-      <g className="ai-dg-wipe" style={{ animationDelay: "0s" }}>
-        <rect className="ai-dg__line" x="32" y="32" width="112" height="36" />
-        <rect className="ai-dg__hot-fill" x="40" y="54" width="34" height="7" />
-      </g>
-      <g className="ai-dg-wipe" style={{ animationDelay: "0.5s" }}>
-        <rect className="ai-dg__line" x="154" y="32" width="54" height="36" />
-      </g>
-      <g className="ai-dg-wipe" style={{ animationDelay: "1s" }}>
-        <rect className="ai-dg__line" x="32" y="78" width="52" height="14" />
-        <rect className="ai-dg__line" x="94" y="78" width="52" height="14" />
-        <rect className="ai-dg__line" x="156" y="78" width="52" height="14" />
-      </g>
-    </svg>
-  );
-}
-
 export default function CapabilityDiagram({ kind }: { kind: DiagramKind }) {
   switch (kind) {
     case "orchestration":
@@ -231,7 +210,5 @@ export default function CapabilityDiagram({ kind }: { kind: DiagramKind }) {
       return <Broadcast />;
     case "retainer":
       return <Retainer />;
-    case "web":
-      return <Web />;
   }
 }
