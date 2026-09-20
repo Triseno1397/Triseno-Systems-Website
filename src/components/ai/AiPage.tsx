@@ -7,7 +7,7 @@ import Capabilities from "./Capabilities";
 import Compression from "./Compression";
 import OrbitalProcess from "./OrbitalProcess";
 import Industries from "./Industries";
-import WhyTriseno from "./WhyTriseno";
+import WhyTriseno, { AiStats } from "./WhyTriseno";
 import AiGate from "./AiGate";
 
 /**
@@ -17,7 +17,7 @@ import AiGate from "./AiGate";
  *
  * Section order, one idea per frame:
  *   01 hero · 02 capabilities (six frames, one card each) · 03 compression
- *   04 process · 05 industries · 06 why · 07 gate
+ *   04 process · 05 industries · 06 counts · 07 why · 08 gate
  */
 export default function AiPage() {
   return (
@@ -29,6 +29,7 @@ export default function AiPage() {
       <Compression />
       <OrbitalProcess />
       <Industries />
+      <AiStats />
       <WhyTriseno />
       <AiGate />
     </main>

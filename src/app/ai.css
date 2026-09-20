@@ -392,7 +392,32 @@
 .ai-log__foot[data-on] { opacity: 1; }
 .ai-log__dot { flex: none; width: 6px; height: 6px; background: var(--cyan); }
 
-/* ── 6. why triseno ── */
+/* ── 6. counts: odometer (its own frame, so nothing crowds the numbers) ── */
+.ai-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px 32px; padding-top: 36px; border-top: 1px solid #ffffff; }
+@media (min-width: 640px) {
+  .ai-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.ai-odo {
+  display: flex; align-items: flex-start; font-family: var(--font-geist-mono), monospace; font-weight: 400;
+  font-size: clamp(52px, 6.4vw, 108px); line-height: 1; color: #ffffff; font-variant-numeric: tabular-nums;
+}
+.ai-odo__window { display: inline-block; height: 1em; overflow: hidden; }
+.ai-odo__strip {
+  display: flex; flex-direction: column; transform: translate3d(0, 0, 0); will-change: transform;
+  transition: transform 2200ms var(--ease-expo); transition-delay: calc(var(--i) * 140ms);
+}
+.ai-odo__strip > span { display: block; height: 1em; line-height: 1; }
+.ai-stats[data-on] .ai-odo__strip { transform: translate3d(0, calc(var(--to) * -1em), 0); }
+.ai-odo__glyph { color: var(--cyan); padding-inline: 0.12em; }
+.ai-stat__label { margin-top: 18px; max-width: 24ch; }
+/* the counts carry a stated basis, the way the diagrams carry ILLUSTRATIVE */
+.ai-stats__basis {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+  margin-top: clamp(36px, 6dvh, 64px); padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+.ai-stats__basis > span { opacity: 0.6; letter-spacing: 0.12em; }
+
+/* ── 7. why triseno ── */
 .ai-why { display: grid; grid-template-columns: minmax(0, 1fr); gap: 44px 40px; }
 @media (min-width: 1024px) {
   .ai-why { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -405,7 +430,7 @@
 }
 .ai-why[data-on] .ai-why__rule { transform: scaleX(1); }
 
-/* ── 7. gate: a gate, not a footer ── */
+/* ── 8. gate: a gate, not a footer ── */
 .ai-gate { display: flex; align-items: center; padding-block: clamp(124px, 17dvh, 190px) clamp(96px, 12dvh, 140px); }
 .ai-gate__figure {
   --gate-ink: #00b4d8;

@@ -9,7 +9,7 @@ import { glyphPoints } from "@/lib/glyph-path";
 import { GATE } from "./content";
 
 /**
- * 7. Gate — the division glyph announces where the button goes (bar.md rule 7),
+ * 8. Gate — the division glyph announces where the button goes (bar.md rule 7),
  * not a footer. At rest it is the cyan triangle filling the frame. Hover or
  * focus the diagnostic button and the same outline (the foundation's coherent
  * glyph sampling) morphs into the plus glyph of Contact and drains to white,
@@ -110,7 +110,7 @@ export default function AiGate() {
 
       <div className="ai-wrap ai-gate__inner">
         <p className="ai-label">
-          <b>07</b> / Next: Contact
+          <b>08</b> / Next: Contact
         </p>
         <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">
           {GATE.title}

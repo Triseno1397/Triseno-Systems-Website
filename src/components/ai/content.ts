@@ -234,6 +234,30 @@ export const INDUSTRIES: Industry[] = [
   },
 ];
 
+/** Odometer counts. `parts` are rolled digits (numbers) or static glyphs (strings). */
+export interface Stat {
+  parts: Array<number | string>;
+  text: string;
+  label: string;
+}
+
+/**
+ * The odometer is here to demonstrate the component, so it counts what the
+ * offer and the diagrams on this page are made of. None of these is a result
+ * or a performance claim; every speed-up figure ("3x", "40 hrs -> 12 min") has
+ * been cut from the page on the owner's instruction.
+ */
+export const STATS_NOTE = {
+  tag: "Counts",
+  text: "Each figure counts something drawn on this page. None is a performance claim.",
+};
+
+export const STATS: Stat[] = [
+  { parts: [1, 2, "→", 0, 2], text: "12 to 2", label: "Manual steps to agent layers, section 03" },
+  { parts: [0, 5], text: "5", label: "Phases, Diagnose to Compound" },
+  { parts: [0, 6], text: "6", label: "Capabilities, one system each" },
+];
+
 export const WHY = {
   title: "Why Triseno",
   label: "AI infrastructure for operations, intelligence and scale",
