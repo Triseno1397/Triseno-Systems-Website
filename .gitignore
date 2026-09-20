@@ -58,3 +58,4 @@ design-loop/shots/
 # builder scratch scripts
 tmp-*.mjs
 .*.mjs
+tmp-*.png
