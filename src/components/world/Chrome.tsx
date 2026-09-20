@@ -87,17 +87,20 @@ function MorphNav({
   onToggle: () => void;
 }) {
   const wordRef = useRef<HTMLSpanElement>(null);
-  const [wordWidth, setWordWidth] = useState(200);
+  const divisionRef = useRef<HTMLSpanElement>(null);
+  const [wordWidth, setWordWidth] = useState(110);
+  const [divisionWidth, setDivisionWidth] = useState(90);
 
   useEffect(() => {
     const measure = () => {
       if (wordRef.current) setWordWidth(wordRef.current.offsetWidth);
+      if (divisionRef.current) setDivisionWidth(divisionRef.current.offsetWidth);
     };
     measure();
     document.fonts?.ready.then(measure).catch(() => {});
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, []);
+  }, [division.key]);
 
   const tinted = division.hue !== "#ffffff";
 
@@ -105,27 +108,26 @@ function MorphNav({
     <header
       className="morph-nav pointer-events-none fixed inset-x-0 top-0 z-[860]"
       data-compact={compact ? "" : undefined}
-      style={{ ["--word-w" as string]: `${wordWidth}px` }}
+      style={{ ["--word-w" as string]: `${wordWidth}px`, ["--div-w" as string]: `${divisionWidth}px` }}
     >
-      <div aria-hidden="true" className="morph-nav__bg" />
-      <div aria-hidden="true" className="morph-nav__line" />
 
       <div className="relative mx-auto flex items-start justify-between px-[var(--gutter)]">
         <WarpLink
           href="/"
           aria-label={`Triseno / ${division.name} — go to portal`}
-          className="morph-nav__lockup pointer-events-auto relative block h-[88px] w-[320px] max-w-[70vw] text-white"
+          className="morph-nav__lockup pointer-events-auto relative block h-[72px] w-[300px] max-w-[70vw] text-white"
         >
           <span ref={wordRef} className="morph-nav__word font-display font-bold uppercase">
             Triseno
           </span>
-          <span className="morph-nav__division font-display font-medium uppercase">
+          <span ref={divisionRef} className="morph-nav__division font-display font-medium uppercase">
             <span className="opacity-60">/</span>
             <span>{division.name}</span>
             {division.key !== "portal" ? (
               <Glyph kind={division.glyph} size={12} color={division.hue} glow={tinted} strokeWidth={1.25} />
             ) : null}
           </span>
+          <span aria-hidden="true" className="morph-nav__rule" />
         </WarpLink>
 
         <button
@@ -136,7 +138,7 @@ function MorphNav({
           className="morph-nav__trigger pointer-events-auto flex h-[44px] items-center gap-4 text-white"
           data-open={menuOpen ? "" : undefined}
         >
-          <span className="hidden font-display text-[12px] font-medium uppercase tracking-[0.24em] sm:block">
+          <span className="hidden font-display font-medium uppercase tracking-[0.24em] sm:block">
             {menuOpen ? "Close" : "Menu"}
           </span>
           <span aria-hidden="true" className="morph-nav__bars">
@@ -281,7 +283,6 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
   const { travel } = useWarp();
   const isPortal = division.key === "portal";
   const up = isPortal || scrolled;
-  const idle = isPortal && !scrolled;
 
   const onClick = useCallback(() => {
     if (up) scrollToTop();
@@ -293,11 +294,9 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
       type="button"
       onClick={onClick}
       aria-label={up ? "Back to top" : "Back to portal"}
-      aria-disabled={idle}
-      className="chrome-btn fixed bottom-[var(--gutter-y)] left-[var(--gutter)] z-[800]"
-      data-idle={idle ? "" : undefined}
+      className="chrome-btn chrome-btn--bl fixed bottom-[var(--gutter-y)] left-[var(--gutter)] z-[800]"
     >
-      {up ? <CaretUp size={20} weight="light" /> : <CaretLeft size={20} weight="light" />}
+      {up ? <CaretUp size={24} weight="light" /> : <CaretLeft size={24} weight="light" />}
     </button>
   );
 }
@@ -309,9 +308,9 @@ function ContactIcon() {
     <WarpLink
       href="/contact"
       aria-label="Contact — start a conversation"
-      className="chrome-btn fixed bottom-[var(--gutter-y)] right-[var(--gutter)] z-[800]"
+      className="chrome-btn chrome-btn--br fixed bottom-[var(--gutter-y)] right-[var(--gutter)] z-[800]"
     >
-      <EnvelopeSimple size={20} weight="light" />
+      <EnvelopeSimple size={24} weight="light" />
     </WarpLink>
   );
 }

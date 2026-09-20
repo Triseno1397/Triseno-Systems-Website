@@ -11,18 +11,25 @@ const OUTLINE = KINDS.map((k) => glyphPoints(k, 48));
  * Triseno beams with collision.
  *
  * Inspired by the 21st.dev "background beams with collision", rebuilt from
- * scratch and made Triseno's own: every beam carries one of the three division
- * glyphs (circle / square / triangle). Where it lands on the wet floor line it
- * throws a glyph-shaped ripple across the floor and a spray of tiny glyph
- * outlines instead of round sparks, and the beam mirrors faintly below the
- * line like everything else in the portal world. White 1px line-work only —
- * the portal is achromatic. Single 2D canvas; runs only while on screen;
- * static frame for reduced motion.
+ * scratch and made Triseno's own: it is light raining onto the portal's wet
+ * floor. Soft shafts of white light fall to a floor line (which the portal pins
+ * to the real 3D floor under the gate object); where a shaft lands it throws a
+ * ripple across the floor in the shape of one of the three division glyphs
+ * (circle / square / triangle, laid flat in perspective) and a short spray of
+ * light. Each shaft mirrors faintly below the line, like everything else in
+ * this world. White only — the portal is achromatic. Single 2D canvas; runs
+ * only while on screen; static frame for reduced motion.
  */
 
 interface BeamsCollisionProps {
-  /** Where the floor line sits, as a fraction of the section height. */
+  /** Where the floor line sits, as a fraction of the canvas height. */
   floor?: number;
+  /** Live floor position (fraction of canvas height); wins over `floor` when given. */
+  getFloor?: () => number;
+  /** Horizontal band the shafts may fall in, as fractions of the width. Default: full width. */
+  xRange?: [number, number];
+  /** Draw the 1px floor line (default true). Off when a rendered floor is already there. */
+  floorLine?: boolean;
   className?: string;
 }
 
@@ -56,7 +63,19 @@ interface Ripple {
   kind: number;
 }
 
-export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCollisionProps) {
+export default function BeamsCollision({
+  floor = 0.8,
+  getFloor,
+  xRange,
+  floorLine = true,
+  className = "",
+}: BeamsCollisionProps) {
+  const getFloorRef = useRef(getFloor);
+  useEffect(() => {
+    getFloorRef.current = getFloor;
+  }, [getFloor]);
+  const x0 = xRange?.[0] ?? 0;
+  const x1 = xRange?.[1] ?? 1;
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -65,7 +84,9 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
     const host = canvas?.parentElement;
     if (!canvas || !ctx || !host) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let w = 0;
     let h = 0;
@@ -75,13 +96,21 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
     const ripples: Ripple[] = [];
 
     const seed = () => {
-      const count = Math.max(5, Math.min(13, Math.round(w / 130)));
+      const count = Math.max(
+        4,
+        Math.min(13, Math.round((w * (x1 - x0)) / 130)),
+      );
       beams = Array.from({ length: count }, (_, i) => ({
-        x: (i + 0.5) / count + (Math.random() - 0.5) * (0.6 / count),
-        y: reduced ? floorY * (0.25 + Math.random() * 0.6) : Math.random() * floorY * 0.9,
+        x:
+          x0 +
+          (x1 - x0) *
+            ((i + 0.5) / count + (Math.random() - 0.5) * (0.6 / count)),
+        y: reduced
+          ? floorY * (0.25 + Math.random() * 0.6)
+          : Math.random() * floorY * 0.9,
         len: 90 + Math.random() * 180,
         speed: 240 + Math.random() * 380,
-        width: Math.random() < 0.3 ? 2 : 1,
+        width: 1,
         wait: reduced ? 0 : Math.random() * 1.2,
         kind: i % KINDS.length,
       }));
@@ -99,7 +128,14 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
     };
 
     /** Stroke a glyph outline centred on (x, y). sy < 1 lays it down on the floor. */
-    const strokeGlyph = (kind: number, x: number, y: number, r: number, sy: number, rot: number) => {
+    const strokeGlyph = (
+      kind: number,
+      x: number,
+      y: number,
+      r: number,
+      sy: number,
+      rot: number,
+    ) => {
       if (!ctx) return;
       const pts = OUTLINE[kind];
       const c = Math.cos(rot);
@@ -116,7 +152,7 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
     };
 
     const burst = (x: number, kind: number) => {
-      const n = 10 + Math.floor(Math.random() * 8);
+      const n = 7 + Math.floor(Math.random() * 6);
       for (let i = 0; i < n; i++) {
         const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
         const v = 80 + Math.random() * 260;
@@ -128,7 +164,7 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
           vy: Math.sin(a) * v,
           life: max,
           max,
-          size: 2.5 + Math.random() * 4,
+          size: 1 + Math.random() * 1.2,
           kind,
           rot: Math.random() * Math.PI,
           spin: (Math.random() - 0.5) * 9,
@@ -141,19 +177,23 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
+      const live = getFloorRef.current?.();
+      if (typeof live === "number") floorY = Math.round(h * live) + 0.5;
 
       // floor line, fading out toward both edges
-      const line = ctx.createLinearGradient(0, 0, w, 0);
-      line.addColorStop(0, "rgba(255,255,255,0)");
-      line.addColorStop(0.18, "rgba(255,255,255,0.9)");
-      line.addColorStop(0.82, "rgba(255,255,255,0.9)");
-      line.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.strokeStyle = line;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, floorY);
-      ctx.lineTo(w, floorY);
-      ctx.stroke();
+      if (floorLine) {
+        const line = ctx.createLinearGradient(0, 0, w, 0);
+        line.addColorStop(0, "rgba(255,255,255,0)");
+        line.addColorStop(0.18, "rgba(255,255,255,0.9)");
+        line.addColorStop(0.82, "rgba(255,255,255,0.9)");
+        line.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = line;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, floorY);
+        ctx.lineTo(w, floorY);
+        ctx.stroke();
+      }
 
       for (const b of beams) {
         if (b.wait > 0) {
@@ -168,19 +208,22 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
           const g = ctx.createLinearGradient(0, tail, 0, head);
           g.addColorStop(0, "rgba(255,255,255,0)");
           g.addColorStop(1, "rgba(255,255,255,0.95)");
+          // a soft shaft of light: wide faint glow under a 1px core
+          const halo = ctx.createLinearGradient(0, tail, 0, head);
+          halo.addColorStop(0, "rgba(255,255,255,0)");
+          halo.addColorStop(1, "rgba(255,255,255,0.14)");
+          ctx.strokeStyle = halo;
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.moveTo(x, tail);
+          ctx.lineTo(x, head);
+          ctx.stroke();
           ctx.strokeStyle = g;
           ctx.lineWidth = b.width;
           ctx.beginPath();
           ctx.moveTo(x, tail);
           ctx.lineTo(x, head);
           ctx.stroke();
-
-          // the beam's glyph rides its head
-          if (head < floorY - 2) {
-            ctx.strokeStyle = "rgba(255,255,255,0.95)";
-            ctx.lineWidth = 1;
-            strokeGlyph(b.kind, x, head, 5, 1, 0);
-          }
 
           // faint mirror under the floor line — the ground here is wet
           const depth = Math.min(head - tail, h - floorY, 140);
@@ -223,7 +266,14 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
           ctx.strokeStyle = `rgba(255,255,255,${(1 - k) * (ring === 0 ? 0.9 : 0.45)})`;
           strokeGlyph(r.kind, r.x, floorY, 8 + rk * 110, 0.22, 0);
         }
-        const glow = ctx.createRadialGradient(r.x, floorY, 0, r.x, floorY, 40 + e * 60);
+        const glow = ctx.createRadialGradient(
+          r.x,
+          floorY,
+          0,
+          r.x,
+          floorY,
+          40 + e * 60,
+        );
         glow.addColorStop(0, `rgba(255,255,255,${0.5 * (1 - k)})`);
         glow.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = glow;
@@ -249,8 +299,10 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
           s.vx *= 0.6;
           s.spin *= 0.5;
         }
-        ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, (s.life / s.max) * 1.4)})`;
-        strokeGlyph(s.kind, s.x, s.y, s.size, 1, s.rot);
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(1, (s.life / s.max) * 1.4)})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
@@ -278,7 +330,10 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
     ro.observe(host);
     resize();
 
-    const io = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()), { threshold: 0 });
+    const io = new IntersectionObserver(
+      ([entry]) => (entry.isIntersecting ? start() : stop()),
+      { threshold: 0 },
+    );
     io.observe(host);
 
     return () => {
@@ -286,7 +341,13 @@ export default function BeamsCollision({ floor = 0.8, className = "" }: BeamsCol
       ro.disconnect();
       io.disconnect();
     };
-  }, [floor]);
+  }, [floor, x0, x1, floorLine]);
 
-  return <canvas ref={canvasRef} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full ${className}`} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+    />
+  );
 }

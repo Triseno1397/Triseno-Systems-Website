@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
  * ~40px glass orb that lenses what is under it (design-system §4).
  * - Chromium: real refraction through an SVG displacement map used as a
  *   backdrop-filter. Other engines keep the brightness/blur glass fallback.
- * - Over interactive elements the orb grows and inverts what it covers.
+ * - It stays ~40px: over interactive elements it only swells a little and its
+ *   rim brightens. It never inverts or hides what it is over.
  * - Pointer devices only; touch keeps the native cursor. Transform-only motion.
  */
 
@@ -44,7 +45,6 @@ const INTERACTIVE = "a, button, [role='button'], input, textarea, select, label,
 
 export default function OrbCursor() {
   const orbRef = useRef<HTMLDivElement>(null);
-  const invertRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
   const [mapUrl, setMapUrl] = useState("");
 
@@ -63,8 +63,7 @@ export default function OrbCursor() {
     root.classList.add("has-orb");
 
     const orb = orbRef.current;
-    const invert = invertRef.current;
-    if (!orb || !invert) return;
+    if (!orb) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let tx = window.innerWidth / 2;
@@ -85,21 +84,18 @@ export default function OrbCursor() {
         x = tx;
         y = ty;
         orb.style.opacity = "1";
-        invert.style.opacity = "1";
       }
       const el = e.target as Element | null;
       const hot = !!el?.closest?.(INTERACTIVE) || root.hasAttribute("data-cursor-hot");
-      targetScale = hot ? 1.7 : 1;
+      targetScale = hot ? 1.12 : 1;
       orb.toggleAttribute("data-hot", hot);
-      invert.toggleAttribute("data-hot", hot);
     };
     const onLeave = () => {
       visible = false;
       orb.style.opacity = "0";
-      invert.style.opacity = "0";
     };
     const onDown = () => (targetScale *= 0.8);
-    const onUp = () => (targetScale = orb.hasAttribute("data-hot") ? 1.7 : 1);
+    const onUp = () => (targetScale = orb.hasAttribute("data-hot") ? 1.12 : 1);
 
     const loop = () => {
       const k = reduced ? 1 : 0.22;
@@ -108,7 +104,6 @@ export default function OrbCursor() {
       scale += (targetScale - scale) * (reduced ? 1 : 0.16);
       const tf = `translate3d(${x - SIZE / 2}px, ${y - SIZE / 2}px, 0) scale(${scale.toFixed(3)})`;
       orb.style.transform = tf;
-      invert.style.transform = tf;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -152,11 +147,6 @@ export default function OrbCursor() {
           </filter>
         </defs>
       </svg>
-      {/* The inverter is its own root-level layer: mix-blend-mode only reaches the
-          page when the element is not trapped inside the orb's stacking context. */}
-      <div ref={invertRef} aria-hidden="true" className="orb-cursor orb-cursor--invert" style={{ opacity: 0 }}>
-        <span className="orb-cursor__invert" />
-      </div>
       <div ref={orbRef} aria-hidden="true" className="orb-cursor" style={{ opacity: 0 }}>
         <span className="orb-cursor__glass" />
         <span className="orb-cursor__spec" />

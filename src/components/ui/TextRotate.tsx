@@ -11,7 +11,8 @@ import Glyph from "@/components/world/Glyph";
  * a per-character, staggered vertical swap inside AnimatePresence. Everything
  * else is Triseno's own:
  * - it is CONTROLLED (`index`), not timer-driven, so the headline word, the lit
- *   menu word and the 3D signature object always change together;
+ *   menu word and the 3D signature object always change together; swaps are
+ *   keyed by the text, so a line that does not change does not re-animate;
  * - each word carries its division glyph (circle / square / triangle), which
  *   turns into place in the division hue while the letters swap;
  * - letters rise through a hard 0-radius mask and a 1px white hairline redraws
@@ -31,11 +32,22 @@ interface TextRotateProps {
   className?: string;
   /** seconds between characters */
   stagger?: number;
+  /** draw the division glyph after the word (default true) */
+  showGlyph?: boolean;
+  /** draw the hairline rule under the word (default true) */
+  showRule?: boolean;
 }
 
 const EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-export function TextRotate({ words, index, className = "", stagger = 0.024 }: TextRotateProps) {
+export function TextRotate({
+  words,
+  index,
+  className = "",
+  stagger = 0.024,
+  showGlyph = true,
+  showRule = true,
+}: TextRotateProps) {
   const reduced = useReducedMotion();
   const word = words[Math.max(0, Math.min(words.length - 1, index))];
   const chars = Array.from(word.text);
@@ -48,7 +60,7 @@ export function TextRotate({ words, index, className = "", stagger = 0.024 }: Te
 
       <span aria-hidden="true" className="text-rotate__word">
         <AnimatePresence mode="popLayout" initial={false}>
-          <motion.span key={index} className="text-rotate__line">
+          <motion.span key={word.text} className="text-rotate__line">
             {chars.map((char, i) =>
               char === " " ? (
                 <span key={i} className="text-rotate__space" />
@@ -66,35 +78,49 @@ export function TextRotate({ words, index, className = "", stagger = 0.024 }: Te
                 </span>
               ),
             )}
-            <motion.span
-              className="text-rotate__rule"
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              exit={{ scaleX: 0, originX: 1 }}
-              transition={{ duration: reduced ? 0.01 : 0.9, ease: EXPO, delay: reduced ? 0 : 0.12 }}
-            />
+            {showRule ? (
+              <motion.span
+                className="text-rotate__rule"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                exit={{ scaleX: 0, originX: 1 }}
+                transition={{
+                  duration: reduced ? 0.01 : 0.9,
+                  ease: EXPO,
+                  delay: reduced ? 0 : 0.12,
+                }}
+              />
+            ) : null}
           </motion.span>
         </AnimatePresence>
       </span>
-      <motion.span
-        aria-hidden="true"
-        className="text-rotate__glyph"
-        layout="position"
-        transition={{ duration: reduced ? 0.01 : 0.9, ease: EXPO }}
-      >
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.span
-            key={index}
-            className="text-rotate__glyph-inner"
-            initial={{ opacity: 0, scale: 0.4, rotate: -120 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 0.4, rotate: 120 }}
-            transition={{ duration: reduced ? 0.01 : 0.9, ease: EXPO }}
-          >
-            <Glyph kind={word.glyph} size="100%" color={word.hue} strokeWidth={2.5} glow />
-          </motion.span>
-        </AnimatePresence>
-      </motion.span>
+      {showGlyph ? (
+        <motion.span
+          aria-hidden="true"
+          className="text-rotate__glyph"
+          layout="position"
+          transition={{ duration: reduced ? 0.01 : 0.9, ease: EXPO }}
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={word.glyph}
+              className="text-rotate__glyph-inner"
+              initial={{ opacity: 0, scale: 0.4, rotate: -120 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.4, rotate: 120 }}
+              transition={{ duration: reduced ? 0.01 : 0.9, ease: EXPO }}
+            >
+              <Glyph
+                kind={word.glyph}
+                size="100%"
+                color={word.hue}
+                strokeWidth={2.5}
+                glow
+              />
+            </motion.span>
+          </AnimatePresence>
+        </motion.span>
+      ) : null}
     </span>
   );
 }

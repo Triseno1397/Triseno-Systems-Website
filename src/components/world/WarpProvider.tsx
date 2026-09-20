@@ -16,14 +16,24 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { divisionForHref, type Division } from "@/lib/divisions";
 import { glyphPoints } from "@/lib/glyph-path";
+import Glyph from "./Glyph";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   M2 — travel between worlds. A full-screen streak tunnel tinted in the
-   DESTINATION hue covers the outgoing page, the route changes underneath it,
-   and the tunnel decelerates and dissolves over the incoming page.
+   M2 — travel between worlds, as one arc of ~2.5s:
+     0.0s  the page lets go: the portal centres its object and fades its menu
+           (it listens for the `world:warp` event), chrome fades out;
+     0.1s  a full-bleed streak tunnel, purely in the DESTINATION hue, closes in;
+     0.9s  the route changes underneath the tunnel;
+     1.0s  the title card — destination glyph + name — resolves letter by letter
+           while the tunnel is still pushing;
+     1.7s+ the tunnel decelerates and dissolves over the incoming page;
+     2.5s  chrome arrives.
    The cover is drawn with alpha over the live page, so there is never a blank
-   frame: you see page -> page+streaks -> streaks -> page+streaks -> page.
+   frame.
    ───────────────────────────────────────────────────────────────────────── */
+
+/** Fired on window when a warp starts. detail: { href, key } */
+export const WARP_EVENT = "world:warp";
 
 interface WarpApi {
   travel: (href: string) => void;
@@ -36,19 +46,21 @@ export function useWarp(): WarpApi {
   return useContext(WarpContext);
 }
 
-const T_IN = 1000; // cover ramps up
-const T_NAV = 850; // router.push fires here (page already ~fully covered)
-const T_MIN_HOLD = 1550; // earliest the out phase may start
-const T_OUT = 900; // cover ramps down
+const T_IN = 750; // cover ramps up
+const T_NAV = 900; // router.push fires here (page fully covered)
+const T_TITLE = 980; // title card starts resolving
+const T_MIN_HOLD = 1720; // earliest the out phase may start
+const T_OUT = 800; // cover ramps down
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
-const STAR_COUNT = 460;
+const STAR_COUNT = 720;
 
 interface Star {
   x: number;
   y: number;
   z: number;
-  white: boolean;
+  /** 0.35..1 — brightness within the one hue; there are no white streaks */
+  lum: number;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -68,7 +80,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
   const fromPathRef = useRef(pathname);
   const arrivedRef = useRef(false);
@@ -135,16 +147,19 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         x: (Math.random() * 2 - 1) * 1.6,
         y: (Math.random() * 2 - 1) * 1.6,
         z: Math.random() * 0.95 + 0.05,
-        white: Math.random() < 0.38,
+        lum: 0.35 + Math.random() * 0.65,
       }));
       const ring = glyphPoints(target.glyph, 96);
 
       overlay.style.display = "block";
       overlay.style.opacity = "1";
       document.documentElement.setAttribute("data-warping", "");
+      titleRef.current?.removeAttribute("data-show");
+      window.dispatchEvent(new CustomEvent(WARP_EVENT, { detail: { href, key: target.key } }));
 
       const start = performance.now();
       let navigated = false;
+      let titled = false;
       let outStart = 0;
       let last = start;
 
@@ -166,10 +181,14 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
           if (target.external) {
             // Static page served from /public — finish with a document navigation.
             // The tunnel keeps drawing until the new document paints.
-            window.setTimeout(() => window.location.assign(href), reduced ? 0 : 450);
+            window.setTimeout(() => window.location.assign(href), reduced ? 0 : 1000);
           } else {
             router.push(href);
           }
+        }
+        if (!titled && t >= (reduced ? 200 : T_TITLE)) {
+          titled = true;
+          titleRef.current?.setAttribute("data-show", "");
         }
         if (!outStart && !target.external) {
           // A destination that boots a 3D world holds the tunnel (instead of showing its
@@ -184,7 +203,12 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         const cover = easeInOutCubic(inK) * (1 - easeInOutCubic(outK));
         const speed = reduced ? 0 : 0.0025 + 0.05 * easeInOutCubic(inK) * (1 - easeOutExpo(outK) * 0.94);
 
-        if (labelRef.current) labelRef.current.style.opacity = String(cover);
+        if (titleRef.current) {
+          // the card keeps drifting toward the viewer for as long as the tunnel pushes
+          const push = 0.94 + Math.min(1, t / 2600) * 0.1;
+          titleRef.current.style.opacity = String(outStart ? 1 - easeInOutCubic(clamp01(outK * 1.35)) : 1);
+          titleRef.current.style.transform = `scale(${push.toFixed(4)})`;
+        }
 
         if (ctx) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -222,9 +246,9 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
               const x1 = cx + (s.x / s.z) * scale * 0.5;
               const y1 = cy + (s.y / s.z) * scale * 0.5;
               if ((x1 < -50 || x1 > w + 50 || y1 < -50 || y1 > h + 50) && (x0 < 0 || x0 > w || y0 < 0 || y0 > h)) continue;
-              const a = clamp01(1.15 - s.z) * cover;
-              ctx.strokeStyle = s.white ? `rgba(255,255,255,${a})` : `rgba(${hr},${hg},${hb},${a})`;
-              ctx.lineWidth = Math.min(2.6, 0.5 + (1 - s.z) * 2.2);
+              const a = clamp01(1.25 - s.z) * cover;
+              ctx.strokeStyle = `rgba(${hr},${hg},${hb},${a * s.lum})`;
+              ctx.lineWidth = Math.min(3.2, 0.6 + (1 - s.z) * 2.8);
               ctx.beginPath();
               ctx.moveTo(x0, y0);
               ctx.lineTo(x1, y1);
@@ -276,14 +300,26 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         className="fixed inset-0 z-[1000] cursor-wait"
       >
         <canvas ref={canvasRef} className="block h-full w-full" />
-        <div
-          ref={labelRef}
-          className="absolute inset-x-0 bottom-[12dvh] flex items-center justify-center gap-3 font-display text-[12px] font-medium uppercase tracking-[0.28em] text-white"
-          style={{ opacity: 0 }}
-        >
-          <span>Triseno</span>
-          <span className="opacity-60">/</span>
-          <span>{dest?.name ?? ""}</span>
+        <div ref={titleRef} className="warp-title absolute inset-0 flex flex-col items-center justify-center gap-8 px-6 text-center text-white">
+          {dest ? (
+            <>
+              <span className="warp-title__glyph">
+                <Glyph kind={dest.glyph} size={56} color={dest.hue} strokeWidth={1.5} glow />
+              </span>
+              <span className="warp-title__name font-display font-bold uppercase" aria-hidden="true">
+                {Array.from(dest.name.toUpperCase()).map((ch, i) =>
+                  ch === " " ? (
+                    <span key={i} className="warp-title__space" />
+                  ) : (
+                    <span key={i} className="warp-title__char" style={{ ["--i" as string]: i }}>
+                      {ch}
+                    </span>
+                  ),
+                )}
+              </span>
+              <span className="warp-title__label font-mono uppercase">Triseno / {dest.name}</span>
+            </>
+          ) : null}
         </div>
       </div>
       <div aria-live="polite" className="sr-only">
