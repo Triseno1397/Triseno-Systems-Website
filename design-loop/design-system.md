@@ -32,7 +32,7 @@ from a screenshot or filmstrip.
 - **Display: Unbounded** (600–700), uppercase, tracking ≥ 0.06em, never negative. Used for headlines, menu words, chrome labels, buttons.
 - **Body: Geist Sans** (400), sentence case, 16–18px, line-height 1.5, max line length 62ch. **Data: Geist Mono** for counters, labels, agent logs.
 - Hairline contrast pairing: a 600–700 headline is paired with 100–400 supporting text; hierarchy comes from weight and size, not colour.
-- Display size ≥ 4× body size on hero frames. Content uses at most 3 type sizes per frame; all chrome and mono labels share one further small size (12–13px). The lockup wordmark counts as chrome.
+- Display size ≥ 4× body size on desktop hero frames; ≥ 2.5× on phones (< 768px), where 4× in Unbounded cannot fit a single word like "CREATIVE" across 390px. A phone hero may drop body text entirely. Content uses at most 3 type sizes per frame; all chrome and mono labels share one further small size (12–13px). The lockup wordmark counts as chrome.
 - Banned: Inter, Roboto, Arial, system fonts, emojis, Lucide icons (Phosphor only, thin/light weight).
 
 ## 4. Shape and chrome
