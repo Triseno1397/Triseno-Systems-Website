@@ -104,11 +104,11 @@ html[data-warping] .progress-rail { opacity: 0; pointer-events: none; }
   width: min(620px, 92vw); height: 210px;
   background: radial-gradient(
     118% 128% at 4% 2%,
-    rgba(0, 0, 0, 0.93) 0%,
-    rgba(0, 0, 0, 0.78) 24%,
-    rgba(0, 0, 0, 0.42) 50%,
-    rgba(0, 0, 0, 0.12) 70%,
-    rgba(0, 0, 0, 0) 84%
+    rgba(0, 0, 0, 0.94) 0%,
+    rgba(0, 0, 0, 0.87) 36%,
+    rgba(0, 0, 0, 0.5) 58%,
+    rgba(0, 0, 0, 0.16) 76%,
+    rgba(0, 0, 0, 0) 88%
   );
 }
 .chrome-scrim--tr {
@@ -580,7 +580,8 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
     letter-spacing: 0.12em; gap: 7px;
     max-width: 100%; overflow: hidden;
   }
-  .morph-nav__rule { top: 38px; width: 100%; }
+  /* the rule sits under the stacked pair, never through the division name */
+  .morph-nav__rule { top: 57px; width: 100%; }
   .morph-nav[data-compact] .morph-nav__word { transform: translate3d(0, 18px, 0); }
   .morph-nav[data-compact] .morph-nav__division { transform: translate3d(0, 38px, 0); }
   .morph-nav__trigger { transform: translate3d(0, 10px, 0); }
@@ -589,7 +590,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   /* the corner scrims cover the full width of the phone so scrolling copy
      dissolves under the chrome instead of colliding with it */
   .chrome-scrim--tl { width: 100vw; height: 168px;
-    background: radial-gradient(120% 150% at 0% 0%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.82) 34%, rgba(0,0,0,0.42) 62%, rgba(0,0,0,0) 92%); }
+    background: radial-gradient(150% 170% at 0% 0%, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.9) 44%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0) 94%); }
   .chrome-scrim--tr { width: 62vw; height: 132px; }
   .chrome-scrim--bl, .chrome-scrim--br { width: 62vw; height: 150px; }
 
