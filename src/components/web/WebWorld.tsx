@@ -18,10 +18,10 @@ gsap.registerPlugin(ScrollTrigger);
  * On top of it, one thin layer this division owns: STATION LIGHT. Every
  * section registers itself with `data-station`; when a station becomes active
  * the division's light moves to the far side of the frame from that section's
- * object, the square glyph frames re-seat, and at the gate the volume visibly
- * changes — the horizon opens, a threshold beam rises and the square turns on
- * its corner. Sections are objects standing in this one world; nothing on the
- * page paints its own background.
+ * object. Everything here stays BEHIND content: no line, column
+ * or bloom of this layer is ever drawn through resting type (design-system §2).
+ * Sections are objects standing in this one world; nothing on the page paints
+ * its own background.
  *
  * Only transform / opacity animate (M4). Reduced motion: the resting lit state.
  */
@@ -56,10 +56,6 @@ export default function WebWorld() {
       <DivisionWorld division="web" />
       <div ref={layerRef} aria-hidden="true" className="web-scene" data-at="hero">
         <span className="web-scene__haze" />
-        <span className="web-scene__ring web-scene__ring--in" />
-        <span className="web-scene__ring web-scene__ring--out" />
-        <span className="web-scene__beam" />
-        <span className="web-scene__horizon" />
       </div>
     </>
   );

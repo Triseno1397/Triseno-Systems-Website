@@ -26,7 +26,8 @@ import gsap from "gsap";
  * per pointer move; only clip-path and transform change.
  */
 
-const START = 50;
+/** Resting split: the rebuilt booking card shows whole on the right. */
+const START = 60;
 
 interface Note {
   /** region on the stage, in % of the stage box */
@@ -144,6 +145,30 @@ export default function CompareReveal() {
     NOTES.forEach((_, i) => notesRef.current?.children[i]?.toggleAttribute("data-lit", true));
   }, [fine]);
 
+  /**
+   * Phone: the first time the stage is properly on screen, show the old site
+   * for a beat and then cut to the rebuild by itself, so the change is SEEN
+   * even by someone who never touches the switch.
+   */
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || fine) return;
+    let timer = 0;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        timer = window.setTimeout(() => setView("after"), 1400);
+      },
+      { threshold: 0.6 },
+    );
+    io.observe(stage);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [fine]);
+
   const fromPointer = (clientX: number) => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -206,21 +231,6 @@ export default function CompareReveal() {
 
       <div className="web-compare__main">
         <div className="web-compare__stack">
-          {/* Phone control. Hidden on a fine pointer, where the drag line rules. */}
-          <div className="web-compare__switch" role="group" aria-label="Show the old site or the rebuild">
-            {(["before", "after"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                data-on={view === v ? "" : undefined}
-                aria-pressed={view === v}
-                onClick={() => setView(v)}
-              >
-                {v === "before" ? "Before — template" : "After — rebuilt"}
-              </button>
-            ))}
-          </div>
-
           <div
             ref={stageRef}
             className="web-compare__stage"
@@ -285,6 +295,23 @@ export default function CompareReveal() {
               </span>
             </div>
           </div>
+
+          {/* Phone control, directly under the site it switches. Hidden on a fine
+              pointer, where the drag line rules. */}
+          <div className="web-compare__switch" role="group" aria-label="Show the old site or the rebuild">
+            {(["before", "after"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                data-on={view === v ? "" : undefined}
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+              >
+                {v === "before" ? "Before — template" : "After — rebuilt"}
+              </button>
+            ))}
+          </div>
+
         </div>
 
         <div className="web-compare__side">

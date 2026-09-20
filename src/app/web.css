@@ -12,7 +12,7 @@
   --hue: #9d5cff;
   /* The rail lane is applied to <main> by world.css (--lane-right); never add it twice. */
   --rail: 0px;
-  --web-display: clamp(30px, 8.2vw, 42px);
+  --web-display: clamp(40px, 11.3vw, 48px); /* phone hero: >= 2.5x body (design-system §3) */
   --web-h2: clamp(22px, 5.6vw, 30px);
   /* Display tracking. design-system §3 floor is 0.06em; set visibly above it. */
   --web-track: 0.1em;
@@ -37,64 +37,50 @@
 @media not ((hover: hover) and (pointer: fine)) { .web-world .web-hover-only { display: none; } }
 
 /* ═══ THE WORLD ═══════════════════════════════════════════════════════
-   The lit 3D volume itself is the foundation's shared DivisionWorld (see
-   WebWorld.tsx). This layer sits on top of it and owns only STATION LIGHT:
-   the haze moves to the far side of whichever object is on stage, the square
-   glyph frames re-seat, and at the gate the horizon opens and a threshold
-   beam rises. Only transform / opacity move (M4). Haze and beams inside the
-   rendered scene carry the division hue by design-system §2.
+   The lit 3D volume is the foundation's shared DivisionWorld (WebWorld.tsx).
+   This layer owns only STATION LIGHT: one soft haze that moves to the far
+   side of whichever object is on stage. It sits BEHIND content (z 0, content
+   z 10) and draws no line, column or glyph of its own (design-system §2).
+   Only transform / opacity move (M4).
    ═══════════════════════════════════════════════════════════════════ */
 .web-scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .web-scene__haze {
-  position: absolute; left: 50%; top: 54%; width: 148vmax; height: 88vmax; margin: -44vmax 0 0 -74vmax;
+  position: absolute; left: 50%; top: 54%; width: 110vmax; height: 66vmax; margin: -33vmax 0 0 -55vmax;
   background: radial-gradient(
     ellipse at center,
     color-mix(in srgb, var(--hue) 20%, transparent) 0%,
     color-mix(in srgb, var(--hue) 6%, transparent) 38%,
     transparent 68%
   );
-  will-change: transform;
   transition: transform 1500ms var(--ease-expo), opacity 1500ms var(--ease-expo);
 }
-.web-scene__ring {
-  position: absolute; left: 50%; top: 54%; aspect-ratio: 1; translate: -50% -50%;
-  border: 1px solid color-mix(in srgb, var(--hue) 20%, transparent);
-  transition: transform 1600ms var(--ease-expo), opacity 1600ms var(--ease-expo);
-}
-.web-scene__ring--in { width: 72vmin; }
-.web-scene__ring--out { width: 126vmin; border-color: color-mix(in srgb, var(--hue) 10%, transparent); }
-.web-scene__horizon {
-  position: absolute; left: 0; right: 0; top: 52%; height: 1px; opacity: 0.5; transform-origin: 50% 50%;
-  background: linear-gradient(90deg, transparent, #ffffff 26%, #ffffff 74%, transparent);
-  transition: transform 1600ms var(--ease-expo), opacity 1600ms var(--ease-expo);
-}
-.web-scene__beam {
-  position: absolute; left: 50%; top: 0; bottom: 0; width: 34vmin; margin-left: -17vmin;
-  background: linear-gradient(
-    180deg, transparent 0%, color-mix(in srgb, var(--hue) 22%, transparent) 46%, transparent 100%
-  );
-  opacity: 0; transform: scaleY(0.4) scaleX(0.5); transform-origin: 50% 100%;
-  transition: transform 1800ms var(--ease-expo), opacity 1800ms var(--ease-expo);
-}
-
 /* Stations: the light moves to the far side of whatever object is on stage. */
 .web-scene[data-at="hero"] .web-scene__haze { transform: translate3d(16vw, 2vh, 0) scale(1); }
 .web-scene[data-at="demo"] .web-scene__haze { transform: translate3d(0, -9vh, 0) scale(1.14); }
 .web-scene[data-at="compare"] .web-scene__haze { transform: translate3d(-19vw, -3vh, 0) scale(1.04); }
 .web-scene[data-at="stack"] .web-scene__haze { transform: translate3d(21vw, 5vh, 0) scale(0.96); }
 .web-scene[data-at="range"] .web-scene__haze { transform: translate3d(-16vw, 7vh, 0) scale(1.06); }
-.web-scene[data-at="gate"] .web-scene__haze { transform: translate3d(0, -2vh, 0) scale(1.28); opacity: 0.85; }
-
-.web-scene[data-at="demo"] .web-scene__ring { transform: translate(-50%, -50%) scale(1.22); opacity: 0.55; }
-.web-scene[data-at="stack"] .web-scene__ring { transform: translate(-50%, -50%) scale(0.82); opacity: 0.7; }
-.web-scene[data-at="range"] .web-scene__ring { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
-.web-scene[data-at="gate"] .web-scene__ring { transform: translate(-50%, -50%) scale(0.52) rotate(45deg); opacity: 1; }
-
-/* The threshold: the volume changes. The horizon opens, the beam rises. */
-.web-scene[data-at="gate"] .web-scene__horizon { opacity: 1; transform: scaleY(2.4); }
-.web-scene[data-at="gate"] .web-scene__beam { opacity: 1; transform: scaleY(1) scaleX(1); }
+.web-scene[data-at="gate"] .web-scene__haze { transform: translate3d(-22vw, -2vh, 0) scale(1.1); opacity: 0.85; }
 
 /* ── shared section primitives ── */
+/* Readable substrate: a soft neutral scrim behind every block of copy, so the
+   world's light and bloom can never wash out resting type (design-system §2:
+   "the scene sits behind content, always"). Neutral black, blurred edges,
+   no hard edge, no rule line. */
+.web-hero__copy, .web-demo__head, .web-compare__head, .web-compare__side,
+.web-stack__aside, .web-range__head, .web-range__list, .web-gate__copy {
+  position: relative; isolation: isolate;
+}
+.web-hero__copy::before, .web-demo__head::before, .web-compare__head::before, .web-compare__side::before,
+.web-stack__aside::before, .web-range__head::before, .web-range__list::before, .web-gate__copy::before {
+  content: ""; position: absolute; inset: -28px -40px; z-index: -1; pointer-events: none;
+  background: rgba(0, 0, 0, 0.56); filter: blur(30px);
+}
+/* Mid-page sections do not carry a bottom lane: the next section's top lane
+   already clears the chrome, and two lanes back to back left ~280px of bare
+   world between sections. */
+.web-compare, .web-stack, .web-range { padding-bottom: 48px; }
+
 /* Sections sit above the world (z 10) and inside the chrome lanes, so no
    fixed chrome element lands on their content (design-loop/division-world.md). */
 .web-section {
@@ -435,7 +421,7 @@
 }
 
 /* ═══ 3 · BEFORE / AFTER — compare reveal ═══ */
-.web-compare { display: flex; flex-direction: column; justify-content: center; }
+.web-compare { display: flex; flex-direction: column; justify-content: flex-start; }
 .web-compare__head { display: grid; gap: 16px; width: 100%; max-width: 1400px; margin: 0 auto 28px; }
 .web-compare__head .web-eyebrow { margin-bottom: 14px; }
 .web-compare__stack { display: grid; gap: 12px; min-width: 0; }
@@ -495,15 +481,16 @@
 .web-compare__knob i { display: block; width: 14px; height: 14px; border: 1px solid var(--hue); filter: drop-shadow(0 0 6px var(--hue)); transition: transform 600ms var(--ease-expo); }
 .web-compare__stage:hover .web-compare__knob i,
 .web-compare__stage[data-dragging] .web-compare__knob i,
-.web-compare__handle:focus-visible .web-compare__knob i { transform: rotate(45deg) scale(0.8); }
+.web-compare__handle:focus-visible .web-compare__knob i { transform: scale(0.64); }
 .web-compare__handle:focus-visible .web-compare__knob { outline: 1px solid #ffffff; outline-offset: 5px; }
 
 /* ── DEFAULT (phone): one full-width site at a time, cut by the switch ──
    A drag line over two full-width sites communicates nothing at 390px, so
    the phone never gets one. */
 .web-compare__stage { cursor: pointer; }
+/* Each site carries its own label; the rebuilt layer covers the old one, so
+   the label on screen always names the site on screen. */
 .web-compare__handle,
-.web-compare__label,
 .web-compare__regions { display: none; }
 .web-compare__layer--after { opacity: 0; transition: opacity 520ms var(--ease-expo); }
 .web-compare__stage[data-view="after"] .web-compare__layer--after { opacity: 1; }
@@ -512,8 +499,7 @@
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .web-compare__switch { display: none; }
   .web-compare__stage { cursor: ew-resize; }
-  .web-compare__handle,
-  .web-compare__label { display: block; }
+  .web-compare__handle { display: block; }
   .web-compare__regions { display: block; clip-path: inset(0 0 0 calc(var(--n) * 1%)); }
   .web-compare__layer--after {
     opacity: 1; transition: none; clip-path: inset(0 0 0 calc(var(--n) * 1%)); will-change: clip-path;
@@ -649,14 +635,84 @@
 .web-stack__list { display: grid; gap: 5dvh; margin: 0; padding: 0 0 3dvh; list-style: none; }
 .web-stack__card { position: sticky; top: calc(var(--lane-top) + var(--i) * 9px); }
 .web-stack__inner {
-  filter: brightness(1);
-  display: flex; flex-direction: column; gap: 14px; min-height: clamp(258px, 40dvh, 380px);
-  padding: clamp(20px, 2.2vw, 34px); border: 1px solid #ffffff;
-  /* frosted, like the shared WorldCard: the world stays visible through the sheet */
-  background: rgba(17, 17, 17, 0.62);
-  -webkit-backdrop-filter: blur(26px) brightness(0.7); backdrop-filter: blur(26px) brightness(0.7);
-  transform-origin: 50% 0; will-change: transform, filter;
+  display: flex; flex-direction: column; min-height: clamp(300px, 46dvh, 440px);
+  padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
+  /* Phone: a near-solid sheet. Seven stacked backdrop-filter layers are the
+     most expensive thing a phone compositor can be asked to hold. */
+  background: rgba(17, 17, 17, 0.94);
+  transform-origin: 50% 0; will-change: transform;
 }
+@media (min-width: 900px) {
+  /* frosted, like the shared WorldCard: the world stays visible through the sheet */
+  .web-stack__inner {
+    background: rgba(17, 17, 17, 0.62);
+    -webkit-backdrop-filter: blur(26px) brightness(0.7); backdrop-filter: blur(26px) brightness(0.7);
+  }
+}
+.web-stack__content { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* the illustrations — hairline white, one violet accent, chrome-size mono */
+.web-stack__viz {
+  display: flex; min-height: clamp(96px, 13dvh, 118px); padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3); overflow: hidden;
+}
+.dv {
+  display: flex; width: 100%; font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  line-height: 1.4; letter-spacing: 0.06em; text-transform: uppercase; color: #ffffff;
+}
+.dv span, .dv i, .dv b { display: block; font-style: normal; font-weight: 400; }
+.dv [data-hot] { border-color: var(--hue) !important; color: var(--hue); }
+
+.dv-map { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.dv-map__root { position: relative; padding: 5px 12px; border: 1px solid #ffffff; }
+.dv-map__root::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 14px; background: #ffffff; }
+.dv-map__kids {
+  display: grid !important; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%;
+  padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, 0.6);
+}
+.dv-map__kids > span { position: relative; padding: 5px 0; border: 1px solid rgba(255, 255, 255, 0.55); text-align: center; }
+.dv-map__kids > span::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 9px; background: rgba(255, 255, 255, 0.6); }
+
+.dv-spec { align-items: center; gap: clamp(14px, 2vw, 26px); }
+.dv-spec__aa { font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: var(--web-h2); letter-spacing: var(--web-track); line-height: 1; text-transform: none; }
+.dv-spec__meta { flex: 1 1 auto; color: var(--ink-muted); }
+.dv-spec__sw { display: grid !important; grid-template-columns: repeat(2, 20px); gap: 6px; }
+.dv-spec__sw i { width: 20px; height: 20px; border: 1px solid #ffffff; }
+.dv-spec__sw i:nth-child(1) { background: #ffffff; }
+.dv-spec__sw i:nth-child(2) { background: #cfcfcf; }
+.dv-spec__sw i:nth-child(3) { background: #111111; }
+.dv-spec__sw i:nth-child(4) { background: var(--hue); border-color: var(--hue); }
+
+.dv-code { flex-direction: column; justify-content: center; text-transform: none; letter-spacing: 0.02em; white-space: pre; color: var(--ink-muted); }
+.dv-code b { display: inline !important; color: var(--hue); }
+.dv-code__ok { margin-top: 6px; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.dv-perf { flex-direction: column; justify-content: center; gap: 6px; }
+.dv-perf__row { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 30px; align-items: center; gap: 10px; }
+.dv-perf__row i { position: relative; height: 3px; background: rgba(255, 255, 255, 0.18); }
+.dv-perf__row i::after { content: ""; position: absolute; inset: 0; background: #ffffff; transform: scaleX(var(--v)); transform-origin: left center; }
+.dv-perf__row[data-hot] i::after { background: var(--hue); }
+.dv-perf__row b { text-align: right; }
+.dv-perf__note { color: var(--ink-muted); }
+
+.dv-serp { flex-direction: column; justify-content: center; gap: 4px; }
+.dv-serp__url { color: var(--ink-muted); text-transform: none; }
+.dv-serp__t { font-family: var(--font-geist-sans), sans-serif; font-size: var(--fs-body); line-height: 1.3; letter-spacing: 0; text-transform: none; color: #ffffff; text-decoration: underline; text-decoration-color: var(--hue); text-underline-offset: 4px; }
+.dv-serp__d { color: var(--ink-muted); text-transform: none; }
+
+.dv-flow { align-items: center; }
+.dv-flow > span { flex: none; padding: 5px 8px; border: 1px solid rgba(255, 255, 255, 0.6); }
+.dv-flow > span[data-hot] { background: var(--hue); color: #000000; }
+.dv-flow > i { flex: 1 1 auto; min-width: 8px; height: 1px; background: #ffffff; }
+@media (max-width: 520px) {
+  .dv-flow > :nth-child(n + 8) { display: none; }
+}
+
+.dv-bars { flex-direction: column; gap: 6px; }
+.dv-bars__plot { flex: 1 1 auto; display: flex !important; align-items: flex-end; gap: 4px; min-height: 56px; }
+.dv-bars__plot i { flex: 1 1 0; height: 100%; background: rgba(255, 255, 255, 0.55); transform: scaleY(var(--h)); transform-origin: 50% 100%; }
+.dv-bars__plot i[data-hot] { background: var(--hue); }
+.dv-bars__axis { display: flex !important; justify-content: space-between; color: var(--ink-muted); }
 .web-stack__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .web-stack__n { font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.2em; color: #ffffff; }
 .web-stack__frame { display: inline-flex; gap: 5px; }
@@ -843,7 +899,7 @@
   position: absolute; inset: calc(var(--k) * 8.2%); border: 1px solid var(--hue); will-change: transform, opacity;
 }
 .web-gate__nest--main .web-gate__frame:first-child { filter: drop-shadow(0 0 26px var(--hue)); border-width: 2px; }
-/* The threshold glyph: the division's square turns on its corner and gives up
+/* The threshold glyph: the division's square makes a quarter turn and gives up
    its hue, because the room on the other side — Contact — is achromatic. */
 .web-gate__core {
   position: absolute; left: 50%; top: 50%; width: 22%; height: 22%; margin: -11% 0 0 -11%;
@@ -855,7 +911,7 @@
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--ink-muted);
 }
-.web-gate__tick i { display: block; width: 8px; height: 8px; border: 1px solid #ffffff; transform: rotate(45deg); }
+.web-gate__tick i { display: block; width: 8px; height: 8px; border: 1px solid #ffffff; }
 .web-gate__mirror {
   width: var(--nest); height: calc(var(--nest) * 0.32); margin-top: 12px; overflow: hidden; filter: blur(3px); opacity: 0.4;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
@@ -883,7 +939,9 @@
 
 /* ═══ reduced motion: final states, nothing pinned ═══ */
 @media (prefers-reduced-motion: reduce) {
-  .web-scene__haze, .web-scene__ring, .web-scene__horizon, .web-scene__beam { transition: none; }
+  .web-scene__haze { transition: none; }
+  /* no stacking: every sheet is whole and readable in a plain column */
+  .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }
   .web-demo__stage { position: relative; height: auto; min-height: 100dvh; }
   .web-demo__viewport { overflow-y: auto; overscroll-behavior: contain; }

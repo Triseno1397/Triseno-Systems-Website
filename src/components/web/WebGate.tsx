@@ -40,12 +40,12 @@ export default function WebGate() {
           },
           0,
         );
-        // The threshold: the division's square turns on its corner and gives up
-        // its hue, because the next room — Contact — is achromatic.
+        // The threshold: the division's square makes a quarter turn and gives up
+        // its hue (Contact is achromatic). It lands square: division gates use the division glyph.
         tl.fromTo(
           ".web-gate__core",
-          { rotate: 0, scale: 0.3, opacity: 0 },
-          { rotate: 45, scale: 1, opacity: 1, duration: 1.5, ease: "expo.out" },
+          { rotate: -90, scale: 0.3, opacity: 0 },
+          { rotate: 0, scale: 1, opacity: 1, duration: 1.5, ease: "expo.out" },
           0.7,
         );
       });
