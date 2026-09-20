@@ -1,0 +1,115 @@
+"use client";
+
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+/* Shared by every /studio section: media-query state without setState-in-effect,
+   and a video that only takes a src once it is near the viewport (design-system
+   §7: video is lazy, the LCP element is text). */
+
+export function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = window.matchMedia(query);
+      mq.addEventListener("change", notify);
+      return () => mq.removeEventListener("change", notify);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
+
+export const REDUCED = "(prefers-reduced-motion: reduce)";
+
+const noopSubscribe = () => () => {};
+
+/** true inside the CMS preview iframe (/studio?__draft=1). */
+export function useDraftMode(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => new URLSearchParams(window.location.search).get("__draft") === "1",
+    () => false,
+  );
+}
+
+interface LazyVideoProps {
+  src: string;
+  className?: string;
+  /** Mount the src immediately (above the fold). */
+  eager?: boolean;
+  /** Play while on screen. false = paused poster frame. */
+  active?: boolean;
+  /** Unmuted. Only ever true after a click. */
+  sound?: boolean;
+  /** Play even when motion is reduced — only ever set by an explicit click. */
+  force?: boolean;
+  label?: string;
+}
+
+export function LazyVideo({
+  src,
+  className,
+  eager = false,
+  active = true,
+  sound = false,
+  force = false,
+  label,
+}: LazyVideoProps) {
+  const holder = useRef<HTMLDivElement>(null);
+  const video = useRef<HTMLVideoElement | null>(null);
+  const [near, setNear] = useState(eager);
+  const [onScreen, setOnScreen] = useState(false);
+  const reduced = useMediaQuery(REDUCED);
+
+  useEffect(() => {
+    const el = holder.current;
+    if (!el) return;
+    const arm = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNear(true);
+          arm.disconnect();
+        }
+      },
+      { rootMargin: "80% 40%" },
+    );
+    const see = new IntersectionObserver((entries) => setOnScreen(entries.some((e) => e.isIntersecting)), {
+      threshold: 0.05,
+    });
+    arm.observe(el);
+    see.observe(el);
+    return () => {
+      arm.disconnect();
+      see.disconnect();
+    };
+  }, []);
+
+  const shouldPlay = near && onScreen && active && (!reduced || force);
+
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    // React's `muted` prop does not reliably reach the DOM.
+    v.muted = !sound;
+    if (shouldPlay) v.play().catch(() => {});
+    else v.pause();
+  }, [shouldPlay, sound, near]);
+
+  return (
+    <div ref={holder} className={className}>
+      {near ? (
+        <video
+          ref={video}
+          // The media fragment makes a paused clip show a real frame, not black.
+          src={`${src}#t=0.1`}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={label}
+          aria-hidden={label ? undefined : true}
+          tabIndex={-1}
+        />
+      ) : null}
+    </div>
+  );
+}

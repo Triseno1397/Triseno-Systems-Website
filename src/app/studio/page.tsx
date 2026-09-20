@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import StudioContent from "@/components/studio/StudioContent";
+import StudioWorld from "@/components/studio/StudioWorld";
 import ReelsProvider from "@/content/ReelsProvider";
+import "../studio.css";
 
 export const metadata: Metadata = {
   title: "Triseno Studio · video that sells",
@@ -11,10 +12,12 @@ export const metadata: Metadata = {
   },
 };
 
+// ReelsProvider stays the page root: it is the CMS contract. /edit loads this
+// route with ?__draft=1 and pushes unsaved reel libraries into it over postMessage.
 export default function StudioPage() {
   return (
     <ReelsProvider>
-      <StudioContent />
+      <StudioWorld />
     </ReelsProvider>
   );
 }
