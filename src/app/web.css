@@ -37,37 +37,21 @@
 @media not ((hover: hover) and (pointer: fine)) { .web-world .web-hover-only { display: none; } }
 
 /* ═══ THE WORLD ═══════════════════════════════════════════════════════
-   The generated plate (design-loop/world-plates.md): a violet concrete
-   atrium of receding square portals over a polished floor. Fixed, full-bleed,
-   data-world-layer (never masked by the content fade). WebWorld.tsx writes
-   --cam (page scroll 0..1), --px / --py (pointer -1..1) and --lx / --ly
-   (pointer px). Everything here sits BEHIND content (z 0; content z 10).
-   Only transform / opacity / filter move (M4); ambient loops are the living
-   atmosphere the plate brief asks for.
+   Base: the shared WorldPlate for "web" (world.css), which owns the camera
+   on the shared pose model that every GlassPanel lines up with. This file
+   styles only the overlays this division adds on top of it: the far
+   portal's breathing light (in .web-plate__fx, which WebWorld moves on the
+   plate's own pose), two violet haze banks, dust, a violet key light that
+   follows the pointer, and station haze. The wrapper is fixed and
+   data-world-layer, never masked by the content fade. Everything sits BEHIND
+   content (z 0; content z 10). Only transform / opacity / filter move (M4).
    ═══════════════════════════════════════════════════════════════════ */
-.web-scene {
-  --cam: 0; --px: 0; --py: 0; --lx: 62vw; --ly: 40vh;
-  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000000;
-}
-.web-plate { position: absolute; inset: 0; }
-/* dolly: deeper through the portals, scaling about their vanishing point */
-.web-plate__cam {
-  position: absolute; inset: 0; transform-origin: 50% 57%; will-change: transform;
-  transform: translate3d(0, calc(var(--cam) * -2.4vh), 0) scale(calc(1.04 + var(--cam) * 0.16));
-}
-.web-plate__par {
-  position: absolute; inset: -2%;
-  transform: translate3d(calc(var(--px) * -10px), calc(var(--py) * -7px), 0);
-}
-.web-plate__blur,
-.web-plate__img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
-.web-plate__blur { background-size: cover; background-position: center; filter: blur(22px); transform: scale(1.06); }
-.web-plate__blur--m { display: none; }
-.web-plate__img { opacity: 0; transition: opacity 1200ms var(--ease-expo); }
-.web-scene[data-loaded] .web-plate__img { opacity: 1; }
+.web-scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000000; }
+/* laid out exactly like WorldPlate's camera layer so the pose lines up */
+.web-plate__fx { position: absolute; inset: -2%; transform-origin: 50% 60%; will-change: transform; }
 /* the far portal breathes */
 .web-plate__shaft {
-  position: absolute; left: 50%; top: 56%; width: 30vw; height: 46vh; margin: -23vh 0 0 -15vw;
+  position: absolute; left: 50%; top: 57%; width: 30vw; height: 46vh; margin: -23vh 0 0 -15vw;
   background: radial-gradient(ellipse at center, rgba(222, 204, 255, 0.5) 0%, color-mix(in srgb, var(--hue) 36%, transparent) 34%, transparent 70%);
   mix-blend-mode: screen; opacity: 0.5; animation: web-breathe 7s ease-in-out infinite alternate;
 }
@@ -96,13 +80,11 @@
 /* soft violet key light that follows the pointer (additive) */
 .web-plate__light {
   position: absolute; left: 0; top: 0; width: 72vmin; height: 72vmin; margin: -36vmin 0 0 -36vmin;
-  transform: translate3d(var(--lx), var(--ly), 0); mix-blend-mode: screen;
+  transform: translate3d(62vw, 40vh, 0); mix-blend-mode: screen; will-change: transform;
   background: radial-gradient(circle, color-mix(in srgb, var(--hue) 30%, transparent) 0%, color-mix(in srgb, var(--hue) 9%, transparent) 42%, transparent 70%);
 }
 @media (max-width: 767px) {
-  .web-plate__cam { transform-origin: 50% 40%; }
-  .web-plate__blur--d { display: none; }
-  .web-plate__blur--m { display: block; }
+  .web-plate__fx { transform-origin: 50% 62%; }
   .web-plate__shaft { top: 11%; width: 70vw; height: 30vh; margin: -15vh 0 0 -35vw; }
   .web-plate__light { opacity: 0.6; }
 }
@@ -122,23 +104,26 @@
 .web-scene[data-at="gate"] .web-scene__haze { transform: translate3d(-22vw, -2vh, 0) scale(1.1); opacity: 0.85; }
 
 /* ── LIT OBJECTS ───────────────────────────────────────────────────────
-   Every component frame is an object standing in the atrium, not a flat
-   slab: a translucent glass bezel ring, a hairline edge catching the light,
-   the division's light glowing around it and spilling onto the floor
-   beneath. All box-shadow, so no layout moves and a frame's own overflow
-   never clips it. Glow is allowed on scene objects (design-system §2); the
-   concept sites inside stay fully legible. */
-/* GLASS SWAP POINT: when the shared GlassPanel primitive lands (world-plates.md),
-   it replaces the tint/blur on .web-stack__inner and the bezel ring below. */
-.web-hero__site, .web-demo__device, .web-compare__stage, .web-tile, .web-stack__inner {
-  border: 1px solid rgba(255, 255, 255, 0.82);
+   Every component is an object standing in the atrium, in real frosted glass:
+   the shared GlassPanel (world.css) paints a pre-blurred copy of the plate
+   aligned with the world behind it, so the glass survives the content fade.
+   - .web-bezel: a GlassPanel wrapped round a concept site / the demo device /
+     the before/after stage / a style tile — the glass is its bezel;
+   - .web-stack__inner: each deliverable card IS a GlassPanel.
+   Around the glass this division adds the light: a light-catching hairline,
+   the violet glow and the spill onto the floor (box-shadow, so no layout moves
+   and the panel's own overflow never clips it). Glow is allowed on scene
+   objects (design-system §2); the concept sites inside stay fully legible. */
+.glass-panel.web-bezel { padding: 8px; border-color: rgba(255, 255, 255, 0.82); }
+.glass-panel.web-bezel,
+.glass-panel.web-stack__inner {
   box-shadow:
-    0 0 0 7px rgba(255, 255, 255, 0.06),
-    0 0 0 8px rgba(255, 255, 255, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 0 0 1px color-mix(in srgb, var(--hue) 22%, transparent),
     0 0 46px 2px color-mix(in srgb, var(--hue) 38%, transparent),
     0 44px 64px -30px color-mix(in srgb, var(--hue) 78%, transparent);
 }
+/* the frames inside keep their own 1px screen edge */
+.web-hero__site, .web-compare__stage, .web-tile { border: 1px solid rgba(255, 255, 255, 0.82); }
 
 /* ── shared section primitives ── */
 /* Readable substrate: a soft neutral scrim behind every block of copy, so the
@@ -365,7 +350,8 @@
   perspective: 1500px; perspective-origin: 50% 40%;
 }
 .web-demo__device {
-  position: relative; width: 100%; border: 1px solid #ffffff; background: #000000;
+  /* the object is its GlassPanel bezel (.web-bezel); the device only carries the tilt */
+  position: relative; width: 100%;
   transform-origin: 50% 100%; will-change: transform; backface-visibility: hidden;
 }
 .web-demo__viewport {
@@ -554,8 +540,7 @@
 .web-compare__line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #ffffff; }
 .web-compare__knob {
   position: absolute; left: 50%; top: 52px; width: 36px; height: 36px; margin: -18px 0 0 -18px;
-  display: grid; place-items: center; border: 1px solid #ffffff; background: rgba(0, 0, 0, 0.42);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  display: grid; place-items: center; border: 1px solid #ffffff; background: rgba(0, 0, 0, 0.62);
   transition: transform 600ms var(--ease-expo);
 }
 .web-compare__knob i { display: block; width: 14px; height: 14px; border: 1px solid var(--hue); filter: drop-shadow(0 0 6px var(--hue)); transition: transform 600ms var(--ease-expo); }
@@ -719,18 +704,10 @@
   position: relative; /* offsetParent for the per-row fade in StackCards */
   display: flex; flex-direction: column; min-height: clamp(300px, 46dvh, 440px);
   padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
-  /* Phone: a near-solid sheet. Seven stacked backdrop-filter layers are the
-     most expensive thing a phone compositor can be asked to hold. */
-  background: rgba(17, 17, 17, 0.94);
   transform-origin: 50% 0; will-change: transform;
 }
-@media (min-width: 900px) {
-  /* frosted, like the shared WorldCard: the world stays visible through the sheet */
-  .web-stack__inner {
-    background: rgba(16, 15, 20, 0.74);
-    -webkit-backdrop-filter: blur(26px) brightness(0.7); backdrop-filter: blur(26px) brightness(0.7);
-  }
-}
+/* GlassPanel wraps its children in a body: let it fill the sheet */
+.web-stack__inner > .glass-panel__body { flex: 1 1 auto; display: flex; flex-direction: column; }
 .web-stack__content { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; }
 
 /* the illustrations — hairline white, one violet accent, chrome-size mono */
@@ -1065,7 +1042,7 @@
 @media (prefers-reduced-motion: reduce) {
   .web-scene__haze { transition: none; }
   .web-plate__shaft, .web-plate__haze, .web-plate__dust { animation: none; }
-  .web-plate__img { transition: none; }
+
   /* no stacking: every sheet is whole and readable in a plain column */
   .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }

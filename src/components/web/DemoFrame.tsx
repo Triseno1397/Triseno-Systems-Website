@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import ConceptSite from "./ConceptSite";
+import GlassPanel from "@/components/world/GlassPanel";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -46,7 +47,8 @@ export default function DemoFrame() {
         const page = pageRef.current;
         if (!root || !device || !viewport || !page) return;
 
-        const travel = () => Math.max(0, page.scrollHeight - viewport.clientHeight);
+        const travel = () =>
+          Math.max(0, page.scrollHeight - viewport.clientHeight);
 
         const tl = gsap.timeline({
           defaults: { ease: "none" },
@@ -61,12 +63,33 @@ export default function DemoFrame() {
 
         tl.fromTo(
           device,
-          { rotateX: 64, yPercent: 26, scale: 0.78, transformOrigin: "50% 100%" },
-          { rotateX: 0, yPercent: 0, scale: 1, duration: 0.36, ease: "power2.out" },
+          {
+            rotateX: 64,
+            yPercent: 26,
+            scale: 0.78,
+            transformOrigin: "50% 100%",
+          },
+          {
+            rotateX: 0,
+            yPercent: 0,
+            scale: 1,
+            duration: 0.36,
+            ease: "power2.out",
+          },
           0,
         );
-        tl.fromTo(".web-demo__mirror", { opacity: 0.1, scaleY: 0.4 }, { opacity: 0.55, scaleY: 1, duration: 0.36 }, 0);
-        tl.fromTo(".web-demo__shine", { opacity: 0.5 }, { opacity: 0, duration: 0.36 }, 0);
+        tl.fromTo(
+          ".web-demo__mirror",
+          { opacity: 0.1, scaleY: 0.4 },
+          { opacity: 0.55, scaleY: 1, duration: 0.36 },
+          0,
+        );
+        tl.fromTo(
+          ".web-demo__shine",
+          { opacity: 0.5 },
+          { opacity: 0, duration: 0.36 },
+          0,
+        );
         tl.fromTo(page, { y: 0 }, { y: () => -travel(), duration: 0.6 }, 0.38);
         tl.to({}, { duration: 0.02 });
       });
@@ -75,7 +98,13 @@ export default function DemoFrame() {
   );
 
   return (
-    <section ref={rootRef} id="web-demo" data-rail="Demo" data-station="demo" className="web-demo">
+    <section
+      ref={rootRef}
+      id="web-demo"
+      data-rail="Demo"
+      data-station="demo"
+      className="web-demo"
+    >
       <div className="web-demo__stage">
         <header className="web-demo__head">
           <p className="web-eyebrow">
@@ -84,34 +113,37 @@ export default function DemoFrame() {
           </p>
           <h2 className="web-h2">The page is the demo</h2>
           <p className="web-body">
-            Every section of this page runs a different motion system, built by hand. Keep scrolling: the frame
-            stands up, then a concept site runs inside it.
+            Every section of this page runs a different motion system, built by
+            hand. Keep scrolling: the frame stands up, then a concept site runs
+            inside it.
           </p>
         </header>
 
         <div className="web-demo__rig">
           <div ref={deviceRef} className="web-demo__device">
-            <div className="web-browser__bar">
-              <span aria-hidden="true" className="web-browser__dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="web-browser__url">hotelquillon.example</span>
-              <span className="web-browser__tag">Concept</span>
-            </div>
-            <div
-              ref={viewportRef}
-              className="web-demo__viewport"
-              data-lenis-prevent=""
-              tabIndex={-1}
-              aria-label="Concept site for a fictional hotel"
-            >
-              <div ref={pageRef} className="web-demo__page">
-                <ConceptSite />
+            <GlassPanel world="web" className="web-bezel">
+              <div className="web-browser__bar">
+                <span aria-hidden="true" className="web-browser__dots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="web-browser__url">hotelquillon.example</span>
+                <span className="web-browser__tag">Concept</span>
               </div>
-              <span aria-hidden="true" className="web-demo__shine" />
-            </div>
+              <div
+                ref={viewportRef}
+                className="web-demo__viewport"
+                data-lenis-prevent=""
+                tabIndex={-1}
+                aria-label="Concept site for a fictional hotel"
+              >
+                <div ref={pageRef} className="web-demo__page">
+                  <ConceptSite />
+                </div>
+                <span aria-hidden="true" className="web-demo__shine" />
+              </div>
+            </GlassPanel>
           </div>
           <span aria-hidden="true" className="web-demo__mirror" />
         </div>

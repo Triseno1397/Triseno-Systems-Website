@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { RANGE, type RangeItem } from "./RangeComps";
+import GlassPanel from "@/components/world/GlassPanel";
 
 /**
  * Range — hover-swap gallery, section 05, standing in the world.
@@ -32,7 +33,9 @@ export default function RangeGallery() {
 
   useEffect(() => {
     // Matches the CSS dock query exactly.
-    const mq = window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)");
+    const mq = window.matchMedia(
+      "(min-width: 768px) and (hover: hover) and (pointer: fine)",
+    );
     const sync = () => setFine(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -43,13 +46,22 @@ export default function RangeGallery() {
     setActiveRaw(i);
     setShown(i);
   }, []);
-  const release = useCallback((i: number) => setActiveRaw((v) => (v === i ? null : v)), []);
+  const release = useCallback(
+    (i: number) => setActiveRaw((v) => (v === i ? null : v)),
+    [],
+  );
 
-  const reelStyle = { transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)` } as CSSProperties;
+  const reelStyle = {
+    transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)`,
+  } as CSSProperties;
   const item = RANGE[shown];
 
   return (
-    <section data-rail="Range" data-station="range" className="web-section web-range">
+    <section
+      data-rail="Range"
+      data-station="range"
+      className="web-section web-range"
+    >
       <header className="web-range__head">
         <h2 className="web-eyebrow">
           <span className="web-sq" aria-hidden="true" />
@@ -58,13 +70,19 @@ export default function RangeGallery() {
         <p className="web-body">
           Eight concept directions, eight layouts, eight typographic voices.
           <span className="web-hover-only"> Hover a row to run the frame.</span>
-          <span className="web-touch-only"> Each industry, its own site.</span> Fictional brands,
-          labelled as concepts.
+          <span className="web-touch-only">
+            {" "}
+            Each industry, its own site.
+          </span>{" "}
+          Fictional brands, labelled as concepts.
         </p>
       </header>
 
       <div className="web-range__main">
-        <ol className="web-range__list" data-active={active !== null ? "" : undefined}>
+        <ol
+          className="web-range__list"
+          data-active={active !== null ? "" : undefined}
+        >
           {RANGE.map((entry, i) => (
             <li key={entry.industry} className="web-range__item">
               <button
@@ -81,7 +99,9 @@ export default function RangeGallery() {
                 onFocus={() => fine && activate(i)}
                 onBlur={() => fine && release(i)}
               >
-                <span className="web-range__n">{String(i + 1).padStart(2, "0")}</span>
+                <span className="web-range__n">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 <span className="web-range__word">{entry.industry}</span>
                 <span className="web-range__meta">
                   <span>{entry.brand}</span>
@@ -90,32 +110,42 @@ export default function RangeGallery() {
               </button>
               {/* Phone: the concept itself, directly under its industry (hidden
                   where the docked tile shows it instead). */}
-              <figure className="web-tile web-range__inline" aria-label={`Concept site for ${entry.brand}`}>
-                <div className="web-range__comp">{entry.comp}</div>
-                <TileRail item={entry} />
-              </figure>
+              <GlassPanel world="web" className="web-bezel web-range__inline">
+                <figure
+                  className="web-tile"
+                  aria-label={`Concept site for ${entry.brand}`}
+                >
+                  <div className="web-range__comp">{entry.comp}</div>
+                  <TileRail item={entry} />
+                </figure>
+              </GlassPanel>
             </li>
           ))}
         </ol>
 
         {/* Desktop: the docked frame. Its own column, so it covers nothing. */}
         <div className="web-range__dock" aria-hidden="true">
-          <figure className="web-tile" data-on={active !== null ? "" : undefined}>
-            <div className="web-range__window">
-              <div className="web-range__reel" style={reelStyle}>
-                {RANGE.map((entry) => (
-                  <div key={entry.industry} className="web-range__comp">
-                    {entry.comp}
-                  </div>
-                ))}
+          <GlassPanel world="web" className="web-bezel">
+            <figure
+              className="web-tile"
+              data-on={active !== null ? "" : undefined}
+            >
+              <div className="web-range__window">
+                <div className="web-range__reel" style={reelStyle}>
+                  {RANGE.map((entry) => (
+                    <div key={entry.industry} className="web-range__comp">
+                      {entry.comp}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <TileRail item={item} />
-          </figure>
+              <TileRail item={item} />
+            </figure>
+          </GlassPanel>
           <p className="web-range__caption">
             <span>
-              Concept {String(shown + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
-              {item.industry}
+              Concept {String(shown + 1).padStart(2, "0")} /{" "}
+              {String(RANGE.length).padStart(2, "0")} — {item.industry}
             </span>
             <span>{item.note}</span>
           </p>
@@ -132,9 +162,18 @@ export default function RangeGallery() {
 function TileRail({ item }: { item: RangeItem }) {
   const [paper, ink] = item.palette;
   return (
-    <figcaption className="web-tile__rail" style={{ "--paper": paper, "--ink": ink } as CSSProperties}>
-      <span className={`web-tile__face web-tile__face--${item.face}`}>{item.brand}</span>
-      <span className="web-tile__sw" role="img" aria-label={`Palette: ${item.palette.join(", ")}`}>
+    <figcaption
+      className="web-tile__rail"
+      style={{ "--paper": paper, "--ink": ink } as CSSProperties}
+    >
+      <span className={`web-tile__face web-tile__face--${item.face}`}>
+        {item.brand}
+      </span>
+      <span
+        className="web-tile__sw"
+        role="img"
+        aria-label={`Palette: ${item.palette.join(", ")}`}
+      >
         {item.palette.map((c) => (
           <i key={c} style={{ background: c }} />
         ))}

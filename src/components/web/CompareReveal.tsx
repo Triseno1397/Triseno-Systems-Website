@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import gsap from "gsap";
 import ConceptPhoto from "./ConceptPhoto";
+import GlassPanel from "@/components/world/GlassPanel";
 
 /**
  * Triseno compare reveal — section 03, an object standing in the world.
@@ -96,11 +103,16 @@ export default function CompareReveal() {
     const handle = handleRef.current;
     if (handle) {
       handle.setAttribute("aria-valuenow", String(Math.round(pos)));
-      handle.setAttribute("aria-valuetext", `${Math.round(pos)} percent of the rebuilt site shown`);
+      handle.setAttribute(
+        "aria-valuetext",
+        `${Math.round(pos)} percent of the rebuilt site shown`,
+      );
     }
     NOTES.forEach((note, i) => {
       const lit = pos >= LIT_AT[i];
-      stage.querySelector<HTMLElement>(`[data-region="${i}"]`)?.toggleAttribute("data-lit", lit);
+      stage
+        .querySelector<HTMLElement>(`[data-region="${i}"]`)
+        ?.toggleAttribute("data-lit", lit);
       notesRef.current?.children[i]?.toggleAttribute("data-lit", lit);
     });
   }, []);
@@ -108,7 +120,9 @@ export default function CompareReveal() {
   useEffect(() => {
     // Matches the CSS drag-mode query exactly: a fine pointer AND enough room
     // for two sites side by side. Anything narrower gets the switch.
-    const mq = window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)");
+    const mq = window.matchMedia(
+      "(min-width: 768px) and (hover: hover) and (pointer: fine)",
+    );
     const sync = () => setFine(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -120,7 +134,9 @@ export default function CompareReveal() {
     if (!stage || !fine) return;
     apply(posRef.current);
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reduced) return;
 
     const io = new IntersectionObserver(
@@ -147,7 +163,9 @@ export default function CompareReveal() {
   /** Phone: every note is relevant, so all of them read at full strength. */
   useEffect(() => {
     if (fine) return;
-    NOTES.forEach((_, i) => notesRef.current?.children[i]?.toggleAttribute("data-lit", true));
+    NOTES.forEach((_, i) =>
+      notesRef.current?.children[i]?.toggleAttribute("data-lit", true),
+    );
   }, [fine]);
 
   /**
@@ -195,7 +213,8 @@ export default function CompareReveal() {
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     dragging.current = false;
     stageRef.current?.removeAttribute("data-dragging");
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (e.currentTarget.hasPointerCapture(e.pointerId))
+      e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -218,7 +237,11 @@ export default function CompareReveal() {
   };
 
   return (
-    <section data-rail="Before / After" data-station="compare" className="web-section web-compare">
+    <section
+      data-rail="Before / After"
+      data-station="compare"
+      className="web-section web-compare"
+    >
       <header className="web-compare__head">
         <div>
           <p className="web-eyebrow">
@@ -228,82 +251,101 @@ export default function CompareReveal() {
           <h2 className="web-h2">Same business. Rebuilt.</h2>
         </div>
         <p className="web-body">
-          The template a local trade firm usually starts with, and the same offer rebuilt around one action.
-          <span className="web-hover-only"> Drag the frame, or use the arrow keys.</span>
+          The template a local trade firm usually starts with, and the same
+          offer rebuilt around one action.
+          <span className="web-hover-only">
+            {" "}
+            Drag the frame, or use the arrow keys.
+          </span>
           <span className="web-touch-only"> Tap to cut between them.</span>
         </p>
       </header>
 
       <div className="web-compare__main">
         <div className="web-compare__stack">
-          <div
-            ref={stageRef}
-            className="web-compare__stage"
-            data-view={view}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onClick={() => {
-              if (!fine) setView((v) => (v === "before" ? "after" : "before"));
-            }}
-          >
-            <div className="web-compare__layer" aria-label="Before: dated template layout" role="img">
-              <BeforeMock />
-              <span className="web-compare__label web-compare__label--before">Before — template</span>
-            </div>
+          <GlassPanel world="web" className="web-bezel">
             <div
-              className="web-compare__layer web-compare__layer--after"
-              aria-label="After: rebuilt layout"
-              role="img"
+              ref={stageRef}
+              className="web-compare__stage"
+              data-view={view}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onClick={() => {
+                if (!fine)
+                  setView((v) => (v === "before" ? "after" : "before"));
+              }}
             >
-              <AfterMock />
-              <span className="web-compare__label web-compare__label--after">After — rebuilt</span>
-            </div>
-
-            {/* Region brackets, clipped to the same edge as the rebuilt layer. */}
-            <div aria-hidden="true" className="web-compare__regions">
-              {NOTES.map((note, i) => (
-                <span
-                  key={note.title}
-                  data-region={i}
-                  className="web-compare__region"
-                  style={
-                    {
-                      "--x": `${note.x}%`,
-                      "--y": `${note.y}%`,
-                      "--w": `${note.w}%`,
-                      "--h": `${note.h}%`,
-                    } as CSSProperties
-                  }
-                >
-                  <i>{String(i + 1).padStart(2, "0")}</i>
+              <div
+                className="web-compare__layer"
+                aria-label="Before: dated template layout"
+                role="img"
+              >
+                <BeforeMock />
+                <span className="web-compare__label web-compare__label--before">
+                  Before — template
                 </span>
-              ))}
-            </div>
+              </div>
+              <div
+                className="web-compare__layer web-compare__layer--after"
+                aria-label="After: rebuilt layout"
+                role="img"
+              >
+                <AfterMock />
+                <span className="web-compare__label web-compare__label--after">
+                  After — rebuilt
+                </span>
+              </div>
 
-            <div
-              ref={handleRef}
-              className="web-compare__handle"
-              role="slider"
-              tabIndex={0}
-              aria-label="Before and after divider"
-              aria-orientation="horizontal"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={START}
-              onKeyDown={onKeyDown}
-            >
-              <span aria-hidden="true" className="web-compare__line" />
-              <span aria-hidden="true" className="web-compare__knob">
-                <i />
-              </span>
+              {/* Region brackets, clipped to the same edge as the rebuilt layer. */}
+              <div aria-hidden="true" className="web-compare__regions">
+                {NOTES.map((note, i) => (
+                  <span
+                    key={note.title}
+                    data-region={i}
+                    className="web-compare__region"
+                    style={
+                      {
+                        "--x": `${note.x}%`,
+                        "--y": `${note.y}%`,
+                        "--w": `${note.w}%`,
+                        "--h": `${note.h}%`,
+                      } as CSSProperties
+                    }
+                  >
+                    <i>{String(i + 1).padStart(2, "0")}</i>
+                  </span>
+                ))}
+              </div>
+
+              <div
+                ref={handleRef}
+                className="web-compare__handle"
+                role="slider"
+                tabIndex={0}
+                aria-label="Before and after divider"
+                aria-orientation="horizontal"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={START}
+                onKeyDown={onKeyDown}
+              >
+                <span aria-hidden="true" className="web-compare__line" />
+                <span aria-hidden="true" className="web-compare__knob">
+                  <i />
+                </span>
+              </div>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Phone control, directly under the site it switches. Hidden on a fine
               pointer, where the drag line rules. */}
-          <div className="web-compare__switch" role="group" aria-label="Show the old site or the rebuild">
+          <div
+            className="web-compare__switch"
+            role="group"
+            aria-label="Show the old site or the rebuild"
+          >
             {(["before", "after"] as const).map((v) => (
               <button
                 key={v}
@@ -316,7 +358,6 @@ export default function CompareReveal() {
               </button>
             ))}
           </div>
-
         </div>
 
         <div className="web-compare__side">
@@ -333,7 +374,8 @@ export default function CompareReveal() {
             ))}
           </ol>
           <p className="web-fineprint">
-            Concept rebuild for a fictional business. It shows layout decisions, not client results.
+            Concept rebuild for a fictional business. It shows layout decisions,
+            not client results.
           </p>
         </div>
       </div>
@@ -347,8 +389,12 @@ function BeforeMock() {
     <div className="bm">
       <div className="bm-wrap">
         <div className="bm-header">
-          <span className="bm-title">Fennick &amp; Rowe Plumbing and Heating</span>
-          <span className="bm-tag">Your Local Friendly Plumbers Since 1998!!</span>
+          <span className="bm-title">
+            Fennick &amp; Rowe Plumbing and Heating
+          </span>
+          <span className="bm-tag">
+            Your Local Friendly Plumbers Since 1998!!
+          </span>
           <span className="bm-phone">Tel: (555) 014-2200</span>
         </div>
         <div className="bm-nav">
@@ -370,29 +416,32 @@ function BeforeMock() {
             <i />
           </span>
         </div>
-        <div className="bm-notice">*** CALL NOW FOR A FREE NO OBLIGATION QUOTE ***</div>
+        <div className="bm-notice">
+          *** CALL NOW FOR A FREE NO OBLIGATION QUOTE ***
+        </div>
         <div className="bm-boxes">
           <div>
             <i />
             <b>Our Services</b>
             <span>
-              We offer a wide range of plumbing and heating services to suit all of your needs. Click here to
-              read more.
+              We offer a wide range of plumbing and heating services to suit all
+              of your needs. Click here to read more.
             </span>
           </div>
           <div>
             <i />
             <b>About Us</b>
             <span>
-              We are a family run business with many years of experience in the trade. Click here to read
-              more.
+              We are a family run business with many years of experience in the
+              trade. Click here to read more.
             </span>
           </div>
           <div>
             <i />
             <b>Contact Us</b>
             <span>
-              Please fill in the form on our contact page and we will get back to you as soon as possible.
+              Please fill in the form on our contact page and we will get back
+              to you as soon as possible.
             </span>
           </div>
         </div>
@@ -408,7 +457,11 @@ function BeforeMock() {
 function AfterMock() {
   return (
     <div className="am">
-      <ConceptPhoto slug="fennick-rowe-engineer" className="am-photo" position="50% 30%" />
+      <ConceptPhoto
+        slug="fennick-rowe-engineer"
+        className="am-photo"
+        position="50% 30%"
+      />
       <span className="am-shade" aria-hidden="true" />
       <div className="am-nav">
         <span className="am-logo">
@@ -425,10 +478,15 @@ function AfterMock() {
       </div>
       <div className="am-body">
         <div className="am-copy">
-          <span className="am-kicker">Heating + plumbing · Northgate and 12 miles around</span>
-          <span className="am-h">Boiler out? An engineer at your door in 90 minutes.</span>
+          <span className="am-kicker">
+            Heating + plumbing · Northgate and 12 miles around
+          </span>
+          <span className="am-h">
+            Boiler out? An engineer at your door in 90 minutes.
+          </span>
           <span className="am-p">
-            Fixed prices, no call-out fee, and a named engineer who texts before arriving.
+            Fixed prices, no call-out fee, and a named engineer who texts before
+            arriving.
           </span>
           <span className="am-actions">
             <span className="am-btn am-btn--solid">Book a visit</span>
@@ -454,7 +512,9 @@ function AfterMock() {
           <span className="am-field">
             <b>Postcode</b>NG4 2__
           </span>
-          <span className="am-btn am-btn--solid am-btn--wide">See today&apos;s slots</span>
+          <span className="am-btn am-btn--solid am-btn--wide">
+            See today&apos;s slots
+          </span>
           <span className="am-slot">
             <i />
             Next slot: 14:30 today

@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import GhostButton from "@/components/ui/GhostButton";
+import GlassPanel from "@/components/world/GlassPanel";
 import { getLenis } from "@/components/world/SmoothScroll";
 
 /**
@@ -39,13 +40,19 @@ export default function ShutterHero() {
     const lenis = getLenis();
     if (lenis) lenis.scrollTo(target, { duration: 1.4 });
     else {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
       target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
     }
   };
 
   return (
-    <section data-rail="Hero" data-station="hero" className="web-section web-hero">
+    <section
+      data-rail="Hero"
+      data-station="hero"
+      className="web-section web-hero"
+    >
       <div className="web-hero__grid">
         <div className="web-hero__copy">
           <p className="web-eyebrow">
@@ -86,14 +93,20 @@ export default function ShutterHero() {
             ))}
             <span aria-hidden="true" className="web-shutter__slats">
               {Array.from({ length: BANDS }, (_, i) => (
-                <i key={i} style={{ "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties} />
+                <i
+                  key={i}
+                  style={
+                    { "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties
+                  }
+                />
               ))}
             </span>
           </div>
 
           <p className="web-lede">
-            The web arm of Triseno Systems. Custom, motion-led websites engineered to convert. No templates:
-            the page you are scrolling is the demo.
+            The web arm of Triseno Systems. Custom, motion-led websites
+            engineered to convert. No templates: the page you are scrolling is
+            the demo.
           </p>
           <div className="web-hero__actions">
             <GhostButton href="/contact">Start a Conversation</GhostButton>
@@ -105,31 +118,41 @@ export default function ShutterHero() {
         </div>
 
         <div className="web-hero__object">
-          <button
-            type="button"
-            key={`s${run}`}
-            className="web-hero__site"
-            onClick={replay}
-            aria-label="Concept site for Vale and Hollis. Replay the shutter."
-          >
-            <span className="web-browser__bar">
-              <span aria-hidden="true" className="web-browser__dots">
-                <i />
-                <i />
-                <i />
+          <GlassPanel world="web" className="web-bezel">
+            <button
+              type="button"
+              key={`s${run}`}
+              className="web-hero__site"
+              onClick={replay}
+              aria-label="Concept site for Vale and Hollis. Replay the shutter."
+            >
+              <span className="web-browser__bar">
+                <span aria-hidden="true" className="web-browser__dots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="web-browser__url">valeandhollis.example</span>
+                <span className="web-browser__tag">Concept</span>
               </span>
-              <span className="web-browser__url">valeandhollis.example</span>
-              <span className="web-browser__tag">Concept</span>
-            </span>
-            <span className="web-hero__site-view">
-              <HeroSite />
-              <span aria-hidden="true" className="web-shutter__slats web-shutter__slats--site">
-                {Array.from({ length: BANDS }, (_, i) => (
-                  <i key={i} style={{ "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties} />
-                ))}
+              <span className="web-hero__site-view">
+                <HeroSite />
+                <span
+                  aria-hidden="true"
+                  className="web-shutter__slats web-shutter__slats--site"
+                >
+                  {Array.from({ length: BANDS }, (_, i) => (
+                    <i
+                      key={i}
+                      style={
+                        { "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties
+                      }
+                    />
+                  ))}
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          </GlassPanel>
           <span aria-hidden="true" className="web-hero__mirror" />
         </div>
       </div>
@@ -162,7 +185,8 @@ function HeroSite() {
             Gardens that look <em>older</em> than the house.
           </span>
           <span className="hs-p">
-            Planting plans, hard landscaping and ten-year maintenance, drawn for one plot at a time.
+            Planting plans, hard landscaping and ten-year maintenance, drawn for
+            one plot at a time.
           </span>
         </span>
         <span className="hs-art" aria-hidden="true">

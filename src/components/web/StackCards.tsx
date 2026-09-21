@@ -4,6 +4,7 @@ import { useRef, type CSSProperties, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import GlassPanel from "@/components/world/GlassPanel";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -118,7 +119,8 @@ export default function StackCards() {
         cards.forEach((card, i) => {
           if (card.getBoundingClientRect().top <= line) idx = i;
         });
-        if (countRef.current) countRef.current.textContent = String(idx + 1).padStart(2, "0");
+        if (countRef.current)
+          countRef.current.textContent = String(idx + 1).padStart(2, "0");
       };
       ScrollTrigger.create({
         trigger: root,
@@ -133,7 +135,9 @@ export default function StackCards() {
         cards.forEach((card, i) => {
           if (i === total - 1) return;
           const inner = card.querySelector<HTMLElement>(".web-stack__inner");
-          const content = card.querySelector<HTMLElement>(".web-stack__content");
+          const content = card.querySelector<HTMLElement>(
+            ".web-stack__content",
+          );
           const next = cards[i + 1];
           if (!inner || !content) return;
           const depth = total - 1 - i;
@@ -141,7 +145,10 @@ export default function StackCards() {
           const nextTop = () => parseFloat(getComputedStyle(next).top);
           /** how much of this sheet is still showing once the next one has stuck */
           const sliver = () => Math.max(0, nextTop() - top());
-          const trig = (end: () => string, start = () => `top ${top() + inner.offsetHeight}px`) => ({
+          const trig = (
+            end: () => string,
+            start = () => `top ${top() + inner.offsetHeight}px`,
+          ) => ({
             trigger: next,
             start,
             end,
@@ -158,7 +165,8 @@ export default function StackCards() {
             inner,
             { clipPath: "inset(0px 0px 0px 0px)", scale: 1 },
             {
-              clipPath: () => `inset(0px 0px ${Math.max(0, inner.offsetHeight - sliver())}px 0px)`,
+              clipPath: () =>
+                `inset(0px 0px ${Math.max(0, inner.offsetHeight - sliver())}px 0px)`,
               scale: 1 - Math.min(depth, 4) * 0.02,
               ease: "none",
               immediateRender: false,
@@ -172,7 +180,11 @@ export default function StackCards() {
           // panel.
           Array.from(content.children).forEach((row) => {
             const el = row as HTMLElement;
-            const bottom = () => el.offsetTop + el.offsetHeight;
+            // rows are laid out in GlassPanel's positioned body, which sits
+            // inside the sheet's padding: offsets relative to the sheet's top
+            const body = el.offsetParent as HTMLElement | null;
+            const bottom = () =>
+              (body?.offsetTop ?? 0) + el.offsetTop + el.offsetHeight;
             gsap.fromTo(
               el,
               { opacity: 1 },
@@ -194,7 +206,12 @@ export default function StackCards() {
   );
 
   return (
-    <section ref={rootRef} data-rail="Deliverables" data-station="stack" className="web-section web-stack">
+    <section
+      ref={rootRef}
+      data-rail="Deliverables"
+      data-station="stack"
+      className="web-section web-stack"
+    >
       <div className="web-stack__aside">
         <p className="web-eyebrow">
           <span className="web-sq" aria-hidden="true" />
@@ -202,7 +219,8 @@ export default function StackCards() {
         </p>
         <h2 className="web-h2">Seven deliverables. One team.</h2>
         <p className="web-body">
-          Every engagement ships all seven. Nothing is an add-on, and nothing starts from a theme.
+          Every engagement ships all seven. Nothing is an add-on, and nothing
+          starts from a theme.
         </p>
         <p className="web-stack__count" aria-hidden="true">
           <span ref={countRef} className="web-readout-hue">
@@ -214,11 +232,17 @@ export default function StackCards() {
 
       <ol className="web-stack__list">
         {DELIVERABLES.map((d, i) => (
-          <li key={d.title} className="web-stack__card" style={{ "--i": i } as CSSProperties}>
-            <div className="web-stack__inner">
+          <li
+            key={d.title}
+            className="web-stack__card"
+            style={{ "--i": i } as CSSProperties}
+          >
+            <GlassPanel world="web" className="web-stack__inner" veil={0.62}>
               <div className="web-stack__content">
                 <div className="web-stack__top">
-                  <span className="web-stack__n">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="web-stack__n">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                   <span aria-hidden="true" className="web-stack__frame">
                     {Array.from({ length: i + 1 }, (_, k) => (
                       <i key={k} />
@@ -239,7 +263,7 @@ export default function StackCards() {
                   ))}
                 </dl>
               </div>
-            </div>
+            </GlassPanel>
           </li>
         ))}
       </ol>
@@ -290,9 +314,7 @@ const VIZ: Record<VizKey, ReactNode> = {
       <span>
         <b>export default</b> function Page() {"{"}
       </span>
-      <span>
-        {"  "}return &lt;Hero offer=&quot;book&quot; /&gt;;
-      </span>
+      <span>{"  "}return &lt;Hero offer=&quot;book&quot; /&gt;;</span>
       <span>{"}"}</span>
       <span className="dv-code__ok">build passed · 0 templates</span>
     </span>
@@ -300,7 +322,11 @@ const VIZ: Record<VizKey, ReactNode> = {
   perf: (
     <span className="dv dv-perf">
       {PERF.map(([k, v], i) => (
-        <span key={k} className="dv-perf__row" data-hot={i === 0 ? "" : undefined}>
+        <span
+          key={k}
+          className="dv-perf__row"
+          data-hot={i === 0 ? "" : undefined}
+        >
           <span>{k}</span>
           <i style={{ "--v": v / 100 } as CSSProperties} />
           <b>{v}</b>
@@ -311,9 +337,15 @@ const VIZ: Record<VizKey, ReactNode> = {
   ),
   serp: (
     <span className="dv dv-serp">
-      <span className="dv-serp__url">fennickandrowe.example › boiler-repair</span>
-      <span className="dv-serp__t">Boiler repair in Northgate — engineer in 90 min</span>
-      <span className="dv-serp__d">Fixed prices · No call-out fee · 4.9 / 5</span>
+      <span className="dv-serp__url">
+        fennickandrowe.example › boiler-repair
+      </span>
+      <span className="dv-serp__t">
+        Boiler repair in Northgate — engineer in 90 min
+      </span>
+      <span className="dv-serp__d">
+        Fixed prices · No call-out fee · 4.9 / 5
+      </span>
     </span>
   ),
   flow: (
