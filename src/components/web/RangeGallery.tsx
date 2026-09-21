@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { RANGE, type RangeItem } from "./RangeComps";
-import GlassPanel from "@/components/world/GlassPanel";
 
 /**
  * Range — hover-swap gallery, section 05, standing in the world.
@@ -13,21 +12,22 @@ import GlassPanel from "@/components/world/GlassPanel";
  * carrying its brand in its own display voice and its palette swatches — the
  * range is argued in type and colour, not in window chrome.
  *
- * DESKTOP: industries in display type down the left, and a DOCKED style
- * tile in its own column on the right. Hovering or focusing a row runs the
- * reel of concept sites to that industry (one transform on the reel). The
- * panel is docked rather than cursor-following on purpose: a panel that
- * follows the cursor lands on top of the very words it is illustrating.
+ * DESKTOP: industries in display type down the left, and a DOCKED DECK of
+ * the eight tiles in its own column on the right. Hovering or focusing a row
+ * deals that concept to the front and fans its neighbours out behind it
+ * (transform + opacity per card). The deck is docked rather than
+ * cursor-following on purpose: a panel that follows the cursor lands on top
+ * of the very words it is illustrating.
  *
  * PHONE: there is no hover, so the concept sites are not hidden behind one —
- * they are the section. Every industry row carries its own style tile
- * directly beneath it, so wherever a phone stops in this section, concept
- * work is on screen.
+ * they are the section. Every industry row carries its own tile directly
+ * beneath it, pinned at a slight alternating angle like a board on a wall, so
+ * wherever a phone stops in this section, concept work is on screen.
  */
 
 export default function RangeGallery() {
   const [active, setActiveRaw] = useState<number | null>(null);
-  /** The reel keeps showing the last site while the panel settles. */
+  /** The deck keeps the last concept in front while nothing is hovered. */
   const [shown, setShown] = useState(0);
   const [fine, setFine] = useState(true);
 
@@ -51,9 +51,6 @@ export default function RangeGallery() {
     [],
   );
 
-  const reelStyle = {
-    transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)`,
-  } as CSSProperties;
   const item = RANGE[shown];
 
   return (
@@ -110,38 +107,40 @@ export default function RangeGallery() {
               </button>
               {/* Phone: the concept itself, directly under its industry (hidden
                   where the docked tile shows it instead). */}
-              <GlassPanel world="web" className="web-bezel web-range__inline">
-                <figure
-                  className="web-tile"
-                  aria-label={`Concept site for ${entry.brand}`}
-                >
-                  <div className="web-range__comp">{entry.comp}</div>
-                  <TileRail item={entry} />
-                </figure>
-              </GlassPanel>
+              <figure
+                className="web-tile web-range__inline"
+                aria-label={`Concept site for ${entry.brand}`}
+              >
+                <div className="web-range__comp">{entry.comp}</div>
+                <TileRail item={entry} />
+              </figure>
             </li>
           ))}
         </ol>
 
-        {/* Desktop: the docked frame. Its own column, so it covers nothing. */}
+        {/* Desktop: a docked deck of concept cards in its own column, so it
+            covers nothing. Hovering a row deals that card to the front; its
+            neighbours fan out behind it. Not a browser frame: a design board. */}
         <div className="web-range__dock" aria-hidden="true">
-          <GlassPanel world="web" className="web-bezel">
-            <figure
-              className="web-tile"
-              data-on={active !== null ? "" : undefined}
-            >
-              <div className="web-range__window">
-                <div className="web-range__reel" style={reelStyle}>
-                  {RANGE.map((entry) => (
-                    <div key={entry.industry} className="web-range__comp">
-                      {entry.comp}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <TileRail item={item} />
-            </figure>
-          </GlassPanel>
+          <div
+            className="web-range__deck"
+            data-on={active !== null ? "" : undefined}
+          >
+            {RANGE.map((entry, i) => {
+              const d = i - shown;
+              const pos = Math.abs(d) > 2 ? "far" : String(d);
+              return (
+                <figure
+                  key={entry.industry}
+                  className="web-tile web-range__card"
+                  data-pos={pos}
+                >
+                  <div className="web-range__comp">{entry.comp}</div>
+                  <TileRail item={entry} />
+                </figure>
+              );
+            })}
+          </div>
           <p className="web-range__caption">
             <span>
               Concept {String(shown + 1).padStart(2, "0")} /{" "}
