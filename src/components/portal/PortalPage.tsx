@@ -9,7 +9,7 @@ import GhostButton from "@/components/ui/GhostButton";
 import BeamsCollision from "@/components/ui/BeamsCollision";
 import Glyph from "@/components/world/Glyph";
 import Loader from "@/components/world/Loader";
-import WorldAtmosphere from "@/components/world/WorldAtmosphere";
+import WorldPlate from "@/components/world/WorldPlate";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -344,7 +344,12 @@ export default function PortalPage() {
       {/* The world: one fixed canvas behind every section. */}
       {mode === "full" ? (
         <div className="fixed inset-0 z-0" data-world-layer="" data-scene-ready={ready ? "" : undefined}>
-          <PortalScene onReady={() => setReady(true)} onEnter={travel} />
+          {/* the plate paints at once; the 3D world (which draws the same plate
+              as its own deep background) covers it when its first frame is up */}
+          <WorldPlate world="portal" />
+          <div className="absolute inset-0">
+            <PortalScene onReady={() => setReady(true)} onEnter={travel} />
+          </div>
         </div>
       ) : null}
 
@@ -353,7 +358,7 @@ export default function PortalPage() {
           between door cards. */}
       {mode === "lite" ? (
         <div className="fixed inset-0 z-0" data-world-layer="" aria-hidden="true">
-          <WorldAtmosphere hue={liteHue} />
+          <WorldPlate world="portal" hue={liteHue} />
         </div>
       ) : null}
 

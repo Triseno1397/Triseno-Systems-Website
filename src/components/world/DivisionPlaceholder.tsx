@@ -20,7 +20,7 @@ export default function DivisionPlaceholder({ division, line, children }: Divisi
   return (
     <main className="placeholder-world relative bg-black text-white">
       <div aria-hidden="true" data-world-layer="" className="placeholder-world__scene">
-        <DivisionWorld division={division.key} />
+        <DivisionWorld division={division.key} plate />
         {/* the world draws this glyph at architectural scale once the canvas is
             up; until then (and on the lite path) it is drawn here */}
         <span className="placeholder-world__glyph">

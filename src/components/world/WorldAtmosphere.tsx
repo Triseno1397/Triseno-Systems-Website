@@ -1,6 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import WorldPlate from "./WorldPlate";
+import type { PlateWorld } from "./plates";
 
 /**
  * The lit place, composited in CSS.
@@ -19,12 +21,26 @@ export default function WorldAtmosphere({
   hue = "#ffffff",
   className = "",
   fixed = false,
+  plate,
 }: {
   hue?: string;
   className?: string;
   /** pin it to the viewport instead of the nearest positioned ancestor */
   fixed?: boolean;
+  /**
+   * Stand in a generated world plate instead of the composited gradients
+   * (design-loop/world-plates.md). `hue` then grades the plate: pass white for
+   * the achromatic portal plate at rest, or for a plate painted in its hue.
+   */
+  plate?: PlateWorld;
 }) {
+  if (plate) {
+    return (
+      <div aria-hidden="true" className={`world-atmos ${fixed ? "world-atmos--fixed" : ""} ${className}`}>
+        <WorldPlate world={plate} hue={hue} />
+      </div>
+    );
+  }
   return (
     <div
       aria-hidden="true"

@@ -10,6 +10,7 @@ import {
 import dynamic from "next/dynamic";
 import { DIVISIONS, type DivisionKey } from "@/lib/divisions";
 import WorldAtmosphere from "./WorldAtmosphere";
+import { plateForDivision } from "./plates";
 import { onWorldProgress, setWorldProgress, worldState } from "./scene/worldState";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -60,6 +61,13 @@ export interface DivisionWorldProps {
    * Pass a ref to drive it from one element's own scroll range instead.
    */
   scrollRef?: React.RefObject<HTMLElement | null>;
+  /**
+   * Stand in this division's generated world plate (/worlds/{division}-*.webp;
+   * Work and Contact use the achromatic portal plate). The plate is the deep
+   * background, the 3D is lit foreground over it. Default false while division
+   * pages adopt plates in their own world components.
+   */
+  plate?: boolean;
   /** called once the canvas has drawn its first frames */
   onReady?: () => void;
   className?: string;
@@ -69,8 +77,13 @@ export default function DivisionWorld({
   division,
   scrollRef,
   onReady,
+  plate = false,
   className = "",
 }: DivisionWorldProps) {
+  const plateWorld = plate ? plateForDivision(division) : undefined;
+  // a division plate is painted in its hue already; the portal plate stays
+  // colourless for Work and Contact
+  const grade = 0;
   const d = DIVISIONS[division];
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
@@ -144,13 +157,15 @@ export default function DivisionWorld({
     >
       {/* Always present: the instant, never-empty backdrop. The canvas is opaque
           and covers it once it is up; on lite / low-end it IS the world. */}
-      <WorldAtmosphere hue={d.hue} />
+      <WorldAtmosphere hue={plateWorld ? "#ffffff" : d.hue} plate={plateWorld} />
       {mode === "full" ? (
         <div className="division-world__canvas" data-on={ready ? "" : undefined}>
           <DivisionWorldScene
             hue={d.hue}
             glyph={d.glyph}
             seed={SEED[division] ?? 7}
+            plate={plateWorld}
+            grade={grade}
             onReady={() => {
               setReady(true);
               onReady?.();

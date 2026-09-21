@@ -26,21 +26,15 @@ import {
 import {
   Dust,
   Haze,
-  Horizon,
   KeyLight,
-  Monoliths,
   Post,
   ReadySignal,
-  WetFloor,
   WorldEnvironment,
 } from "@/components/world/scene/pieces";
-import {
-  disposeFloorMaps,
-  makeFloorMaps,
-  makeGlowTexture,
-  makeHazeTexture,
-} from "@/components/world/scene/textures";
+import { makeGlowTexture, makeHazeTexture } from "@/components/world/scene/textures";
 import { WARP_EVENT } from "@/components/world/WarpProvider";
+import { plate } from "@/components/world/plates";
+import { PlateBackdrop } from "@/components/world/scene/plate";
 import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState } from "./portalState";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -56,7 +50,10 @@ import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState }
 
 const RING_Y = 1.95;
 const RING_SCALE = 1.42;
-const CAM_Y = 2.35;
+// Camera heights are set against the plate: at rest the object floats in the
+// light shaft centred on screen, and every door stands on the plate's floor.
+const CAM_Y = 0.95;
+const DOOR_CAM_Y = 1.55;
 const REST_YAW = -0.42; // the object rests turned toward the type column so its depth reads
 const GATE_POS = new THREE.Vector3(0, 2.45, -64);
 const GATE_SCALE = 2.1;
@@ -357,12 +354,23 @@ function GateObject() {
 
 /* ── camera rig: scroll moves the camera, not a document ───────────────── */
 
+/**
+ * The camera always looks level, down the corridor, and its lens is shifted
+ * so the 3D horizon sits exactly on the plate's horizon (world-plates.md): the
+ * painted gallery and the real-time foreground share one vanishing point, so
+ * the glass object and the doors stand on the plate's wet floor.
+ * Framing (pushing the focal object off-centre so copy never sits on it) is a
+ * sideways camera move, never a lens shift — a level camera moved sideways
+ * keeps the vanishing point where the plate has it.
+ */
+const PLATE_HORIZON = plate("portal").horizon.desktop;
+
 function CameraRig() {
   const { camera, size } = useThree();
   const pos = useMemo(() => new THREE.Vector3(0, CAM_Y, 7.6), []);
-  const look = useMemo(() => new THREE.Vector3(0, RING_Y, 0), []);
-  const curLook = useRef(new THREE.Vector3(0, RING_Y, 0));
-  const lastShift = useRef(Number.NaN);
+  const look = useMemo(() => new THREE.Vector3(0, CAM_Y, 0), []);
+  const curLook = useRef(new THREE.Vector3(0, CAM_Y, 0));
+  const lens = useRef("");
   const curFrame = useRef(1);
   const first = useRef(true);
   const probe = useMemo(() => new THREE.Vector3(), []);
@@ -371,51 +379,48 @@ function CameraRig() {
     const { hero, doors, gate, px, py, warpAt, capture } = portalState;
     const h = ease(Math.min(1, hero));
     let z = 7.6 - 9.6 * h;
+    const k = first.current ? 1 : 1 - Math.exp(-Math.min(dt, 1) * 6);
+
+    // Framing, as a sideways camera offset in world units.
+    const wide = capture ? 0 : size.width >= 1024 ? 1 : size.width >= 768 ? 0.8 : 0;
+    let f = framing(hero, doors, gate, z);
+    if (warpAt) f *= 1 - smooth(0, 650, performance.now() - warpAt);
+    curFrame.current += (f - curFrame.current) * k;
+    const frameX = -1.6 * wide * curFrame.current;
 
     if (hero < 1 || doors <= 0) {
       // Hero: dolly straight through the signature object. A warp out of the
       // portal pushes the camera at the object while the tunnel closes in.
       const w = warpAt ? smooth(0, 1900, performance.now() - warpAt) : 0;
       z -= w * 5.2;
-      const k = 1 - h;
-      pos.set(px * 0.35 * k * (1 - w), CAM_Y + (RING_Y - CAM_Y) * Math.max(h, w) + py * 0.12 * k * (1 - w), z);
-      look.set(0, RING_Y - 0.55 * k * (1 - w), z - 8);
+      const kk = 1 - h;
+      pos.set(frameX + px * 0.35 * kk * (1 - w), CAM_Y + (RING_Y - CAM_Y) * Math.max(h, w) + py * 0.12 * kk * (1 - w), z);
     }
     if (doors > 0) {
       z = dollyZ(doors) - gate * 4.5;
-      pos.set(px * 0.2, 2.05 + py * 0.08 + gate * 0.35, z);
-      look.set(0, 2.05 + gate * 0.35, z - 9);
+      pos.set(frameX + px * 0.2, DOOR_CAM_Y + py * 0.08 + gate * 0.35, z);
     }
-    if (capture === "door") pos.y = look.y = 2.05;
+    // level gaze, straight down the corridor
+    look.set(pos.x, pos.y, pos.z - 9);
 
     // even at a few frames per second the camera must arrive on wall-clock time
-    const k = first.current ? 1 : 1 - Math.exp(-Math.min(dt, 1) * 6);
     first.current = false;
     camera.position.lerp(pos, k);
     curLook.current.lerp(look, k);
     camera.lookAt(curLook.current);
 
-    // Framing: push the focal object off-centre so copy never sits on top of it.
-    const wide = capture ? 0 : size.width >= 1024 ? 0.2 : size.width >= 768 ? 0.16 : 0;
-    let f = framing(hero, doors, gate, z);
-    if (warpAt) f *= 1 - smooth(0, 650, performance.now() - warpAt);
-    curFrame.current += (f - curFrame.current) * k;
-    const shift = Math.round(wide * curFrame.current * size.width);
-    if (shift !== lastShift.current) {
-      lastShift.current = shift;
+    // lens shift: horizon on the plate's horizon
+    const key = `${size.width}x${size.height}`;
+    if (lens.current !== key) {
+      lens.current = key;
       const cam = camera as THREE.PerspectiveCamera;
-      if (shift === 0) cam.clearViewOffset();
-      else cam.setViewOffset(size.width, size.height, -shift, 0, size.width, size.height);
+      cam.setViewOffset(size.width, size.height, 0, -Math.round((PLATE_HORIZON - 0.5) * size.height), size.width, size.height);
     }
 
-    // where the wet floor under the gate object lands on screen — the beams fall to it
+    // where the floor under the gate object lands on screen — the beams fall to it
     probe.set(GATE_POS.x, 0, GATE_POS.z).project(camera);
     portalState.gateFloorY = Math.min(0.94, Math.max(0.55, (1 - probe.y) / 2));
   });
-
-  useEffect(() => {
-    lastShift.current = Number.NaN;
-  }, [size.width, size.height]);
 
   return null;
 }
@@ -430,7 +435,6 @@ interface PortalSceneProps {
 export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   const glow = useMemo(() => makeGlowTexture(), []);
   const haze = useMemo(() => makeHazeTexture(), []);
-  const floor = useMemo(() => makeFloorMaps(), []);
   // never render above the device's own pixel ratio; cap at 1.5 and fall to 1 if frames drop
   const [maxDpr, setMaxDpr] = useState(1.5);
   // "H" pins the high tier so headless/software-GPU captures show what a real
@@ -444,9 +448,8 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
     () => () => {
       glow.dispose();
       haze.dispose();
-      disposeFloorMaps(floor);
     },
-    [glow, haze, floor],
+    [glow, haze],
   );
 
   // Once the warp tunnel fully covers the screen the portal is invisible, so
@@ -476,7 +479,8 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}
       onCreated={({ gl, scene }) => {
         gl.setClearColor("#000000", 1);
-        scene.fog = new THREE.Fog("#0a0a0a", 6, 58);
+        // light fog: far doors recede into the plate's haze, never into murk
+        scene.fog = new THREE.Fog("#0a0a0a", 16, 120);
       }}
     >
       {pinHigh ? null : (
@@ -499,8 +503,9 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         <EnvDirector />
         <CameraRig />
         <KeyLight />
-        <Horizon />
-        {DBG.includes("m") ? null : <Monoliths />}
+        {/* the painted gallery is the deep background; the monoliths, sky and
+            floor it paints are not duplicated in 3D */}
+        <PlateBackdrop world="portal" pointer={() => [portalState.px, portalState.py]} />
         {DBG.includes("h") ? null : <Haze texture={haze} />}
         <SignatureObject glow={glow} />
         {DOOR_ITEMS.map((_, i) => (
@@ -508,8 +513,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         ))}
         <GateObject />
         {DBG.includes("d") ? null : <Dust sprite={glow} />}
-        {DBG.includes("f") ? null : <WetFloor maps={floor} />}
-        {DBG.includes("p") ? null : <Post focusY={RING_Y} />}
+        {DBG.includes("p") ? null : <Post focusY={RING_Y} dof={false} />}
         <ReadySignal onReady={onReady} />
       </TierContext.Provider>
     </Canvas>

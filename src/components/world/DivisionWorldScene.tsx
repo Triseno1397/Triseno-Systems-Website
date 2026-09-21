@@ -21,6 +21,8 @@ import {
 } from "./scene/pieces";
 import { disposeFloorMaps, makeFloorMaps, makeGlowTexture, makeHazeTexture } from "./scene/textures";
 import { worldState } from "./scene/worldState";
+import { PlateBackdrop } from "./scene/plate";
+import { plate, type PlateWorld } from "./plates";
 
 /* ─────────────────────────────────────────────────────────────────────────
    One continuous lit world behind a whole division page.
@@ -47,12 +49,22 @@ const MARKERS = [
 const CAM_START_Z = 13;
 const CAM_END_Z = -72;
 const CAM_Y = 2.55;
+const PLATE_CAM_Y = 1.4;
 
 export interface DivisionWorldSceneProps {
   hue: string;
   glyph: GlyphKind;
   /** changes the monolith layout so two divisions are not the same place */
   seed: number;
+  /**
+   * Stand the world in a generated plate: the plate becomes the deep
+   * background (sky, far forms, floor are not duplicated in 3D), the camera
+   * looks level with its horizon lens-shifted onto the plate's, and only the
+   * glyph markers, dust, haze and light remain as real-time foreground.
+   */
+  plate?: PlateWorld;
+  /** how strongly the division hue grades the plate (0 for a plate painted in its hue) */
+  grade?: number;
   onReady: () => void;
 }
 
@@ -132,8 +144,9 @@ function GlyphMarker({
 
 /* ── camera: one continuous dolly down the corridor ────────────────────── */
 
-function CameraRig() {
-  const { camera } = useThree();
+function CameraRig({ horizon }: { horizon?: number }) {
+  const { camera, size } = useThree();
+  const lens = useRef("");
   const pos = useMemo(() => new THREE.Vector3(0, CAM_Y, CAM_START_Z), []);
   const look = useMemo(() => new THREE.Vector3(0, 2.1, 0), []);
   const cur = useRef(new THREE.Vector3(0, 2.1, 0));
@@ -151,18 +164,47 @@ function CameraRig() {
       CAM_Y - 0.55 * p + Math.sin(t * 0.21) * 0.05 + worldState.py * 0.1,
       z,
     );
-    look.set(drift * 0.25, 2.0 - 0.35 * p, z - 12);
+    if (horizon === undefined) look.set(drift * 0.25, 2.0 - 0.35 * p, z - 12);
+    else {
+      // level gaze over the plate: sideways moves only, so the vanishing point
+      // stays where the plate paints it
+      pos.setY(PLATE_CAM_Y + Math.sin(t * 0.21) * 0.05 + worldState.py * 0.1);
+      look.set(pos.x, pos.y, z - 12);
+    }
 
     const k = first.current ? 1 : 1 - Math.exp(-Math.min(dt, 1) * 5);
     first.current = false;
     camera.position.lerp(pos, k);
     cur.current.lerp(look, k);
     camera.lookAt(cur.current);
+
+    if (horizon !== undefined) {
+      const key = `${size.width}x${size.height}`;
+      if (lens.current !== key) {
+        lens.current = key;
+        (camera as THREE.PerspectiveCamera).setViewOffset(
+          size.width,
+          size.height,
+          0,
+          -Math.round((horizon - 0.5) * size.height),
+          size.width,
+          size.height,
+        );
+      }
+    }
   });
   return null;
 }
 
-export default function DivisionWorldScene({ hue, glyph, seed, onReady }: DivisionWorldSceneProps) {
+export default function DivisionWorldScene({
+  hue,
+  glyph,
+  seed,
+  onReady,
+  plate: plateWorld,
+  grade = 0,
+}: DivisionWorldSceneProps) {
+  const horizon = plateWorld ? plate(plateWorld).horizon.desktop : undefined;
   const glow = useMemo(() => makeGlowTexture(), []);
   const haze = useMemo(() => makeHazeTexture(), []);
   const floor = useMemo(() => makeFloorMaps(), []);
@@ -208,17 +250,23 @@ export default function DivisionWorldScene({ hue, glyph, seed, onReady }: Divisi
       <TierContext.Provider value={tier}>
         <WorldEnvironment />
         <EnvDirector hue={hue} />
-        <CameraRig />
+        <CameraRig horizon={horizon} />
         <KeyLight />
-        <Horizon />
-        <Monoliths seed={seed} corridor={132} start={10} />
+        {plateWorld ? (
+          <PlateBackdrop world={plateWorld} grade={grade} pointer={() => [worldState.px, worldState.py]} />
+        ) : (
+          <>
+            <Horizon />
+            <Monoliths seed={seed} corridor={132} start={10} />
+          </>
+        )}
         <Haze texture={haze} />
         {MARKERS.map((_, i) => (
           <GlyphMarker key={i} index={i} glyph={glyph} hue={hue} />
         ))}
         <Dust sprite={glow} depth={120} />
-        <WetFloor maps={floor} z={-52} />
-        <Post focusY={2.1} />
+        {plateWorld ? null : <WetFloor maps={floor} z={-52} />}
+        <Post focusY={2.1} dof={!plateWorld} />
         <ReadySignal onReady={onReady} />
       </TierContext.Provider>
     </Canvas>

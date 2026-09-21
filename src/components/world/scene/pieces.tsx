@@ -343,8 +343,10 @@ export function WorldEnvironment() {
 
 /* ── post: depth of field that follows the focal object, bloom, vignette ── */
 
-export function Post({ focusY = 1.95 }: { focusY?: number }) {
-  const high = useContext(TierContext) === "high";
+export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; dof?: boolean }) {
+  // depth of field is off in front of a painted plate: the plate has no depth
+  // buffer, so DOF would smear the whole backdrop
+  const high = useContext(TierContext) === "high" && withDof;
   const dof = useRef<DepthOfFieldEffect>(null);
   const focus = useMemo(() => new THREE.Vector3(0, focusY, 0), [focusY]);
   useFrame((_, dt) => {
