@@ -28,7 +28,7 @@
   .route{font:400 12px var(--mono);color:var(--dim)}
   .status{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 10px;border:1px solid var(--line);color:var(--fog);white-space:nowrap}
   .status.building{color:var(--void);background:var(--white);border-color:var(--white)}
-  .status.passed{color:var(--pass);border-color:var(--pass)}
+  .status.live{color:var(--white);border-color:var(--white)} .status.passed{color:var(--pass);border-color:var(--pass)}
   .critics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
   .critic{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:4px}
   .critic .who{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
@@ -40,7 +40,7 @@
   .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px}
   ol.bar,ul.open{margin:0;padding-left:20px;color:var(--fog);display:grid;gap:8px;font-size:14px}
   ol.bar b,ul.open b{color:var(--white);font-weight:500}
-  .verdict-line{margin:0;padding:12px 16px;border-left:2px solid var(--fail);background:rgba(255,90,106,.07);color:var(--white);max-width:72ch;font-size:14px}
+  .verdict-line{margin:0;padding:12px 16px;border-left:2px solid var(--pass);background:rgba(125,255,176,.06);color:var(--white);max-width:72ch;font-size:14px}
   footer{font:400 11px var(--mono);color:var(--dim);letter-spacing:.08em;border-top:1px solid var(--line);padding-top:16px}
 </style>
 
@@ -82,33 +82,36 @@
 
 <script>
 const DATA = {
-  updated: "2026-09-21 · round 2 judged (12/12, all FAIL), round 3 building",
-  headline: "Round 2 moved the failures from missing fundamentals to layering and polish. The 3D worlds now exist; the critics are catching them drawing over text, going dark on phones, and letterboxing the frame.",
+  updated: "2026-09-21 · all six pages built · live on the revamp preview",
+  headline: "Every page is built and live on the preview: portal, the three divisions, Work and Contact. The automated critics never passed a round: the craft critic judges still frames and can't see motion. So the loop stopped after round 5 and you are judging the live site.",
   open: [
-    ["21st.dev limit", "Your plan allows 2 component downloads a day. Two exact sources are in; the other nine are rebuilt from their demos and tailored to Triseno anyway."],
-    ["Video shots", "No Higgsfield video is generated until you approve each shot. Nothing spent yet."],
-    ["Brand film", "Proposed: a fictional performance-car film, 15s in 21:9. A 480p draft costs 45 credits, the 1080p final 180. Waiting on your go. Until then the slot shows a reference cut of your existing footage."]
+    ["Your review", "Judge the preview: triseno-systems-website-git-revamp-trisenos-projects.vercel.app. Nothing merges to the live site until you say so."],
+    ["Higgsfield", "No generations until you confirm the credit cost and say go. 100 credits spent so far on world plates, camera stations, concept sites and portraits."],
+    ["Brand film", "Not generated. The Brand Films slot shows a cut of your existing footage."]
   ],
   pieces: [
-    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"building", round:3,
-     critics:{brief:["fail","Mobile is broken: a button runs off screen and fixed chrome covers the copy."],system:["fail","No colourless rest state, oversized cursor, too many type sizes, black gaps on mobile."],craft:["fail","Lost to the reference 0-7. Glyphs float in a black void where the reference has a lit place."]},
-     history:["R1 built: type check + production build pass, 0 console errors","R1: all three critics failed it","R2 interrupted by the usage limit partway; rescued and committed","R2 built: soft corner scrims, reserved rail lane, two-line mobile lockup, shared DivisionWorld, one-word-at-a-time headline"]},
-    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"building", round:3,
-     critics:{brief:["fail","The header prints over body copy, and on mobile it swallows the Start a Conversation button."],system:["fail","Chrome collisions, an amber gradient wash on the page background, cyan footage on an amber page."],craft:["fail","Lost 1-6. Reads as stacked document blocks with media punched in, not one camera move."]},
-     history:["R1 built: 5 sections, 9 formats, 10 testimonials","R1: all three critics failed it","R1: flagship Brand Films panel is an empty slate; real brand names in the founder bio","R2 built: brand names removed, flagship reference cut, one amber world behind the page, mobile swipe testimonials"]},
-    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"building", round:3,
-     critics:{brief:["fail","On a phone the before/after collapses into an unreadable fragment, and the industry previews vanish entirely."],system:["fail","Every display headline is set at zero letter-spacing; ~290px black gaps on mobile."],craft:["fail","Lost 0-7. A document scrolling over a static wireframe backdrop."]},
-     history:["R1 built: 6 sections, live HTML concept mocks, keyboard-accessible compare","R1: all three critics failed it","R1: the first screen shows a diagram, not a website","R2 built: 0.1em display tracking, website in the first screen, tap-toggle before/after on phones, mobile concept carousel"]},
-    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"building", round:3,
-     critics:{brief:["fail","Body copy scrolls through the header at a third of all positions; a web-design card sits on the AI page."],system:["fail","The lockup collides white-on-white with headlines; black bands of 126-146px; mobile lockup hits the menu trigger."],craft:["fail","Lost 1-6. A dense dark-mode document with a faint wireframe behind it."]},
-     history:["R1 built: 7 sections, lattice hero, 5-step orbital process","R1 credit: the mechanism and process read as specific and honest","R1: 3x contradicts the page's own 40hrs-to-12min claim","R1 credit: hue discipline clean across all 30 frames; exactly 5 chrome elements; tracking measured in spec","R2 built: web card removed, both speed figures cut, one card per screen, odometer counts only what the page draws"]}
+    {name:"Foundation + Portal", route:"/ and global chrome", hue:"white", status:"live", round:5,
+     critics:{brief:["wait","Handed to Tristen after round 5."],system:["wait","Hue discipline, 5 chrome elements, content fades before chrome."],craft:["wait","The still-frame critic can't judge motion; Tristen judges the live site."]},
+     history:["Lighthouse desktop: accessibility 100, best practices 100, SEO 100","Performance ~73 under headless software GL (three.js); real GPUs are faster"]},
+    {name:"Creative — Triseno Studio", route:"/studio", hue:"amber", status:"live", round:5,
+     critics:{brief:["wait","Expansion hero, filmstrip, print deal, marquee wall, iris gate."],system:["wait","Amber only, chrome clear."],craft:["wait","Judged live by Tristen."]},
+     history:["Camera stations: 3 connected views of the lit stage","Lighthouse: perf 98, a11y 100, BP 100, SEO 100"]},
+    {name:"Web Design Division", route:"/web-design-division", hue:"violet", status:"live", round:5,
+     critics:{brief:["wait","Shutter hero, device scroll, compare reveal, stacking cards, range gallery."],system:["wait","Violet only."],craft:["wait","Judged live by Tristen."]},
+     history:["Camera stations through the violet hall","Lighthouse: perf 99, a11y 100 after the contrast fix, BP 100, SEO 100"]},
+    {name:"AI Infrastructure", route:"/ai-infrastructure", hue:"cyan", status:"live", round:5,
+     critics:{brief:["wait","Lattice hero, spotlight bento, compression draw, orbital timeline, agent-log rows, vendor toggle."],system:["wait","Cyan only."],craft:["wait","Judged live by Tristen."]},
+     history:["Camera stations end on the radiant core","Lighthouse: perf 99, a11y 100, BP 100, SEO 100"]},
+    {name:"Work + Contact", route:"/work · /contact", hue:"white", status:"live", round:1,
+     critics:{brief:["wait","Work is an index of what Triseno builds, not a portfolio. Contact asks one question at a time."],system:["wait","Achromatic; a division's hue appears only when chosen or hovered."],craft:["wait","Judged live by Tristen."]},
+     history:["Work: 23 entries, hover-distortion preview, reflowing division filter, convergence gate","Contact: 8 steps, line-draw progress, ?division= preselect, same web3forms delivery","Lighthouse: perf 99–100, a11y 100, BP 100, SEO 100"]}
   ]
 };
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.textContent=h;return e};
 const label={wait:"—",pass:"PASS",fail:"FAIL"};
 const rounds=DATA.pieces.reduce((a,p)=>a+p.round,0), passed=DATA.pieces.filter(p=>p.status==="passed").length;
 document.getElementById("headline").textContent=DATA.headline;
-document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pieces passed <b>${passed} / ${DATA.pieces.length}</b></span><span>Rounds judged <b>2</b></span><span>Pages passed <b>0 / 4</b></span><span>Higgsfield credits spent <b>0</b></span>`;
+document.getElementById("stats").innerHTML=`<span>Rounds run <b>${rounds}</b></span><span>Pages built <b>6 / 6</b></span><span>Higgsfield credits spent <b>100</b></span>`;
 const root=document.getElementById("pieces");
 DATA.pieces.forEach(p=>{
   const card=el("article","piece");card.dataset.hue=p.hue;
