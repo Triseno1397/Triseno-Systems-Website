@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import gsap from "gsap";
-import { plate as plateFor, type PlateWorld } from "./plates";
+import { plate as plateFor, stationPlates, type PlateWorld } from "./plates";
+import { stationFrames } from "./stations";
 import { platePose, plateTransform, type PlatePose } from "./plateMotion";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -46,28 +47,43 @@ export default function GlassPanel({
   // every allowed tag is a plain block element; typed as div for the ref
   const Tag = as as "div";
   const panelRef = useRef<HTMLDivElement>(null);
-  const plateRef = useRef<HTMLSpanElement>(null);
+  const copyRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const p = plateFor(world);
+  const stations = stationPlates(world);
 
   useEffect(() => {
     const panel = panelRef.current;
-    const copy = plateRef.current;
-    if (!panel || !copy) return;
+    if (!panel) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let visible = true;
-    let last = "";
+    const last: string[] = [];
+    const painted: boolean[] = [];
     const io = new IntersectionObserver((e) => (visible = e[0]?.isIntersecting ?? true), { rootMargin: "20%" });
     io.observe(panel);
     const tick = () => {
       if (!visible) return;
       const r = panel.getBoundingClientRect();
-      // the copy is a viewport-sized plate; move it so its (0,0) sits on the
-      // viewport's (0,0), then apply the plate's own pose
-      const t = plateTransform(platePose(pose), -r.left - 1, -r.top - 1);
-      if (t !== last) {
-        last = t;
-        copy.style.transform = t;
-      }
+      // each copy is a viewport-sized plate; move it so its (0,0) sits on the
+      // viewport's (0,0), then apply the plate's pose and, per station, the
+      // same push-in and dissolve as WorldPlate — so the glass always shows
+      // the room the camera is actually in
+      const base = plateTransform(platePose(pose), -r.left - 1, -r.top - 1);
+      const frames = stationFrames(world);
+      copyRefs.current.forEach((copy, i) => {
+        if (!copy) return;
+        const f = frames[i] ?? { alpha: 0, scale: 1, near: false };
+        if (f.near && !painted[i]) {
+          painted[i] = true;
+          copy.style.backgroundImage = `var(--glass-img-${i})`;
+        }
+        const t = `${base} scale(${f.scale.toFixed(4)})|${f.alpha.toFixed(3)}`;
+        if (t !== last[i]) {
+          last[i] = t;
+          copy.style.transform = `${base} scale(${f.scale.toFixed(4)})`;
+          copy.style.opacity = f.alpha.toFixed(3);
+          copy.style.visibility = f.alpha <= 0.001 ? "hidden" : "visible";
+        }
+      });
     };
     tick();
     gsap.ticker.add(tick);
@@ -75,12 +91,16 @@ export default function GlassPanel({
       gsap.ticker.remove(tick);
       io.disconnect();
     };
-  }, []);
+  }, [world]);
 
   const vars = {
     ...style,
-    ["--glass-d" as string]: `url("${p.desktopGlass}")`,
-    ["--glass-m" as string]: `url("${p.mobileGlass}")`,
+    ...Object.fromEntries(
+      stations.flatMap((st, i) => [
+        [`--glass-d-${i}`, `url("${st.desktopGlass}")`],
+        [`--glass-m-${i}`, `url("${st.mobileGlass}")`],
+      ]),
+    ),
     ["--glass-h-d" as string]: `${p.horizon.desktop * 100}%`,
     ["--glass-h-m" as string]: `${p.horizon.mobile * 100}%`,
     ["--glass-veil" as string]: String(veil),
@@ -89,7 +109,16 @@ export default function GlassPanel({
   return (
     <Tag ref={panelRef} className={`glass-panel ${className}`} style={vars}>
       <span aria-hidden="true" className="glass-panel__world">
-        <span ref={plateRef} className="glass-panel__plate" />
+        {stations.map((st, i) => (
+          <span
+            key={st.desktopGlass}
+            ref={(el) => {
+              copyRefs.current[i] = el;
+            }}
+            className="glass-panel__plate"
+            style={i === 0 ? undefined : { opacity: 0, visibility: "hidden", backgroundImage: "none" }}
+          />
+        ))}
       </span>
       <span aria-hidden="true" className="glass-panel__veil" />
       <div className="glass-panel__body">{children}</div>

@@ -202,7 +202,9 @@ export default function StudioBackdrop() {
 
   return (
     <div aria-hidden="true" className="sx-world" data-world-layer="">
-      <WorldPlate world="creative" />
+      {/* camera stations: further into the soundstage at Behind the studio,
+          arriving at the hero spotlight pool as the gate enters */}
+      <WorldPlate world="creative" stations={[0, '[data-rail="Behind"]', '[data-rail="Gate"]']} />
       {/* this page's air over the plate, on the plate's own camera */}
       <div ref={cam} className="sx-world__air-cam">
         <canvas ref={cvs} className="sx-world__air" />

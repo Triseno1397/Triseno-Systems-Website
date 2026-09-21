@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
-import { plate as plateFor, type PlateWorld } from "./plates";
+import { plate as plateFor, stationPlates, type PlateWorld } from "./plates";
+import { setStationStarts, stationFrames, type StationStart } from "./stations";
 import { platePose, plateTransform, type PlatePose } from "./plateMotion";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -27,16 +28,44 @@ export interface WorldPlateProps {
   hue?: string;
   /** how strongly the hue grades the plate, 0..1 */
   tint?: number;
+  /**
+   * Camera stations (stations.ts): where each station of this world begins —
+   * a fraction of page scroll, or a CSS selector the station arrives with.
+   * Omit for the default (spread down the page, the last on the gate);
+   * `false` keeps the base plate only.
+   */
+  stations?: StationStart[] | false;
   className?: string;
 }
 
 const WHITE = "#ffffff";
 
-export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className = "" }: WorldPlateProps) {
+export default function WorldPlate({
+  world,
+  hue = WHITE,
+  tint = 0.78,
+  stations,
+  className = "",
+}: WorldPlateProps) {
   const p = plateFor(world);
+  const all = stationPlates(world);
+  const plates = stations === false ? all.slice(0, 1) : all;
   const camRef = useRef<HTMLDivElement>(null);
   const lightRef = useRef<HTMLSpanElement>(null);
-  const [loaded, setLoaded] = useState(false);
+  const layerRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // which stations have been asked for their full image (preloaded just ahead of need)
+  const [near, setNear] = useState<boolean[]>(() => plates.map((_, i) => i === 0));
+  const [loaded, setLoaded] = useState<boolean[]>(() => plates.map(() => false));
+  const markLoaded = (i: number) =>
+    setLoaded((l) => (l[i] ? l : l.map((v, k) => (k === i ? true : v))));
+
+  // register where the stations begin, for this plate and every GlassPanel
+  const startsKey = stations === false ? "off" : JSON.stringify(stations ?? null);
+  useEffect(() => {
+    const parsed = JSON.parse(startsKey === "off" ? '"off"' : startsKey) as StationStart[] | "off" | null;
+    setStationStarts(world, parsed ?? undefined);
+    return () => setStationStarts(world, undefined);
+  }, [world, startsKey]);
 
   // hue swaps dip through colourless: the old grade fades out before the new
   // one fades in, so two division hues never mix
@@ -54,13 +83,32 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
     if (!cam) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let last = "";
-    // same pose model and same clock as every GlassPanel's copy of this plate
+    const lastLayer: string[] = [];
+    const asked = plates.map((_, i) => i === 0);
+    // same pose model, same station model and same clock as every GlassPanel's
+    // copy of this plate
     const tick = () => {
       const t = plateTransform(platePose(pose));
       if (t !== last) {
         last = t;
         cam.style.transform = t;
       }
+      const frames = stationFrames(world);
+      layerRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const f = frames[i] ?? { alpha: 0, scale: 1, near: false };
+        const key = `${f.alpha.toFixed(3)}|${f.scale.toFixed(4)}`;
+        if (key !== lastLayer[i]) {
+          lastLayer[i] = key;
+          el.style.opacity = f.alpha.toFixed(3);
+          el.style.visibility = f.alpha <= 0.001 ? "hidden" : "visible";
+          el.style.transform = `scale(${f.scale.toFixed(4)})`;
+        }
+        if (f.near && !asked[i]) {
+          asked[i] = true;
+          setNear((n) => n.map((v, k) => (k === i ? true : v)));
+        }
+      });
     };
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "touch" || !light) return;
@@ -74,7 +122,8 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
       gsap.ticker.remove(tick);
       window.removeEventListener("pointermove", onMove);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world, plates.length]);
 
   const style = {
     ["--plate-hue" as string]: shown,
@@ -96,22 +145,42 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
       style={style}
     >
       <div ref={camRef} className="world-plate__cam">
-        <picture>
-          <source media="(max-width: 767px)" srcSet={p.mobile} />
-          <img
-            src={p.desktop}
-            alt=""
-            decoding="async"
-            fetchPriority="low"
-            className="world-plate__img"
-            data-loaded={loaded ? "" : undefined}
-            ref={(img) => {
-              // an image decoded before hydration never fires onLoad; catch it
-              if (img?.complete && img.naturalWidth > 0) window.requestAnimationFrame(() => setLoaded(true));
+        {plates.map((st, i) => (
+          <div
+            key={st.desktop}
+            ref={(el) => {
+              layerRefs.current[i] = el;
             }}
-            onLoad={() => setLoaded(true)}
-          />
-        </picture>
+            className="world-plate__station"
+            style={
+              {
+                ["--st-ph-d" as string]: `url("${st.desktopGlass}")`,
+                ["--st-ph-m" as string]: `url("${st.mobileGlass}")`,
+                opacity: i === 0 ? 1 : 0,
+                visibility: i === 0 ? "visible" : "hidden",
+              } as CSSProperties
+            }
+          >
+            {near[i] ? (
+              <picture>
+                <source media="(max-width: 767px)" srcSet={st.mobile} />
+                <img
+                  src={st.desktop}
+                  alt=""
+                  decoding="async"
+                  fetchPriority="low"
+                  className="world-plate__img"
+                  data-loaded={loaded[i] ? "" : undefined}
+                  ref={(img) => {
+                    // an image decoded before hydration never fires onLoad; catch it
+                    if (img?.complete && img.naturalWidth > 0) window.requestAnimationFrame(() => markLoaded(i));
+                  }}
+                  onLoad={() => markLoaded(i)}
+                />
+              </picture>
+            ) : null}
+          </div>
+        ))}
         <span className="world-plate__shaft" />
         <span className="world-plate__haze" />
       </div>

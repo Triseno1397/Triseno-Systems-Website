@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import WorldPlate from "@/components/world/WorldPlate";
 import { platePose, plateTransform, type PlatePose } from "@/components/world/plateMotion";
+import { activeStation } from "@/components/world/stations";
 import { DIVISIONS } from "@/lib/divisions";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -67,11 +68,20 @@ export default function WebWorld() {
     if (!fx) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let last = "";
+    let lastO = "";
     const tick = () => {
       const t = plateTransform(platePose(pose));
       if (t !== last) {
         last = t;
         fx.style.transform = t;
+      }
+      // the far portal's light dips through each station hand-off and comes
+      // back up on the next station's portal, never hanging over the dissolve
+      const { blend } = activeStation("web");
+      const o = (1 - Math.sin(Math.PI * blend)).toFixed(3);
+      if (o !== lastO) {
+        lastO = o;
+        fx.style.opacity = o;
       }
     };
     const onMove = (e: PointerEvent) => {
@@ -89,7 +99,14 @@ export default function WebWorld() {
 
   return (
     <div ref={layerRef} aria-hidden="true" data-world-layer="" className="web-scene" data-at="hero">
-      <WorldPlate world="web" hue={DIVISIONS.web.hue} tint={0.35} />
+      {/* camera stations: deeper into the atrium at Before / After, arriving
+          in the innermost glowing room as the gate enters */}
+      <WorldPlate
+        world="web"
+        hue={DIVISIONS.web.hue}
+        tint={0.35}
+        stations={[0, '[data-rail="Before / After"]', '[data-rail="Gate"]']}
+      />
       <div ref={fxRef} className="web-plate__fx">
         {/* the far portal's light, locked to the plate's pose */}
         <span className="web-plate__shaft" />

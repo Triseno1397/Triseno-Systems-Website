@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import WorldPlate from "@/components/world/WorldPlate";
 import { platePose, plateTransform, type PlatePose } from "@/components/world/plateMotion";
+import { activeStation } from "@/components/world/stations";
 
 /**
  * The world for /ai-infrastructure: the cathedral plate — a nave of dark
@@ -22,6 +23,7 @@ import { platePose, plateTransform, type PlatePose } from "@/components/world/pl
 export default function AiWorld() {
   const camRef = useRef<HTMLDivElement>(null);
   const lightRef = useRef<HTMLSpanElement>(null);
+  const glowRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const cam = camRef.current;
@@ -44,11 +46,21 @@ export default function AiWorld() {
       moved = true;
     };
 
+    let lastG = "";
     const tick = () => {
       const t = plateTransform(platePose(pose));
       if (t !== last) {
         last = t;
         cam.style.transform = t;
+      }
+      // the side filament glows belong to the first station's geometry: they
+      // fade out through the first hand-off (the core pulse stays — every
+      // station keeps the vanishing point, and station 3 ends on the core)
+      const { index, blend } = activeStation("ai");
+      const g = Math.max(0, 1 - (index + blend)).toFixed(3);
+      if (g !== lastG && glowRef.current) {
+        lastG = g;
+        glowRef.current.style.opacity = g;
       }
       if (!fine.matches || reduced.matches) return;
       if (!moved) {
@@ -73,11 +85,15 @@ export default function AiWorld() {
 
   return (
     <div aria-hidden="true" data-world-layer="" className="ai-world__scene">
-      <WorldPlate world="ai" />
+      {/* camera stations: further down the nave at Process, arriving at the
+          radiant core as the gate enters */}
+      <WorldPlate world="ai" stations={[0, '[data-rail="Process"]', '[data-rail="Gate"]']} />
       {/* laid out exactly like WorldPlate's camera, so these sit on the plate */}
       <div ref={camRef} className="ai-world__cam">
-        <span className="ai-world__glow ai-world__glow--l" />
-        <span className="ai-world__glow ai-world__glow--r" />
+        <span ref={glowRef} className="ai-world__glows" style={{ position: "absolute", inset: 0, mixBlendMode: "screen" }}>
+          <span className="ai-world__glow ai-world__glow--l" />
+          <span className="ai-world__glow ai-world__glow--r" />
+        </span>
         <span className="ai-world__core" />
       </div>
       <span ref={lightRef} className="ai-world__light" />

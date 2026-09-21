@@ -49,3 +49,24 @@ and one transform per panel, immune to masks, opacity, filters and pinned sectio
 overflow: hidden`; put your padding on it via `className`. It stays aligned only with a plate rendered by `WorldPlate`
 / `PlateBackdrop` (shared pose model); a page that animates its plate some other way should switch to `WorldPlate`.
 `WorldCard` is already a GlassPanel.
+
+## Camera stations (one camera move, not a slideshow)
+Creative, Web and AI each have three stations of the same place: station 1 is the base plate, station 2
+(`{world}-station2[-mobile].webp`) is further in, station 3 (`-station3`) is the arrival. `stations.ts` turns page
+scroll into ONE dolly: inside a station its plate keeps pushing in (scale 1.00 → 1.20 about the vanishing point);
+around each hand-off station N, still pushing past where it started, dissolves into station N+1, which enters at its
+wider framing and starts pushing in too. Zoom + dissolve between two views of one place, anchor held, reads as the
+camera moving forward — no cut, no slide, no scale reset. The dissolve spans about one viewport of scroll.
+- **Where stations begin:** `<WorldPlate world="ai" stations={[0, '[data-rail="Process"]', '[data-rail="Gate"]']} />`.
+  A number is a fraction of page scroll; a selector means "arrive as this element's top reaches 55% of the
+  viewport". Omit `stations` for the default (spread down the page, the last on `[data-rail="Gate"]`);
+  `stations={false}` keeps the base plate only. Current wiring: Creative → Behind, Gate; Web → Before / After,
+  Gate; AI → Process, Gate. Station 3 arrives as each page's gate enters.
+- **Glass follows:** every `GlassPanel` of that world paints a pre-blurred copy per station
+  (`*-station{2,3}[-mobile]-glass.webp`) and dissolves/pushes them in lockstep with the plate — no prop needed.
+- **Overlays:** keep riding `platePose()` (the global pose is unchanged). If an overlay belongs to one station's
+  geometry, read `activeStation(world)` → `{ index, blend }` and fade it (AI side filament glows fade out through
+  the first hand-off; the Web far-portal light dips through each hand-off and returns on the next portal).
+- **Loading:** station 1 loads as before; station N's full image is requested about 1.4 viewports before its
+  dissolve begins (its tiny glass copy paints first as the placeholder). Reduced motion: no push-in, the stations
+  still change by a plain scroll-linked dissolve at the same places.

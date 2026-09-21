@@ -577,6 +577,14 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   will-change: transform;
   background: var(--plate-blur-d) center var(--plate-h) / cover no-repeat;
 }
+/* one layer per camera station (stations.ts): each pushes in about the
+   vanishing point and dissolves over the one before it */
+.world-plate__station {
+  position: absolute; inset: 0;
+  transform-origin: 50% var(--plate-h);
+  background: var(--st-ph-d) center var(--plate-h) / cover no-repeat;
+  will-change: transform, opacity;
+}
 .world-plate__img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: 50% var(--plate-h);
@@ -645,6 +653,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 @media (max-width: 767px) {
   .world-plate { --plate-h: var(--plate-h-m); }
   .world-plate__cam { background-image: var(--plate-blur-m); }
+  .world-plate__station { background-image: var(--st-ph-m); }
   .world-plate__shaft { width: 60%; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -659,14 +668,16 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 .glass-panel {
   position: relative; isolation: isolate; overflow: hidden;
   border: 1px solid #ffffff; border-radius: 0;
-  --glass-img: var(--glass-d);
   --glass-h: var(--glass-h-d);
+  --glass-img-0: var(--glass-d-0);
+  --glass-img-1: var(--glass-d-1, none);
+  --glass-img-2: var(--glass-d-2, none);
 }
 .glass-panel__world { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
 .glass-panel__plate {
   position: absolute; left: -2vw; top: -2dvh;
   width: 104vw; height: 104dvh;
-  background: #0b0b0d var(--glass-img) 50% var(--glass-h) / cover no-repeat;
+  background: #0b0b0d var(--glass-img-0) 50% var(--glass-h) / cover no-repeat;
   transform-origin: 50% var(--glass-h);
   will-change: transform;
 }
@@ -680,7 +691,12 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 }
 .glass-panel__body { position: relative; }
 @media (max-width: 767px) {
-  .glass-panel { --glass-img: var(--glass-m); --glass-h: var(--glass-h-m); }
+  .glass-panel {
+    --glass-h: var(--glass-h-m);
+    --glass-img-0: var(--glass-m-0);
+    --glass-img-1: var(--glass-m-1, none);
+    --glass-img-2: var(--glass-m-2, none);
+  }
 }
 
 /* ═══ DivisionWorld: one lit world behind a whole division page ═══════════ */
