@@ -59,3 +59,6 @@ design-loop/shots/
 tmp-*.mjs
 .*.mjs
 tmp-*.png
+
+# generated art sources (large PNGs; web copies live in public/)
+design-loop/art-src/
