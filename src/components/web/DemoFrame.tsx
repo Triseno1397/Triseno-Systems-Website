@@ -50,6 +50,7 @@ export default function DemoFrame() {
         const travel = () =>
           Math.max(0, page.scrollHeight - viewport.clientHeight);
 
+        const small = window.matchMedia("(max-width: 767px)").matches;
         const tl = gsap.timeline({
           defaults: { ease: "none" },
           scrollTrigger: {
@@ -64,9 +65,11 @@ export default function DemoFrame() {
         tl.fromTo(
           device,
           {
-            rotateX: 64,
-            yPercent: 26,
-            scale: 0.78,
+            // phones start less flat, so the lying-down frame never leaves
+            // most of a small screen empty
+            rotateX: small ? 34 : 64,
+            yPercent: small ? 10 : 26,
+            scale: small ? 0.9 : 0.78,
             transformOrigin: "50% 100%",
           },
           {

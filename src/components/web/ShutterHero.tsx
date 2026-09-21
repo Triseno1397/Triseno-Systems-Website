@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import GhostButton from "@/components/ui/GhostButton";
 import GlassPanel from "@/components/world/GlassPanel";
 import { getLenis } from "@/components/world/SmoothScroll";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /**
  * Triseno shutter text — section 01, standing in the world.
@@ -16,22 +21,52 @@ import { getLenis } from "@/components/world/SmoothScroll";
  *   slats filling the block — which collapses band by band as the type slides
  *   in. Nothing is ever a blank hole waiting for JavaScript: the animation is
  *   CSS and is already running on the first painted frame;
- * - the same shutter runs over the hero's second object: a browser frame with
- *   a live concept site inside it, so the first screen of a page that sells
- *   websites shows a website;
- * - clicking either object re-runs the shutter.
+ * - the hero's second object is a browser frame with a live concept site in
+ *   it, readable from the first paint, so the first screen of a page that
+ *   sells websites shows a website; clicking it re-runs the headline shutter.
  * Reduced motion and no-JS render the finished headline and the finished site.
  */
 
 const LINES = ["Design that", "moves", "people."];
 const BANDS = 9;
-/** ms each band trails the one before — uneven on purpose (stepped front). */
-const LAG = [0, 190, 70, 260, 120, 310, 30, 215, 150];
+/**
+ * ms each band trails the one before — uneven on purpose (stepped front), and
+ * short: the whole reveal resolves in ~0.7s, so the headline is readable almost
+ * at once.
+ */
+const LAG = [0, 76, 28, 104, 48, 124, 12, 86, 60];
 
 export default function ShutterHero() {
   // Remounting the shutter restarts the CSS animation — no JS timeline to sync.
   const [run, setRun] = useState(0);
   const replay = () => setRun((v) => v + 1);
+  const rootRef = useRef<HTMLElement>(null);
+
+  // Leaving: the whole hero fades and lifts away as it scrolls out, so no
+  // part of it (the CTA row least of all) lingers under the lockup.
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          ".web-hero__grid",
+          { opacity: 1, y: 0 },
+          {
+            opacity: 0,
+            y: -48,
+            ease: "none",
+            scrollTrigger: {
+              trigger: rootRef.current,
+              start: "top top-=40",
+              end: "bottom 55%",
+              scrub: true,
+            },
+          },
+        );
+      });
+    },
+    { scope: rootRef },
+  );
 
   const toDemo = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const target = document.getElementById("web-demo");
@@ -49,6 +84,7 @@ export default function ShutterHero() {
 
   return (
     <section
+      ref={rootRef}
       data-rail="Hero"
       data-station="hero"
       className="web-section web-hero"
@@ -137,19 +173,6 @@ export default function ShutterHero() {
               </span>
               <span className="web-hero__site-view">
                 <HeroSite />
-                <span
-                  aria-hidden="true"
-                  className="web-shutter__slats web-shutter__slats--site"
-                >
-                  {Array.from({ length: BANDS }, (_, i) => (
-                    <i
-                      key={i}
-                      style={
-                        { "--lag": `${LAG[i % LAG.length]}ms` } as CSSProperties
-                      }
-                    />
-                  ))}
-                </span>
               </span>
             </button>
           </GlassPanel>

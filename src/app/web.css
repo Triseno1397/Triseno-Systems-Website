@@ -142,7 +142,7 @@
 /* Mid-page sections do not carry a bottom lane: the next section's top lane
    already clears the chrome, and two lanes back to back left ~280px of bare
    world between sections. */
-.web-compare, .web-stack, .web-range { padding-bottom: 48px; }
+.web-compare, .web-stack, .web-range { padding-top: clamp(72px, 10dvh, 104px); padding-bottom: 48px; }
 
 /* Sections sit above the world (z 10) and inside the chrome lanes, so no
    fixed chrome element lands on their content (design-loop/division-world.md). */
@@ -248,11 +248,11 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .web-shutter__band {
-    animation: web-band 1250ms var(--ease-expo) both;
+    animation: web-band 680ms var(--ease-expo) both;
     animation-delay: var(--lag);
   }
   .web-shutter__slats i {
-    animation: web-slat 1150ms var(--ease-expo) both;
+    animation: web-slat 600ms var(--ease-expo) both;
     animation-delay: var(--lag);
   }
 }
@@ -278,7 +278,6 @@
   position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
   container-type: inline-size; background: #f4f1ea;
 }
-.web-shutter__slats--site { inset: 0; gap: 0; }
 .web-hero__mirror {
   display: none; width: 100%; height: 9dvh; margin-top: 8px; transform-origin: 50% 0;
   border: 1px solid rgba(255, 255, 255, 0.7); border-bottom: 0;
@@ -339,13 +338,13 @@
 .web-demo { position: relative; z-index: 10; height: 260dvh; }
 .web-demo__stage {
   position: sticky; top: 0; height: 100dvh; overflow: hidden;
-  display: flex; flex-direction: column; align-items: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
 .web-demo__head { width: 100%; max-width: 1400px; display: grid; gap: 12px; margin-bottom: 20px; }
 .web-demo__head .web-eyebrow { margin-bottom: 4px; }
 .web-demo__rig {
-  position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+  position: relative; flex: 0 1 auto; min-height: 0; width: 100%;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   perspective: 1500px; perspective-origin: 50% 40%;
 }
@@ -1048,7 +1047,7 @@
 /* Phone: the line to read and the button come first, inside the top lane; the
    threshold object stands below them. */
 @media (max-width: 899px) {
-  .web-gate__object { order: 2; --nest: min(46vw, 200px); }
+  .web-gate__object { --nest: min(30vw, 116px); }
   .web-gate__mirror { display: none; }
 }
 .web-gate__nest { position: relative; width: var(--nest); height: var(--nest); }
@@ -1058,11 +1057,18 @@
 .web-gate__nest--main .web-gate__frame:first-child { filter: drop-shadow(0 0 26px var(--hue)); border-width: 2px; }
 /* The threshold glyph: the division's square makes a quarter turn and gives up
    its hue, because the room on the other side — Contact — is achromatic. */
+/* an emissive square: lit from inside, a white core fading to the division's
+   light at its edges, a hot rim and a halo — a lit object, not a black tile */
 .web-gate__core {
-  position: absolute; left: 50%; top: 50%; width: 22%; height: 22%; margin: -11% 0 0 -11%;
-  border: 1px solid #ffffff; background: #000000;
+  position: absolute; left: 50%; top: 50%; width: 24%; height: 24%; margin: -12% 0 0 -12%;
+  border: 2px solid #ffffff;
+  background:
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.95) 0%, rgba(236, 224, 255, 0.72) 38%, color-mix(in srgb, var(--hue) 62%, transparent) 78%, color-mix(in srgb, var(--hue) 40%, transparent) 100%);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.7),
+    0 0 18px 2px rgba(255, 255, 255, 0.55),
+    0 0 60px 10px color-mix(in srgb, var(--hue) 55%, transparent);
 }
-.web-gate__nest--main .web-gate__core { filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.6)); }
 .web-gate__tick {
   display: inline-flex; align-items: center; gap: 10px; margin-left: 22px;
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em;
@@ -1075,7 +1081,14 @@
   mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
 }
 .web-gate__mirror .web-gate__nest { transform: scaleY(-1); }
-.web-gate__copy { display: grid; justify-items: start; gap: 22px; }
+/* capped so the headline always wraps well clear of the rail lane */
+.web-gate__copy { display: grid; justify-items: start; gap: 22px; max-width: 600px; }
+/* phone: the glyph above, then line, button, cross-links — all inside the
+   lanes at rest (the page ends here, so this is where it rests) */
+@media (max-width: 767px) {
+  .web-gate__copy { gap: 18px; }
+  .web-gate__copy > .web-body, .web-gate__tick { display: none; }
+}
 .web-gate__copy .web-eyebrow { margin: 0; }
 .web-gate__title {
   margin: 0; max-width: 15ch; font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: calc(var(--web-display) * 0.82);
