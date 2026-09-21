@@ -394,18 +394,22 @@ function ProgressRail({ pathname }: { pathname: string }) {
       className="progress-rail pointer-events-none fixed right-[var(--gutter)] top-1/2 z-[800] flex w-[44px] -translate-y-1/2 flex-col items-center gap-4 text-white"
     >
       <span aria-hidden="true" className="chrome-scrim chrome-scrim--rail" />
-      <span className="font-mono text-[12px] tracking-[0.1em]">
+      {/* Read as a single instruction, not a pair of stray words: where you are
+          in the page (03/05), how far through this section (the line), and
+          where the next scroll takes you. */}
+      <span className="progress-rail__count font-mono text-[12px] tracking-[0.1em]">
         {String(labels.index).padStart(2, "0")}
-      </span>
-      <span className="progress-rail__label font-display text-[12px] font-medium uppercase tracking-[0.24em]">
-        {labels.current}
+        <span className="opacity-45">/{String(labels.total).padStart(2, "0")}</span>
       </span>
       <span className="relative block h-[clamp(72px,16dvh,160px)] w-px bg-white/25">
         <span ref={fillRef} className="absolute inset-0 origin-top bg-white" style={{ transform: "scaleY(0)" }} />
       </span>
-      <span className="progress-rail__label font-display text-[12px] font-medium uppercase tracking-[0.24em] opacity-45">
-        {labels.next}
-      </span>
+      {labels.next ? (
+        <span className="progress-rail__label font-mono text-[12px] uppercase tracking-[0.2em]">
+          <span className="opacity-45">Next — </span>
+          {labels.next}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -138,6 +138,15 @@ export default function Loader({ ready }: LoaderProps) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Wall-clock guarantee: once the world is ready the loader leaves within
+  // 1.4s even if its own animation frames are throttled, and it unmounts
+  // (canvas and rAF loop included) 0.9s after that — nothing lingers.
+  useEffect(() => {
+    if (!ready) return;
+    const id = window.setTimeout(() => setPhase((p) => (p === "loading" ? "leaving" : p)), 1400);
+    return () => window.clearTimeout(id);
+  }, [ready]);
+
   useEffect(() => {
     if (phase !== "leaving") return;
     const id = window.setTimeout(() => setPhase("gone"), 900);

@@ -10,6 +10,7 @@ import BeamsCollision from "@/components/ui/BeamsCollision";
 import Glyph from "@/components/world/Glyph";
 import Loader from "@/components/world/Loader";
 import WorldPlate from "@/components/world/WorldPlate";
+import GlassPanel from "@/components/world/GlassPanel";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -365,7 +366,7 @@ export default function PortalPage() {
       {/* ── 1. Signature object menu ─────────────────────────────────── */}
       <section
         ref={heroRef}
-        data-rail="Menu"
+        data-rail="Divisions"
         aria-label="Triseno Systems"
         className={full ? "relative z-10 h-[200dvh]" : "relative z-10 min-h-[100dvh] overflow-hidden"}
       >
@@ -429,10 +430,12 @@ export default function PortalPage() {
                   ref={(el) => {
                     cardRefs.current[i] = el;
                   }}
-                  className="door-card pointer-events-auto"
+                  className="pointer-events-auto"
                   style={{ opacity: 0, visibility: "hidden" }}
                 >
-                  <DoorCardBody index={i} />
+                  <GlassPanel world="portal" className="door-card">
+                    <DoorCardBody index={i} />
+                  </GlassPanel>
                 </div>
               </div>
             ))}
@@ -442,12 +445,10 @@ export default function PortalPage() {
         <section data-rail="Doors" aria-label="Three divisions" className="relative z-10">
           {DOOR_ITEMS.map((door) => (
             <div key={door.key} data-lite-door="" className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
-              {/* the lit place, composited in CSS — it takes the door's hue only
-                  while that door owns the viewport (D2) */}
               <LiteGlyph kind={door.glyph} hue={door.hue} />
-              <div className="door-card door-card--static relative">
+              <GlassPanel world="portal" className="door-card door-card--static">
                 <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
-              </div>
+              </GlassPanel>
             </div>
           ))}
         </section>

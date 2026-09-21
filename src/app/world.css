@@ -239,6 +239,7 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
    Below 1200px there is no lane to give it, so it gets out of the way
    entirely rather than printing its label inside a word. */
 .progress-rail__label { writing-mode: vertical-rl; white-space: nowrap; }
+.progress-rail__count { writing-mode: vertical-rl; white-space: nowrap; }
 @media (max-width: 1199px) {
   .progress-rail { display: none !important; }
 }
@@ -353,10 +354,6 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 /* door cards: frosted glass over the scene */
 .door-card {
   padding: clamp(24px, 2.4vw, 36px);
-  background: rgba(255, 255, 255, 0.05);
-  -webkit-backdrop-filter: blur(26px) brightness(0.72);
-  backdrop-filter: blur(26px) brightness(0.72);
-  border: 1px solid #ffffff; border-radius: 0;
   will-change: transform, opacity;
 }
 .door-card--static { will-change: auto; }
@@ -609,6 +606,38 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   .world-plate__shaft, .world-plate__haze, .world-plate__dust { animation: none; }
 }
 
+/* ═══ GLASS PANEL (GlassPanel.tsx) — frosted glass that survives the fade ═══
+   A pre-blurred copy of the world plate, aligned with the fixed plate every
+   frame. No backdrop-filter, so masks / opacity on ancestors cannot break it.
+   The copy is laid out exactly like WorldPlate's camera layer (104% of the
+   viewport, offset -2%, cover-fit about the horizon). */
+.glass-panel {
+  position: relative; isolation: isolate; overflow: hidden;
+  border: 1px solid #ffffff; border-radius: 0;
+  --glass-img: var(--glass-d);
+  --glass-h: var(--glass-h-d);
+}
+.glass-panel__world { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.glass-panel__plate {
+  position: absolute; left: -2vw; top: -2dvh;
+  width: 104vw; height: 104dvh;
+  background: #0b0b0d var(--glass-img) 50% var(--glass-h) / cover no-repeat;
+  transform-origin: 50% var(--glass-h);
+  will-change: transform;
+}
+/* neutral veil: the glass is a touch lighter than the world at its rim and
+   darker behind the copy, so type always reads — never a painted hue */
+.glass-panel__veil {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015) 40%, rgba(255, 255, 255, 0.03)),
+    rgba(0, 0, 0, var(--glass-veil));
+}
+.glass-panel__body { position: relative; }
+@media (max-width: 767px) {
+  .glass-panel { --glass-img: var(--glass-m); --glass-h: var(--glass-h-m); }
+}
+
 /* ═══ DivisionWorld: one lit world behind a whole division page ═══════════ */
 .division-world { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #000; }
 .division-world__canvas {
@@ -628,13 +657,8 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
 }
 /* Frosted substrate for copy over the scene — never an opaque rectangle. */
 .world-card {
-  position: relative;
   padding: clamp(22px, 2.4vw, 38px);
   max-width: min(640px, 100%);
-  background: rgba(255, 255, 255, 0.045);
-  -webkit-backdrop-filter: blur(26px) brightness(0.68);
-  backdrop-filter: blur(26px) brightness(0.68);
-  border: 1px solid #ffffff; border-radius: 0;
 }
 
 /* ── placeholder worlds: the atmosphere plus the division glyph ── */

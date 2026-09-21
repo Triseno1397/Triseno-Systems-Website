@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 import { DIVISIONS, type DivisionKey } from "@/lib/divisions";
 import WorldAtmosphere from "./WorldAtmosphere";
 import { plateForDivision } from "./plates";
+import GlassPanel from "./GlassPanel";
 import { onWorldProgress, setWorldProgress, worldState } from "./scene/worldState";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -207,18 +208,25 @@ export function WorldSection({ rail, railNext, id, className = "", children }: W
 }
 
 /**
- * Frosted-glass substrate for copy that sits over the scene. 0 radius, 1px
- * white line-work, no drop shadow — the blur is what makes the type readable,
- * never an opaque black rectangle.
+ * Frosted-glass substrate for copy that sits over the scene: a GlassPanel
+ * (real blur of the world plate, immune to the content fade), 0 radius, 1px
+ * white line-work, never an opaque black rectangle.
  */
 export function WorldCard({
+  division = "portal",
   className = "",
   children,
 }: {
+  /** the page's world, so the glass shows the right plate behind it */
+  division?: DivisionKey;
   className?: string;
   children: ReactNode;
 }) {
-  return <div className={`world-card ${className}`}>{children}</div>;
+  return (
+    <GlassPanel world={plateForDivision(division)} className={`world-card ${className}`}>
+      {children}
+    </GlassPanel>
+  );
 }
 
 /* ── reading the camera from the DOM ───────────────────────────────────── */

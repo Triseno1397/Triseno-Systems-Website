@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import gsap from "gsap";
 import { plate as plateFor, type PlateWorld } from "./plates";
+import { platePose, plateTransform, type PlatePose } from "./plateMotion";
 
 /* ─────────────────────────────────────────────────────────────────────────
    A world plate in the DOM — the lit place behind a page on a phone, under
@@ -47,44 +49,30 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
   }, [hue, shown]);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cam = camRef.current;
     const light = lightRef.current;
     if (!cam) return;
-    let prog = 0;
-    let px = 0;
-    let py = 0;
-    let raf = 0;
-    const apply = () => {
-      raf = 0;
-      const s = 1 + 0.12 * prog;
-      cam.style.transform = `translate3d(${(-px * 6).toFixed(2)}px, ${(-py * 4 - prog * 10).toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
-    };
-    const queue = () => {
-      if (!raf) raf = requestAnimationFrame(apply);
-    };
-    const onScroll = () => {
-      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      prog = Math.min(1, Math.max(0, window.scrollY / max));
-      queue();
+    const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
+    let last = "";
+    // same pose model and same clock as every GlassPanel's copy of this plate
+    const tick = () => {
+      const t = plateTransform(platePose(pose));
+      if (t !== last) {
+        last = t;
+        cam.style.transform = t;
+      }
     };
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      px = (e.clientX / window.innerWidth) * 2 - 1;
-      py = (e.clientY / window.innerHeight) * 2 - 1;
-      if (light) {
-        light.style.opacity = "1";
-        light.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-      }
-      queue();
+      if (e.pointerType === "touch" || !light) return;
+      light.style.opacity = "1";
+      light.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
     };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    tick();
+    gsap.ticker.add(tick);
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      gsap.ticker.remove(tick);
       window.removeEventListener("pointermove", onMove);
-      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 

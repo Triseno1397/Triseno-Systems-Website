@@ -16,6 +16,9 @@ export interface Plate {
   /** base64 WebP placeholders (may be empty if the manifest has no entry) */
   desktopBlur: string;
   mobileBlur: string;
+  /** pre-blurred copies of the plate for GlassPanel (tiny; frosted glass without backdrop-filter) */
+  desktopGlass: string;
+  mobileGlass: string;
   /** vertical position of the plate's horizon / vanishing point, 0 = top */
   horizon: { desktop: number; mobile: number };
 }
@@ -38,6 +41,8 @@ export function plate(world: PlateWorld): Plate {
     mobile,
     desktopBlur: entries[desktop]?.blur ?? "",
     mobileBlur: entries[mobile]?.blur ?? "",
+    desktopGlass: `/worlds/${world}-desktop-glass.webp`,
+    mobileGlass: `/worlds/${world}-mobile-glass.webp`,
     horizon: HORIZON[world],
   };
 }
