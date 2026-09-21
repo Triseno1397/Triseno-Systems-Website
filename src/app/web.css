@@ -37,21 +37,80 @@
 @media not ((hover: hover) and (pointer: fine)) { .web-world .web-hover-only { display: none; } }
 
 /* ═══ THE WORLD ═══════════════════════════════════════════════════════
-   The lit 3D volume is the foundation's shared DivisionWorld (WebWorld.tsx).
-   This layer owns only STATION LIGHT: one soft haze that moves to the far
-   side of whichever object is on stage. It sits BEHIND content (z 0, content
-   z 10) and draws no line, column or glyph of its own (design-system §2).
-   Only transform / opacity move (M4).
+   The generated plate (design-loop/world-plates.md): a violet concrete
+   atrium of receding square portals over a polished floor. Fixed, full-bleed,
+   data-world-layer (never masked by the content fade). WebWorld.tsx writes
+   --cam (page scroll 0..1), --px / --py (pointer -1..1) and --lx / --ly
+   (pointer px). Everything here sits BEHIND content (z 0; content z 10).
+   Only transform / opacity / filter move (M4); ambient loops are the living
+   atmosphere the plate brief asks for.
    ═══════════════════════════════════════════════════════════════════ */
-.web-scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.web-scene {
+  --cam: 0; --px: 0; --py: 0; --lx: 62vw; --ly: 40vh;
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000000;
+}
+.web-plate { position: absolute; inset: 0; }
+/* dolly: deeper through the portals, scaling about their vanishing point */
+.web-plate__cam {
+  position: absolute; inset: 0; transform-origin: 50% 57%; will-change: transform;
+  transform: translate3d(0, calc(var(--cam) * -2.4vh), 0) scale(calc(1.04 + var(--cam) * 0.16));
+}
+.web-plate__par {
+  position: absolute; inset: -2%;
+  transform: translate3d(calc(var(--px) * -10px), calc(var(--py) * -7px), 0);
+}
+.web-plate__blur,
+.web-plate__img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.web-plate__blur { background-size: cover; background-position: center; filter: blur(22px); transform: scale(1.06); }
+.web-plate__blur--m { display: none; }
+.web-plate__img { opacity: 0; transition: opacity 1200ms var(--ease-expo); }
+.web-scene[data-loaded] .web-plate__img { opacity: 1; }
+/* the far portal breathes */
+.web-plate__shaft {
+  position: absolute; left: 50%; top: 56%; width: 30vw; height: 46vh; margin: -23vh 0 0 -15vw;
+  background: radial-gradient(ellipse at center, rgba(222, 204, 255, 0.5) 0%, color-mix(in srgb, var(--hue) 36%, transparent) 34%, transparent 70%);
+  mix-blend-mode: screen; opacity: 0.5; animation: web-breathe 7s ease-in-out infinite alternate;
+}
+@keyframes web-breathe { from { opacity: 0.32; transform: scale(0.94); } to { opacity: 0.72; transform: scale(1.04); } }
+.web-plate__haze {
+  position: absolute; left: -25%; right: -25%; height: 34vh; mix-blend-mode: screen; filter: blur(18px);
+  background: radial-gradient(ellipse at center, rgba(200, 176, 255, 0.16) 0%, transparent 68%);
+  animation: web-drift-x 30s ease-in-out infinite alternate;
+}
+.web-plate__haze--a { top: 46%; }
+.web-plate__haze--b { top: 64%; height: 26vh; animation-duration: 38s; animation-direction: alternate-reverse; opacity: 0.8; }
+@keyframes web-drift-x { from { transform: translate3d(-8%, 0, 0); } to { transform: translate3d(8%, -2vh, 0); } }
+.web-plate__dust {
+  position: absolute; inset: -10% 0; mix-blend-mode: screen; opacity: 0.55;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 255, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 34% 64%, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 58% 38%, rgba(230, 214, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 72% 76%, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 86% 18%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 44% 88%, rgba(230, 214, 255, 0.7), transparent 60%);
+  background-size: 420px 380px;
+  animation: web-dust 24s linear infinite;
+}
+@keyframes web-dust { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -380px, 0); } }
+/* soft violet key light that follows the pointer (additive) */
+.web-plate__light {
+  position: absolute; left: 0; top: 0; width: 72vmin; height: 72vmin; margin: -36vmin 0 0 -36vmin;
+  transform: translate3d(var(--lx), var(--ly), 0); mix-blend-mode: screen;
+  background: radial-gradient(circle, color-mix(in srgb, var(--hue) 30%, transparent) 0%, color-mix(in srgb, var(--hue) 9%, transparent) 42%, transparent 70%);
+}
+@media (max-width: 767px) {
+  .web-plate__cam { transform-origin: 50% 40%; }
+  .web-plate__blur--d { display: none; }
+  .web-plate__blur--m { display: block; }
+  .web-plate__shaft { top: 11%; width: 70vw; height: 30vh; margin: -15vh 0 0 -35vw; }
+  .web-plate__light { opacity: 0.6; }
+}
+/* station light: the key haze moves to the far side of the object on stage */
 .web-scene__haze {
   position: absolute; left: 50%; top: 54%; width: 110vmax; height: 66vmax; margin: -33vmax 0 0 -55vmax;
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in srgb, var(--hue) 20%, transparent) 0%,
-    color-mix(in srgb, var(--hue) 6%, transparent) 38%,
-    transparent 68%
-  );
+  mix-blend-mode: screen;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--hue) 18%, transparent) 0%, color-mix(in srgb, var(--hue) 5%, transparent) 38%, transparent 68%);
   transition: transform 1500ms var(--ease-expo), opacity 1500ms var(--ease-expo);
 }
 /* Stations: the light moves to the far side of whatever object is on stage. */
@@ -952,6 +1011,8 @@
 /* ═══ reduced motion: final states, nothing pinned ═══ */
 @media (prefers-reduced-motion: reduce) {
   .web-scene__haze { transition: none; }
+  .web-plate__shaft, .web-plate__haze, .web-plate__dust { animation: none; }
+  .web-plate__img { transition: none; }
   /* no stacking: every sheet is whole and readable in a plain column */
   .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }
