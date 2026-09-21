@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
-import DivisionPlaceholder from "@/components/world/DivisionPlaceholder";
-import GhostButton from "@/components/ui/GhostButton";
-import { DIVISIONS } from "@/lib/divisions";
+import WorkPage from "@/components/work/WorkPage";
+import "../work.css";
 
 export const metadata: Metadata = {
-  title: "Work · Triseno Systems",
-  description: "Selected work across Triseno's three divisions.",
+  title: "Work · What Triseno can build",
+  description:
+    "An index of what Triseno Systems builds across its three divisions: ad creative formats, concept websites for fictional brands, and AI system concepts.",
   alternates: { canonical: "/work" },
-  // Placeholder until the work index is built (revamp piece 5).
-  robots: { index: false, follow: true },
+  openGraph: {
+    title: "Work · What Triseno can build",
+    description: "Formats, concept sites and system concepts across Creative, Web Design and AI Infrastructure.",
+    url: "https://trisenosystems.com/work",
+  },
 };
 
-export default function WorkPage() {
-  return (
-    <DivisionPlaceholder
-      division={DIVISIONS.work}
-      line="One index for all three divisions, each project tinted by the division it belongs to. This page is being built — the current Studio reels are live now."
-    >
-      <GhostButton href="/portfolio">View the Studio reels</GhostButton>
-    </DivisionPlaceholder>
-  );
+export default function WorkRoute() {
+  return <WorkPage />;
 }
