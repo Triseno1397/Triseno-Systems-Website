@@ -63,7 +63,7 @@ export default function AiHero() {
           </p>
 
           <div className="ai-rise mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-5" style={{ ["--d" as string]: 6 }}>
-            <GhostButton href="/contact">Start with a diagnostic</GhostButton>
+            <GhostButton href="/contact?division=ai">Start with a diagnostic</GhostButton>
             <a href="#capabilities" onClick={toCapabilities} className="ai-textlink">
               <span>Explore what we build</span>
               <ArrowDown size={16} weight="light" aria-hidden="true" />

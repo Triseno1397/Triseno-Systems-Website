@@ -145,7 +145,7 @@ export default function ShutterHero() {
             the demo.
           </p>
           <div className="web-hero__actions">
-            <GhostButton href="/contact">Start a Conversation</GhostButton>
+            <GhostButton href="/contact?division=web">Start a Conversation</GhostButton>
             <a href="#web-demo" onClick={toDemo} className="web-subaction">
               <span className="web-subaction__rule" aria-hidden="true" />
               See the demo

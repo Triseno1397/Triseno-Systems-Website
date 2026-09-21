@@ -36,11 +36,31 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 6. Why Triseno: **two-way toggle** — typical AI vendor vs Triseno, three rows wiping between answers. (The odometer is a separate Counts section that counts only what the page draws.)
 7. Gate → "Start with a diagnostic" (cyan warp).
 
-## `/work` — achromatic, items tinted by division
-- **WebGL/clip-path hover distortion list**: project names in display type, media preview follows cursor; filter by division.
+## `/work` — achromatic (white diamond), an entry takes its division's hue only while active
+Reframed: an **index of what the studio can build**, never a portfolio of past clients. 23 entries: the 8 Creative
+formats (existing `/videos` clips), the 9 Web concept sites (fictional brands, labelled "Concept site"), 6 AI
+"System concept" entries named after the AI page's capabilities (AI world plates as media). Every entry warps to its
+division page. World: portal plate via `WorldPlate`, colourless; intro + gate copy on `GlassPanel`.
+1. Index: **clip-path + displacement hover-distortion list** — display-type rows; the hovered row pulls a media
+   preview after the cursor (behind the type) that leans, shears (clip-path quad) and ripples (SVG displacement
+   filter) with its velocity; entries swap by a directional clip-path wipe. Keyboard focus docks it beside the row.
+   **Division filter (All / Creative / Web / AI) reflows the list**: leaving rows wipe out sideways, survivors glide
+   to their new places (GSAP Flip, transform only), arriving rows wipe in staggered. Phone: no cursor — each row is a
+   disclosure that opens its media inline; the filter works the same.
+2. Gate: **convergence** — circle, square and triangle (white hairlines) arrive from three sides on scroll and fuse;
+   the white diamond resolves out of them. "Start a Conversation" -> /contact.
 
-## `/contact` — achromatic
-- **Conversational one-field-at-a-time form** with line-draw progress; existing hidden portal seal easter egg kept.
+## `/contact` — achromatic (white hexagon) until a division is chosen
+On the world chrome (the old (site) navbar/footer group is gone). World: portal plate via `WorldPlate`.
+1. Conversation: **one-question-at-a-time form with line-draw progress** — a hexagon node per step, the line draws
+   forward (scaleX). The first question picks the division; from then on the scene light (plate grade + floor
+   spill, and the glass that frosts it) and the line take that division's hue, UI stays white. Steps: division,
+   name, email, phone + preferred contact, company, project type (per division), current site (Web only),
+   timeline, message. Enter advances (Ctrl/Cmd+Enter in the message), a click on a choice answers it, Back sits
+   before the field (Shift+Tab reaches it), each step validates, aria-live announces the step, focus follows.
+   `?division=creative|web|ai` preselects and opens on the name (division CTAs and the chrome contact icon pass it).
+   Same web3forms endpoint, key and field names as before; success and error states.
+2. Direct: email + Instagram on glass, and the **hidden portal seal** easter egg (drag-to-collapse) kept.
 
 ## Loop pieces
 1. Foundation + Portal (`/` and global chrome/transition/cursor/loader)

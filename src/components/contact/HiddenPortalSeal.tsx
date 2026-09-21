@@ -189,7 +189,8 @@ export default function HiddenPortalSeal() {
             className="relative z-10 flex h-full w-full items-center justify-center logo-spin-3d"
             style={{
               transformStyle: "preserve-3d",
-              filter: "drop-shadow(0 6px 18px rgba(0,229,255,0.18))",
+              // neutral at rest: /contact is achromatic until a division is chosen
+              filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))",
             }}
           >
             <Image

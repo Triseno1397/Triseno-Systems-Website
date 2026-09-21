@@ -72,7 +72,7 @@ export function divisionForHref(href: string): Division {
  * chrome, orb cursor and smooth scroll; legacy pages keep their own navigation
  * until their piece of the revamp lands. The warp transition is global.
  */
-const REVAMPED = ["/", "/ai-infrastructure", "/work", "/web-design-division", "/studio"];
+const REVAMPED = ["/", "/ai-infrastructure", "/work", "/web-design-division", "/studio", "/contact"];
 
 export function isRevampedRoute(pathname: string): boolean {
   return REVAMPED.includes(pathname);

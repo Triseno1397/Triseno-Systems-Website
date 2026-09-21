@@ -96,7 +96,7 @@ export default function WebGate() {
           starts.
         </p>
         <div className="web-gate__actions">
-          <GhostButton href="/contact">Start a Conversation</GhostButton>
+          <GhostButton href="/contact?division=web">Start a Conversation</GhostButton>
           <span aria-hidden="true" className="web-gate__tick">
             <i />
             Threshold — Contact

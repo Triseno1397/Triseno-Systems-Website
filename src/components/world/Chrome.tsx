@@ -80,7 +80,7 @@ export default function Chrome() {
       />
       <MenuOverlay open={menuOpen} current={division.key} onClose={() => setMenuOpen(false)} />
       <BackChevron division={division} scrolled={compact} />
-      <ContactIcon />
+      <ContactIcon division={division} />
       <ProgressRail pathname={pathname} />
     </>
   );
@@ -315,10 +315,13 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
 
 /* ── 4: contact icon (bottom-right) ────────────────────────────────────── */
 
-function ContactIcon() {
+function ContactIcon({ division }: { division: Division }) {
+  // from a division page the conversation opens already about that division
+  const k = division.key;
+  const href = k === "creative" || k === "web" || k === "ai" ? `/contact?division=${k}` : "/contact";
   return (
     <WarpLink
-      href="/contact"
+      href={href}
       aria-label="Contact — start a conversation"
       className="chrome-btn chrome-btn--br fixed bottom-[var(--gutter-y)] right-[var(--gutter)] z-[800]"
     >

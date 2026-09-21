@@ -234,7 +234,7 @@ export default function ExpansionHero() {
               between — from UGC to cinematic brand films. Built to convert, not just to look good.
             </p>
             <div className="sx-hero__actions">
-              <GhostButton href="/contact">Start a Conversation</GhostButton>
+              <GhostButton href="/contact?division=creative">Start a Conversation</GhostButton>
               <a href="#formats" onClick={toFormats} className="ghost-btn">
                 <span className="ghost-btn__layer">{formatsInner}</span>
                 <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">

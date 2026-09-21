@@ -120,9 +120,9 @@ export default function AiGate() {
 
         <div className="ai-gate__cta">
           <span ref={ctaRef}>
-            <GhostButton href="/contact">{GATE.primary}</GhostButton>
+            <GhostButton href="/contact?division=ai">{GATE.primary}</GhostButton>
           </span>
-          <WarpLink href="/contact" className="ai-textlink">
+          <WarpLink href="/contact?division=ai" className="ai-textlink">
             <span>{GATE.secondary}</span>
           </WarpLink>
         </div>

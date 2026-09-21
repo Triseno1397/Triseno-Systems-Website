@@ -106,7 +106,7 @@ export default function StudioGate() {
               Tell us what you&apos;re selling and where it needs to run. We&apos;ll come back with concepts and a quote —
               no retainer required to start.
             </p>
-            <GhostButton href="/contact">Start a Conversation</GhostButton>
+            <GhostButton href="/contact?division=creative">Start a Conversation</GhostButton>
             <p className="sx-gate__tick font-mono" aria-hidden="true">
               <span className="sx-gate__tick-rail">
                 <span ref={tick} />

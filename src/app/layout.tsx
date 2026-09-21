@@ -146,7 +146,7 @@ export default function RootLayout({
     >
       {/* Root layout owns <html>, fonts, <body>, metadata and the WorldShell
           (warp transition everywhere; chrome/cursor/smooth scroll on revamped
-          routes). Legacy chrome still lives in the (site) route group. */}
+          routes). /portfolio and /edit bring their own chrome. */}
       <body>
         <script
           type="application/ld+json"
