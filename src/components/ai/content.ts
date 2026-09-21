@@ -11,6 +11,8 @@ export const HERO = {
   label: "Consulting / Architecture / Implementation",
   headline: ["We Build the", "Operational", "Intelligence", "Layer"],
   sub: "Multi-agent orchestration, workflow compression and decision-layer automation for organizations that need systems, not features.",
+  /** the phone hero carries the same offer as a mono line */
+  offers: ["Multi-agent orchestration", "Workflow compression", "Decision automation"],
 };
 
 export type DiagramKind = "orchestration" | "catalog" | "compression" | "revenue" | "broadcast" | "retainer";
@@ -222,49 +224,45 @@ export const INDUSTRIES: Industry[] = [
   },
 ];
 
-/** Odometer counts. `parts` are rolled digits (numbers) or static glyphs (strings). */
-export interface Stat {
-  parts: Array<number | string>;
-  text: string;
-  label: string;
-}
-
-/**
- * The odometer demonstrates the component by counting what the offer and the
- * drawings on this page are made of — never results. Every speed-up figure has
- * been cut from the page on the owner's instruction.
- */
-export const STATS: Stat[] = [
-  { parts: [1, 2, "→", 0, 2], text: "12 to 2", label: "Manual steps to agent layers, section 03" },
-  { parts: [0, 5], text: "5", label: "Phases, Diagnose to Compound" },
-  { parts: [0, 6], text: "6", label: "Capabilities, one system each" },
-];
-
 /**
  * Why Triseno as a two-state comparison. The "vendor" column describes the
  * generic alternative a buyer is weighing, not any named company.
  */
 export const WHY = {
   title: "Why Triseno",
-  label: "Why Triseno",
+  label: "Compare",
+  lead: "Flip between what a typical AI vendor sells you and what we build.",
   states: ["Typical AI vendor", "Triseno"] as const,
   /** phone labels — the long one does not fit half a 300px switch */
   statesShort: ["Vendor", "Triseno"] as const,
   rows: [
     {
       topic: "Pricing",
-      vendor: "Per-seat licence, whatever the outcome",
+      vendor: "Per-seat licence, whatever happens",
+      vendorNote: "You pay the same whether the tool moves a number or not.",
       triseno: "Fees tied to numbers you already track",
+      trisenoNote: "Cycle time, error rate, revenue recovered: agreed before the build.",
     },
     {
       topic: "Scope",
       vendor: "A tool bolted onto your stack",
+      vendorNote: "One more login, one more silo, one more export to reconcile.",
       triseno: "The orchestration layer underneath it",
+      trisenoNote: "Agents that read from and write to the systems you already run.",
     },
     {
       topic: "Failure",
       vendor: "A support ticket and a wait",
+      vendorNote: "When a model is unsure, the process simply stops.",
       triseno: "Fallback logic built into every agent",
+      trisenoNote: "Low confidence routes to a named person, with the full trail attached.",
+    },
+    {
+      topic: "Ownership",
+      vendor: "Their platform, their roadmap",
+      vendorNote: "Your workflow lives inside someone else's product.",
+      triseno: "Your system, documented and handed over",
+      trisenoNote: "Architecture, prompts and logs stay yours, with your team trained to run it.",
     },
   ],
 };

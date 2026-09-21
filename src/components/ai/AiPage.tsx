@@ -7,7 +7,7 @@ import Capabilities from "./Capabilities";
 import Compression from "./Compression";
 import OrbitalProcess from "./OrbitalProcess";
 import Industries from "./Industries";
-import WhyTriseno, { AiStats } from "./WhyTriseno";
+import WhyTriseno from "./WhyTriseno";
 import AiGate from "./AiGate";
 
 /**
@@ -16,8 +16,8 @@ import AiGate from "./AiGate";
  * no seam between sections; the scene slides instead of cutting.
  *
  * Section order, one idea per frame:
- *   01 hero · 02 capabilities (six frames, one card each) · 03 compression
- *   04 process · 05 industries · 06 counts · 07 why · 08 gate
+ *   01 hero · 02 capabilities (one spotlight bento) · 03 compression
+ *   04 process · 05 industries · 06 compare · 07 gate
  */
 export default function AiPage() {
   return (
@@ -29,7 +29,6 @@ export default function AiPage() {
       <Compression />
       <OrbitalProcess />
       <Industries />
-      <AiStats />
       <WhyTriseno />
       <AiGate />
     </main>

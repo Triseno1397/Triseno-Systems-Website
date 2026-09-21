@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import GlassPanel from "@/components/world/GlassPanel";
 import { COMPRESSION } from "./content";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -14,9 +15,14 @@ gsap.registerPlugin(ScrollTrigger);
  * already on the plate, every step named. Scrolling first traces the process in
  * cyan, lighting each step as the trace reaches it; then the twelve steps
  * collapse into five nodes on two layers (orchestrator over four agents), and
- * the resolved system holds for the last ~30% of the scrub. The mono readout
- * counts the diagram only — twelve steps, occupying twelve layers before the
- * collapse and two after. No time, cost or multiple is claimed.
+ * the resolved system holds for the last ~30% of the scrub. The readout states
+ * only what the drawing shows at that moment: "12 steps" while the manual
+ * process is on screen, and "12 steps -> 2 layers" once it has collapsed — it
+ * can never contradict itself at a settled position. No time, cost or multiple
+ * is claimed.
+ *
+ * Layout: the headline stands directly on the world, centred in the nave over
+ * a soft scrim; the drawing sits below it on one wide frosted panel.
  *
  * Labels are set at the shared 12-13px mono size whatever the drawing's scale
  * (a ResizeObserver converts that to SVG units), and the drawing sits on a
@@ -104,7 +110,6 @@ function geometry(mobile: boolean): Geometry {
 export default function Compression() {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const layersRef = useRef<HTMLSpanElement>(null);
   const [mobile, setMobile] = useState<boolean | null>(null);
   const [unit, setUnit] = useState(1.7);
 
@@ -142,9 +147,6 @@ export default function Compression() {
       const hits = q<SVGRectElement>(".ai-flow__hit");
 
       const readout = (time: number) => {
-        const squeeze = Math.min(1, Math.max(0, (time - 2.8) / 1.9));
-        const eased = squeeze * squeeze * (3 - 2 * squeeze);
-        if (layersRef.current) layersRef.current.textContent = String(Math.round(12 - 10 * eased)).padStart(2, "0");
         stage.toggleAttribute("data-compressed", time >= 4.9);
       };
 
@@ -171,6 +173,8 @@ export default function Compression() {
       tl.fromTo(q(".ai-flow__node"), { opacity: 0 }, { opacity: 1, duration: 0.45, stagger: 0.05 }, 4.1);
       tl.fromTo(q(".ai-flow__link"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 0.7, stagger: 0.06 }, 4.3);
       tl.fromTo(q(".ai-flow__tag"), { opacity: 0 }, { opacity: 1, duration: 0.45 }, 4.1);
+      // the readout's second half arrives with the system it describes
+      tl.fromTo(q(".ai-readout__after"), { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.5 }, 4.3);
       tl.to({}, { duration: 2.2 }, 5);
 
       if (reduced) {
@@ -207,30 +211,23 @@ export default function Compression() {
     >
       <div ref={stageRef} className="ai-compress__stage">
         <div className="ai-wrap ai-compress__grid">
-          <div className="ai-glass ai-sheet ai-compress__copy">
+          <header className="ai-compress__copy">
+            <span aria-hidden="true" className="ai-scrim" />
             <p className="ai-label">
               <b>03</b> / Workflow compression
             </p>
-            <h2 id="ai-flow-title" className="ai-h2 mt-5 font-display font-semibold uppercase">
+            <h2 id="ai-flow-title" className="ai-h2 mt-4 font-display font-semibold uppercase">
               {COMPRESSION.title}
             </h2>
-            <p className="ai-body mt-6 max-w-[42ch] max-md:hidden">{COMPRESSION.body}</p>
+            <p className="ai-readout" aria-label="Twelve manual steps collapse into two layers">
+              <span aria-hidden="true">12 steps</span>
+              <span aria-hidden="true" className="ai-readout__after">
+                <i>→</i> 02 layers
+              </span>
+            </p>
+          </header>
 
-            <dl className="ai-readout" aria-label="Twelve manual steps collapse into two layers">
-              <div>
-                <dt className="ai-label">Steps to layers</dt>
-                <dd aria-hidden="true">
-                  <span>12</span>
-                  <i>→</i>
-                  <span ref={layersRef} className="ai-readout__hot">
-                    12
-                  </span>
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <figure className="ai-glass ai-compress__figure">
+          <GlassPanel world="ai" as="div" className="ai-compress__figure">
             <svg
               ref={svgRef}
               className="ai-flow"
@@ -280,8 +277,8 @@ export default function Compression() {
                 </g>
               ))}
             </svg>
-            <figcaption className="ai-label ai-compress__note">{COMPRESSION.note}</figcaption>
-          </figure>
+            <p className="ai-label ai-compress__note">{COMPRESSION.note}</p>
+          </GlassPanel>
         </div>
       </div>
     </section>

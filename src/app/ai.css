@@ -22,56 +22,51 @@
   --ai-h2: clamp(23px, 3.3vw, 56px);
   --ai-readout: clamp(20px, 2.2vw, 38px);
   --ai-body: 17px;
-  /* translucent raised panel: #111 over the world, never a gradient */
-  --ai-panel: rgba(17, 17, 17, 0.72);
   background: #000000;
   isolation: isolate;
   overflow-x: clip;
 }
 @media (max-width: 767px) {
-  .ai-world { --ai-body: 16px; --ai-h2: 26px; }
+  /* phone: display >= 2.5x body. "INTELLIGENCE" has to fit one line, so the
+     hero headline is sized to the width and the body line is not set there */
+  .ai-world { --ai-body: 16px; --ai-h2: 26px; --ai-display: 8vw; }
 }
 
 .ai-world ::selection { background: #ffffff; color: #000000; }
 .ai-world :focus-visible { outline: 1px solid var(--cyan); outline-offset: 6px; }
 
-/* ── the world: the cathedral plate (design-loop/world-plates.md) ──
-   A fixed layer directly under <main>, never masked by the content fade.
-   Only transform / opacity / filter move. */
-.ai-world__scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000000; }
-.ai-plate {
-  position: absolute; inset: -3%; transform-origin: 50% 64%; will-change: transform;
-  background: var(--plate-blur-d) center / cover no-repeat;
+/* ── the world: the cathedral plate via the shared WorldPlate ──
+   (design-loop/world-plates.md). The overlays below ride the plate's own
+   camera (AiWorld applies the shared pose), laid out like .world-plate__cam.
+   Only transform / opacity move. */
+.ai-world__scene {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000000;
+  --ai-plate-h: 56%; --ai-vp: 69%;
 }
-.ai-plate__par { position: absolute; inset: 0; will-change: transform; }
-.ai-plate__img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  opacity: 0; transition: opacity 1400ms var(--ease-expo);
-}
-.ai-plate__img[data-loaded] { opacity: 1; }
+.ai-world__cam { position: absolute; inset: -2%; transform-origin: 50% var(--ai-plate-h); will-change: transform; }
 /* the filaments on each side breathe out of phase: a brightened copy of the
    plate, screened over itself and masked to one side of the nave */
-.ai-plate__glow {
+.ai-world__glow {
   position: absolute; inset: 0; opacity: 0; mix-blend-mode: screen;
-  background: url("/worlds/ai-desktop.webp") center / cover no-repeat;
+  background: url("/worlds/ai-desktop.webp") 50% var(--ai-plate-h) / cover no-repeat;
   filter: brightness(1.4) saturate(1.2);
   animation: ai-glow 4600ms var(--ease-power3) infinite alternate;
 }
-.ai-plate__glow--l {
+.ai-world__glow--l {
   mask-image: linear-gradient(90deg, #000 0%, #000 30%, transparent 46%);
   -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 30%, transparent 46%);
 }
-.ai-plate__glow--r {
+.ai-world__glow--r {
   mask-image: linear-gradient(270deg, #000 0%, #000 30%, transparent 46%);
   -webkit-mask-image: linear-gradient(270deg, #000 0%, #000 30%, transparent 46%);
   animation-duration: 6200ms; animation-delay: -2300ms;
 }
-@keyframes ai-glow { from { opacity: 0; } to { opacity: 0.55; } }
+@keyframes ai-glow { from { opacity: 0; } to { opacity: 0.5; } }
 /* the vanishing point pulses like a signal arriving down the nave */
-.ai-plate__core {
-  position: absolute; left: 50%; top: 69%; width: 36vw; height: 9vw; margin: -4.5vw 0 0 -18vw;
+.ai-world__core {
+  position: absolute; left: 50%; top: var(--ai-vp); width: 36vw; height: 9vw; margin: -4.5vw 0 0 -18vw;
   background: radial-gradient(closest-side, rgba(150, 236, 255, 0.5), rgba(0, 180, 216, 0.16) 48%, transparent);
-  mix-blend-mode: screen; transform-origin: 50% 50%;
+  mix-blend-mode: screen;
   animation: ai-core 3800ms var(--ease-power3) infinite alternate;
 }
 @keyframes ai-core {
@@ -79,9 +74,9 @@
   to { opacity: 1; transform: scale(1.08); }
 }
 /* the spotlight: a soft cyan light that follows the pointer through the nave */
-.ai-plate__light {
+.ai-world__light {
   position: absolute; left: 0; top: 0; width: 760px; height: 760px; margin: -380px 0 0 -380px;
-  background: radial-gradient(closest-side, rgba(0, 180, 216, 0.26), rgba(0, 180, 216, 0.07) 52%, transparent);
+  background: radial-gradient(closest-side, rgba(0, 180, 216, 0.24), rgba(0, 180, 216, 0.06) 52%, transparent);
   mix-blend-mode: screen; will-change: transform;
 }
 /* chrome scrims: soft neutral falloff behind the lockup, trigger, chevron and
@@ -89,34 +84,28 @@
 .ai-world__scrim { position: absolute; left: 0; right: 0; }
 .ai-world__scrim--top {
   top: 0; height: calc(var(--fade-top) + 48px);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0) 100%);
 }
 .ai-world__scrim--bottom {
   bottom: 0; height: calc(var(--fade-bottom) + 48px);
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 100%);
-}
-/* frost: the blurred world under every .ai-glass panel (AiWorld tracks each
-   pane to its panel). Neutral only — no hue of its own. */
-.ai-world__frost { position: absolute; inset: 0; }
-.ai-world__frost-pane {
-  position: absolute; left: 0; top: 0; visibility: hidden; will-change: transform;
-  background: rgba(6, 8, 10, 0.5);
-  backdrop-filter: blur(28px) saturate(0.6) brightness(0.72);
-  -webkit-backdrop-filter: blur(28px) saturate(0.6) brightness(0.72);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0) 100%);
 }
 @media (max-width: 767px) {
-  .ai-plate { background-image: var(--plate-blur-m); transform-origin: 50% 78%; }
-  .ai-plate__glow { background-image: url("/worlds/ai-mobile.webp"); }
-  .ai-plate__core { top: 79%; width: 90vw; height: 22vw; margin: -11vw 0 0 -45vw; }
+  .ai-world__scene { --ai-plate-h: 58%; --ai-vp: 79%; }
+  .ai-world__glow { background-image: url("/worlds/ai-mobile.webp"); }
+  .ai-world__core { width: 90vw; height: 22vw; margin: -11vw 0 0 -45vw; }
 }
 @media (hover: none), (pointer: coarse) {
-  .ai-plate__light { display: none; }
+  .ai-world__light { display: none; }
 }
 
-/* a glass sheet: the content half of a frosted panel (1px white, 0 radius);
-   its blur is drawn in the world layer beneath it */
-.ai-sheet { position: relative; border: 1px solid #ffffff; padding: clamp(22px, 2.6vw, 44px); }
-.ai-glass { background: transparent; }
+/* A local soft neutral scrim (world-plates.md): copy that stands directly on
+   the world sits on one of these, never on bare filaments. No edge, no hue. */
+.ai-scrim {
+  position: absolute; inset: -22% -16%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.84), rgba(0, 0, 0, 0.62) 55%, rgba(0, 0, 0, 0));
+}
+.ai-sheet { padding: clamp(22px, 2.6vw, 44px); }
 
 /* ── shared type + layout ── */
 .ai-wrap { width: 100%; max-width: 1400px; margin-inline: auto; padding-inline: var(--gutter); }
@@ -125,7 +114,8 @@
   .ai-wrap { padding-right: calc(var(--gutter) + 76px); }
 }
 @media (max-width: 767px) {
-  .ai-wrap { padding-right: calc(var(--gutter) + 36px); }
+  .ai-wrap { padding-right: var(--gutter); }
+  .ai-section { min-height: 0; padding-block: 64px; }
 }
 /* top padding keeps headlines and key figures out of the fixed chrome zone */
 /* Everything that must be read at rest sits inside the chrome lanes: the
@@ -170,17 +160,28 @@
 .ai-textlink > svg { transition: transform 650ms var(--ease-expo); }
 .ai-textlink:hover > svg { transform: translate3d(0, 4px, 0); }
 
-/* ── 1. hero: one glass card in the calm centre of the nave ── */
+/* ── 1. hero: directly on the world, centred in the nave, with an entrance ── */
 .ai-hero__inner { padding-block: var(--lane-top) var(--lane-bottom); align-items: center; }
-.ai-hero__card { width: fit-content; max-width: 100%; }
+.ai-hero__stack { position: relative; isolation: isolate; max-width: 100%; text-align: center; }
 /* solid white at rest, always (design-system §2) */
-.ai-hero__title {
-  position: relative; width: fit-content; max-width: 100%; color: #ffffff;
-  font-size: var(--ai-display); line-height: 1.04; letter-spacing: 0.08em;
+.ai-hero__title { color: #ffffff; font-size: var(--ai-display); line-height: 1.04; letter-spacing: 0.08em; }
+.ai-hero__line { display: block; }
+.ai-hero__word {
+  display: inline-block;
+  animation: ai-line-in 1100ms var(--ease-expo) backwards;
+  animation-delay: calc(var(--d) * 110ms + 180ms);
 }
+/* the mask only exists while the line is rising; afterwards nothing is set */
+@keyframes ai-line-in {
+  from { transform: translate3d(0, 55%, 0); clip-path: inset(0 0 100% 0); opacity: 0; }
+  to { transform: translate3d(0, 0, 0); clip-path: inset(-20% -4% -20% -4%); opacity: 1; }
+}
+.ai-rise { animation: ai-rise 1000ms var(--ease-expo) backwards; animation-delay: calc(var(--d) * 110ms + 180ms); }
+@keyframes ai-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } }
+.ai-hero__sub { max-width: 46ch; margin-inline: auto; }
+.ai-hero__offers { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 @media (max-width: 767px) {
-  .ai-hero__inner { justify-content: flex-end; align-items: stretch; }
-  .ai-hero__card { width: 100%; }
+  .ai-hero__inner { justify-content: flex-end; }
 }
 
 /* ── 2. capabilities: spotlight bento, one frame ──
@@ -196,33 +197,28 @@
   .ai-bento { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ai-bento__head { grid-column: span 2; }
 }
-.ai-bento__head { display: grid; align-content: end; gap: 12px; }
-.ai-sheet.ai-bento__head { padding: clamp(18px, 1.8vw, 28px); }
+.ai-bento__head { display: flex; }
+.ai-bento__headpanel { flex: 1; }
+.ai-sheet.ai-bento__headpanel { padding: clamp(18px, 1.8vw, 28px); }
+.ai-bento__headpanel > .glass-panel__body { display: grid; align-content: end; gap: 12px; height: 100%; }
 /* the head cell is two bento columns wide: the headline must fit it */
 .ai-bento__head .ai-h2 { font-size: clamp(22px, 2.9vw, 50px); }
-.ai-bento__head > .ai-body { max-width: 36ch; }
+.ai-bento__head .ai-body { max-width: 36ch; }
 
 .ai-card { position: relative; display: flex; min-width: 0; }
 .ai-card__ring,
 .ai-card__field { position: absolute; inset: 0; pointer-events: none; clip-path: circle(0px at 0px 0px); will-change: clip-path; }
-/* the ring is a 1px stroke drawn above the panel, not a fill behind it */
-.ai-card__ring { z-index: 2; border: 1px solid #ffffff; }
+/* inside the light the card's edge lights cyan (active state) over its white hairline */
+.ai-card__ring { z-index: 2; border: 1px solid var(--cyan); }
 /* the cyan field is line-work (a grid of hairline plus marks), never a colour wash */
 .ai-card__field {
   opacity: 0.4;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M14 11v6M11 14h6' stroke='%2300b4d8' stroke-width='1'/%3E%3C/svg%3E");
 }
-/* frosted glass: translucent #111, a real backdrop blur, no hue of its own */
-.ai-card__panel {
-  position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden;
-  padding: clamp(16px, 1.5vw, 22px);
-}
-.ai-card__panel > *:not(.ai-card__field):not(.ai-card__tick) { position: relative; }
-.ai-card__tick { position: absolute; width: 10px; height: 10px; border: 0 solid #ffffff; }
-.ai-card__tick--tl { left: 0; top: 0; border-width: 1px 0 0 1px; }
-.ai-card__tick--tr { right: 0; top: 0; border-width: 1px 1px 0 0; }
-.ai-card__tick--bl { left: 0; bottom: 0; border-width: 0 0 1px 1px; }
-.ai-card__tick--br { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
+/* frosted glass via the shared GlassPanel (full white hairline, no gaps) */
+.ai-card__panel { flex: 1; min-width: 0; }
+.ai-card__panel > .glass-panel__body { height: 100%; }
+.ai-card__inner { position: relative; display: flex; flex-direction: column; height: 100%; padding: clamp(16px, 1.5vw, 22px); }
 .ai-card__meta { display: flex; justify-content: space-between; gap: 16px; }
 .ai-card__status { display: inline-grid; }
 .ai-card__status > i { grid-area: 1 / 1; font-style: normal; text-align: right; transition: opacity 500ms var(--ease-expo); }
@@ -245,19 +241,18 @@
   }
 }
 /* the read-out of the LIVE card sits on its own glass strip under the grid */
-.ai-bento__caption {
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 14px;
-  padding: 16px clamp(18px, 1.8vw, 28px); border: 1px solid #ffffff;
-}
+.ai-bento__captionwrap { margin-top: 14px; }
+.ai-bento__caption { padding: 16px clamp(18px, 1.8vw, 28px); }
+.ai-bento__caption > .glass-panel__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 @media (min-width: 1100px) {
-  .ai-bento__caption { grid-template-columns: 300px minmax(0, 1fr); align-items: baseline; gap: 24px; }
+  .ai-bento__caption > .glass-panel__body { grid-template-columns: 300px minmax(0, 1fr); align-items: baseline; gap: 24px; }
 }
 .ai-bento__read { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 .ai-bento__read > .ai-body { max-width: 70ch; }
 @media (hover: none), (pointer: coarse) {
   /* touch: there is no light to reveal them, so borders are simply on */
   .ai-card__ring { clip-path: none; }
-  .ai-card__field, .ai-card__status, .ai-card__tick, .ai-bento__caption { display: none; }
+  .ai-card__field, .ai-card__status, .ai-bento__captionwrap { display: none; }
   .ai-card__figure { opacity: 1; }
 }
 
@@ -315,20 +310,22 @@
 @media (min-width: 1024px) {
   .ai-compress__grid { grid-template-columns: minmax(0, 5fr) minmax(0, 9fr); gap: 48px; }
 }
-.ai-readout { display: grid; gap: 22px; margin-top: clamp(24px, 5dvh, 56px); }
-.ai-readout dd {
-  display: flex; align-items: baseline; gap: 0.45em; margin-top: 8px; white-space: nowrap;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--ai-readout); line-height: 1.1;
-  font-variant-numeric: tabular-nums; color: #ffffff;
+.ai-compress__copy { position: relative; isolation: isolate; }
+/* the headline is fitted to its column at every width: "COMPRESSION." is the
+   longest word and must never run past the column edge */
+@media (min-width: 1024px) {
+  .ai-compress__copy .ai-h2 { font-size: clamp(22px, 2.5vw, 44px); }
 }
-.ai-readout dd > i { font-style: normal; opacity: 0.5; }
-.ai-readout__hot { color: var(--cyan); }
-@media (max-width: 767px) {
-  .ai-readout { margin-top: 20px; }
+.ai-readout {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.5em; margin-top: clamp(18px, 3dvh, 32px);
+  font-family: var(--font-geist-mono), monospace; font-size: var(--ai-readout); line-height: 1.15;
+  font-variant-numeric: tabular-nums; color: #ffffff; text-transform: uppercase; letter-spacing: 0.04em;
 }
+.ai-readout__after { color: var(--cyan); }
+.ai-readout__after > i { font-style: normal; color: #ffffff; opacity: 0.6; }
 /* the drawing sits on its own frosted plate, so its twelve steps can never be
    mistaken for nodes of the live lattice behind it */
-.ai-compress__figure { position: relative; padding: clamp(12px, 1.6vw, 26px); border: 1px solid #ffffff; }
+.ai-compress__figure { padding: clamp(12px, 1.6vw, 26px); }
 @media (max-width: 767px) {
   .ai-compress__grid { gap: 14px; }
   .ai-compress__note { display: none; }
@@ -361,7 +358,12 @@
 @media (min-width: 1024px) {
   .ai-process { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
-.ai-orbit { position: relative; width: min(100%, 440px, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 230px)); aspect-ratio: 1; margin-inline: auto; }
+.ai-process__stage { position: relative; isolation: isolate; display: grid; gap: clamp(20px, 3dvh, 32px); }
+.ai-process__stage .ai-head { margin-bottom: 0; }
+@media (min-width: 1024px) {
+  .ai-process__stage .ai-h2 { font-size: clamp(22px, 2.5vw, 44px); }
+}
+.ai-orbit { position: relative; width: min(100%, 440px, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 170px)); aspect-ratio: 1; margin-inline: auto; }
 @media (max-width: 767px) {
   .ai-orbit { width: min(100%, 320px); margin-block: 4px 20px; }
 }
@@ -421,6 +423,12 @@
 .ai-mini-btn:disabled { opacity: 0.35; pointer-events: none; }
 
 /* ── 5. industries: accordion + agent log ── */
+.glass-panel.ai-band { width: 100%; border-left: 0; border-right: 0; padding-block: clamp(24px, 3.4dvh, 40px); }
+@media (min-width: 1024px) {
+  .ai-band .ai-wrap > div { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr); gap: 48px; align-items: start; }
+  .ai-band .ai-head { margin-bottom: 0; }
+  .ai-band .ai-h2 { font-size: clamp(22px, 2.3vw, 40px); }
+}
 .ai-rows { border-top: 1px solid #ffffff; }
 .ai-row { position: relative; border-bottom: 1px solid #ffffff; }
 .ai-row__trigger {
@@ -467,27 +475,13 @@
 .ai-log__state[data-on] { opacity: 1; color: var(--cyan); }
 .ai-log__dot { flex: none; width: 6px; height: 6px; background: currentColor; }
 
-/* ── 6. counts: odometer (its own frame, so nothing crowds the numbers) ── */
-.ai-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px 56px; padding-top: 40px; border-top: 1px solid #ffffff; }
-@media (min-width: 900px) {
-  /* the first figure has five glyphs (12 -> 02): it gets the wide column */
-  .ai-stats { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr); }
+/* ── 6. why triseno: split frame, two-state switch ── */
+.ai-why-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: center; }
+@media (min-width: 1024px) {
+  .ai-why-split { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.25fr); gap: clamp(40px, 5vw, 88px); }
 }
-.ai-odo {
-  display: flex; align-items: flex-start; font-family: var(--font-geist-mono), monospace; font-weight: 400;
-  font-size: clamp(56px, 7.6vw, 136px); line-height: 1; color: #ffffff; font-variant-numeric: tabular-nums;
-}
-.ai-odo__window { display: inline-block; height: 1em; overflow: hidden; }
-.ai-odo__strip {
-  display: flex; flex-direction: column; transform: translate3d(0, 0, 0); will-change: transform;
-  transition: transform 1300ms var(--ease-expo); transition-delay: calc(var(--i) * 90ms);
-}
-.ai-odo__strip > span { display: block; height: 1em; line-height: 1; }
-.ai-stats[data-on] .ai-odo__strip { transform: translate3d(0, calc(var(--to) * -1em), 0); }
-.ai-odo__glyph { color: var(--cyan); padding-inline: 0.12em; }
-.ai-stat__label { margin-top: 18px; max-width: 24ch; }
-/* ── 7. why triseno: two-state switch ── */
-.ai-why__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 24px 40px; margin-bottom: clamp(32px, 5dvh, 60px); }
+.ai-why__head { position: relative; isolation: isolate; display: grid; justify-items: start; gap: 16px; }
+.ai-why__head .ai-switch { margin-top: 12px; }
 .ai-switch { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; border: 1px solid #ffffff; }
 .ai-switch__thumb {
   position: absolute; top: 0; bottom: 0; left: 0; width: 50%; background: #ffffff;
@@ -498,70 +492,71 @@
   position: relative; z-index: 1; min-height: 48px; padding-inline: clamp(14px, 1.6vw, 24px);
   font-family: var(--font-unbounded), sans-serif; font-weight: 500; font-size: var(--fs-label);
   letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; color: #ffffff;
-  overflow: hidden; text-overflow: clip;
-  transition: color 700ms var(--ease-expo);
+  overflow: hidden; transition: color 700ms var(--ease-expo);
 }
-/* the selected side sits on the white thumb, so its label inverts to black */
+/* the selected side sits on the white thumb, so its label inverts to black;
+   the other is an inactive state: solid white at reduced opacity */
 .ai-switch__opt[aria-checked="true"] { color: #000000; }
 .ai-switch__opt[aria-checked="false"] { opacity: 0.6; }
-.ai-why { border-top: 1px solid #ffffff; }
+.ai-why__panel { padding: clamp(20px, 2.4vw, 36px); }
 .ai-why__row {
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 32px; align-items: baseline;
-  padding-block: clamp(16px, 2.6dvh, 30px); border-bottom: 1px solid #ffffff;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 24px; align-items: baseline;
+  padding-block: clamp(12px, 1.8dvh, 18px); border-bottom: 1px solid #ffffff;
 }
+.ai-why__row:first-child { padding-top: 0; }
+.ai-why__row:last-child { border-bottom: 0; padding-bottom: 0; }
 @media (min-width: 900px) {
-  .ai-why__row { grid-template-columns: 220px minmax(0, 1fr); }
+  .ai-why__row { grid-template-columns: 150px minmax(0, 1fr); }
 }
 .ai-why__cell { display: grid; }
-.ai-why__say {
-  grid-area: 1 / 1; font-family: var(--font-unbounded), sans-serif; font-weight: 600;
-  font-size: var(--ai-readout); line-height: 1.15; letter-spacing: 0.08em; text-transform: uppercase; color: #ffffff;
+.ai-why__swap {
+  grid-area: 1 / 1; display: grid; gap: 6px;
   transition: clip-path 900ms var(--ease-expo), opacity 900ms var(--ease-expo);
-  transition-delay: calc(var(--i) * 120ms);
+  transition-delay: calc(var(--i) * 110ms);
 }
-/* the outgoing statement is wiped away, the incoming one wiped in; at rest the
-   visible statement is solid, unmasked white */
-.ai-why[data-state="0"] .ai-why__say--triseno,
-.ai-why[data-state="1"] .ai-why__say--vendor { clip-path: inset(0 0 0 100%); opacity: 0; }
-.ai-why[data-state="0"] .ai-why__say--vendor,
-.ai-why[data-state="1"] .ai-why__say--triseno { clip-path: inset(0 0 0 0); opacity: 1; }
+.ai-why__say {
+  font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: clamp(17px, 1.6vw, 26px);
+  line-height: 1.18; letter-spacing: 0.08em; text-transform: uppercase; color: #ffffff;
+}
+.ai-why__note { color: var(--ink-secondary); }
+/* the outgoing row is wiped away, the incoming one wiped in; at rest the
+   visible row is solid and unmasked */
+.ai-why[data-state="0"] .ai-why__swap--triseno,
+.ai-why[data-state="1"] .ai-why__swap--vendor { clip-path: inset(0 0 0 100%); opacity: 0; }
+.ai-why[data-state="0"] .ai-why__swap--vendor,
+.ai-why[data-state="1"] .ai-why__swap--triseno { clip-path: none; opacity: 1; }
 
-/* ── 8. gate: a gate, not a footer ── */
+/* ── 7. gate: a gate, not a footer — glyph above the copy, never over it ── */
 .ai-gate { display: flex; align-items: center; padding-block: var(--lane-top) var(--lane-bottom); }
+.ai-gate__inner { display: grid; justify-items: center; gap: clamp(16px, 3dvh, 28px); text-align: center; }
 .ai-gate__figure {
   --gate-ink: #00b4d8;
-  position: absolute; top: 50%; right: max(4vw, calc(50% - 660px)); width: min(52vw, 700px); height: auto;
-  overflow: visible; transform: translate3d(0, -50%, 0);
-  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--gate-ink) 60%, transparent));
+  display: block; width: clamp(96px, 11vw, 150px); height: auto; overflow: visible;
+  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--gate-ink) 60%, transparent));
 }
 #ai-gate-shape { vector-effect: non-scaling-stroke; }
 .ai-gate__glyph { fill: none; stroke: var(--gate-ink); stroke-width: 2; stroke-linejoin: miter; }
 .ai-gate__echo { fill: none; stroke: #ffffff; stroke-width: 1; }
-.ai-gate__inner { position: relative; }
-@media (min-width: 1024px) {
-  .ai-gate__inner > * { max-width: min(100%, 640px); }
-}
-.ai-gate__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 36px; margin-top: clamp(36px, 6dvh, 56px); }
+.ai-gate__copy { position: relative; isolation: isolate; display: grid; justify-items: center; max-width: 720px; }
+.ai-gate__copy .ai-h2 { max-width: 22ch; }
+.ai-gate__cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 20px 36px; margin-top: clamp(28px, 4.5dvh, 44px); }
 .ai-gate__cross {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 28px; margin-top: clamp(52px, 10dvh, 112px);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 28px; margin-top: clamp(28px, 4dvh, 44px);
   padding-top: 16px; border-top: 1px solid #ffffff;
 }
 .ai-gate__cross > .ai-label { opacity: 0.6; }
-@media (max-width: 1023px) {
-  .ai-gate { align-items: flex-end; }
-  .ai-gate__figure { top: 24%; right: 50%; width: min(70vw, 360px); transform: translate3d(50%, -50%, 0); }
-}
 
 /* ── reduced motion: every section is its final state ── */
 @media (prefers-reduced-motion: reduce) {
   .ai-dg-run, .ai-dg-squeeze, .ai-dg-layers, .ai-dg-fill, .ai-dg-rise,
-  .ai-step__body, .ai-row__panel, .ai-log__caret, .ai-plate__glow, .ai-plate__core { animation: none !important; }
-  .ai-plate__glow { opacity: 0.25; }
-  .ai-plate__light { display: none; }
+  .ai-step__body, .ai-row__panel, .ai-log__caret, .ai-world__glow, .ai-world__core,
+  .ai-hero__word, .ai-rise { animation: none !important; }
+  .ai-world__glow { opacity: 0.25; }
+  .ai-world__light { display: none; }
   .ai-dg-set { animation: none !important; opacity: 0; }
   .ai-dg-set[data-first] { opacity: 1; }
-  .ai-plate__img, .ai-card__status > i, .ai-orbit__arc, .ai-orbit__name,
-  .ai-mini-btn::before, .ai-row__title, .ai-row__sign > i, .ai-why__say, .ai-switch__thumb, .ai-switch__opt,
+  .ai-card__status > i, .ai-orbit__arc, .ai-orbit__name,
+  .ai-mini-btn::before, .ai-row__title, .ai-row__sign > i, .ai-why__swap, .ai-switch__thumb, .ai-switch__opt,
   .ai-card__figure,
   .ai-textlink > span::after, .ai-textlink > svg {
     transition-duration: 1ms !important; transition-delay: 0ms !important;

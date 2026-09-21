@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ArrowLeft, ArrowRight, Play } from "@phosphor-icons/react";
+import GlassPanel from "@/components/world/GlassPanel";
 import Glyph from "@/components/world/Glyph";
 import { DIVISIONS } from "@/lib/divisions";
 import { PROCESS, PROCESS_INTRO } from "./content";
@@ -147,17 +148,18 @@ export default function OrbitalProcess() {
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
-        <div className="ai-glass ai-sheet ai-process-sheet">
-        <header className="ai-head ai-head--single">
-          <p className="ai-label">
-            <b>04</b> / Process &nbsp;·&nbsp; {PROCESS_INTRO.body}
-          </p>
-          <h2 id="ai-process-title" className="ai-h2 font-display font-semibold uppercase">
-            {PROCESS_INTRO.title}
-          </h2>
-        </header>
-
         <div className="ai-process">
+          <div className="ai-process__stage">
+            <span aria-hidden="true" className="ai-scrim" />
+            <header className="ai-head ai-head--single">
+                <p className="ai-label">
+                <b>04</b> / Process &nbsp;·&nbsp; {PROCESS_INTRO.body}
+                </p>
+              <h2 id="ai-process-title" className="ai-h2 font-display font-semibold uppercase">
+            {PROCESS_INTRO.title}
+              </h2>
+            </header>
+
           <div ref={orbitRef} className="ai-orbit" data-locked={locked ? "" : undefined}>
             <svg aria-hidden="true" className="ai-orbit__dial" viewBox="-100 -100 200 200">
               <circle className="ai-orbit__ring ai-orbit__ring--faint" r="56" />
@@ -226,6 +228,9 @@ export default function OrbitalProcess() {
             </div>
           </div>
 
+          </div>
+
+          <GlassPanel world="ai" className="ai-sheet ai-process__panel">
           <div
             id="ai-step-panel"
             role="tabpanel"
@@ -277,7 +282,7 @@ export default function OrbitalProcess() {
               ) : null}
             </div>
           </div>
-        </div>
+          </GlassPanel>
         </div>
       </div>
     </section>

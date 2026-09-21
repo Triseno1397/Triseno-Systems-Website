@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import GlassPanel from "@/components/world/GlassPanel";
 import CapabilityDiagram from "./CapabilityDiagram";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
 
@@ -8,10 +9,10 @@ import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
  * 2. Capabilities — spotlight cards in a bento (site-map mechanic; the 21st.dev
  * spotlight-card component, tailored). ONE frame, not six clones.
  *
- * At rest a card is four corner ticks, its diagram and its name. A light
- * travels over the bento — the pointer, or on its own when idle — and inside
- * its radius the 1px white border and a cyan hairline field appear
- * (clip-path circles; the field is line-work, never a colour wash).
+ * Each card is frosted glass (GlassPanel) with its diagram and its name. A
+ * light travels over the bento — the pointer, or on its own when idle — and
+ * inside its radius the card's edge lights cyan (active state) and a cyan
+ * hairline field appears (clip-path circles; line-work, never a colour wash).
  *
  * Beyond the stock demo: exactly one card is ever LIVE (the one nearest the
  * light), its diagram comes up to full strength, and its description is read
@@ -145,25 +146,24 @@ export default function Capabilities() {
     >
       <div className="ai-wrap">
         <div ref={gridRef} className="ai-bento">
-          <header className="ai-glass ai-sheet ai-bento__head">
-            <p className="ai-label">
-              <b>02</b> / Capabilities
-            </p>
-            <h2 id="ai-cap-title" className="ai-h2 font-display font-semibold uppercase">
-              {CAPABILITIES_INTRO.title}
-            </h2>
-            <p className="ai-body">{CAPABILITIES_INTRO.body}</p>
+          <header className="ai-bento__head">
+            <GlassPanel world="ai" className="ai-sheet ai-bento__headpanel">
+              <p className="ai-label">
+                <b>02</b> / Capabilities
+              </p>
+              <h2 id="ai-cap-title" className="ai-h2 font-display font-semibold uppercase">
+                {CAPABILITIES_INTRO.title}
+              </h2>
+              <p className="ai-body">{CAPABILITIES_INTRO.body}</p>
+            </GlassPanel>
           </header>
 
           {CAPABILITIES.map((cap, i) => (
             <article key={cap.id} className="ai-card">
               <span aria-hidden="true" className="ai-card__ring" />
-              <div className="ai-glass ai-card__panel">
+              <GlassPanel world="ai" className="ai-card__panel">
                 <span aria-hidden="true" className="ai-card__field" />
-                <span aria-hidden="true" className="ai-card__tick ai-card__tick--tl" />
-                <span aria-hidden="true" className="ai-card__tick ai-card__tick--tr" />
-                <span aria-hidden="true" className="ai-card__tick ai-card__tick--bl" />
-                <span aria-hidden="true" className="ai-card__tick ai-card__tick--br" />
+                <div className="ai-card__inner">
 
                 <p className="ai-card__meta ai-label">
                   <span>
@@ -180,12 +180,14 @@ export default function Capabilities() {
                 <h3 className="ai-h3 font-display font-semibold uppercase">{cap.title}</h3>
                 {/* on pointer devices this is read out in the caption instead */}
                 <p className="ai-body ai-card__body">{cap.body}</p>
-              </div>
+                </div>
+              </GlassPanel>
             </article>
           ))}
         </div>
 
-        <p aria-hidden="true" className="ai-glass ai-bento__caption">
+        <div aria-hidden="true" className="ai-bento__captionwrap">
+        <GlassPanel world="ai" className="ai-bento__caption">
           <span className="ai-label">
             <b ref={capIndexRef}>01</b> / Live
           </span>
@@ -197,7 +199,8 @@ export default function Capabilities() {
               {CAPABILITIES[0].body}
             </span>
           </span>
-        </p>
+        </GlassPanel>
+        </div>
       </div>
     </section>
   );

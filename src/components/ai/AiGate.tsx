@@ -9,18 +9,19 @@ import { glyphPoints } from "@/lib/glyph-path";
 import { GATE } from "./content";
 
 /**
- * 8. Gate — the division glyph announces where the button goes (bar.md rule 7),
+ * 7. Gate — the division glyph announces where the button goes (bar.md rule 7),
  * not a footer. At rest it is the cyan triangle filling the frame. Hover or
  * focus the diagnostic button and the same outline (the foundation's coherent
  * glyph sampling) morphs into the plus glyph of Contact and drains to white,
- * echoed by the hairline copies behind it — the world recolours toward the
+ * echoed by the hairline copies around it — the world recolours toward the
  * destination before you travel. One ghost button names the next destination. The two cross-division links are the only place on
  * this page another division may be named (D3), and they are set in the same
  * Unbounded uppercase as every other link on the page.
  */
 
 const SAMPLES = 360;
-const ECHOES = [1.5, 2.15, 3, 4.1];
+/** echoes stay inside the figure box, so no outline ever reaches the copy */
+const ECHOES = [1.22, 1.44, 1.66];
 
 function mix(a: number, b: number, k: number) {
   return a + (b - a) * k;
@@ -90,7 +91,8 @@ export default function AiGate() {
       aria-labelledby="ai-gate-title"
       className="ai-gate relative z-10 min-h-[100dvh] overflow-hidden"
     >
-      <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.5 -1.75 3 3">
+      <div className="ai-wrap ai-gate__inner">
+      <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.8 -2 3.6 3.6">
         <defs>
           <polygon id="ai-gate-shape" ref={shapeRef} points={points(0)} />
         </defs>
@@ -100,16 +102,16 @@ export default function AiGate() {
             href="#ai-gate-shape"
             className="ai-gate__echo"
             transform={`scale(${scale})`}
-            style={{ opacity: 0.3 - i * 0.065 }}
+            style={{ opacity: 0.34 - i * 0.09 }}
           />
         ))}
         <use href="#ai-gate-shape" className="ai-gate__glyph" />
       </svg>
 
-      <div className="ai-wrap ai-gate__inner">
-        <div className="ai-glass ai-sheet ai-gate__sheet">
+        <div className="ai-gate__copy">
+        <span aria-hidden="true" className="ai-scrim" />
         <p className="ai-label">
-          <b>08</b> / Next: Contact
+          <b>07</b> / Next: Contact
         </p>
         <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">
           {GATE.title}

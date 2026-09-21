@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import GlassPanel from "@/components/world/GlassPanel";
 import { INDUSTRIES, INDUSTRIES_INTRO, type Industry } from "./content";
 
 /**
@@ -137,8 +138,9 @@ export default function Industries() {
       aria-labelledby="ai-ind-title"
       className="ai-section relative z-10"
     >
+      <GlassPanel world="ai" className="ai-band">
       <div className="ai-wrap">
-        <div className="ai-glass ai-sheet">
+        <div>
         <header className="ai-head ai-head--single">
           <p className="ai-label">
             <b>05</b> / Industries
@@ -199,6 +201,7 @@ export default function Industries() {
         </ul>
         </div>
       </div>
+      </GlassPanel>
     </section>
   );
 }
