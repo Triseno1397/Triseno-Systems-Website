@@ -706,6 +706,19 @@
   padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
   transform-origin: 50% 0; will-change: transform;
 }
+/* The handover edge. --v is the sheet's visible height, scrubbed by
+   StackCards to track the incoming sheet's edge; at rest it is huge, so the
+   sheet is whole. The mask box overhangs the sheet by 120px on every side
+   (no-clip) so its glow and floor spill are never cut at rest. */
+.web-stack__inner {
+  --v: 100000px;
+  --stack-mask: linear-gradient(180deg, #000 calc(var(--v) + 120px - 56px), transparent calc(var(--v) + 120px));
+  -webkit-mask-image: var(--stack-mask); mask-image: var(--stack-mask);
+  -webkit-mask-size: calc(100% + 240px) calc(100% + 240px); mask-size: calc(100% + 240px) calc(100% + 240px);
+  -webkit-mask-position: -120px -120px; mask-position: -120px -120px;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-clip: no-clip; mask-clip: no-clip;
+}
 /* GlassPanel wraps its children in a body: let it fill the sheet */
 .web-stack__inner > .glass-panel__body { flex: 1 1 auto; display: flex; flex-direction: column; }
 .web-stack__content { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; }
@@ -763,8 +776,11 @@
 .dv-flow > span { flex: none; padding: 5px 8px; border: 1px solid rgba(255, 255, 255, 0.6); }
 .dv-flow > span[data-hot] { background: var(--hue); color: #000000; }
 .dv-flow > i { flex: 1 1 auto; min-width: 8px; height: 1px; background: #ffffff; }
+/* narrow: the pipeline wraps onto two lines rather than dropping a node */
 @media (max-width: 520px) {
-  .dv-flow > :nth-child(n + 8) { display: none; }
+  .dv-flow { flex-wrap: wrap; row-gap: 8px; }
+  .dv-flow > span { padding: 4px 6px; letter-spacing: 0.03em; }
+  .dv-flow > i { flex: 0 0 10px; }
 }
 
 .dv-bars { flex-direction: column; gap: 6px; }

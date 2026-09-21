@@ -12,11 +12,10 @@ gsap.registerPlugin(ScrollTrigger);
  * What you get — sticky stacking cards, section 04, standing in the world.
  *
  * Each deliverable is a lit glass sheet that sticks a few pixels below the
- * last. As the next sheet slides up, the one underneath is clipped exactly at
- * the incoming edge and settles back into the tray, and each of its rows fades
- * out just before that edge reaches it. So a covered sheet is never an empty
- * panel, no row is sliced mid-glyph, and nothing of it sits behind the sheet in
- * front.
+ * last. As the next sheet slides up, the one underneath dissolves into the
+ * incoming edge through a soft mask that tracks it, and settles back into the
+ * tray. So a covered sheet is never an empty panel, no row is sliced
+ * mid-glyph, and nothing of it sits behind the sheet in front.
  *
  * Every sheet carries a small, live-built illustration of the thing it
  * delivers — a sitemap, a type specimen, the build, a performance meter, a
@@ -156,49 +155,24 @@ export default function StackCards() {
             invalidateOnRefresh: true,
           });
 
-          // The covered sheet is CLIPPED at the incoming sheet's edge. Nothing
-          // of it ever sits behind the glass sheet in front (so no hidden edge
-          // crosses visible content), and what is visible of it is still whole.
-          // The next sheet moves 1:1 with scroll until it sticks, so a linear
-          // scrub tracks its edge exactly.
+          // The covered sheet dissolves into the incoming sheet's edge: a soft
+          // mask edge (--v, the visible height, see web.css) tracks that edge
+          // exactly — the next sheet moves 1:1 with scroll until it sticks, so
+          // a linear scrub follows it. Above the edge the sheet is whole (panel
+          // and content together, never an empty panel); rows reaching the
+          // edge dissolve rather than being sliced; nothing of it sits behind
+          // the glass sheet in front.
           gsap.fromTo(
             inner,
-            { clipPath: "inset(0px 0px 0px 0px)", scale: 1 },
+            { "--v": () => `${inner.offsetHeight + 80}px`, scale: 1 },
             {
-              clipPath: () =>
-                `inset(0px 0px ${Math.max(0, inner.offsetHeight - sliver())}px 0px)`,
+              "--v": () => `${sliver()}px`,
               scale: 1 - Math.min(depth, 4) * 0.02,
               ease: "none",
               immediateRender: false,
               scrollTrigger: trig(() => `top ${nextTop()}px`),
             },
           );
-
-          // Row by row, each line of the sheet fades out just before the
-          // incoming edge reaches it — the clip never slices a glyph, and the
-          // rows above the edge stay readable, so the sheet is never an empty
-          // panel.
-          Array.from(content.children).forEach((row) => {
-            const el = row as HTMLElement;
-            // rows are laid out in GlassPanel's positioned body, which sits
-            // inside the sheet's padding: offsets relative to the sheet's top
-            const body = el.offsetParent as HTMLElement | null;
-            const bottom = () =>
-              (body?.offsetTop ?? 0) + el.offsetTop + el.offsetHeight;
-            gsap.fromTo(
-              el,
-              { opacity: 1 },
-              {
-                opacity: 0,
-                ease: "none",
-                immediateRender: false,
-                scrollTrigger: trig(
-                  () => `top ${top() + bottom() + 4}px`,
-                  () => `top ${top() + bottom() + 44}px`,
-                ),
-              },
-            );
-          });
         });
       });
     },
