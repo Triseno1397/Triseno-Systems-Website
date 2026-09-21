@@ -491,27 +491,22 @@
 }
 .web-compare__layer { position: absolute; inset: 0; z-index: 1; overflow: hidden; isolation: isolate; }
 .web-compare__layer--after { z-index: 2; }
-.web-compare__label {
-  position: absolute; top: 12px; z-index: 3; padding: 6px 10px; border: 1px solid #ffffff; background: #000000;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em;
-  text-transform: uppercase; color: #ffffff; pointer-events: none;
-}
-/* drag mode: rebuilt on the left of the handle, old template on the right */
-.web-compare__label--before { right: 12px; }
-.web-compare__label--after { left: 12px; }
 
-/* Annotation: a bracket AROUND the area that changed, with its number seated
-   on the bracket's top edge — never a badge dropped on the mock's own words. */
+/* Legend above the stage (drag mode): rebuilt on the left of the handle, the
+   old template on the right. Never a tag on the concept itself. */
+.web-compare__legend {
+  display: none; justify-content: space-between; margin: 0 0 10px;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em;
+  text-transform: uppercase; color: #ffffff;
+}
+.web-compare__legend span:last-child { color: var(--ink-muted); }
+/* Annotation: a 1px outline AROUND the area that changed, lit with its note —
+   no badge is ever dropped on the mock's own words. */
 .web-compare__regions { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .web-compare__region {
   position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h);
   border: 1px solid var(--hue); opacity: 0; transform: scale(0.97);
   transition: opacity 600ms var(--ease-expo), transform 700ms var(--ease-expo);
-}
-.web-compare__region i {
-  position: absolute; left: -1px; top: 0; transform: translateY(-100%);
-  display: block; padding: 3px 7px; background: var(--hue); color: #000000; font-style: normal;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.06em; line-height: 1.2;
 }
 .web-compare__region[data-lit] { opacity: 1; transform: scale(1); }
 
@@ -538,16 +533,16 @@
 }
 .web-compare__handle:focus-visible { outline: none; }
 .web-compare__line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #ffffff; }
-.web-compare__knob {
-  position: absolute; left: 50%; top: 52px; width: 36px; height: 36px; margin: -18px 0 0 -18px;
-  display: grid; place-items: center; border: 1px solid #ffffff; background: rgba(0, 0, 0, 0.62);
-  transition: transform 600ms var(--ease-expo);
+/* the grip: two short parallel hairlines ON the line, no box floating on the split */
+.web-compare__grip {
+  position: absolute; left: 50%; top: 50%; width: 7px; height: 44px; margin: -22px 0 0 -3.5px;
+  border-left: 1px solid #ffffff; border-right: 1px solid #ffffff;
+  transition: transform 600ms var(--ease-expo), border-color 600ms var(--ease-expo);
 }
-.web-compare__knob i { display: block; width: 14px; height: 14px; border: 1px solid var(--hue); filter: drop-shadow(0 0 6px var(--hue)); transition: transform 600ms var(--ease-expo); }
-.web-compare__stage:hover .web-compare__knob i,
-.web-compare__stage[data-dragging] .web-compare__knob i,
-.web-compare__handle:focus-visible .web-compare__knob i { transform: scale(0.64); }
-.web-compare__handle:focus-visible .web-compare__knob { outline: 1px solid #ffffff; outline-offset: 5px; }
+.web-compare__stage:hover .web-compare__grip,
+.web-compare__stage[data-dragging] .web-compare__grip,
+.web-compare__handle:focus-visible .web-compare__grip { transform: scaleY(1.3); border-color: var(--hue); }
+.web-compare__handle:focus-visible .web-compare__line { background: var(--hue); }
 
 /* ── DEFAULT (phone): one full-width site at a time, cut by the switch ──
    A drag line over two full-width sites communicates nothing at 390px, so
@@ -563,6 +558,7 @@
 /* ── DRAG MODE: only where there is a fine pointer AND room for two sites ── */
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .web-compare__switch { display: none; }
+  .web-compare__legend { display: flex; }
   .web-compare__stage { cursor: ew-resize; }
   .web-compare__handle { display: block; }
   .web-compare__regions { display: block; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); }
@@ -598,7 +594,7 @@
   .web-compare__stage { aspect-ratio: 16 / 10; }
 }
 @media (min-width: 1024px) {
-  .web-compare__main { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); column-gap: 4vw; align-items: center; }
+  .web-compare__main { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); column-gap: 4vw; align-items: start; }
   .web-compare__stack { width: min(100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 240px) * 1.6)); min-width: min(100%, 520px); margin: 0; justify-self: end; }
   .web-compare__notes { margin-top: 0; gap: 22px; }
 }
@@ -1108,7 +1104,7 @@
   .web-demo { height: auto; }
   .web-demo__stage { position: relative; height: auto; min-height: 100dvh; }
   .web-demo__viewport { overflow-y: auto; overscroll-behavior: contain; }
-  .web-compare__region, .web-compare__note, .web-compare__note::after, .web-compare__knob i,
+  .web-compare__region, .web-compare__note, .web-compare__note::after, .web-compare__grip,
   .web-compare__layer--after, .web-compare__switch button,
   .web-range__row, .web-range__word, .web-range__card, .web-subaction, .web-subaction__rule {
     transition-duration: 1ms !important;

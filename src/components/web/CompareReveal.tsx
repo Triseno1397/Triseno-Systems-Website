@@ -17,12 +17,12 @@ import GlassPanel from "@/components/world/GlassPanel";
  * Mechanical starting point: 21st.dev "compare" — two layers and a drag line.
  * Tailored, and split by input:
  *
- * DESKTOP / fine pointer — the drag line. Hairline handle carrying the
- * division's square glyph; role="slider", arrow / Page / Home / End keys,
+ * DESKTOP / fine pointer — the drag line. A hairline with a slim grip (no box
+ * floating on the split); role="slider", arrow / Page / Home / End keys,
  * pointer capture, vertical scroll preserved. "What changed" is annotated with
- * 1px violet REGION BRACKETS, not badges dropped on top of the mock's own
- * words: the bracket outlines the area that changed and its number sits on the
- * bracket's top edge, outside the region.
+ * 1px violet REGION OUTLINES that light with their note — no badge is ever
+ * dropped on the mock's own words, and the Before / After legend sits above
+ * the stage, never on it.
  *
  * PHONE — a drag line over two full-width sites does not communicate anything
  * at 390px, so there is no drag line. The stage shows ONE site at a time at
@@ -263,6 +263,12 @@ export default function CompareReveal() {
 
       <div className="web-compare__main">
         <div className="web-compare__stack">
+          {/* Legend OUTSIDE the stage, so no tag ever sits on the concept's own
+              logo or headline. Drag mode only; the phone switch names the site. */}
+          <p className="web-compare__legend" aria-hidden="true">
+            <span>After — rebuilt</span>
+            <span>Before — template</span>
+          </p>
           <GlassPanel world="web" className="web-bezel">
             <div
               ref={stageRef}
@@ -283,9 +289,6 @@ export default function CompareReveal() {
                 role="img"
               >
                 <BeforeMock />
-                <span className="web-compare__label web-compare__label--before">
-                  Before — template
-                </span>
               </div>
               <div
                 className="web-compare__layer web-compare__layer--after"
@@ -293,9 +296,6 @@ export default function CompareReveal() {
                 role="img"
               >
                 <AfterMock />
-                <span className="web-compare__label web-compare__label--after">
-                  After — rebuilt
-                </span>
               </div>
 
               {/* Region brackets, clipped to the same edge as the rebuilt layer. */}
@@ -313,9 +313,7 @@ export default function CompareReveal() {
                         "--h": `${note.h}%`,
                       } as CSSProperties
                     }
-                  >
-                    <i>{String(i + 1).padStart(2, "0")}</i>
-                  </span>
+                  />
                 ))}
               </div>
 
@@ -332,9 +330,7 @@ export default function CompareReveal() {
                 onKeyDown={onKeyDown}
               >
                 <span aria-hidden="true" className="web-compare__line" />
-                <span aria-hidden="true" className="web-compare__knob">
-                  <i />
-                </span>
+                <span aria-hidden="true" className="web-compare__grip" />
               </div>
             </div>
           </GlassPanel>
@@ -358,6 +354,10 @@ export default function CompareReveal() {
               </button>
             ))}
           </div>
+          <p className="web-fineprint">
+            Concept rebuild for a fictional business. It shows layout decisions,
+            not client results.
+          </p>
         </div>
 
         <div className="web-compare__side">
@@ -373,10 +373,6 @@ export default function CompareReveal() {
               </li>
             ))}
           </ol>
-          <p className="web-fineprint">
-            Concept rebuild for a fictional business. It shows layout decisions,
-            not client results.
-          </p>
         </div>
       </div>
     </section>
