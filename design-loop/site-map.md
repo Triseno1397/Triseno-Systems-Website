@@ -15,14 +15,14 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 ## `/studio` Creative — amber
 1. Hero: **scroll-expansion hero** (21st) — the showreel starts as a small framed window and expands to full-bleed as you scroll.
 2. What we make: horizontal pinned **filmstrip scrub** — 7 formats (UGC, product hero, direct response, ASMR, try-on, demo, brand film), videos play on centre.
-3. Behind the studio: **split-text line reveal** with mask wipe, large editorial type.
-4. Proof: **testimonials with marquee** (21st) — real quotes only; until Tristen supplies them it runs as a format/reel marquee labelled as such.
+3. Behind the studio: **pinned print deal** — scrolling deals four stills onto the lit stage one at a time while the founder's story advances a beat per print; hover lifts a print.
+4. Proof: **testimonials with marquee** (21st) — a demonstration of the component: fictional sample clients with generated portraits, carrying one discreet note that the wall is illustrative.
 5. Gate → contact (amber warp).
 
 ## `/web-design-division` Web — violet
 1. Hero: **hero shutter text** (21st) — headline slices open like a shutter.
-2. The page is the demo: **container scroll animation** (21st) — a device frame tilts up from the floor showing a real captured site.
-3. Before / after: **compare reveal** (21st) — drag slider, old site vs rebuilt site (real captures).
+2. The page is the demo: **container scroll animation** (21st) — a device frame tilts up from the floor showing a fully built fictional concept site.
+3. Before / after: **compare reveal** (21st) — drag slider, a dated template vs the rebuilt fictional concept site.
 4. What you get: **sticky stacking cards** — deliverables stack and scale back as the next arrives.
 5. Range: **cursor-follow image trail / hover-swap gallery** of industry concepts (labelled concepts).
 6. Gate → contact (violet warp).
