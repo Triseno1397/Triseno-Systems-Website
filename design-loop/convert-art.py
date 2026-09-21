@@ -8,6 +8,11 @@ MAP = {}
 for w in ['portal','creative','web','ai']:
     MAP[f'{w}-desktop'] = ('worlds', 2880, 78)
     MAP[f'{w}-mobile']  = ('worlds', 1170, 78)
+# additional camera stations: the same place further along the journey (1 = the base plate)
+for w in ['creative','web','ai']:
+    for n in (2, 3):
+        MAP[f'{w}-station{n}']        = ('worlds', 2880, 78)
+        MAP[f'{w}-station{n}-mobile'] = ('worlds', 1170, 78)
 for c in ['mesa-tordo','ironvale-build','solenne-aesthetics','harrow-pike','tavo-supply','kilo-club','alder-quay','caliber-nine','fennick-rowe-engineer','fennick-rowe-van']:
     MAP[c] = ('concepts', 1600, 80)
 for t in ['maren-holloway','marcus-thibault','priya-raman','caleb-whitford','sofia-marchetti','jonah-pruitt','elena-vasquez','hannah-lindqvist','tomas-reyes','devin-okafor']:
