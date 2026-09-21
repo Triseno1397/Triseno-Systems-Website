@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pause, Play } from "@phosphor-icons/react";
+import GlassPanel from "@/components/world/GlassPanel";
 import Aperture from "./Aperture";
 import { useMediaQuery } from "./media";
 import { TESTIMONIALS, type Testimonial } from "./testimonials";
@@ -48,9 +49,10 @@ function Portrait({ name }: { name: string }) {
   );
 }
 
-function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
+// The wall's second (looping) copy is aria-hidden at the set level.
+function Card({ t }: { t: Testimonial }) {
   return (
-    <figure className="sx-card" aria-hidden={hidden || undefined}>
+    <GlassPanel world="creative" as="article" className="sx-card">
       <header className="sx-card__head font-mono">
         <span className="sx-card__glyph">
           <Aperture size={22} open={0.28} strokeWidth={1.25} className="sx-card__iris sx-card__iris--shut" />
@@ -61,7 +63,7 @@ function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
         </span>
       </header>
       <blockquote className="sx-card__quote font-sans font-light">“{t.quote}”</blockquote>
-      <figcaption className="sx-card__by">
+      <div className="sx-card__by">
         <Portrait name={t.name} />
         <span className="sx-card__who">
           <span className="font-display font-medium uppercase">{t.name}</span>
@@ -70,8 +72,8 @@ function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
           </span>
           <span className="sx-card__note font-mono">{t.note}</span>
         </span>
-      </figcaption>
-    </figure>
+      </div>
+    </GlassPanel>
   );
 }
 
@@ -87,7 +89,7 @@ function Row({ row, dir }: { row: Testimonial[]; dir: "left" | "right" }) {
         {/* Second copy closes the loop; hidden from assistive tech. */}
         <div className="sx-marquee__set" aria-hidden="true">
           {row.map((t) => (
-            <Card key={t.name} t={t} hidden />
+            <Card key={t.name} t={t} />
           ))}
         </div>
       </div>

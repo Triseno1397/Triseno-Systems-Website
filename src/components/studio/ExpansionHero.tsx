@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { ArrowDown } from "@phosphor-icons/react";
 import GhostButton from "@/components/ui/GhostButton";
+import GlassPanel from "@/components/world/GlassPanel";
 import { getLenis } from "@/components/world/SmoothScroll";
 import Aperture, { aperturePath } from "./Aperture";
 import { LazyVideo } from "./media";
@@ -212,20 +213,22 @@ export default function ExpansionHero() {
           </span>
         </h1>
 
-        <div ref={copy} className="sx-hero__copy sx-glass">
-          <p className="sx-hero__lede font-sans font-light">
-            We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in
-            between — from UGC to cinematic brand films. Built to convert, not just to look good.
-          </p>
-          <div className="sx-hero__actions">
-            <GhostButton href="/contact">Start a Conversation</GhostButton>
-            <a href="#formats" onClick={toFormats} className="ghost-btn">
-              <span className="ghost-btn__layer">{formatsInner}</span>
-              <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">
-                {formatsInner}
-              </span>
-            </a>
-          </div>
+        <div ref={copy} className="sx-hero__copy">
+          <GlassPanel world="creative" veil={0.6} className="sx-hero__glass">
+            <p className="sx-hero__lede font-sans font-light">
+              We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in
+              between — from UGC to cinematic brand films. Built to convert, not just to look good.
+            </p>
+            <div className="sx-hero__actions">
+              <GhostButton href="/contact">Start a Conversation</GhostButton>
+              <a href="#formats" onClick={toFormats} className="ghost-btn">
+                <span className="ghost-btn__layer">{formatsInner}</span>
+                <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">
+                  {formatsInner}
+                </span>
+              </a>
+            </div>
+          </GlassPanel>
         </div>
 
         {/* One slim line of camera data — no rules, no REC lamp. */}

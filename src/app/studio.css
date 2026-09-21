@@ -22,21 +22,14 @@
    page never cuts to a flat black band (M6, bar.md 1). The DOM canvas itself
    stays true black — the amber is scene light inside the render (§2). */
 .sx-world { position: fixed; inset: 0; z-index: 0; display: block; overflow: hidden; pointer-events: none; background: #000000; }
-.sx-world__camera { position: absolute; inset: 0; transform-origin: 50% 58%; will-change: transform; }
-.sx-world__blur,
-.sx-world__plate { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sx-world__blur { background-size: cover; background-position: center; filter: blur(24px); transform: scale(1.08); }
-.sx-world__blur--m { display: none; }
-@media (max-width: 767px) {
-  .sx-world__blur--d { display: none; }
-  .sx-world__blur--m { display: block; }
-}
-.sx-world__plate { object-fit: cover; opacity: 0; transition: opacity 1200ms var(--ease-expo); }
-.sx-world__plate[data-on] { opacity: 1; }
+/* the air sits on WorldPlate's own camera box: 104% of the viewport, scaled
+   about the plate's horizon, driven by the same pose every frame */
+.sx-world__air-cam { position: absolute; inset: -2%; transform-origin: 50% 62%; will-change: transform; }
 .sx-world__air { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sx-world__vignette {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 75% at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+/* WorldPlate's generic centre shaft — this plate carries its own four */
+.sx-world .world-plate__shaft { display: none; }
+@media (max-width: 767px) {
+  .sx-world__air-cam { transform-origin: 50% 64%; }
 }
 .studio-world__stations { position: relative; z-index: 1; }
 html[data-world-chrome] main.studio-world { padding-right: 0; }
@@ -81,7 +74,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 /* Copy sits in a lit world, so it always has a substrate (design-system §2):
    · headings and short captions — a soft neutral scrim that reaches zero at
      its own edge (closest-side), so it never shows as a dark rectangle;
-   · copy that rests over bright scene or footage — real frosted glass. */
+   · copy that rests over bright scene or footage — GlassPanel (world/),
+     frosted glass that survives the foundation's content fade. */
 .sx-film__intro,
 .sx-film__now,
 .sx-film__caption { position: relative; }
@@ -90,12 +84,6 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 .sx-film__caption::before {
   content: ""; position: absolute; inset: -60px -90px; z-index: -1; pointer-events: none;
   background: radial-gradient(closest-side, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.62) 45%, rgba(0, 0, 0, 0.26) 75%, rgba(0, 0, 0, 0) 100%);
-}
-.sx-glass {
-  background: rgba(8, 8, 8, 0.46);
-  -webkit-backdrop-filter: blur(18px) saturate(1.05);
-  backdrop-filter: blur(18px) saturate(1.05);
-  border: 1px solid #ffffff; border-radius: 0;
 }
 
 /* ═════ 1 · SHOWREEL — scroll-expansion hero ═════ */
@@ -157,8 +145,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   translate: -50% 0; text-align: center;
   opacity: 0; pointer-events: none; will-change: transform, opacity;
 }
-.sx-hero__copy { padding: 26px 30px 28px; }
-.sx-hero__copy > p { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); }
+.sx-hero__glass { padding: 26px 30px 28px; }
+.sx-hero__lede { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); }
 .sx-hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 26px; }
 
 .sx-hero__readout {
@@ -194,7 +182,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   .sx-hero__lede { display: none; }
   .sx-hero__copy { width: auto; bottom: var(--lane-bottom); }
   .sx-hero__actions { margin-top: 0; }
-  .sx-hero__copy { padding: 18px; width: calc(100vw - var(--gutter) * 2); }
+  .sx-hero__copy { width: calc(100vw - var(--gutter) * 2); }
+  .sx-hero__glass { padding: 18px; }
   .sx-hero__actions { flex-direction: column; align-items: stretch; gap: 10px; }
   /* the joined headline gets a soft neutral substrate over the full-bleed reel */
   .sx-hero__veil {
@@ -276,8 +265,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 }
 .sx-frame__title {
   position: absolute; left: 0; top: 0; z-index: 2; max-width: 100%; padding: 7px 10px; pointer-events: none;
-  color: #ffffff; background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  color: #ffffff; background: rgba(0, 0, 0, 0.62);
   font-size: var(--fs-label); line-height: 1.35; letter-spacing: 0.14em; text-transform: uppercase;
 }
 .sx-frame__title i { font-style: normal; opacity: 0.6; }
@@ -302,8 +290,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 }
 .sx-frame__cell { position: relative; display: block; overflow: hidden; background: #111111; }
 .sx-frame__cap {
-  position: absolute; left: 0; bottom: 0; padding: 7px 10px; background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  position: absolute; left: 0; bottom: 0; padding: 7px 10px; background: rgba(0, 0, 0, 0.62);
   font-size: var(--fs-label); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
 }
 .sx-slate {
@@ -478,10 +465,9 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 @keyframes sx-marquee { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
 
 .sx-card {
-  flex: none; width: clamp(300px, 30vw, 440px); display: flex; flex-direction: column; gap: 18px;
-  padding: 24px; border: 1px solid #ffffff; border-radius: 0;
-  background: rgba(8, 8, 8, 0.5); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  flex: none; width: clamp(300px, 30vw, 440px); padding: 24px;
 }
+.sx-card > .glass-panel__body { display: flex; flex-direction: column; gap: 18px; height: 100%; }
 .sx-card__head { display: flex; align-items: center; gap: 12px; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; }
 .sx-card__head i { font-style: normal; opacity: 0.5; }
 .sx-card__glyph { position: relative; flex: none; width: 22px; height: 22px; }
@@ -563,11 +549,9 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 
 /* The gate's copy rests on frosted glass: the iris blades pass behind it,
    blurred, never through the headline, the copy or the button. */
-.sx-gate__body {
-  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;
-  padding: clamp(28px, 4dvh, 44px) clamp(24px, 4vw, 64px);
-  will-change: transform;
-}
+.sx-gate__body { position: relative; z-index: 1; will-change: transform; }
+.sx-gate__glass { padding: clamp(28px, 4dvh, 44px) clamp(24px, 4vw, 64px); }
+.sx-gate__glass > .glass-panel__body { display: flex; flex-direction: column; align-items: center; }
 .sx-gate .sx-kicker { justify-content: center; margin-bottom: 26px; }
 .sx-gate__tick {
   display: flex; align-items: center; gap: 14px; margin-top: 24px;

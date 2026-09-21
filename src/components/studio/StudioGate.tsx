@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import GhostButton from "@/components/ui/GhostButton";
+import GlassPanel from "@/components/world/GlassPanel";
 import Glyph from "@/components/world/Glyph";
 import { WarpLink } from "@/components/world/WarpProvider";
 import { DIVISIONS } from "@/lib/divisions";
@@ -90,39 +91,41 @@ export default function StudioGate() {
           </div>
         </div>
 
-        <div ref={body} className="sx-gate__body sx-glass">
-          <p className="sx-kicker font-mono">Next — Contact</p>
-          <h2 id="sx-gate-title" className="sx-gate__title font-display font-bold uppercase">
-            Let&apos;s make the ad that pays for itself.
-          </h2>
-          <p className="sx-gate__lead font-sans font-light">
-            Tell us what you&apos;re selling and where it needs to run. We&apos;ll come back with concepts and a quote —
-            no retainer required to start.
-          </p>
-          <GhostButton href="/contact">Start a Conversation</GhostButton>
-          <p className="sx-gate__tick font-mono" aria-hidden="true">
-            <span className="sx-gate__tick-rail">
-              <span ref={tick} />
-            </span>
-            Scroll to close the iris
-          </p>
-          <p className="sx-gate__direct font-mono">
-            <a href={`mailto:${STUDIO_EMAIL}`} className="world-underline">
-              {STUDIO_EMAIL}
-            </a>
-            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="world-underline">
-              Instagram @trisenosystems
-            </a>
-          </p>
-          <nav aria-label="Other Triseno divisions" className="sx-gate__cross font-mono">
-            <span>Other divisions</span>
-            {others.map((d) => (
-              <WarpLink key={d.key} href={d.route} className="world-underline">
-                <Glyph kind={d.glyph} size={12} strokeWidth={1.25} />
-                {d.key === "web" ? "Web Design Division" : d.name}
-              </WarpLink>
-            ))}
-          </nav>
+        <div ref={body} className="sx-gate__body">
+          <GlassPanel world="creative" veil={0.55} className="sx-gate__glass">
+            <p className="sx-kicker font-mono">Next — Contact</p>
+            <h2 id="sx-gate-title" className="sx-gate__title font-display font-bold uppercase">
+              Let&apos;s make the ad that pays for itself.
+            </h2>
+            <p className="sx-gate__lead font-sans font-light">
+              Tell us what you&apos;re selling and where it needs to run. We&apos;ll come back with concepts and a quote —
+              no retainer required to start.
+            </p>
+            <GhostButton href="/contact">Start a Conversation</GhostButton>
+            <p className="sx-gate__tick font-mono" aria-hidden="true">
+              <span className="sx-gate__tick-rail">
+                <span ref={tick} />
+              </span>
+              Scroll to close the iris
+            </p>
+            <p className="sx-gate__direct font-mono">
+              <a href={`mailto:${STUDIO_EMAIL}`} className="world-underline">
+                {STUDIO_EMAIL}
+              </a>
+              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="world-underline">
+                Instagram @trisenosystems
+              </a>
+            </p>
+            <nav aria-label="Other Triseno divisions" className="sx-gate__cross font-mono">
+              <span>Other divisions</span>
+              {others.map((d) => (
+                <WarpLink key={d.key} href={d.route} className="world-underline">
+                  <Glyph kind={d.glyph} size={12} strokeWidth={1.25} />
+                  {d.key === "web" ? "Web Design Division" : d.name}
+                </WarpLink>
+              ))}
+            </nav>
+          </GlassPanel>
         </div>
       </div>
     </section>

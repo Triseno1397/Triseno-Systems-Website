@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import GlassPanel from "@/components/world/GlassPanel";
 import Aperture from "./Aperture";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -124,7 +125,7 @@ export default function BehindReveal() {
   return (
     <section ref={root} data-rail="Behind" className="sx-behind" aria-labelledby="sx-behind-title">
       <div className="sx-behind__stage">
-        <div className="sx-behind__text sx-glass">
+        <GlassPanel world="creative" veil={0.55} className="sx-behind__text">
           <p className="sx-kicker font-mono">
             <Aperture size={14} strokeWidth={1.25} glow />
             Behind the Studio
@@ -142,7 +143,7 @@ export default function BehindReveal() {
               </li>
             ))}
           </ol>
-        </div>
+        </GlassPanel>
 
         {/* The table: prints from the studio's own frames, dealt by scroll. */}
         <div aria-hidden="true" className="sx-behind__table">
