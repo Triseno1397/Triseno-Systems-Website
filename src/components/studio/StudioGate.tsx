@@ -88,10 +88,9 @@ export default function StudioGate() {
           <div ref={spin} className="sx-gate__iris">
             <Aperture size="100%" open={OPEN_TO} strokeWidth={1.5} glow pathRef={iris} />
           </div>
-          <span className="sx-gate__floor" />
         </div>
 
-        <div ref={body} className="sx-gate__body">
+        <div ref={body} className="sx-gate__body sx-glass">
           <p className="sx-kicker font-mono">Next — Contact</p>
           <h2 id="sx-gate-title" className="sx-gate__title font-display font-bold uppercase">
             Let&apos;s make the ad that pays for itself.

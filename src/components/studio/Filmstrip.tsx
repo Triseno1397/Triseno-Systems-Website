@@ -36,6 +36,7 @@ const STEP_VH = 46; // vertical scroll per frame in scrub mode
  */
 const POSTER_AT: Record<string, number> = {
   "/videos/apparel-tryon.mp4": 2.6,
+  "/videos/product-hero.mp4": 19.7, // the sparks, not the near-black opening
 };
 
 /**
@@ -51,16 +52,12 @@ const RANGE_AT: Record<string, [number, number]> = {
 const GRADED = new Set(["/videos/pickleball-hypermotion.mp4"]);
 
 /* ── 05 BRAND FILMS — the flagship slot ──────────────────────────────────
-   The film is in production. Until it is delivered the widest panel on the
-   page runs a reference cut: three shots from the studio's own footage in one
-   2.39:1 frame, labelled as a reference cut so it reads as a deliberate
-   assembly rather than a missing asset.
-
-   TO SWAP IN THE DELIVERED FILM — one line:
-     drop  public/videos/brand-film.mp4   (+ public/posters/brand-film.jpg)
-     set   FLAGSHIP_FILM = "/videos/brand-film.mp4"
-   The frame then plays it full-bleed in exactly the shape every other format
-   uses, and the reference cut below is ignored.                            */
+   Presented as a finished piece: one 2.39:1 frame cut as a three-shot film
+   from the studio's own footage (cold open, the street, the moment).
+   If a dedicated brand film is ever delivered, drop it at
+   public/videos/brand-film.mp4 (+ public/posters/brand-film.jpg) and set
+   FLAGSHIP_FILM = "/videos/brand-film.mp4" — the frame then plays it in the
+   same shape every other format uses.                                       */
 const FLAGSHIP_FILM: string | null = null;
 
 const SEQUENCES: Record<string, { src: string; shot: string }[]> = {
@@ -336,7 +333,6 @@ export default function Filmstrip() {
                     </span>
                     <span aria-hidden="true" className="sx-frame__title font-mono">
                       {item.title}
-                      {seq && !flagship ? <i> — reference cut, film in production</i> : null}
                     </span>
                     <button
                       type="button"
@@ -395,7 +391,7 @@ export default function Filmstrip() {
                         // No reel yet (e.g. Brand Films): a camera slate, not an empty frame.
                         <span className="sx-slate">
                           <Aperture size={72} open={on ? 0.8 : 0.3} strokeWidth={1.25} glow={on} />
-                          <span className="font-mono">Slate {item.n} — reel in production</span>
+                          <span className="font-mono">Slate {item.n}</span>
                         </span>
                       )}
                     </button>

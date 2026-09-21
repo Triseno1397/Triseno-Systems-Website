@@ -188,7 +188,7 @@ export default function ExpansionHero() {
         <div ref={edge} aria-hidden="true" className="sx-hero__edge" />
         <div ref={clip} className="sx-hero__clip">
           <div ref={media} className="sx-hero__media">
-            <LazyVideo src={SHOWREEL} eager range={REEL_RANGE} className="sx-fill" />
+            <LazyVideo src={SHOWREEL} eager range={REEL_RANGE} poster={19.7} className="sx-fill" />
           </div>
           <div ref={veil} aria-hidden="true" className="sx-hero__veil" />
         </div>
@@ -212,7 +212,7 @@ export default function ExpansionHero() {
           </span>
         </h1>
 
-        <div ref={copy} className="sx-hero__copy">
+        <div ref={copy} className="sx-hero__copy sx-glass">
           <p className="sx-hero__lede font-sans font-light">
             We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in
             between — from UGC to cinematic brand films. Built to convert, not just to look good.

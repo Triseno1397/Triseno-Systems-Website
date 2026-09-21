@@ -1,294 +1,280 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import manifest from "../../../public/art-manifest.json";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   /studio — THE WORLD. One fixed, continuously rendered scene that runs
-   behind every section of the page, so the page is a camera move through a
-   lit soundstage rather than a stack of black document blocks (bar.md 1, 3).
+   /studio — THE WORLD (design-loop/world-plates.md). A night film soundstage:
+   sodium-amber shafts falling through haze from the rigging onto a wet floor,
+   light stands and a crane at the edges, a calm dark centre. One fixed layer
+   behind the whole page — the iris hero opens into it, and the filmstrip,
+   the contact sheet and the testimonial wall all sit on this stage.
 
-   It is a rendered scene, not a DOM background: the canvas draws a stage
-   floor in perspective, two key-light shafts, the light pool they throw, the
-   division's aperture standing on the floor, haze and dust. Page scroll is
-   the camera: it dollies forward, cranes, and yaws, so no two scroll
-   positions frame the stage the same way, and sections never hard-cut —
-   they arrive inside the same continuous move.
-
-   Hue (amber) only ever appears here as scene light (design-system §2). The
-   DOM behind it stays true black.
-
-   NOTE FOR THE FOUNDATION: this is a single, self-contained element mounted
-   once at the top of StudioWorld. When `DivisionWorld` lands it replaces this
-   file wholesale — nothing else on the page reads from it.
+   The plate is the base; it is brought to life on top:
+   · camera — page scroll dollies in (scale 1 → 1.12) and cranes (small
+     vertical drift); the pointer adds a few px of parallax;
+   · light — each of the plate's shafts breathes, out of phase, and a soft
+     amber key follows the pointer;
+   · air — haze drifts through the beams and dust hangs in them.
+   Only transform / opacity (DOM) and a transparent canvas are animated.
+   The blur placeholder paints instantly; the plate fades in over it, so the
+   page's text stays the LCP element.
    ───────────────────────────────────────────────────────────────────────── */
 
-const BLADES = 6;
-const amber = (a: number) => `rgba(255, 138, 61, ${a})`;
-const white = (a: number) => `rgba(255, 255, 255, ${a})`;
+type Art = { w: number; h: number; blur: string };
+const ART = manifest as unknown as Record<string, Art | undefined>;
+
+const PLATES = {
+  desktop: "/worlds/creative-desktop.webp",
+  mobile: "/worlds/creative-mobile.webp",
+} as const;
+
+/** The plate's lamps and where their shafts land, in plate-normalised coords. */
+interface Shaft {
+  lamp: [number, number];
+  floor: [number, number];
+  /** half-width of the beam where it meets the floor, as a fraction of plate width */
+  spread: number;
+  phase: number;
+}
+const SHAFTS: Record<keyof typeof PLATES, Shaft[]> = {
+  desktop: [
+    { lamp: [0.088, 0.03], floor: [0.33, 0.7], spread: 0.1, phase: 0 },
+    { lamp: [0.222, 0.09], floor: [0.43, 0.72], spread: 0.09, phase: 1.9 },
+    { lamp: [0.725, 0.135], floor: [0.58, 0.72], spread: 0.08, phase: 3.1 },
+    { lamp: [0.862, 0.065], floor: [0.66, 0.7], spread: 0.1, phase: 4.4 },
+  ],
+  mobile: [
+    { lamp: [0.13, 0.12], floor: [0.34, 0.66], spread: 0.16, phase: 0 },
+    { lamp: [0.71, 0.3], floor: [0.56, 0.68], spread: 0.12, phase: 2.2 },
+    { lamp: [0.86, 0.2], floor: [0.72, 0.68], spread: 0.16, phase: 3.7 },
+  ],
+};
+
+const amber = (a: number) => `rgba(255, 150, 70, ${a})`;
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-interface Mote {
-  u: number;
-  z: number;
-  drift: number;
-}
-
 export default function StudioBackdrop() {
+  const cam = useRef<HTMLDivElement>(null);
   const cvs = useRef<HTMLCanvasElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    const camera = cam.current;
     const canvas = cvs.current;
-    const ctx = canvas?.getContext("2d", { alpha: true });
-    if (!canvas || !ctx) return;
+    const ctx = canvas?.getContext("2d");
+    if (!camera || !canvas || !ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wideQ = window.matchMedia("(min-width: 768px)");
+    const SCALE = 0.5; // atmosphere is soft light — rendered at half resolution
+
     let W = 0;
     let H = 0;
+    let kind: keyof typeof PLATES = "desktop";
     let target = 0;
     let p = 0;
     let t = 0;
+    let px = 0; // pointer, -1..1
+    let py = 0;
+    let lx = 0.5; // pointer light, 0..1 (eased)
+    let ly = 0.45;
+    let tx = 0.5;
+    let ty = 0.45;
     let raf = 0;
     let alive = true;
 
-    // Deterministic motes: same world on every load, no hydration mismatch.
-    let seed = 7;
+    // deterministic dust
+    let seed = 11;
     const rnd = () => {
       seed = (seed * 1664525 + 1013904223) % 4294967296;
       return seed / 4294967296;
     };
-    const motes: Mote[] = Array.from({ length: 48 }, () => ({
-      u: rnd() * 2 - 1,
-      z: 0.6 + rnd() * 9,
-      drift: rnd() * Math.PI * 2,
-    }));
-
-    // The scene is light, haze and hairlines of light — it is rendered below
-    // display resolution and scaled up, which costs a third of the fill rate
-    // and softens the beams the way a real lens would.
-    const SCALE = 0.55;
-    let vignette: HTMLCanvasElement | null = null;
+    const dust = Array.from({ length: 70 }, () => ({ s: rnd(), a: rnd(), k: Math.floor(rnd() * 4), f: rnd() * 6.28 }));
 
     const resize = () => {
       W = window.innerWidth;
       H = window.innerHeight;
+      kind = wideQ.matches ? "desktop" : "mobile";
       canvas.width = Math.max(1, Math.round(W * SCALE));
       canvas.height = Math.max(1, Math.round(H * SCALE));
-      canvas.style.width = `${W}px`;
-      canvas.style.height = `${H}px`;
       ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-
-      // The vignette never changes, so it is baked once and composited.
-      const v = vignette ?? document.createElement("canvas");
-      v.width = canvas.width;
-      v.height = canvas.height;
-      const vc = v.getContext("2d");
-      if (vc) {
-        vc.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-        // Sized off the diagonal so a tall phone viewport is not crushed to black.
-        const d = Math.hypot(W, H);
-        const g = vc.createRadialGradient(W / 2, H * 0.5, d * 0.22, W / 2, H * 0.5, d * 0.74);
-        g.addColorStop(0, "rgba(0, 0, 0, 0)");
-        g.addColorStop(1, "rgba(0, 0, 0, 0.78)");
-        vc.fillStyle = g;
-        vc.fillRect(0, 0, W, H);
-      }
-      vignette = v;
     };
-
     const readScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       target = max > 0 ? clamp01(window.scrollY / max) : 0;
     };
 
-    /** A light shaft falling from an off-frame softbox onto the stage floor. */
-    const shaft = (apexX: number, baseX: number, spread: number, floorY: number, strength: number) => {
-      const g = ctx.createLinearGradient(apexX, -H * 0.25, baseX, floorY);
-      g.addColorStop(0, amber(strength));
-      g.addColorStop(0.55, amber(strength * 0.4));
-      g.addColorStop(1, amber(0));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(apexX - W * 0.035, -H * 0.25);
-      ctx.lineTo(apexX + W * 0.035, -H * 0.25);
-      ctx.lineTo(baseX + spread, floorY);
-      ctx.lineTo(baseX - spread, floorY);
-      ctx.closePath();
-      ctx.fill();
+    /** plate coords -> screen coords, for an object-fit: cover plate */
+    const map = (u: number, v: number): [number, number] => {
+      const art = ART[PLATES[kind]];
+      const pw = art?.w ?? (kind === "desktop" ? 2880 : 1170);
+      const ph = art?.h ?? (kind === "desktop" ? 1620 : 2069);
+      const s = Math.max(W / pw, H / ph);
+      return [(W - pw * s) / 2 + u * pw * s, (H - ph * s) / 2 + v * ph * s];
+    };
+
+    const place = () => {
+      // camera: dolly in + crane, plus pointer parallax
+      const scale = 1 + 0.12 * p;
+      const drift = -H * 0.035 * p;
+      camera.style.transform = `translate3d(${(px * -8).toFixed(2)}px, ${(drift + py * -6).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
     };
 
     const draw = () => {
-      const fy = H * 0.34; // floor foreshortening
-      const fx = W * 0.5;
-      const hy = H * (0.66 - 0.17 * p); // the camera cranes as the page travels
-      const vx = W * (0.5 + 0.17 * Math.sin(p * 5.1 + 0.4)); // and yaws across the stage
-      const travel = p * 30 + t * 0.05;
-
       ctx.clearRect(0, 0, W, H);
-
-      // ── far light: the key throwing off the back of the stage ──
-      const back = ctx.createRadialGradient(vx, hy, 0, vx, hy, Math.max(W, H) * 0.56);
-      back.addColorStop(0, amber(0.28));
-      back.addColorStop(0.2, amber(0.075));
-      back.addColorStop(0.55, amber(0.015));
-      back.addColorStop(1, amber(0));
-      ctx.fillStyle = back;
-      ctx.fillRect(0, 0, W, H);
-
       ctx.globalCompositeOperation = "lighter";
+      const pwScale = map(1, 0)[0] - map(0, 0)[0];
 
-      // ── two shafts, swung by the same camera yaw ──
-      shaft(vx - W * 0.34, vx - W * 0.16, W * 0.2, hy + fy * 0.7, 0.05);
-      shaft(vx + W * 0.42, vx + W * 0.22, W * 0.26, hy + fy * 0.55, 0.035);
-
-      // ── the pool of light the shafts leave on the floor ──
-      const pool = ctx.createRadialGradient(vx, hy + fy * 0.26, 0, vx, hy + fy * 0.26, W * 0.52);
-      pool.addColorStop(0, amber(0.16));
-      pool.addColorStop(0.45, amber(0.05));
-      pool.addColorStop(1, amber(0));
-      ctx.save();
-      ctx.translate(vx, hy + fy * 0.26);
-      ctx.scale(1, 0.3);
-      ctx.translate(-vx, -(hy + fy * 0.26));
-      ctx.fillStyle = pool;
-      ctx.fillRect(-W, hy - H, W * 3, H * 3);
-      ctx.restore();
-
-      ctx.globalCompositeOperation = "source-over";
-
-      // ── the floor: depth ribs sliding toward the camera as it dollies ──
-      ctx.lineWidth = 1 / SCALE;
-      for (let i = 1; i <= 26; i++) {
-        const z = i - (travel % 1);
-        if (z <= 0.35) continue;
-        const y = hy + fy / z;
-        if (y > H + 2) continue;
-        ctx.strokeStyle = white(0.075 / Math.pow(z, 0.62));
+      // breathing shafts, laid over the plate's own beams
+      for (const sh of SHAFTS[kind]) {
+        const breathe = 0.5 + 0.5 * Math.sin(t * 0.5 + sh.phase);
+        const a = 0.035 + 0.075 * breathe;
+        const [ax, ay] = map(sh.lamp[0], sh.lamp[1]);
+        const [fx, fy] = map(sh.floor[0], sh.floor[1]);
+        const half = sh.spread * pwScale;
+        const g = ctx.createLinearGradient(ax, ay, fx, fy);
+        g.addColorStop(0, amber(a * 1.4));
+        g.addColorStop(0.6, amber(a * 0.55));
+        g.addColorStop(1, amber(0));
+        ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.moveTo(Math.max(-10, vx - (fx * 3) / z), y);
-        ctx.lineTo(Math.min(W + 10, vx + (fx * 3) / z), y);
-        ctx.stroke();
+        ctx.moveTo(ax - 6, ay);
+        ctx.lineTo(ax + 6, ay);
+        ctx.lineTo(fx + half, fy);
+        ctx.lineTo(fx - half, fy);
+        ctx.closePath();
+        ctx.fill();
       }
-      // ── and the rails running to the vanishing point ──
-      ctx.strokeStyle = white(0.04);
-      ctx.beginPath();
-      for (let u = -5; u <= 5; u++) {
-        if (u === 0) continue;
-        ctx.moveTo(vx, hy);
-        ctx.lineTo(vx + (u * fx) / 0.4, hy + fy / 0.4);
-      }
-      ctx.stroke();
 
-      // ── the signature object: the aperture standing on the stage ──
-      const ringR = H * (0.15 + 0.2 * p);
-      const ringY = hy - H * 0.05;
-      const open = 0.24 + 0.62 * p;
-      const k = ringR * (0.14 + 0.66 * open);
-      const twist = (1 - open) * 0.9 - Math.PI / 2 + t * 0.012;
-      ctx.save();
-      ctx.shadowColor = amber(0.55);
-      ctx.shadowBlur = 26 * SCALE;
-      ctx.strokeStyle = white(0.17);
-      ctx.lineWidth = 1 / SCALE;
-      ctx.beginPath();
-      ctx.arc(vx, ringY, ringR, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = white(0.11);
-      ctx.beginPath();
-      for (let i = 0; i < BLADES; i++) {
-        const a0 = twist + (i / BLADES) * Math.PI * 2;
-        const a1 = twist + ((i + 1) / BLADES) * Math.PI * 2;
-        const x0 = Math.cos(a0) * k;
-        const y0 = Math.sin(a0) * k;
-        const x1 = Math.cos(a1) * k;
-        const y1 = Math.sin(a1) * k;
-        const len = Math.hypot(x1 - x0, y1 - y0) || 1;
-        const dx = (x1 - x0) / len;
-        const dy = (y1 - y0) / len;
-        const b = x0 * dx + y0 * dy;
-        const s = -b + Math.sqrt(Math.max(0, b * b - (x0 * x0 + y0 * y0 - ringR * ringR)));
-        ctx.moveTo(vx + x0, ringY + y0);
-        ctx.lineTo(vx + x0 + dx * s, ringY + y0 + dy * s);
-      }
-      ctx.stroke();
-      ctx.restore();
-
-      // ── haze drifting through the shafts ──
-      ctx.globalCompositeOperation = "lighter";
+      // haze drifting across the stage
       for (let i = 0; i < 3; i++) {
-        const cx = vx + Math.sin(t * 0.07 + i * 2.1) * W * 0.3;
-        const cy = hy + Math.cos(t * 0.05 + i * 1.7) * H * 0.16 - H * 0.04;
-        const r = H * (0.3 + i * 0.16);
+        const cx = W * (0.5 + 0.42 * Math.sin(t * 0.045 + i * 2.3));
+        const cy = H * (0.52 + 0.08 * Math.cos(t * 0.06 + i * 1.3));
+        const r = Math.max(W, H) * (0.28 + i * 0.08);
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        g.addColorStop(0, white(0.022));
-        g.addColorStop(1, white(0));
+        g.addColorStop(0, amber(0.045));
+        g.addColorStop(1, amber(0));
         ctx.fillStyle = g;
         ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
       }
 
-      // ── dust in the beam ──
-      for (const m of motes) {
-        const z = ((m.z - travel * 0.5) % 10 + 10) % 10 + 0.5;
-        const x = vx + (m.u * fx) / z + Math.sin(t * 0.3 + m.drift) * (6 / z);
-        const y = hy + (fy * 0.7) / z - (H * 0.12) / z;
-        if (y > H || x < -20 || x > W + 20) continue;
-        ctx.fillStyle = amber(Math.min(0.5, 0.11 / z) * (0.6 + 0.4 * Math.sin(t * 0.9 + m.drift)));
-        ctx.fillRect(x, y, 1.4, 1.4);
+      // dust hanging in the beams
+      const shafts = SHAFTS[kind];
+      for (const d of dust) {
+        const sh = shafts[d.k % shafts.length];
+        const along = (d.s + t * 0.006) % 1;
+        const [ax, ay] = map(sh.lamp[0], sh.lamp[1]);
+        const [fx, fy] = map(sh.floor[0], sh.floor[1]);
+        const across = (d.a - 0.5) * 2 * sh.spread * pwScale * along;
+        const x = ax + (fx - ax) * along + across + Math.sin(t * 0.4 + d.f) * 4;
+        const y = ay + (fy - ay) * along;
+        const tw = 0.5 + 0.5 * Math.sin(t * 1.3 + d.f);
+        ctx.fillStyle = amber(0.25 + 0.4 * tw);
+        ctx.fillRect(x, y, 2, 2);
+      }
+
+      // a soft key light that follows the pointer
+      if (kind === "desktop") {
+        const cx = lx * W;
+        const cy = ly * H;
+        const r = Math.min(W, H) * 0.42;
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0, amber(0.07));
+        g.addColorStop(1, amber(0));
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
       }
       ctx.globalCompositeOperation = "source-over";
-
-      // ── lens vignette, so type always has a dark field to sit on ──
-      if (vignette) ctx.drawImage(vignette, 0, 0, W, H);
     };
 
-    const still = () => {
-      p = target;
-      draw();
-    };
-
-    // 30fps is plenty for haze and a dolly, and it halves the cost.
     let lastAt = 0;
     const loop = (now: number) => {
       if (!alive) return;
       raf = requestAnimationFrame(loop);
       if (now - lastAt < 32) return;
       lastAt = now;
-      p += (target - p) * 0.14;
+      p += (target - p) * 0.12;
+      lx += (tx - lx) * 0.06;
+      ly += (ty - ly) * 0.06;
       t += 1 / 30;
+      place();
+      draw();
+    };
+    const still = () => {
+      p = target;
+      place();
       draw();
     };
 
-    const onResize = () => {
-      resize();
-      readScroll();
-      if (reduced) still();
-    };
-
-    // M5: reduced motion keeps the camera tied to the scroll position (which is
-    // scrubbed, not jacked) but drops every idle animation.
     const onScroll = reduced
       ? () => {
           readScroll();
           still();
         }
       : readScroll;
+    const onResize = () => {
+      resize();
+      readScroll();
+      if (reduced) still();
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      tx = e.clientX / W;
+      ty = e.clientY / H;
+      px = tx * 2 - 1;
+      py = ty * 2 - 1;
+    };
 
     resize();
     readScroll();
     if (reduced) still();
-    else raf = requestAnimationFrame(loop);
-    // The canvas is a scaled-up low-resolution render; the browser's own
-    // smoothing is what turns the beams into light rather than bands.
-    canvas.style.imageRendering = "auto";
+    else {
+      raf = requestAnimationFrame(loop);
+      window.addEventListener("pointermove", onPointer, { passive: true });
+    }
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
+    wideQ.addEventListener("change", onResize);
 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", onPointer);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
+      wideQ.removeEventListener("change", onResize);
     };
   }, []);
 
-  return <canvas ref={cvs} aria-hidden="true" className="sx-world" />;
+  const blurD = ART[PLATES.desktop]?.blur;
+  const blurM = ART[PLATES.mobile]?.blur;
+
+  return (
+    <div aria-hidden="true" className="sx-world" data-world-layer="">
+      <div ref={cam} className="sx-world__camera">
+        {/* instant placeholders, one per breakpoint */}
+        {blurD ? <span className="sx-world__blur sx-world__blur--d" style={{ backgroundImage: `url(${blurD})` }} /> : null}
+        {blurM ? <span className="sx-world__blur sx-world__blur--m" style={{ backgroundImage: `url(${blurM})` }} /> : null}
+        <picture>
+          <source media="(min-width: 768px)" srcSet={PLATES.desktop} />
+          <img
+            src={PLATES.mobile}
+            alt=""
+            decoding="async"
+            fetchPriority="low"
+            className="sx-world__plate"
+            data-on={loaded ? "" : undefined}
+            onLoad={() => setLoaded(true)}
+            ref={(img) => {
+              if (img?.complete && img.naturalWidth > 0 && !loaded) setLoaded(true);
+            }}
+          />
+        </picture>
+        <canvas ref={cvs} className="sx-world__air" />
+      </div>
+      {/* keeps the calm centre calm: a soft neutral falloff, no hue */}
+      <span className="sx-world__vignette" />
+    </div>
+  );
 }

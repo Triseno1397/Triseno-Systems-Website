@@ -66,7 +66,7 @@ export function LazyVideo({
   sound = false,
   force = false,
   label,
-  poster = 0.1,
+  poster,
   range,
 }: LazyVideoProps) {
   const holder = useRef<HTMLDivElement>(null);
@@ -144,7 +144,7 @@ export function LazyVideo({
           poster={still}
           // The media fragment makes a paused clip show a real frame, not black
           // — and lands it on a frame that depicts the format (see `poster`).
-          src={`${src}#t=${from ?? poster}`}
+          src={`${src}#t=${poster ?? from ?? 0.1}`}
           muted
           loop={from === undefined}
           playsInline
