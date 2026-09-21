@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
+import ConceptPhoto from "./ConceptPhoto";
 
 /**
  * Triseno compare reveal — section 03, an object standing in the world.
@@ -407,6 +408,8 @@ function BeforeMock() {
 function AfterMock() {
   return (
     <div className="am">
+      <ConceptPhoto slug="fennick-rowe-engineer" className="am-photo" position="50% 30%" />
+      <span className="am-shade" aria-hidden="true" />
       <div className="am-nav">
         <span className="am-logo">
           <i />

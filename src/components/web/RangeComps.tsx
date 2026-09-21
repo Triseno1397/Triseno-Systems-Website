@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import ConceptPhoto from "./ConceptPhoto";
 
 /**
  * Eight small concept comps, one per industry. Live HTML/CSS in container
@@ -32,6 +33,8 @@ export const RANGE: RangeItem[] = [
           <span>Book</span>
         </span>
         <span className="rc-rest__plate" aria-hidden="true" />
+        <ConceptPhoto slug="mesa-tordo" className="rc-rest__photo" position="62% 50%" />
+        <span className="rc-shade rc-rest__shade" aria-hidden="true" />
         <span className="rc-rest__h">
           Fire, salt, <em>patience.</em>
         </span>
@@ -53,6 +56,7 @@ export const RANGE: RangeItem[] = [
     comp: (
       <div className="rc rc-con">
         <span className="rc-con__stripe" aria-hidden="true" />
+        <ConceptPhoto slug="ironvale-build" className="rc-con__photo" position="40% 50%" />
         <span className="rc-con__logo">Ironvale Build</span>
         <span className="rc-con__h">Built on time. On the number.</span>
         <span className="rc-con__stats">
@@ -78,7 +82,9 @@ export const RANGE: RangeItem[] = [
     palette: ["#f3e6df", "#4a2f2a", "#b9776a", "#d9a292"],
     comp: (
       <div className="rc rc-spa">
-        <span className="rc-spa__arch" aria-hidden="true" />
+        <span className="rc-spa__arch" aria-hidden="true">
+          <ConceptPhoto slug="solenne-aesthetics" position="42% 62%" />
+        </span>
         <span className="rc-spa__copy">
           <span className="rc-spa__logo">Solenne</span>
           <span className="rc-spa__h">
@@ -103,6 +109,9 @@ export const RANGE: RangeItem[] = [
           <span>Free case review</span>
         </span>
         <span className="rc-law__h">Employment disputes, settled or tried.</span>
+        <span className="rc-law__slot" aria-hidden="true">
+          <ConceptPhoto slug="harrow-pike" />
+        </span>
         <span className="rc-law__cols">
           <span>
             <b>I.</b>Wrongful dismissal
@@ -132,7 +141,9 @@ export const RANGE: RangeItem[] = [
         </span>
         <span className="rc-shop__grid">
           <span>
-            <i className="rc-shop__p rc-shop__p--a" />
+            <i className="rc-shop__p rc-shop__p--a">
+              <ConceptPhoto slug="tavo-supply" />
+            </i>
             <b>Field Mug</b>28
           </span>
           <span>
@@ -156,6 +167,8 @@ export const RANGE: RangeItem[] = [
     palette: ["#0b0b0b", "#d6ff3f", "#ffffff"],
     comp: (
       <div className="rc rc-fit">
+        <ConceptPhoto slug="kilo-club" className="rc-fit__photo" />
+        <span className="rc-shade rc-fit__shade" aria-hidden="true" />
         <span className="rc-fit__h">Kilo Club</span>
         <span className="rc-fit__side">Strength · 6 coaches · 1 floor</span>
         <span className="rc-fit__rows">
@@ -185,6 +198,7 @@ export const RANGE: RangeItem[] = [
           <i />
           <i />
           <i />
+          <ConceptPhoto slug="alder-quay" />
         </span>
         <span className="rc-home__card">
           <span className="rc-home__tag">New · Alder &amp; Quay</span>
@@ -209,6 +223,8 @@ export const RANGE: RangeItem[] = [
     comp: (
       <div className="rc rc-auto">
         <span className="rc-auto__lines" aria-hidden="true" />
+        <ConceptPhoto slug="caliber-nine" className="rc-auto__photo" />
+        <span className="rc-shade rc-auto__shade" aria-hidden="true" />
         <span className="rc-auto__logo">Caliber Nine</span>
         <span className="rc-auto__h">Ceramic. Corrected. Sealed.</span>
         <span className="rc-auto__table">

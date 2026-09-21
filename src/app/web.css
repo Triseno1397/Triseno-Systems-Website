@@ -128,6 +128,8 @@
    beneath. All box-shadow, so no layout moves and a frame's own overflow
    never clips it. Glow is allowed on scene objects (design-system §2); the
    concept sites inside stay fully legible. */
+/* GLASS SWAP POINT: when the shared GlassPanel primitive lands (world-plates.md),
+   it replaces the tint/blur on .web-stack__inner and the bezel ring below. */
 .web-hero__site, .web-demo__device, .web-compare__stage, .web-tile, .web-stack__inner {
   border: 1px solid rgba(255, 255, 255, 0.82);
   box-shadow:
@@ -150,7 +152,7 @@
 .web-hero__copy::before, .web-demo__head::before, .web-compare__head::before, .web-compare__side::before,
 .web-stack__aside::before, .web-range__head::before, .web-range__list::before, .web-gate__copy::before {
   content: ""; position: absolute; inset: -28px -40px; z-index: -1; pointer-events: none;
-  background: rgba(0, 0, 0, 0.56); filter: blur(30px);
+  background: rgba(0, 0, 0, 0.64); filter: blur(30px);
 }
 /* Mid-page sections do not carry a bottom lane: the next section's top lane
    already clears the chrome, and two lanes back to back left ~280px of bare
@@ -709,7 +711,8 @@
   display: flex; align-items: baseline; gap: 10px; margin: 8px 0 0;
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em; color: #ffffff;
 }
-.web-stack__count > span:first-child { font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: var(--web-h2); letter-spacing: var(--web-track); line-height: 1; }
+/* the counter is a readout: chrome-size mono, never a fourth type size */
+.web-stack__count > span:first-child { font-weight: 500; }
 .web-stack__list { display: grid; gap: 5dvh; margin: 0; padding: 0 0 3dvh; list-style: none; }
 .web-stack__card { position: sticky; top: calc(var(--lane-top) + var(--i) * 9px); }
 .web-stack__inner {
@@ -955,6 +958,56 @@
 .rc-auto__table > span:last-child { border-right: 0; }
 .rc-auto__table b { display: block; font-family: var(--concept-sans); font-size: calc(var(--u) * 2.2); color: #bdbdbd; letter-spacing: 0.06em; }
 .rc-auto__cta { position: absolute; right: calc(var(--u) * 5); top: calc(var(--u) * 4.4); padding: calc(var(--u) * 1.5) calc(var(--u) * 3); background: #e31b23; color: #ffffff; font-weight: 700; font-style: italic; font-size: calc(var(--u) * 2.5); text-transform: uppercase; }
+
+/* ── concept photography (public/concepts/*.webp) ──────────────────────
+   Every photo sits OVER the concept's CSS-drawn art: if a file is missing
+   ConceptPhoto removes itself and the drawing shows. Text in each concept is
+   positioned so it always paints above the photo and its shade. Depicted
+   content: palettes and gradients here belong to the fictional brands. */
+.rc-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.rc-shade { position: absolute !important; inset: 0; }
+
+.rc-rest__shade {
+  background:
+    linear-gradient(180deg, rgba(23, 17, 13, 0.62) 0%, transparent 30%),
+    linear-gradient(90deg, rgba(23, 17, 13, 0.94) 0%, rgba(23, 17, 13, 0.74) 44%, rgba(23, 17, 13, 0.12) 80%);
+}
+.rc-rest__nav { position: relative; z-index: 1; }
+
+.rc-con__photo { inset: calc(var(--u) * 3) 0 auto auto; width: 46%; height: 60%; }
+.rc-con__logo, .rc-con__h, .rc-con__stats { position: relative; z-index: 1; }
+.rc-con__h { max-width: 54%; }
+.rc-con__cta { z-index: 2; }
+
+.rc-spa__arch { position: relative; overflow: hidden; }
+
+.rc-law__h { max-width: 56%; }
+.rc-law__slot {
+  position: absolute; right: calc(var(--u) * 6); top: calc(var(--u) * 17); width: 34%; height: calc(var(--u) * 36);
+  overflow: hidden; background: linear-gradient(160deg, #1d2d52 0%, #14213d 100%);
+  border-bottom: calc(var(--u) * 0.6) solid #8a6d2f;
+}
+
+.rc-shop__p { position: relative; overflow: hidden; }
+
+.rc-fit__shade { background: linear-gradient(180deg, rgba(11, 11, 11, 0.5) 0%, rgba(11, 11, 11, 0.8) 42%, rgba(11, 11, 11, 0.95) 72%); }
+.rc-fit__h, .rc-fit__side, .rc-fit__rows { position: relative; z-index: 1; }
+.rc-fit__cta { z-index: 2; }
+
+.rc-home__img { overflow: hidden; }
+
+.rc-auto__photo { left: 38%; width: 62%; }
+.rc-auto__shade { background: linear-gradient(90deg, #0d0d0f 36%, rgba(13, 13, 15, 0.55) 60%, rgba(13, 13, 15, 0.1) 100%); }
+.rc-auto__cta { z-index: 2; }
+
+/* the rebuilt "after" site: its engineer on the right, behind the booking card */
+.am-photo { left: 38%; width: 62%; }
+.am-shade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--deep) 34%, rgba(14, 43, 47, 0.6) 56%, rgba(14, 43, 47, 0.2) 100%); }
+.am-nav, .am-body, .am-prices { position: relative; z-index: 1; }
+@container (max-width: 640px) {
+  .am-photo { left: 0; width: 100%; }
+  .am-shade { background: linear-gradient(180deg, rgba(14, 43, 47, 0.74) 0%, rgba(14, 43, 47, 0.88) 46%, var(--deep) 64%); }
+}
 
 /* ═══ 6 · GATE ═══ */
 .web-gate { display: grid; gap: 24px; align-content: center; align-items: center; max-width: calc(1400px + var(--gutter) * 2 + var(--rail)); margin: 0 auto; }
