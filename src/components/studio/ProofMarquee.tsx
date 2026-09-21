@@ -17,6 +17,37 @@ import { TESTIMONIALS, type Testimonial } from "./testimonials";
 const half = Math.ceil(TESTIMONIALS.length / 2);
 const ROWS: Testimonial[][] = [TESTIMONIALS.slice(0, half), TESTIMONIALS.slice(half)];
 
+const slug = (name: string) => name.toLowerCase().replace(/[^a-z]+/g, "-").replace(/(^-|-$)/g, "");
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+/** Generated portrait; falls back to a monogram if the file is missing. */
+function Portrait({ name }: { name: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="sx-card__face" data-failed={failed ? "" : undefined}>
+      <span className="sx-card__mono font-mono" aria-hidden="true">
+        {initials(name)}
+      </span>
+      {failed ? null : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/testimonials/${slug(name)}.webp`}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
+  );
+}
+
 function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
   return (
     <figure className="sx-card" aria-hidden={hidden || undefined}>
@@ -31,13 +62,36 @@ function Card({ t, hidden }: { t: Testimonial; hidden?: boolean }) {
       </header>
       <blockquote className="sx-card__quote font-sans font-light">“{t.quote}”</blockquote>
       <figcaption className="sx-card__by">
-        <span className="font-display font-medium uppercase">{t.name}</span>
-        <span className="font-mono">
-          {t.role} · {t.company}
+        <Portrait name={t.name} />
+        <span className="sx-card__who">
+          <span className="font-display font-medium uppercase">{t.name}</span>
+          <span className="font-mono">
+            {t.role} · {t.company}
+          </span>
+          <span className="sx-card__note font-mono">{t.note}</span>
         </span>
-        <span className="sx-card__note font-mono">{t.note}</span>
       </figcaption>
     </figure>
+  );
+}
+
+function Row({ row, dir }: { row: Testimonial[]; dir: "left" | "right" }) {
+  return (
+    <div className="sx-marquee" data-dir={dir}>
+      <div className="sx-marquee__track">
+        <div className="sx-marquee__set">
+          {row.map((t) => (
+            <Card key={t.name} t={t} />
+          ))}
+        </div>
+        {/* Second copy closes the loop; hidden from assistive tech. */}
+        <div className="sx-marquee__set" aria-hidden="true">
+          {row.map((t) => (
+            <Card key={t.name} t={t} hidden />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -49,63 +103,46 @@ export default function ProofMarquee() {
 
   return (
     <section data-rail="Proof" className="sx-proof" aria-labelledby="sx-proof-title">
-      {/* One centred column — deliberately not the heading-left / copy-right /
-          chips block the formats section uses. */}
-      <header className="sx-proof__head">
-        <div>
+      {/* The headline is set INTO the wall, between its two counter-running
+          rows — not a heading-and-paragraph block above a component. */}
+      <div className="sx-proof__wall" data-paused={paused ? "" : undefined}>
+        <Row row={ROWS[0]} dir="left" />
+        <header className="sx-proof__band">
           <p className="sx-kicker font-mono">
             <Aperture size={14} strokeWidth={1.25} glow />
             Proof — the Triseno edge
           </p>
-          <h2 id="sx-proof-title" className="sx-h2 sx-h2--wide font-display font-semibold uppercase">
+          <h2 id="sx-proof-title" className="sx-proof__title font-display font-bold uppercase">
             Agency-grade work, without the agency timeline.
           </h2>
-          <p className="sx-proof__lede font-sans font-light">
-            Triseno was built on an AI-powered production pipeline, and that engine never left. It&apos;s how we
-            generate more concepts, version creative for every placement, and turn briefs around in days. You
-            don&apos;t pay for the technology. You pay for the speed, the volume, and the edge it buys you.
-          </p>
-          <p className="sx-proof__specs font-mono">AI-accelerated / Concepts at volume / Multi-placement / Founder-led</p>
-        </div>
-      </header>
-
-      <div className="sx-proof__wall" data-paused={paused ? "" : undefined}>
-        {ROWS.map((row, r) => (
-          <div key={r} className="sx-marquee" data-dir={r % 2 ? "right" : "left"}>
-            <div className="sx-marquee__track">
-              <div className="sx-marquee__set">
-                {row.map((t) => (
-                  <Card key={t.name} t={t} />
-                ))}
-              </div>
-              {/* Second copy closes the loop; hidden from assistive tech. */}
-              <div className="sx-marquee__set" aria-hidden="true">
-                {row.map((t) => (
-                  <Card key={t.name} t={t} hidden />
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
+        </header>
+        <Row row={ROWS[1]} dir="right" />
       </div>
 
-      <div className="sx-proof__foot font-mono">
-        {wide ? (
-          <>
+      <div className="sx-proof__foot">
+        <p className="sx-proof__lede font-sans font-light">
+          Triseno was built on an AI-powered production pipeline, and that engine never left. It&apos;s how we generate
+          more concepts, version creative for every placement, and turn briefs around in days.
+        </p>
+        <div className="sx-proof__aside font-mono">
+          {wide ? (
             <button type="button" className="sx-sound" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>
               {paused ? (
                 <Play size={14} weight="light" aria-hidden="true" />
               ) : (
                 <Pause size={14} weight="light" aria-hidden="true" />
               )}
-              {paused ? "Resume wall" : "Pause wall"}
+              {paused ? "Resume wall" : "Hold the wall"}
             </button>
-            <span>Hover a row to hold it</span>
-          </>
-        ) : (
-          <span className="sx-proof__swipe">Swipe a row — one card at a time</span>
-        )}
-        <span className="sx-proof__sample">Showcase set — sample client names</span>
+          ) : (
+            <span className="sx-proof__swipe">Swipe a row</span>
+          )}
+          {/* Honest, and quiet: this wall demonstrates the component. */}
+          <p className="sx-proof__note">
+            An illustrative wall. The clients, their words and their portraits are fictional — set here to show how
+            the component carries real ones.
+          </p>
+        </div>
       </div>
     </section>
   );
