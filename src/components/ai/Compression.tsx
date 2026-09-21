@@ -219,7 +219,8 @@ export default function Compression() {
             <h2 id="ai-flow-title" className="ai-h2 mt-4 font-display font-semibold uppercase">
               {COMPRESSION.title}
             </h2>
-            <p className="ai-readout" aria-label="Twelve manual steps collapse into two layers">
+            <p className="ai-readout">
+              <span className="sr-only">Twelve manual steps collapse into two layers</span>
               <span aria-hidden="true">12 steps</span>
               <span aria-hidden="true" className="ai-readout__after">
                 <i>→</i> 02 layers

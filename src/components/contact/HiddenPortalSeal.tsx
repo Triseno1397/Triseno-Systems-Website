@@ -183,6 +183,7 @@ export default function HiddenPortalSeal() {
           whileHover={{ scale: 1.03 }}
           style={{ x, y, touchAction: "none" }}
           className="relative z-[55] flex h-[148px] w-[148px] cursor-grab items-center justify-center select-none"
+          role="img"
           aria-label="Triseno seal"
         >
           <span

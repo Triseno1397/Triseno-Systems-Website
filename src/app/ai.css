@@ -436,7 +436,7 @@
   width: 100%; padding-block: clamp(12px, 1.6dvh, 18px); text-align: left; color: #ffffff;
 }
 .ai-row__title {
-  font-size: var(--ai-readout); line-height: 1.12; letter-spacing: 0.08em; opacity: 0.4;
+  font-size: var(--ai-readout); line-height: 1.12; letter-spacing: 0.08em; opacity: 0.6;
   transform: translate3d(0, 0, 0);
   transition: opacity 600ms var(--ease-expo), transform 800ms var(--ease-expo);
 }

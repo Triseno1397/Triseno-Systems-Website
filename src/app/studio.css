@@ -498,7 +498,7 @@
 .sx-card__who { display: grid; gap: 7px; min-width: 0; }
 .sx-card__who > span:first-child { font-size: var(--fs-label); line-height: 1.2; letter-spacing: 0.16em; }
 .sx-card__who > .font-mono { font-size: var(--fs-label); line-height: 1.3; letter-spacing: 0.08em; color: var(--ink-muted); }
-.sx-card__who > .sx-card__note { color: var(--hue); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6; transition: opacity 600ms var(--ease-expo); }
+.sx-card__who > .sx-card__note { color: var(--hue); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; transition: opacity 600ms var(--ease-expo); }
 .sx-card:hover .sx-card__note { opacity: 1; }
 
 .sx-proof__foot {

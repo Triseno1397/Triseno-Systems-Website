@@ -16,6 +16,7 @@ const settle = async (pg, max = 12000) => {
 };
 const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+p.setDefaultTimeout(150000);
 const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
 await p.goto(base + route, { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(1200); await p.screenshot({ path: out + '00-first-paint.png' });

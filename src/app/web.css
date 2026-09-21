@@ -920,7 +920,7 @@
 .rc-rest__h { position: relative; max-width: 62%; font-family: var(--concept-serif); font-size: calc(var(--u) * 13); line-height: 0.95; }
 .rc-rest__h em { color: #e0793a; }
 .rc-rest__bar { position: relative; display: grid !important; grid-template-columns: repeat(3, auto) 1fr; gap: calc(var(--u) * 3); align-items: center; padding: calc(var(--u) * 2.4) calc(var(--u) * 3); background: #f2e6d3; color: #17110d; font-size: calc(var(--u) * 2.8); }
-.rc-rest__bar b { justify-self: end; padding: calc(var(--u) * 1.4) calc(var(--u) * 3); background: #c4572b; color: #fff4e6; }
+.rc-rest__bar b { justify-self: end; padding: calc(var(--u) * 1.4) calc(var(--u) * 3); background: #b04a22; color: #fff4e6; }
 
 .rc-con { background: #f2c230; color: #111111; padding: calc(var(--u) * 5); display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
 .rc-con__stripe { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--u) * 3); background: repeating-linear-gradient(-45deg, #111111 0 calc(var(--u) * 3), #f2c230 calc(var(--u) * 3) calc(var(--u) * 6)); }

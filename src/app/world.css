@@ -338,7 +338,7 @@ html:has(.portal-world[data-capture]) main > [data-fade] { -webkit-mask-image: n
   .portal-menu__rule { margin: 14px 0 12px; }
 }
 .portal-word {
-  display: inline-flex; align-items: center; line-height: 1.15; letter-spacing: 0.08em; color: #ffffff; opacity: 0.62;
+  display: inline-flex; align-items: center; min-height: 24px; line-height: 1.15; letter-spacing: 0.08em; color: #ffffff; opacity: 0.62;
   transform: translate3d(0, 0, 0);
   transition: opacity 600ms var(--ease-expo), transform 700ms var(--ease-expo);
 }
