@@ -26,6 +26,8 @@ from a screenshot or filmstrip.
 - **Division gates use the division glyph.** A division page's final gate uses that division's own glyph (circle / square / triangle). The diamond is the portal's Work glyph, not a generic gate mark.
 - Colour comes from the scene/media (3D, video, generated imagery) and from the single division hue. Max one saturated hue per frame (see D2).
 - No purple-to-blue SaaS gradients. No drop shadows on UI. Glow is allowed only on scene objects and the division glyph.
+- **A component presented as a lit object standing in the world is a scene object.** Device frames, concept-site panels, cards and diagrams that are staged *inside* the environment (catching its light, casting a spill or reflection on its floor) may carry glow, spill and reflection in the division hue. A flat UI element that is not staged in the world may not.
+- **Diagram line-work that encodes data flow** (connectors, nodes, lanes in an illustrative diagram) counts as a data readout and may use the division hue.
 - **Frosted-glass cards are allowed** over a rendered scene (bar.md #5 requires them): translucent, backdrop-blurred, 1px white hairline, 0 radius. They may pick up the scene's light through the blur; they may not carry their own painted hue or gradient.
 - **Chrome scrims are allowed**: a soft, neutral-black (never hued) falloff behind a chrome element so it stays legible. It must have no hard edge and no rule line. This is not a drop shadow.
 - **Type at rest is solid.** Display and body type settle to a solid fill (white, fog or ash). A gradient or mask on type is allowed only while a reveal animation is running, never as a resting style.
