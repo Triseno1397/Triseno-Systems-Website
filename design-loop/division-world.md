@@ -17,6 +17,7 @@ weave, so any two consecutive scroll positions are two frames of one camera move
 | `division` | `DivisionKey` (`"creative" \| "web" \| "ai" \| "work" \| "contact"`) | required | Picks the single hue and the glyph from `src/lib/divisions.ts` (design-system §1). `work`/`contact` give the achromatic white world. |
 | `scrollRef` | `RefObject<HTMLElement>` | document | Drive the camera from one element's scroll range instead of the whole page. |
 | `onReady` | `() => void` | — | Fires once the canvas has drawn its first frames (use it to release a loader). |
+| `plate` | `boolean` | `false` | Stand in the division's generated plate (`/worlds/{division}-*.webp`; Work/Contact use the portal plate): plate as deep background, 3D as foreground. See world-plates.md. |
 | `className` | `string` | — | Extra class on the fixed layer. |
 
 ## Adopting it (the whole change)
@@ -64,7 +65,7 @@ Rules for the page:
 |---|---|
 | `default DivisionWorld` | the fixed world layer |
 | `WorldSection` | `{ rail, railNext?, id?, className?, children }` — 100dvh section inside the safe zone, registers with the progress rail via `data-rail` |
-| `WorldCard` | `{ className?, children }` — frosted readable substrate |
+| `WorldCard` | `{ division?, className?, children }` — a GlassPanel: frosted readable substrate that works under the content fade |
 | `useWorldProgress(fn)` | subscribe to scroll progress 0..1 without re-rendering on every tick: `useWorldProgress(p => el.current!.style.opacity = String(p))` |
 | `worldState` | the live record (`progress`, `px`, `py`) for imperative reads |
 
