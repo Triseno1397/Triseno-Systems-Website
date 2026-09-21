@@ -26,7 +26,12 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
    and scroll-to still address the same positions as before.
    ───────────────────────────────────────────────────────────────────────── */
 
-const STEP_VH = 46; // vertical scroll per frame in scrub mode
+const STEP_VH = 52; // vertical scroll per frame in scrub mode
+// Handoffs (desktop scrub): the strip fades in on the spot while the hero
+// dissolves, and fades out on the spot while the contact sheet arrives — no
+// section ever slides half-off the screen (studio.css sets the overlaps).
+const FADE_IN_VH = 32;
+const FADE_OUT_VH = 36;
 
 /**
  * Seconds a *paused* frame should sit on. Some clips open on an establishing
@@ -44,27 +49,24 @@ const POSTER_AT: Record<string, number> = {
  * this page, and a flat paused still is not the rendered-scene exemption, so
  * this one is graded to a single amber tone instead of being dropped.
  */
-/** Text-free stretch of a clip, where it is cut into another frame. */
-const RANGE_AT: Record<string, [number, number]> = {
-  "/videos/product-hero.mp4": [11, 22],
-};
-
 const GRADED = new Set(["/videos/pickleball-hypermotion.mp4"]);
 
 /* ── 05 BRAND FILMS — the flagship slot ──────────────────────────────────
-   Presented as a finished piece: one 2.39:1 frame cut as a three-shot film
-   from the studio's own footage (cold open, the street, the moment).
+   Presented as a finished piece: one 2.39:1 frame cut as a triptych — three
+   movements of one lifestyle film (cold open, the street, the gallery), each
+   cell looping its own stretch of the clip. One clip, so footage is spread
+   across the page: nine clips for ten frames in this strip means exactly one
+   clip has to appear twice here, and this is it (it is also 07 Try-On).
    If a dedicated brand film is ever delivered, drop it at
    public/videos/brand-film.mp4 (+ public/posters/brand-film.jpg) and set
-   FLAGSHIP_FILM = "/videos/brand-film.mp4" — the frame then plays it in the
-   same shape every other format uses.                                       */
+   FLAGSHIP_FILM = "/videos/brand-film.mp4".                                 */
 const FLAGSHIP_FILM: string | null = null;
 
-const SEQUENCES: Record<string, { src: string; shot: string }[]> = {
+const SEQUENCES: Record<string, { src: string; shot: string; range: [number, number] }[]> = {
   "Brand Films": [
-    { src: "/videos/product-hero.mp4", shot: "01 · cold open" },
-    { src: "/videos/apparel-tryon.mp4", shot: "02 · the street" },
-    { src: "/videos/direct-response.mp4", shot: "03 · the moment" },
+    { src: "/videos/apparel-tryon.mp4", shot: "I · Cold open", range: [0, 4.3] },
+    { src: "/videos/apparel-tryon.mp4", shot: "II · The street", range: [4.4, 8.6] },
+    { src: "/videos/apparel-tryon.mp4", shot: "III · The gallery", range: [8.7, 13] },
   ],
 };
 
@@ -101,6 +103,7 @@ export default function Filmstrip() {
   const track = useRef<HTMLOListElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
   const gateMark = useRef<HTMLSpanElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   // One state object: a new frame in the gate always lands muted and (under
   // reduced motion) paused, so the three values can never disagree.
   const [gate, setGate] = useState<Gate>(GATE_ZERO);
@@ -133,18 +136,29 @@ export default function Filmstrip() {
         });
         travel = Math.max(0, strip.offsetWidth - port.clientWidth);
       };
+      const pinned = Math.max(1, (count - 1) * STEP_VH);
+      const fin = FADE_IN_VH / pinned;
+      const fout = FADE_OUT_VH / pinned;
       const apply = (p: number) => {
         if (!centres.length) return;
-        const f = p * (count - 1);
+        // frames travel between the two fades, then hold on the last one
+        const q = Math.min(1, Math.max(0, (p - fin * 0.4) / (1 - fin * 0.4 - fout * 1.5)));
+        const f = q * (count - 1);
         const i0 = Math.min(count - 1, Math.floor(f));
         const i1 = Math.min(count - 1, i0 + 1);
         const c = centres[i0] + (centres[i1] - centres[i0]) * easeInOut(f - i0);
-        const t = -travel * p;
+        const t = -travel * q;
         strip.style.transform = `translate3d(${t.toFixed(1)}px,0,0)`;
         if (gateMark.current) gateMark.current.style.transform = `translate3d(${(c + t).toFixed(1)}px,0,0)`;
-        if (bar.current) bar.current.style.transform = `scaleX(${p.toFixed(4)})`;
+        if (bar.current) bar.current.style.transform = `scaleX(${q.toFixed(4)})`;
         setGate(gateTo(Math.round(f)));
-        setMoved(p > 0.02);
+        setMoved(q > 0.02);
+        const st = stageRef.current;
+        if (st) {
+          const o = Math.min(Math.min(1, p / fin), Math.min(1, (1 - p) / fout));
+          st.style.opacity = Math.max(0, o).toFixed(3);
+          st.style.visibility = o < 0.005 ? "hidden" : "visible";
+        }
       };
 
       measure();
@@ -167,6 +181,7 @@ export default function Filmstrip() {
         st.kill();
         strip.style.transform = "";
         gateMark.current?.style.removeProperty("transform");
+        stageRef.current?.removeAttribute("style");
       };
     },
     { scope: root, dependencies: [scrub, count], revertOnUpdate: true },
@@ -215,7 +230,11 @@ export default function Filmstrip() {
     if (scrub) {
       const top = section.getBoundingClientRect().top + window.scrollY;
       const span = section.offsetHeight - window.innerHeight;
-      const y = top + (count > 1 ? i / (count - 1) : 0) * span;
+      const pinned = Math.max(1, (count - 1) * STEP_VH);
+      const fin = FADE_IN_VH / pinned;
+      const fout = FADE_OUT_VH / pinned;
+      const q = count > 1 ? i / (count - 1) : 0;
+      const y = top + (fin * 0.4 + q * (1 - fin * 0.4 - fout * 1.5)) * span;
       const lenis = getLenis();
       if (lenis) lenis.scrollTo(y, { duration: 1.2 });
       else window.scrollTo({ top: y, behavior: "smooth" });
@@ -239,7 +258,7 @@ export default function Filmstrip() {
       style={{ ["--frames" as string]: count, ["--step" as string]: `${STEP_VH}vh` } as CSSProperties}
       aria-labelledby="sx-film-title"
     >
-      <div className="sx-film__stage">
+      <div ref={stageRef} className="sx-film__stage">
         <header className="sx-film__head">
           {/* The masthead states the offer once, then steps aside for the frame
               that is actually in the gate — the top of the frame changes with
@@ -374,13 +393,12 @@ export default function Filmstrip() {
                         // The flagship, pre-delivery: one anamorphic frame cut as three shots.
                         <span className="sx-frame__seq">
                           {seq.map((s) => (
-                            <span key={s.src} className="sx-frame__cell">
+                            <span key={s.shot} className="sx-frame__cell">
                               <LazyVideo
                                 src={s.src}
                                 active={on}
                                 force={on && manual}
-                                poster={POSTER_AT[s.src]}
-                                range={RANGE_AT[s.src]}
+                                range={s.range}
                                 className="sx-fill"
                               />
                               <span className="sx-frame__cap font-mono">{s.shot}</span>

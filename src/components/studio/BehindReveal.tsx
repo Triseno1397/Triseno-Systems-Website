@@ -33,11 +33,13 @@ interface Print {
   r: number;
 }
 
+// Four frames, each from a clip that appears only once elsewhere on the page
+// (in the formats strip) — never the hero reel, never twice here.
 const PRINTS: Print[] = [
-  { src: "/posters/product-hero.jpg", cap: "01 · Rim light", x: -38, y: -10, r: -7 },
-  { src: "/posters/apparel-tryon.jpg", cap: "02 · Last light", x: 34, y: -26, r: 6 },
-  { src: "/posters/asmr-unbox.jpg", cap: "03 · Close mic", x: -22, y: 28, r: 4 },
-  { src: "/posters/ugc-watch-unbox.jpg", cap: "04 · Practical", x: 40, y: 22, r: -5 },
+  { src: "/posters/direct-response.jpg", cap: "01 · Practicals", x: -38, y: -10, r: -7 },
+  { src: "/posters/ugc-watch-unbox.jpg", cap: "02 · Warm key", x: 34, y: -26, r: 6 },
+  { src: "/posters/demo-sneaker-cleaner.jpg", cap: "03 · Macro", x: -22, y: 28, r: 4 },
+  { src: "/posters/visual-appeal.jpg", cap: "04 · Top light", x: 40, y: 22, r: -5 },
 ];
 
 const BEATS = [
@@ -66,17 +68,27 @@ export default function BehindReveal() {
     () => {
       const mm = gsap.matchMedia();
       const prints = gsap.utils.toArray<HTMLElement>(".sx-print", root.current);
+      const stage = root.current?.querySelector<HTMLElement>(".sx-behind__stage") ?? null;
 
       // Desktop: pinned deal, driven directly by scroll progress.
       mm.add("(min-width: 768px) and (prefers-reduced-motion: no-preference)", () => {
         const n = PRINTS.length;
+        // Timeline over the pinned range (300dvh): fade in on the spot while
+        // the strip fades out (0-.12) · the deal (.12-.68) · hold (.68-.76) ·
+        // fade out (.76-.88) · empty stage while the proof wall rises (.88-1).
         const render = (p: number) => {
+          const d = clamp01((p - 0.12) / 0.56);
+          const o = Math.min(clamp01(p / 0.12), 1 - clamp01((p - 0.76) / 0.12));
+          if (stage) {
+            stage.style.opacity = o.toFixed(3);
+            stage.style.visibility = o < 0.005 ? "hidden" : "visible";
+          }
           prints.forEach((el, i) => {
             const pr = PRINTS[i];
-            // print i lands across [i/n, (i + 0.85)/n] of the section
-            const land = easeOut((p * n - i) / 0.85);
+            // print i lands across [i/n, (i + 0.85)/n] of the deal
+            const land = easeOut((d * n - i) / 0.85);
             // and gives way a little as each later print lands on top of it
-            const under = clamp01(p * n - i - 1) / (n - 1);
+            const under = clamp01(d * n - i - 1) / (n - 1);
             const x = pr.x + (1 - land) * 60;
             const y = pr.y + (1 - land) * 150;
             const r = pr.r + (1 - land) * 24;
@@ -85,7 +97,7 @@ export default function BehindReveal() {
             el.style.opacity = clamp01(land * 1.6).toFixed(3);
             el.style.setProperty("--dim", (under * 0.5).toFixed(3));
           });
-          setBeat(Math.min(BEATS.length - 1, Math.floor(p * BEATS.length * 0.999)));
+          setBeat(Math.min(BEATS.length - 1, Math.floor(d * BEATS.length * 0.999)));
         };
         render(0);
         const st = ScrollTrigger.create({
@@ -98,6 +110,7 @@ export default function BehindReveal() {
         return () => {
           st.kill();
           prints.forEach((el) => el.removeAttribute("style"));
+          stage?.removeAttribute("style");
         };
       });
 

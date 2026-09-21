@@ -9,9 +9,9 @@
 
 .studio-world {
   --hue: #ff8a3d;
-  /* Text keeps out of the rail's lane; media and walls run full width and
-     fade softly into it (see .sx-lane-fade) instead of being cut hard. */
-  --rail-safe: var(--lane-right);
+  /* The rail's lane is the foundation's padding on <main> (--lane-right):
+     nothing on this page enters it. Media rows fade to nothing before it. */
+  --rail-safe: 0px;
   position: relative;
   background: #000000;
   color: #ffffff;
@@ -32,12 +32,11 @@
   .sx-world__air-cam { transform-origin: 50% 64%; }
 }
 .studio-world__stations { position: relative; z-index: 1; }
-html[data-world-chrome] main.studio-world { padding-right: 0; }
-/* media rows that run under the rail dissolve before they reach it */
+/* media rows read full-bleed but dissolve to nothing before the rail's lane */
 .sx-film__viewport,
 .sx-marquee {
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 calc(100% - var(--lane-right) - 8%), transparent calc(100% - var(--lane-right) * 0.35));
-  mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 calc(100% - var(--lane-right) - 8%), transparent calc(100% - var(--lane-right) * 0.35));
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 88%, transparent 100%);
 }
 .studio-world ::selection { background: #ffffff; color: #000000; }
 .studio-world :focus-visible { outline: 1px solid var(--hue); outline-offset: 5px; }
@@ -88,7 +87,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 
 /* ═════ 1 · SHOWREEL — scroll-expansion hero ═════ */
 /* The reel is full-bleed: the hero runs under the rail lane like the world. */
-.sx-hero { position: relative; height: 260dvh; }
+.sx-hero { position: relative; height: 300dvh; }
 .sx-hero__stage {
   --s: min(30dvh, 21vw);
   --gap: 20px;
@@ -105,9 +104,12 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 }
 .sx-hero__clip {
   background: #111111;
-  /* no hard media edge as the stage scrolls away: the reel dissolves into the world */
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
+  /* no hard media edge: at full bleed the reel dissolves into the world at the
+     bottom and before the rail's lane on the right */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%), linear-gradient(90deg, #000 0%, #000 90%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%), linear-gradient(90deg, #000 0%, #000 90%, transparent 100%);
+  mask-composite: intersect;
 }
 .sx-hero__media { position: absolute; inset: 0; transform: scale(0.3); will-change: transform; }
 .sx-hero__veil {
@@ -131,8 +133,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 }
 .sx-hero__half { position: relative; display: block; white-space: nowrap; will-change: transform; }
 .sx-hero__half > span { display: block; }
-.sx-hero__half--l { grid-column: 1; justify-self: end; text-align: right; }
-.sx-hero__half--r { grid-column: 3; justify-self: start; text-align: left; }
+.sx-hero__half--l { grid-column: 1; justify-self: end; text-align: right; transform-origin: 100% 50%; }
+.sx-hero__half--r { grid-column: 3; justify-self: start; text-align: left; transform-origin: 0% 50%; }
 .sx-hero__eyebrow {
   position: absolute; right: 0; bottom: calc(100% + 22px);
   display: flex !important; align-items: center; gap: 12px; white-space: nowrap;
@@ -145,8 +147,10 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   translate: -50% 0; text-align: center;
   opacity: 0; pointer-events: none; will-change: transform, opacity;
 }
+.sx-hero__eyebrow--r { right: auto; left: 0; }
 .sx-hero__glass { padding: 26px 30px 28px; }
-.sx-hero__lede { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); }
+/* the copy card is protective: solid white copy on a dense veil */
+.sx-hero__lede { font-size: var(--fs-body); line-height: 1.5; font-weight: 400; color: #ffffff; }
 .sx-hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 26px; }
 
 .sx-hero__readout {
@@ -165,7 +169,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
      headline above and below the window, both inside the chrome lanes; no HUD;
      no body paragraph (allowed on phones) — the CTA alone rests on the
      bottom lane once the reel is full-bleed. */
-  .sx-hero { height: 200dvh; } /* M5: pinned for one extra viewport only */
+  .sx-hero { height: 250dvh; } /* M5: pinned for 1.5 viewports (limit 2) */
   .sx-hero__stage { --s: min(32dvh, 60vw); --hero-fs: clamp(32px, 9vw, 42px); }
   .sx-hero__media { transform: scale(0.62); }
   .sx-hero__title {
@@ -178,6 +182,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   .sx-hero__half--l { grid-column: 1; grid-row: 1; justify-self: center; align-self: end; text-align: center; }
   .sx-hero__half--r { grid-column: 1; grid-row: 3; justify-self: center; align-self: start; text-align: center; }
   .sx-hero__eyebrow { right: auto; left: 50%; translate: -50% 0; bottom: calc(100% + 14px); }
+  /* the right half's line sits under it, clear of the iris window */
+  .sx-hero__eyebrow--r { bottom: auto; top: calc(100% + 14px); }
   .sx-hero__readout { display: none; }
   .sx-hero__lede { display: none; }
   .sx-hero__copy { width: auto; bottom: var(--lane-bottom); }
@@ -197,8 +203,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 .sx-film { position: relative; }
 .sx-film[data-mode="scrub"] { height: calc(100dvh + (var(--frames) - 1) * var(--step)); }
 .sx-film__stage {
-  --film-h: clamp(190px, 30dvh, 440px);
-  --head-h: 212px;
+  --film-h: clamp(180px, 28dvh, 420px);
+  --head-h: 204px;
   position: relative; min-height: 100dvh; overflow: clip;
   display: flex; flex-direction: column;
   /* Everything read at rest sits inside the chrome lanes (division-world.md 6). */
@@ -238,7 +244,9 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 
 .sx-film__track {
   position: relative; display: flex; align-items: center; gap: 28px; width: max-content;
-  height: calc(var(--film-h) + 64px); padding-block: 32px; padding-inline: 18vw;
+  /* sprockets sit 6-18px from each edge; frame labels get their own clear
+     band (22-34px) between the sprockets and the frame */
+  height: calc(var(--film-h) + 84px); padding-block: 42px; padding-inline: 18vw;
   border-block: 1px solid #ffffff; will-change: transform;
 }
 /* Sprocket holes: 0-radius, hairline, printed on the strip so they travel with it. */
@@ -247,8 +255,8 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   content: ""; position: absolute; left: 0; right: 0; height: 12px; pointer-events: none;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='12'%3E%3Crect x='7.5' y='.5' width='13' height='11' fill='none' stroke='%23fff'/%3E%3C/svg%3E") repeat-x 0 0;
 }
-.sx-film__track::before { top: 8px; }
-.sx-film__track::after { bottom: 8px; }
+.sx-film__track::before { top: 6px; }
+.sx-film__track::after { bottom: 6px; }
 .sx-film[data-mode="scrub"] .sx-film__track { padding-inline: var(--gutter); }
 .sx-film[data-mode="scrub"] .sx-film__track::before,
 .sx-film[data-mode="scrub"] .sx-film__track::after { left: -120vw; right: -120vw; }
@@ -258,7 +266,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   border: 1px solid #ffffff; scroll-snap-align: center;
 }
 .sx-frame__edge {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 7px);
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px);
   display: flex; justify-content: space-between; gap: 12px; white-space: nowrap;
   font-size: var(--fs-label); line-height: 1; letter-spacing: 0.14em; text-transform: uppercase;
   opacity: 0.45; transition: opacity 700ms var(--ease-expo);
@@ -367,7 +375,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 }
 
 /* ═════ 3 · BEHIND — the deal (pinned) ═════ */
-.sx-behind { position: relative; height: 340dvh; }
+.sx-behind { position: relative; height: 400dvh; }
 .sx-behind__stage {
   position: sticky; top: 0; height: 100dvh; overflow: clip;
   width: 100%; max-width: 1400px; margin-inline: auto;
@@ -386,7 +394,7 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
 .sx-beat[data-on] { opacity: 1; clip-path: inset(0 0 0 0); transform: none; }
 .sx-beat[data-past] { clip-path: inset(0 0 0 0); transform: translate3d(0, -18px, 0); }
 .sx-beat__label {
-  margin-bottom: 12px; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase;
+  margin-bottom: 12px; font-size: var(--fs-label); line-height: 1.45; letter-spacing: 0.16em; text-transform: uppercase;
 }
 .sx-beat__label b { font-weight: 400; color: var(--hue); }
 .sx-beat__text { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); max-width: 58ch; }
@@ -557,6 +565,9 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   display: flex; align-items: center; gap: 14px; margin-top: 24px;
   font-size: var(--fs-label); line-height: 1; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.6;
 }
+.sx-gate__tick-shut { display: none; }
+.sx-gate[data-shut] .sx-gate__tick-open { display: none; }
+.sx-gate[data-shut] .sx-gate__tick-shut { display: inline; color: var(--hue); }
 .sx-gate__tick-rail { position: relative; display: block; width: 92px; height: 1px; background: rgba(255, 255, 255, 0.28); }
 .sx-gate__tick-rail > span {
   position: absolute; inset: 0; background: var(--hue); transform: scaleX(0); transform-origin: left center;
@@ -579,11 +590,32 @@ html[data-world-chrome] main.studio-world { padding-right: 0; }
   .sx-gate { height: auto; }
   .sx-gate__stage {
     position: relative; height: auto; min-height: auto;
-    padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+    padding: var(--lane-top) var(--gutter) calc(var(--lane-bottom) + 32px);
   }
   .sx-gate__iris { width: 150vw; }
   .sx-gate__lead { margin-block: 20px 28px; }
   .sx-gate__tick { display: none; }
+}
+
+/* ═════ HANDOFFS — chapters cross-fade on the spot; nothing slides half-off ═════
+   Each pinned stage dissolves over the last stretch of its pin while the next
+   chapter is already pinned beneath it and fades in over the same stretch
+   (the fades are written by each section's own scroll timeline). The only
+   free-scrolling chapter, the proof wall, rises over the dissolving contact
+   sheet. Numbers must match the timelines:
+     hero out 32dvh (.84-1 of a 200dvh pin)  ↔ strip FADE_IN_VH 32
+     strip FADE_OUT_VH 36                    ↔ contact sheet in (.12 of 300dvh)
+     contact sheet out at .76 of 300dvh      ↔ proof enters 72dvh before release */
+@media (prefers-reduced-motion: no-preference) {
+  .sx-hero + .sx-film[data-mode="scrub"] { margin-top: -132dvh; }
+  .sx-film[data-mode="scrub"] + .sx-behind { margin-top: -136dvh; }
+  .sx-film[data-mode="scrub"] + .sx-behind + .sx-proof { margin-top: -88dvh; }
+  .sx-proof + .sx-gate { margin-top: -30dvh; }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 767px) {
+  /* phone hero dissolves over 24dvh; the strip is already rising beneath it */
+  .sx-hero + .sx-film { margin-top: -40dvh; }
+  .sx-proof + .sx-gate { margin-top: 0; }
 }
 
 /* ═════ M5 · reduced motion: every section renders its final state ═════ */

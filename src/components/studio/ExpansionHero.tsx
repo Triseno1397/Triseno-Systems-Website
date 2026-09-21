@@ -42,6 +42,7 @@ const pad = (n: number, l = 2) => String(n).padStart(l, "0");
 
 export default function ExpansionHero() {
   const root = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
   const clip = useRef<HTMLDivElement>(null);
   const edge = useRef<HTMLDivElement>(null);
   const media = useRef<HTMLDivElement>(null);
@@ -68,16 +69,21 @@ export default function ExpansionHero() {
         let last = -1;
 
         const measure = () => {
-          vw = window.innerWidth;
-          vh = section.querySelector<HTMLElement>(".sx-hero__stage")?.offsetHeight ?? window.innerHeight;
+          // the stage, not the window: <main> keeps the rail's lane
+          vw = stage.current?.clientWidth || window.innerWidth;
+          vh = stage.current?.offsetHeight || window.innerHeight;
           // The window size lives in CSS (--s); the ring is drawn at 1.2 x that.
           s = (ring.current?.offsetWidth ?? 0) / 1.2 || Math.min(vh * 0.3, vw * 0.21);
         };
 
         const render = (p: number) => {
           last = p;
-          const open = smooth(p / 0.3); // iris opens, circle -> 0-radius frame
-          const grow = easeInOut((p - 0.1) / 0.8); // frame -> full bleed
+          // Timeline: iris opens (0-.22) · frame grows to full bleed (.06-.62) ·
+          // copy arrives (.58-.70) and HOLDS · the whole stage dissolves into
+          // the world (.84-1) while the formats section fades in on the spot.
+          const open = smooth(p / 0.22); // iris opens, circle -> 0-radius frame
+          const grow = easeInOut((p - 0.06) / 0.56); // frame -> full bleed
+          const out = smooth((p - 0.84) / 0.16);
           const w = s + (vw - s) * grow;
           const h = s + (vh - s) * grow;
           const x = (vw - w) / 2;
@@ -96,7 +102,7 @@ export default function ExpansionHero() {
           if (media.current) media.current.style.transform = `scale(${Math.max(w / vw, h / vh).toFixed(4)})`;
           if (veil.current) veil.current.style.opacity = grow.toFixed(3);
           if (ring.current) {
-            ring.current.style.opacity = (1 - smooth((p - 0.1) / 0.22)).toFixed(3);
+            ring.current.style.opacity = (1 - smooth((p - 0.06) / 0.2)).toFixed(3);
             ring.current.style.transform = `translate(-50%, -50%) rotate(${(p * 160).toFixed(2)}deg) scale(${(1 + grow * 2).toFixed(3)})`;
           }
           iris.current?.setAttribute("d", aperturePath(0.12 + open * 0.88));
@@ -105,9 +111,11 @@ export default function ExpansionHero() {
           if (vw >= 768) {
             // At full bleed the headline lifts so the copy and CTA below it
             // rest inside the chrome lane, clear of the bottom fade band.
-            const rise = (-vh * 0.12 * grow).toFixed(1);
-            if (left.current) left.current.style.transform = `translate3d(${(-drift).toFixed(1)}px,${rise}px,0)`;
-            if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,${rise}px,0)`;
+            // It also steps down in size, so the copy card never touches it.
+            const rise = (-vh * 0.17 * grow).toFixed(1);
+            const k = (1 - 0.14 * grow).toFixed(4);
+            if (left.current) left.current.style.transform = `translate3d(${(-drift).toFixed(1)}px,${rise}px,0) scale(${k})`;
+            if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,${rise}px,0) scale(${k})`;
           } else {
             // Mobile: the window is gone at full bleed, so the halves close up into one headline.
             const join = s / 2 + 16;
@@ -115,13 +123,17 @@ export default function ExpansionHero() {
             if (left.current) left.current.style.transform = `translate3d(0,${((join - lift) * grow).toFixed(1)}px,0)`;
             if (right.current) right.current.style.transform = `translate3d(0,${((-join - lift) * grow).toFixed(1)}px,0)`;
           }
-          const arrive = smooth((p - 0.72) / 0.28);
+          const arrive = smooth((p - 0.58) / 0.12);
           if (copy.current) {
             copy.current.style.opacity = arrive.toFixed(3);
             copy.current.style.transform = `translate3d(0,${((1 - arrive) * 28).toFixed(1)}px,0)`;
             copy.current.style.pointerEvents = arrive > 0.6 ? "auto" : "none";
           }
           if (hint.current) hint.current.style.opacity = (1 - smooth(p / 0.12)).toFixed(3);
+          if (stage.current) {
+            stage.current.style.opacity = (1 - out).toFixed(3);
+            stage.current.style.visibility = out > 0.995 ? "hidden" : "visible";
+          }
 
           const frames = Math.round(p * REEL_SECONDS * FPS);
           if (tc.current) tc.current.textContent = `00:00:${pad(Math.floor(frames / FPS))}:${pad(frames % FPS)}`;
@@ -150,7 +162,7 @@ export default function ExpansionHero() {
         return () => {
           window.removeEventListener("resize", onResize);
           st.kill();
-          [clip, edge, media, veil, ring, left, right, copy, hint].forEach((r) => r.current?.removeAttribute("style"));
+          [clip, edge, media, veil, ring, left, right, copy, hint, stage].forEach((r) => r.current?.removeAttribute("style"));
         };
       });
       // M5: no scrub. The CSS renders the final frame; the readout matches it.
@@ -184,7 +196,7 @@ export default function ExpansionHero() {
 
   return (
     <section ref={root} data-rail="Showreel" className="sx-hero" aria-labelledby="sx-hero-title">
-      <div className="sx-hero__stage">
+      <div ref={stage} className="sx-hero__stage">
         {/* 1px hairline: a white layer clipped 1px wider than the media. */}
         <div ref={edge} aria-hidden="true" className="sx-hero__edge" />
         <div ref={clip} className="sx-hero__clip">
@@ -209,12 +221,14 @@ export default function ExpansionHero() {
           </span>
           <span className="sr-only"> </span>
           <span ref={right} className="sx-hero__half sx-hero__half--r">
+            {/* What we sell, on the first screen. */}
+            <span className="sx-hero__eyebrow sx-hero__eyebrow--r font-mono font-normal">Ad creative for paid social</span>
             <span>while</span> <span>it</span> <span>scrolls.</span>
           </span>
         </h1>
 
         <div ref={copy} className="sx-hero__copy">
-          <GlassPanel world="creative" veil={0.6} className="sx-hero__glass">
+          <GlassPanel world="creative" veil={0.8} className="sx-hero__glass">
             <p className="sx-hero__lede font-sans font-light">
               We script, shoot, and edit performance creative for Instagram, TikTok, YouTube, and every feed in
               between — from UGC to cinematic brand films. Built to convert, not just to look good.

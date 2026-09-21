@@ -25,7 +25,8 @@ const STUDIO_EMAIL = "tristen@trisenosystems.com";
 const INSTAGRAM_URL = "https://instagram.com/trisenosystems";
 
 const OPEN_FROM = 1;
-const OPEN_TO = 0.34;
+const OPEN_TO = 0; // fully stopped down
+const SHUT_AT = 0.82; // the iris is shut with a screenful of scroll to spare
 
 export default function StudioGate() {
   const root = useRef<HTMLElement>(null);
@@ -39,10 +40,14 @@ export default function StudioGate() {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         const render = (p: number) => {
-          // Weighted to the end of the range: the last screenful of scroll is
-          // where the iris visibly shuts, so the page never ends on two
-          // identical frames.
-          const eased = Math.pow(p, 1.7);
+          // The payoff lands before the page ends: the iris is fully shut at
+          // SHUT_AT and holds there, and the gate says so.
+          const shut = Math.min(1, p / SHUT_AT);
+          const eased = Math.pow(shut, 1.6);
+          if (root.current) {
+            if (shut >= 1) root.current.dataset.shut = "";
+            else delete root.current.dataset.shut;
+          }
           iris.current?.setAttribute("d", aperturePath(OPEN_FROM + (OPEN_TO - OPEN_FROM) * eased));
           if (spin.current)
             spin.current.style.transform = `rotate(${(-96 + eased * 96).toFixed(2)}deg) scale(${(1.55 - eased * 0.62).toFixed(3)})`;
@@ -52,7 +57,7 @@ export default function StudioGate() {
             const settle = Math.min(1, p / 0.6);
             body.current.style.transform = `translate3d(0, ${((1 - settle) * 32).toFixed(1)}px, 0)`;
           }
-          if (tick.current) tick.current.style.transform = `scaleX(${p.toFixed(4)})`;
+          if (tick.current) tick.current.style.transform = `scaleX(${shut.toFixed(4)})`;
         };
         render(0);
         const st = ScrollTrigger.create({
@@ -93,7 +98,7 @@ export default function StudioGate() {
 
         <div ref={body} className="sx-gate__body">
           <GlassPanel world="creative" veil={0.55} className="sx-gate__glass">
-            <p className="sx-kicker font-mono">Next — Contact</p>
+            <p className="sx-kicker font-mono">Contact</p>
             <h2 id="sx-gate-title" className="sx-gate__title font-display font-bold uppercase">
               Let&apos;s make the ad that pays for itself.
             </h2>
@@ -106,7 +111,8 @@ export default function StudioGate() {
               <span className="sx-gate__tick-rail">
                 <span ref={tick} />
               </span>
-              Scroll to close the iris
+              <span className="sx-gate__tick-open">Scroll to close the iris</span>
+              <span className="sx-gate__tick-shut">Iris closed — your move</span>
             </p>
             <p className="sx-gate__direct font-mono">
               <a href={`mailto:${STUDIO_EMAIL}`} className="world-underline">
