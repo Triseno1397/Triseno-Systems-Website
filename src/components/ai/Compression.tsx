@@ -8,21 +8,25 @@ import { COMPRESSION } from "./content";
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * 3. Workflow compression — scroll-scrubbed SVG line draw.
- * Scroll draws a 12-step manual process as one long hairline, then collapses
- * the twelve steps into five nodes on two layers. The mono readout is driven by
- * the same scrub and counts the diagram: steps drawn, then layers they collapse
- * into. Pinned for 1.6 viewports on desktop, 1 on mobile (M5); reduced motion
- * skips the pin and renders the compressed system.
+ * 3. Workflow compression — scroll-scrubbed SVG draw.
  *
- * R2 timing: the payoff has to be readable wherever a reader stops, so the
- * collapse is front-loaded and the resolved two-layer system holds for the last
- * ~40% of the scrub, and the readout never shows placeholder dashes.
+ * R4: the frame is never empty. On entry the twelve-step manual process is
+ * already on the plate, every step named. Scrolling first traces the process in
+ * cyan, lighting each step as the trace reaches it; then the twelve steps
+ * collapse into five nodes on two layers (orchestrator over four agents), and
+ * the resolved system holds for the last ~30% of the scrub. The mono readout
+ * counts the diagram only — twelve steps, occupying twelve layers before the
+ * collapse and two after. No time, cost or multiple is claimed.
  *
- * R2 truth: this section shows a mechanism, not a result. There is no time,
- * cost or multiple anywhere in it — the owner has not measured one, so the page
- * does not claim one.
+ * Labels are set at the shared 12-13px mono size whatever the drawing's scale
+ * (a ResizeObserver converts that to SVG units), and the drawing sits on a
+ * frosted plate so its steps can't be confused with the world behind it.
+ * Pinned 1.5 viewports on desktop, 0.7 on phones (M5); reduced motion skips
+ * the pin and renders the compressed system.
  */
+
+const LABEL_PX = 12.5;
+const STROKE_PX = 1.25;
 
 interface Geometry {
   vbW: number;
@@ -33,72 +37,76 @@ interface Geometry {
   system: Array<[number, number]>;
   layers: [string, string];
   layerLabel: Array<[number, number]>;
-  font: number;
-  anchor: "middle" | "start";
+  /** where a step's label sits relative to its marker */
+  label: { x: number; y: number; anchor: "middle" | "start" };
+  /** agent label offsets (alternating on phones so neighbours never collide) */
+  agentLabelY: (i: number) => number;
 }
 
 function geometry(mobile: boolean): Geometry {
-  const cols = mobile ? 2 : 4;
-  const xs = mobile ? [56, 236] : [150, 450, 750, 1050];
-  const y0 = mobile ? 40 : 100;
-  const gap = mobile ? 78 : 250;
+  if (mobile) {
+    // one column: every step keeps its name at a legible size on a phone
+    const steps: Array<[number, number]> = Array.from({ length: 12 }, (_, i) => [34, 26 + i * 33]);
+    return {
+      vbW: 400,
+      vbH: 410,
+      steps,
+      path: `M34 26 V${26 + 11 * 33}`,
+      system: [
+        [200, 130],
+        [62, 325],
+        [154, 325],
+        [246, 325],
+        [338, 325],
+      ],
+      layers: ["M18 130 H382", "M18 325 H382"],
+      layerLabel: [
+        [18, 88],
+        [18, 285],
+      ],
+      label: { x: 20, y: 6, anchor: "start" },
+      agentLabelY: (i) => (i % 2 === 0 ? 44 : 72),
+    };
+  }
+  // three columns, four rows, drawn as one serpentine hairline
+  const xs = [200, 600, 1000];
   const steps: Array<[number, number]> = [];
   let path = "";
   for (let i = 0; i < 12; i++) {
-    const row = Math.floor(i / cols);
-    const col = row % 2 === 0 ? i % cols : cols - 1 - (i % cols);
-    const p: [number, number] = [xs[col], y0 + row * gap];
+    const row = Math.floor(i / 3);
+    const col = row % 2 === 0 ? i % 3 : 2 - (i % 3);
+    const p: [number, number] = [xs[col], 70 + row * 172];
     steps.push(p);
-    path += i === 0 ? `M${p[0]} ${p[1]}` : i % cols === 0 ? ` V${p[1]}` : ` H${p[0]}`;
-  }
-  if (mobile) {
-    return {
-      vbW: 400,
-      vbH: 500,
-      steps,
-      path,
-      system: [
-        [200, 150],
-        [62, 360],
-        [154, 360],
-        [246, 360],
-        [338, 360],
-      ],
-      layers: ["M24 150 H376", "M24 360 H376"],
-      layerLabel: [
-        [24, 108],
-        [24, 318],
-      ],
-      font: 13,
-      anchor: "start",
-    };
+    path += i === 0 ? `M${p[0]} ${p[1]}` : i % 3 === 0 ? ` V${p[1]}` : ` H${p[0]}`;
   }
   return {
     vbW: 1200,
-    vbH: 740,
+    vbH: 700,
     steps,
     path,
     system: [
-      [600, 240],
-      [240, 540],
-      [480, 540],
-      [720, 540],
-      [960, 540],
+      [600, 230],
+      [240, 520],
+      [480, 520],
+      [720, 520],
+      [960, 520],
     ],
-    layers: ["M110 240 H1090", "M110 540 H1090"],
+    layers: ["M110 230 H1090", "M110 520 H1090"],
     layerLabel: [
-      [110, 186],
-      [110, 486],
+      [110, 176],
+      [110, 466],
     ],
-    font: 18,
-    anchor: "middle",
+    label: { x: 0, y: 40, anchor: "middle" },
+    agentLabelY: () => 48,
   };
 }
 
 export default function Compression() {
   const stageRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const layersRef = useRef<HTMLSpanElement>(null);
   const [mobile, setMobile] = useState<boolean | null>(null);
+  const [unit, setUnit] = useState(1.7);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -110,6 +118,18 @@ export default function Compression() {
 
   const geo = useMemo(() => geometry(mobile === true), [mobile]);
 
+  /* SVG units per CSS pixel, so labels and strokes keep their real size */
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const ro = new ResizeObserver(() => {
+      const w = svg.getBoundingClientRect().width;
+      if (w > 0) setUnit(geo.vbW / w);
+    });
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, [geo]);
+
   useEffect(() => {
     if (mobile === null) return;
     const stage = stageRef.current;
@@ -119,45 +139,39 @@ export default function Compression() {
     const ctx = gsap.context(() => {
       const q = gsap.utils.selector(stage);
       const stepEls = q<SVGGElement>(".ai-flow__step");
+      const hits = q<SVGRectElement>(".ai-flow__hit");
 
-      // The readout describes the diagram and nothing else. The left figure is
-      // the process (always twelve steps); the right one is how many layers
-      // those steps currently occupy: twelve before the collapse, two after.
-      // It never reads as nonsense ("00 -> 12") at any scroll position, and no
-      // time, cost or multiple is claimed anywhere on this page.
       const readout = (time: number) => {
-        const squeeze = Math.min(1, Math.max(0, (time - 3) / 2.2));
+        const squeeze = Math.min(1, Math.max(0, (time - 2.8) / 1.9));
         const eased = squeeze * squeeze * (3 - 2 * squeeze);
         if (layersRef.current) layersRef.current.textContent = String(Math.round(12 - 10 * eased)).padStart(2, "0");
-        stage.toggleAttribute("data-compressed", time >= 5.2);
+        stage.toggleAttribute("data-compressed", time >= 4.9);
       };
 
       const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: () => readout(tl.time()) });
 
-      // A — the manual process draws, one step at a time
-      tl.fromTo(q(".ai-flow__path"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 2.6 }, 0);
-      stepEls.forEach((el, i) => {
-        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.1 }, (2.6 * i) / 11 - (i === 0 ? 0 : 0.05));
+      // A — the manual process is already there; a cyan trace runs it end to end
+      tl.fromTo(q(".ai-flow__trace"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 2.4 }, 0);
+      hits.forEach((el, i) => {
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.12 }, (2.4 * i) / 11);
       });
 
       // B — twelve steps collapse into five nodes on two layers
       stepEls.forEach((el, i) => {
         const from = geo.steps[i];
         const to = geo.system[COMPRESSION.collapseTo[i]];
-        tl.to(el, { x: to[0] - from[0], y: to[1] - from[1], duration: 1.6, ease: "power3.inOut" }, 3 + i * 0.045);
-        tl.to(el.querySelector("text"), { opacity: 0, duration: 0.7 }, 3.2 + i * 0.045);
-        tl.to(el, { opacity: 0, duration: 0.35 }, 4.7 + i * 0.02);
+        tl.to(el, { x: to[0] - from[0], y: to[1] - from[1], duration: 1.5, ease: "power3.inOut" }, 2.8 + i * 0.03);
+        tl.to(el.querySelector("text"), { opacity: 0, duration: 0.5 }, 2.8 + i * 0.03);
+        tl.to(el, { opacity: 0, duration: 0.3 }, 4.3 + i * 0.02);
       });
-      tl.to(q(".ai-flow__path"), { opacity: 0.16, duration: 1.2 }, 3);
+      tl.to(q(".ai-flow__path, .ai-flow__trace"), { opacity: 0, duration: 1 }, 2.8);
 
-      // C — the 2-layer system draws in, then holds for the rest of the scrub
-      tl.fromTo(q(".ai-flow__layer"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1.1, stagger: 0.18 }, 3.4);
-      tl.fromTo(q(".ai-flow__node"), { opacity: 0 }, { opacity: 1, duration: 0.5, stagger: 0.06 }, 4.3);
-      tl.fromTo(q(".ai-flow__link"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 0.8, stagger: 0.07 }, 4.6);
-      tl.fromTo(q(".ai-flow__tag"), { opacity: 0 }, { opacity: 1, duration: 0.5 }, 4.4);
-      // the resolved system is the last 40% of the scrub, so wherever the
-      // reader settles past the middle they are looking at the payoff
-      tl.to({}, { duration: 3.4 }, 5.2);
+      // C — the two-layer system draws in, then holds
+      tl.fromTo(q(".ai-flow__layer"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 1, stagger: 0.15 }, 3.3);
+      tl.fromTo(q(".ai-flow__node"), { opacity: 0 }, { opacity: 1, duration: 0.45, stagger: 0.05 }, 4.1);
+      tl.fromTo(q(".ai-flow__link"), { strokeDashoffset: 1000 }, { strokeDashoffset: 0, duration: 0.7, stagger: 0.06 }, 4.3);
+      tl.fromTo(q(".ai-flow__tag"), { opacity: 0 }, { opacity: 1, duration: 0.45 }, 4.1);
+      tl.to({}, { duration: 2.2 }, 5);
 
       if (reduced) {
         tl.progress(1);
@@ -170,7 +184,7 @@ export default function Compression() {
       ScrollTrigger.create({
         trigger: stage,
         start: "top top",
-        end: mobile ? "+=95%" : "+=160%",
+        end: mobile ? "+=70%" : "+=150%",
         pin: true,
         scrub: 0.4,
         animation: tl,
@@ -181,17 +195,19 @@ export default function Compression() {
     return () => ctx.revert();
   }, [mobile, geo]);
 
+  const fs = LABEL_PX * unit;
+  const sw = STROKE_PX * unit;
+  const mark = 5 * unit;
+
   return (
     <section
       data-rail="Compression"
-      data-world-side="right"
-      data-dof="full"
       aria-labelledby="ai-flow-title"
       className="ai-compress relative z-10"
     >
       <div ref={stageRef} className="ai-compress__stage">
         <div className="ai-wrap ai-compress__grid">
-          <div className="ai-compress__copy">
+          <div className="ai-glass ai-sheet ai-compress__copy">
             <p className="ai-label">
               <b>03</b> / Workflow compression
             </p>
@@ -207,22 +223,24 @@ export default function Compression() {
                   <span>12</span>
                   <i>→</i>
                   <span ref={layersRef} className="ai-readout__hot">
-                    02
+                    12
                   </span>
                 </dd>
               </div>
             </dl>
           </div>
 
-          <div className="ai-compress__figure">
+          <figure className="ai-glass ai-compress__figure">
             <svg
+              ref={svgRef}
               className="ai-flow"
               viewBox={`0 0 ${geo.vbW} ${geo.vbH}`}
               role="img"
               aria-label="A twelve-step manual process collapsing into an orchestrator and four execution agents"
-              style={{ fontSize: geo.font, ["--sw" as string]: geo.anchor === "start" ? 1.2 : 1.5 }}
+              style={{ fontSize: fs, ["--sw" as string]: sw }}
             >
               <path className="ai-flow__path" d={geo.path} pathLength={1000} />
+              <path className="ai-flow__trace" d={geo.path} pathLength={1000} />
 
               {geo.layers.map((d, i) => (
                 <path key={d} className="ai-flow__layer" d={d} pathLength={1000} data-mid={i === 0 ? "" : undefined} />
@@ -243,7 +261,7 @@ export default function Compression() {
               {geo.system.map(([x, y], i) => (
                 <g key={i} className="ai-flow__node" transform={`translate(${x} ${y})`}>
                   <path d={i === 0 ? "M0 -28 L25 16 L-25 16 Z" : "M0 -19 L17 11 L-17 11 Z"} data-core={i === 0 ? "" : undefined} />
-                  <text y={i === 0 ? -44 : 42} textAnchor="middle">
+                  <text y={i === 0 ? -44 : geo.agentLabelY(i)} textAnchor="middle">
                     {COMPRESSION.agents[i].toUpperCase()}
                   </text>
                 </g>
@@ -252,12 +270,9 @@ export default function Compression() {
               {geo.steps.map(([x, y], i) => (
                 <g key={i} transform={`translate(${x} ${y})`}>
                   <g className="ai-flow__step">
-                    <rect x="-5" y="-5" width="10" height="10" />
-                    <text
-                      x={geo.anchor === "middle" ? 0 : -5}
-                      y={geo.anchor === "middle" ? 34 : 28}
-                      textAnchor={geo.anchor}
-                    >
+                    <rect x={-mark} y={-mark} width={mark * 2} height={mark * 2} />
+                    <rect className="ai-flow__hit" x={-mark} y={-mark} width={mark * 2} height={mark * 2} />
+                    <text x={geo.label.x} y={geo.label.y} textAnchor={geo.label.anchor} dominantBaseline={geo.label.anchor === "start" ? "middle" : undefined}>
                       <tspan className="ai-flow__num">{String(i + 1).padStart(2, "0")}</tspan>{" "}
                       {COMPRESSION.steps[i].toUpperCase()}
                     </text>
@@ -265,8 +280,8 @@ export default function Compression() {
                 </g>
               ))}
             </svg>
-            <p className="ai-label ai-compress__note">{COMPRESSION.note}</p>
-          </div>
+            <figcaption className="ai-label ai-compress__note">{COMPRESSION.note}</figcaption>
+          </figure>
         </div>
       </div>
     </section>

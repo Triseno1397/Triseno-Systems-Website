@@ -140,14 +140,12 @@ export default function Capabilities() {
       ref={sectionRef}
       id="capabilities"
       data-rail="Capabilities"
-      data-world-side="right"
-      data-dof="full"
       aria-labelledby="ai-cap-title"
       className="ai-section ai-caps relative z-10"
     >
       <div className="ai-wrap">
         <div ref={gridRef} className="ai-bento">
-          <header className="ai-bento__head">
+          <header className="ai-glass ai-sheet ai-bento__head">
             <p className="ai-label">
               <b>02</b> / Capabilities
             </p>
@@ -160,7 +158,7 @@ export default function Capabilities() {
           {CAPABILITIES.map((cap, i) => (
             <article key={cap.id} className="ai-card">
               <span aria-hidden="true" className="ai-card__ring" />
-              <div className="ai-card__panel">
+              <div className="ai-glass ai-card__panel">
                 <span aria-hidden="true" className="ai-card__field" />
                 <span aria-hidden="true" className="ai-card__tick ai-card__tick--tl" />
                 <span aria-hidden="true" className="ai-card__tick ai-card__tick--tr" />
@@ -187,9 +185,9 @@ export default function Capabilities() {
           ))}
         </div>
 
-        <p aria-hidden="true" className="ai-bento__caption">
+        <p aria-hidden="true" className="ai-glass ai-bento__caption">
           <span className="ai-label">
-            <b ref={capIndexRef}>01</b> / Live &nbsp;·&nbsp; Diagrams illustrative
+            <b ref={capIndexRef}>01</b> / Live
           </span>
           <span className="ai-bento__read">
             <span ref={capTitleRef} className="ai-h3 font-display font-semibold uppercase">

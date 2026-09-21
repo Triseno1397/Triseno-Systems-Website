@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { STATS, STATS_NOTE, WHY } from "./content";
+import { STATS, WHY } from "./content";
 
 /**
  * 7. Why Triseno — a two-state switch (a mechanic used nowhere else on the
@@ -49,12 +49,11 @@ export default function WhyTriseno() {
     <section
       ref={ref}
       data-rail="Why"
-      data-world-side="right"
-      data-dof="full"
       aria-labelledby="ai-why-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
+        <div className="ai-glass ai-sheet">
         <header className="ai-why__head">
           <div className="grid gap-4">
             <p className="ai-label">
@@ -75,7 +74,8 @@ export default function WhyTriseno() {
                 className="ai-switch__opt"
                 onClick={() => choose(i as 0 | 1)}
               >
-                {label}
+                <span className="max-sm:hidden">{label}</span>
+                <span className="sm:hidden">{WHY.statesShort[i]}</span>
               </button>
             ))}
           </div>
@@ -98,12 +98,13 @@ export default function WhyTriseno() {
             </li>
           ))}
         </ul>
+        </div>
       </div>
     </section>
   );
 }
 
-const STRIP = Array.from({ length: 30 }, (_, i) => i % 10);
+const STRIP = Array.from({ length: 20 }, (_, i) => i % 10);
 
 /**
  * 6. Counts — odometer data readouts (site-map mechanic), on a frame of their
@@ -126,7 +127,7 @@ export function AiStats() {
           io.disconnect();
         }
       },
-      { threshold: 0.35 },
+      { threshold: 0, rootMargin: "0px 0px -18% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -137,12 +138,11 @@ export function AiStats() {
   return (
     <section
       data-rail="Counts"
-      data-world-side="left"
-      data-dof="full"
       aria-labelledby="ai-counts-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
+        <div className="ai-glass ai-sheet">
         <header className="ai-head ai-head--single">
           <p className="ai-label">
             <b>06</b> / Counts
@@ -167,7 +167,7 @@ export function AiStats() {
                   const c = column++;
                   return (
                     <span key={i} className="ai-odo__window">
-                      <span className="ai-odo__strip" style={{ ["--to" as string]: 20 + part, ["--i" as string]: c }}>
+                      <span className="ai-odo__strip" style={{ ["--to" as string]: 10 + part, ["--i" as string]: c }}>
                         {STRIP.map((n, k) => (
                           <span key={k}>{n}</span>
                         ))}
@@ -184,10 +184,7 @@ export function AiStats() {
           ))}
         </div>
 
-        <p className="ai-label ai-stats__basis">
-          <b>{STATS_NOTE.tag}</b>
-          <span>{STATS_NOTE.text}</span>
-        </p>
+        </div>
       </div>
     </section>
   );

@@ -54,9 +54,9 @@ function AgentLog({ industry, run }: { industry: Industry; run: boolean }) {
   const done = shown >= total;
 
   return (
-    <div className="ai-log" role="img" aria-label={`Illustrative agent log: ${industry.log.map(([, m]) => m).join("; ")}.`}>
+    <div className="ai-log" role="img" aria-label={`Example agent log: ${industry.log.map(([, m]) => m).join("; ")}.`}>
       <p className="ai-log__head ai-label">
-        <span>Agent log / Illustrative</span>
+        <span>Agent log</span>
         <span className="ai-log__state" data-on={done ? "" : undefined}>
           <span className="ai-log__dot" />
           {done ? "Cycle complete" : "Running"}
@@ -134,12 +134,11 @@ export default function Industries() {
     <section
       ref={sectionRef}
       data-rail="Industries"
-      data-world-side="right"
-      data-dof="full"
       aria-labelledby="ai-ind-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
+        <div className="ai-glass ai-sheet">
         <header className="ai-head ai-head--single">
           <p className="ai-label">
             <b>05</b> / Industries
@@ -198,6 +197,7 @@ export default function Industries() {
             );
           })}
         </ul>
+        </div>
       </div>
     </section>
   );

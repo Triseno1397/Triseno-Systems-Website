@@ -70,7 +70,7 @@ export const CAPABILITIES: Capability[] = [
 export const COMPRESSION = {
   title: "Not Automation. Compression.",
   body: "A twelve-step manual process, redesigned as a two-layer agent system.",
-  note: "Illustrative workflow",
+  note: "An example workflow, drawn to show the method.",
   steps: [
     "Intake email",
     "Manual data entry",
@@ -230,16 +230,10 @@ export interface Stat {
 }
 
 /**
- * The odometer is here to demonstrate the component, so it counts what the
- * offer and the diagrams on this page are made of. None of these is a result
- * or a performance claim; every speed-up figure ("3x", "40 hrs -> 12 min") has
+ * The odometer demonstrates the component by counting what the offer and the
+ * drawings on this page are made of — never results. Every speed-up figure has
  * been cut from the page on the owner's instruction.
  */
-export const STATS_NOTE = {
-  tag: "Counts",
-  text: "Each figure counts something drawn on this page. None is a performance claim.",
-};
-
 export const STATS: Stat[] = [
   { parts: [1, 2, "→", 0, 2], text: "12 to 2", label: "Manual steps to agent layers, section 03" },
   { parts: [0, 5], text: "5", label: "Phases, Diagnose to Compound" },
@@ -254,6 +248,8 @@ export const WHY = {
   title: "Why Triseno",
   label: "Why Triseno",
   states: ["Typical AI vendor", "Triseno"] as const,
+  /** phone labels — the long one does not fit half a 300px switch */
+  statesShort: ["Vendor", "Triseno"] as const,
   rows: [
     {
       topic: "Pricing",

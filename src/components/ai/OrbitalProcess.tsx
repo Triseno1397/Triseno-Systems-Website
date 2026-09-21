@@ -143,12 +143,11 @@ export default function OrbitalProcess() {
     <section
       ref={sectionRef}
       data-rail="Process"
-      data-world-side="left"
-      data-dof="full"
       aria-labelledby="ai-process-title"
       className="ai-section relative z-10"
     >
       <div className="ai-wrap">
+        <div className="ai-glass ai-sheet ai-process-sheet">
         <header className="ai-head ai-head--single">
           <p className="ai-label">
             <b>04</b> / Process &nbsp;·&nbsp; {PROCESS_INTRO.body}
@@ -278,6 +277,7 @@ export default function OrbitalProcess() {
               ) : null}
             </div>
           </div>
+        </div>
         </div>
       </div>
     </section>

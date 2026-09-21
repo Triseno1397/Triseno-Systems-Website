@@ -87,7 +87,6 @@ export default function AiGate() {
     <section
       data-rail="Gate"
       data-rail-next="Contact"
-      data-world-side="right"
       aria-labelledby="ai-gate-title"
       className="ai-gate relative z-10 min-h-[100dvh] overflow-hidden"
     >
@@ -108,6 +107,7 @@ export default function AiGate() {
       </svg>
 
       <div className="ai-wrap ai-gate__inner">
+        <div className="ai-glass ai-sheet ai-gate__sheet">
         <p className="ai-label">
           <b>08</b> / Next: Contact
         </p>
@@ -134,6 +134,7 @@ export default function AiGate() {
             <span>Web Design</span>
           </WarpLink>
         </nav>
+        </div>
       </div>
     </section>
   );
