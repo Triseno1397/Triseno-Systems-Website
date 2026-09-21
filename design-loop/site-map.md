@@ -33,7 +33,7 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 3. Workflow compression: **scroll-scrubbed SVG draw** — a 12-step process line collapses into a 2-layer system as you scroll.
 4. Process: **radial orbital timeline** (21st) — Diagnose → Architect → Build → Deploy → Compound.
 5. Industries: **accordion rows with mono agent-log typewriter** on open.
-6. Why Triseno: **count-up / odometer data readouts** — only real or clearly-labelled numbers.
+6. Why Triseno: **two-way toggle** — typical AI vendor vs Triseno, three rows wiping between answers. (The odometer is a separate Counts section that counts only what the page draws.)
 7. Gate → "Start with a diagnostic" (cyan warp).
 
 ## `/work` — achromatic, items tinted by division
