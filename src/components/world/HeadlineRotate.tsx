@@ -84,29 +84,34 @@ export function HeadlineRotate({
   showRule = true,
 }: HeadlineRotateProps) {
   const at = Math.max(0, Math.min(words.length - 1, index));
-  const [state, setState] = useState<{ cur: number; prev: number | null; swap: number }>({
+  // `changes` counts real TEXT changes only: a line whose word stays the same
+  // (line one reads WE BUILD for all three divisions) never re-animates
+  const [state, setState] = useState<{ cur: number; prev: number | null; changes: number }>({
     cur: at,
     prev: null,
-    swap: 0,
+    changes: 0,
   });
   const [reduced] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
 
-  // A new index starts a roll: the current word becomes the outgoing one.
   if (at !== state.cur) {
-    setState((s) => ({ cur: at, prev: reduced ? null : s.cur, swap: s.swap + 1 }));
+    const changed = words[at].text !== words[state.cur].text;
+    setState((s) => ({
+      cur: at,
+      prev: changed && !reduced ? s.cur : s.prev,
+      changes: changed ? s.changes + 1 : s.changes,
+    }));
   }
 
   useEffect(() => {
     if (state.prev === null) return;
     const t = window.setTimeout(() => setState((s) => ({ ...s, prev: null })), CLEAR_MS);
     return () => window.clearTimeout(t);
-  }, [state.swap, state.prev]);
+  }, [state.changes, state.prev]);
 
   const cur = words[state.cur];
   const prev = state.prev === null ? null : words[state.prev];
-  const same = prev !== null && prev.text === cur.text;
 
   return (
     <span className={`hrotate ${className}`}>
@@ -114,21 +119,16 @@ export function HeadlineRotate({
       <span className="sr-only">{cur.text}</span>
 
       <span aria-hidden="true" className="hrotate__word">
-        {prev && !same ? (
-          <span key={`o${state.swap}`} className="hrotate__out">
+        {prev ? (
+          <span key={`o${state.changes}`} className="hrotate__out">
             <Line text={prev.text} showRule={showRule} phase="out" />
           </span>
         ) : null}
-        <Line
-          key={same ? "same" : `i${state.swap}`}
-          text={cur.text}
-          showRule={showRule}
-          phase={state.swap === 0 || same ? "rest" : "in"}
-        />
+        <Line key={`i${state.changes}`} text={cur.text} showRule={showRule} phase={state.changes === 0 ? "rest" : "in"} />
       </span>
 
       {showGlyph ? (
-        <span aria-hidden="true" className="hrotate__glyph" data-phase={state.swap === 0 ? "rest" : "in"} key={cur.glyph}>
+        <span aria-hidden="true" className="hrotate__glyph" data-phase={state.changes === 0 ? "rest" : "in"} key={cur.glyph}>
           <Glyph kind={cur.glyph} size="100%" color={cur.hue} strokeWidth={2.5} glow />
         </span>
       ) : null}

@@ -144,10 +144,15 @@ html:has(.portal-world[data-capture]) main > [data-fade] { -webkit-mask-image: n
 @media (min-width: 1200px) {
   :root { --lane-right: clamp(56px, 4.4vw, 76px); }
 }
-html[data-world-chrome] main { padding-right: var(--lane-right); }
+/* The lane is padding INSIDE each content child of <main>, never on <main>
+   itself: a section's own background / scrim then still runs to the frame
+   edge, instead of stopping at the lane in a hard vertical line. */
+@media (min-width: 1200px) {
+  html[data-world-chrome] main:not(.portal-world) > [data-fade] { padding-right: var(--lane-right); }
+}
 /* The portal's own sections are already framed clear of the rail, and its
    scene is a fixed canvas, so it keeps the full width. */
-html[data-world-chrome] main.portal-world { padding-right: 0; }
+
 
 /* morphing scroll navbar: stacked lockup at the top of the page, one hairline-
    underlined line once you scroll. The wordmark is chrome-sized. */
@@ -345,6 +350,16 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
   display: block; width: 1px; height: 40px; background: #ffffff; transform-origin: top;
   animation: scroll-tick 2.4s var(--ease-expo) infinite;
 }
+.scroll-tick--row { font-size: var(--fs-label); }
+.scroll-tick--row .scroll-tick__line {
+  width: 40px; height: 1px; transform-origin: left center;
+  animation-name: scroll-tick-x;
+}
+@keyframes scroll-tick-x {
+  0% { transform: scaleX(0); opacity: 1; }
+  60% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
 @keyframes scroll-tick {
   0% { transform: scaleY(0); opacity: 1; }
   60% { transform: scaleY(1); opacity: 1; }
@@ -390,6 +405,36 @@ html[data-world-chrome] main.portal-world { padding-right: 0; }
 .lite-door .lite-glyph { filter: grayscale(1) brightness(0.75); transition: filter 900ms var(--ease-expo); }
 .lite-door[data-lit] .lite-glyph { filter: none; }
 .portal-gate__rain { height: 38%; }
+
+/* lite signature object: glyphs cross-turn into each other (transform/opacity) */
+.lite-signature {
+  position: relative; align-self: center;
+  width: min(46vw, 210px); aspect-ratio: 1;
+  margin: clamp(18px, 4dvh, 40px) 0 clamp(26px, 6dvh, 56px);
+  pointer-events: none;
+}
+.lite-signature__halo {
+  position: absolute; inset: -40%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05) 45%, transparent 100%);
+  animation: plate-breathe 5s ease-in-out infinite alternate;
+}
+.lite-signature__glyph {
+  position: absolute; inset: 0;
+  opacity: 0; transform: rotate(-90deg) scale(0.6);
+  transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo);
+}
+.lite-signature__glyph svg { width: 100%; height: 100%; }
+.lite-signature__glyph[data-on] { opacity: 1; transform: rotate(0deg) scale(1); animation: lite-sig-float 6s ease-in-out infinite alternate; }
+.lite-signature__reflect {
+  position: absolute; left: 0; right: 0; top: 106%; height: 100%;
+  transform: scaleY(-0.45); transform-origin: top center; opacity: 0.3;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+}
+@keyframes lite-sig-float {
+  from { transform: translate3d(0, -5px, 0) rotate(-2deg); }
+  to { transform: translate3d(0, 5px, 0) rotate(2deg); }
+}
 
 /* poster capture (?capture=…): the bare scene */
 .portal-world[data-capture] > section { visibility: hidden; }
@@ -735,6 +780,7 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
   .world-atmos__haze,
   .world-atmos__dust { animation: none; }
   .hrotate__char, .hrotate__rule, .hrotate__glyph, .hrotate__out { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .lite-signature__halo, .lite-signature__glyph[data-on] { animation: none; }
   .world-loader[data-leaving] { clip-path: inset(0 0 0 0); }
   .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
   .world-menu, .world-menu__link, .world-menu__glyph, .portal-word, .ghost-btn__fill,

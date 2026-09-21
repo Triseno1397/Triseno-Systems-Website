@@ -81,8 +81,10 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
     ["--plate-tint" as string]: String(tint),
     ["--plate-h-d" as string]: `${p.horizon.desktop * 100}%`,
     ["--plate-h-m" as string]: `${p.horizon.mobile * 100}%`,
-    ["--plate-blur-d" as string]: p.desktopBlur ? `url("${p.desktopBlur}")` : "none",
-    ["--plate-blur-m" as string]: p.mobileBlur ? `url("${p.mobileBlur}")` : "none",
+    // placeholder: the plate's own pre-blurred glass copy (true colour; the
+    // manifest's 24px blurs carry chroma noise — a teal cast on amber)
+    ["--plate-blur-d" as string]: `url("${p.desktopGlass}")`,
+    ["--plate-blur-m" as string]: `url("${p.mobileGlass}")`,
   } as CSSProperties;
 
   return (
@@ -103,6 +105,10 @@ export default function WorldPlate({ world, hue = WHITE, tint = 0.78, className 
             fetchPriority="low"
             className="world-plate__img"
             data-loaded={loaded ? "" : undefined}
+            ref={(img) => {
+              // an image decoded before hydration never fires onLoad; catch it
+              if (img?.complete && img.naturalWidth > 0) window.requestAnimationFrame(() => setLoaded(true));
+            }}
             onLoad={() => setLoaded(true)}
           />
         </picture>

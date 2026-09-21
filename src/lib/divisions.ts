@@ -1,7 +1,7 @@
 // Route -> division map. The single source for the division name shown in the
 // chrome lockup, the division hue (design-system §1) and the glyph.
 
-export type GlyphKind = "circle" | "square" | "triangle" | "diamond" | "plus";
+export type GlyphKind = "circle" | "square" | "triangle" | "diamond" | "plus" | "hexagon";
 
 export type DivisionKey = "portal" | "creative" | "web" | "ai" | "work" | "contact";
 
@@ -34,7 +34,8 @@ export const DIVISIONS: Record<DivisionKey, Division> = {
   },
   ai: { key: "ai", name: "AI Infrastructure", route: "/ai-infrastructure", hue: "#00b4d8", glyph: "triangle" },
   work: { key: "work", name: "Work", route: "/work", hue: WHITE, glyph: "diamond" },
-  contact: { key: "contact", name: "Contact", route: "/contact", hue: WHITE, glyph: "plus" },
+  // a plain white hexagon: a closed, achromatic cell — it must never read as a medical cross
+  contact: { key: "contact", name: "Contact", route: "/contact", hue: WHITE, glyph: "hexagon" },
 };
 
 /** Menu order used by the portal menu and the overlay menu. */

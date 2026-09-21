@@ -78,7 +78,9 @@ const FRAG = /* glsl */ `
 
     // colour grade: keep the plate's light, take the division's hue
     float l = lum(c);
-    vec3 graded = clamp(l * uHue / max(lum(uHue), 0.05), 0.0, 1.0);
+    // (scaled by the hue's peak channel, not its luminance, so bright stone
+    // keeps its texture instead of clipping into a flat band of hue)
+    vec3 graded = l * uHue * 1.3;
     c = mix(c, graded, uTint);
 
     // a pool of the focal light on the wet floor under the object
@@ -121,7 +123,9 @@ export function PlateBackdrop({ world, pointer, pool = 0.16, grade = 0.82 }: Pla
   const world3 = useMemo(() => {
     const ready = { v: false };
     const map = loadTexture(p.desktop, () => (ready.v = true));
-    const blur = p.desktopBlur ? loadTexture(p.desktopBlur) : map;
+    // placeholder: the plate's own pre-blurred glass copy (true colour; the
+    // manifest's 24px blurs carry chroma noise)
+    const blur = loadTexture(p.desktopGlass);
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
@@ -142,7 +146,7 @@ export function PlateBackdrop({ world, pointer, pool = 0.16, grade = 0.82 }: Pla
     });
     // x = eased zoom, y = fade-in of the real plate over its placeholder
     return { mat, map, blur, ready, anim: new THREE.Vector2(1, 0) };
-  }, [p.desktop, p.desktopBlur, p.horizon.desktop]);
+  }, [p.desktop, p.desktopGlass, p.horizon.desktop]);
 
   useEffect(
     () => () => {

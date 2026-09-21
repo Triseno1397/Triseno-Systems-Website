@@ -295,6 +295,19 @@ export default function PortalPage() {
   }, [mode]);
 
   const full = mode !== "lite";
+  // Rail stops for the doors section (400dvh, scrubbed from "top bottom" to
+  // "bottom bottom"): door i owns the scroll between the midpoints of its
+  // neighbours' cards, placed where the viewport's centre is at that time.
+  const railStops = useMemo(() => {
+    const H = 400;
+    const b = [
+      0,
+      (progressForDoor(0, 4.2) + progressForDoor(1, 12.8)) / 2,
+      (progressForDoor(1, 4.2) + progressForDoor(2, 12.8)) / 2,
+      1,
+    ].map((p) => Math.max(0, p * H - 50));
+    return [0, 1, 2].map((i) => ({ top: b[i], height: Math.max(1, b[i + 1] - b[i]) }));
+  }, []);
   const current = MENU_ITEMS[active];
   const hue = hot ? current.hue : WHITE;
   const lineOne = useMemo<RotateWord[]>(() => LINE_ONE.map((text) => ({ text, glyph: "circle", hue: WHITE })), []);
@@ -319,6 +332,11 @@ export default function PortalPage() {
           onClick={(e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
             e.preventDefault();
+            // lock headline, counter and object to the destination the moment
+            // the click lands — nothing may rotate back during the warp
+            interacting.current = true;
+            window.clearTimeout(resumeTimer.current);
+            show(i, true);
             travel(item.route);
           }}
         >
@@ -396,28 +414,43 @@ export default function PortalPage() {
             </p>
           </div>
 
+          {mode === "lite" ? <LiteSignature active={active} /> : null}
+
           <nav aria-label="Divisions" className="portal-menu pointer-events-auto mt-8 w-fit max-w-full" onMouseLeave={release}>
             <p className="chrome-label mb-5 font-mono text-white" aria-live="off">
               {hot ? `${active + 1}/${MENU_ITEMS.length} — ${current.name}` : `0/${MENU_ITEMS.length} — Three divisions`}
             </p>
             <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[0, 1, 2].map(menuLink)}</ul>
             <span aria-hidden="true" className="portal-menu__rule" />
-            <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[3, 4].map(menuLink)}</ul>
+            <div className="relative w-fit">
+              <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[3, 4].map(menuLink)}</ul>
+              {/* in the copy column, beside CONTACT — never on the object */}
+              <p
+                aria-hidden="true"
+                className="scroll-tick scroll-tick--row chrome-label pointer-events-none absolute bottom-[0.55em] left-[calc(100%+2.4em)] flex items-center gap-3 whitespace-nowrap font-mono text-white"
+              >
+                <span>Scroll to explore</span>
+                <span className="scroll-tick__line" />
+              </p>
+            </div>
           </nav>
-
-          <p
-            aria-hidden="true"
-            className="scroll-tick chrome-label pointer-events-none absolute bottom-[calc(var(--fade-bottom)+8px)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 font-mono text-white"
-          >
-            <span>Scroll to explore</span>
-            <span className="scroll-tick__line" />
-          </p>
         </div>
       </section>
 
       {/* ── 2. Three doors ───────────────────────────────────────────── */}
       {full ? (
-        <section ref={doorsRef} data-rail="Doors" aria-label="Three divisions" className="relative z-10 h-[400dvh]">
+        <section ref={doorsRef} aria-label="Three divisions" className="relative z-10 h-[400dvh]">
+          {/* one rail stop per door, laid over the stretch of scroll where that
+              door's card is up, so the rail names the door actually in view */}
+          {DOOR_ITEMS.map((door, i) => (
+            <span
+              key={door.key}
+              aria-hidden="true"
+              data-rail={door.name}
+              className="pointer-events-none absolute inset-x-0"
+              style={{ top: `${railStops[i].top}dvh`, height: `${railStops[i].height}dvh` }}
+            />
+          ))}
           <div className="pointer-events-none fixed inset-0 mx-auto max-w-[1400px] px-[var(--gutter)]">
             {DOOR_ITEMS.map((door, i) => (
               <div
@@ -433,7 +466,7 @@ export default function PortalPage() {
                   className="pointer-events-auto"
                   style={{ opacity: 0, visibility: "hidden" }}
                 >
-                  <GlassPanel world="portal" className="door-card">
+                  <GlassPanel world="portal" className="door-card" veil={0.32}>
                     <DoorCardBody index={i} />
                   </GlassPanel>
                 </div>
@@ -442,11 +475,11 @@ export default function PortalPage() {
           </div>
         </section>
       ) : (
-        <section data-rail="Doors" aria-label="Three divisions" className="relative z-10">
+        <section aria-label="Three divisions" className="relative z-10">
           {DOOR_ITEMS.map((door) => (
-            <div key={door.key} data-lite-door="" className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
+            <div key={door.key} data-lite-door="" data-rail={door.name} className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
               <LiteGlyph kind={door.glyph} hue={door.hue} />
-              <GlassPanel world="portal" className="door-card door-card--static">
+              <GlassPanel world="portal" className="door-card door-card--static" veil={0.32}>
                 <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
               </GlassPanel>
             </div>
@@ -510,6 +543,27 @@ function DoorCardBody({ index }: { index: number }) {
         {copy.cta}
       </GhostButton>
     </>
+  );
+}
+
+/* The signature object without WebGL (phones, reduced motion): the five menu
+   glyphs stacked in one lit frame, cross-turning into each other with the
+   headline — transform / opacity only — standing in the plate's light shaft
+   with its reflection on the wet floor. White light: the portal at rest has
+   no hue of its own. */
+function LiteSignature({ active }: { active: number }) {
+  return (
+    <div aria-hidden="true" className="lite-signature">
+      <span className="lite-signature__halo" />
+      {MENU_ITEMS.map((item, i) => (
+        <span key={item.key} className="lite-signature__glyph" data-on={i === active ? "" : undefined}>
+          <Glyph kind={item.glyph} size="100%" color={WHITE} strokeWidth={1.4} glow />
+          <span className="lite-signature__reflect">
+            <Glyph kind={item.glyph} size="100%" color={WHITE} strokeWidth={1.4} />
+          </span>
+        </span>
+      ))}
+    </div>
   );
 }
 

@@ -352,14 +352,23 @@ function ProgressRail({ pathname }: { pathname: string }) {
         }
         return;
       }
-      const probe = window.scrollY + window.innerHeight * 0.5;
+      // The section actually in view: the one covering the most of the
+      // viewport right now (pinned sections, pin-spacers and nested markers
+      // all report their live on-screen box, so this never lags or sticks).
+      const vh = window.innerHeight;
       let idx = 0;
-      sections.forEach((s, i) => {
-        if (s.getBoundingClientRect().top + window.scrollY <= probe) idx = i;
+      let best = -1;
+      const rects = sections.map((s) => s.getBoundingClientRect());
+      rects.forEach((r, i) => {
+        const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (vis > best + 1) {
+          best = vis;
+          idx = i;
+        }
       });
       const el = sections[idx];
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const local = Math.min(1, Math.max(0, (probe - top) / Math.max(1, el.offsetHeight)));
+      const r = rects[idx];
+      const local = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / Math.max(1, r.height)));
       if (fillRef.current) fillRef.current.style.transform = `scaleY(${local.toFixed(4)})`;
 
       const current = el.dataset.rail ?? "";

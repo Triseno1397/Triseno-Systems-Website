@@ -46,6 +46,14 @@ function polygon(kind: GlyphKind): Pt[] {
         [-r, 0],
       ];
     }
+    case "hexagon": {
+      // pointy-top, starting at the top vertex and running clockwise
+      const r = 1.08;
+      return [90, 30, -30, -90, -150, 150].map((deg): Pt => {
+        const a = (deg * Math.PI) / 180;
+        return [Math.cos(a) * r, Math.sin(a) * r];
+      });
+    }
     case "plus": {
       const w = 0.36;
       const e = 1.05;

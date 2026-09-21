@@ -73,7 +73,8 @@ export function doorLit(i: number, camZ: number): number {
 /** Visibility (0..1) of door `i`'s copy card: up while the door is framed, gone before the fly-through. */
 export function cardVisible(i: number, camZ: number): number {
   const d = camZ - DOOR_Z[i];
-  return smooth(11.6, 10, d) * (1 - smooth(6.6, 5, d));
+  // a long fully-visible window, so a card is read at rest, not mid-fade
+  return smooth(12.8, 11.6, d) * (1 - smooth(5.4, 4.2, d));
 }
 
 /** Which side of the frame door `i` sits on (-1 left, +1 right); its card takes the other side. */

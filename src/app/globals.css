@@ -116,8 +116,8 @@
 
 @media (max-width: 767px) {
   :root {
-    --fade-top-solid: 66px;
-    --fade-top: 118px;
+    --fade-top-solid: 78px;
+    --fade-top: 138px;
     --fade-bottom-solid: 76px;
     --fade-bottom: 128px;
   }

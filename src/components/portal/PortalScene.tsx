@@ -169,7 +169,7 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
       group.current.rotation.x = (Math.sin(t * 0.27) * 0.05 * still - portalState.py * 0.08) * (1 - warp);
     }
     // the glow is a billboard — it has to be gone before the camera reaches it
-    haloMat.opacity = (0.12 + 0.1 * env.white) * (1 - Math.min(1, Math.max(0, portalState.hero / 0.45))) * (1 - warp);
+    haloMat.opacity = 0.08 * (1 - Math.min(1, Math.max(0, portalState.hero / 0.45))) * (1 - warp);
     halo.current?.lookAt(state.camera.position);
 
     if (portalState.doors <= 0) env.focus.set(0, RING_Y, 0);
@@ -256,10 +256,21 @@ function Door({ index, onEnter }: { index: number; onEnter: (route: string) => v
     };
   }, [loops, points, coreMat, veilMat]);
 
+  const outer = useRef<THREE.Group>(null);
+
   useFrame((state) => {
     const camZ = state.camera.position.z;
     const lit = doorLit(index, camZ);
     const d = camZ - DOOR_Z[index];
+    // One focal glyph at a time: a door only exists while it is the door
+    // ahead (it rises into place as the camera approaches) — never as a small
+    // stack of glyphs visible down the corridor behind the signature object
+    // or behind the door in front of it.
+    const appear = portalState.doors > 0 && d > -1.5 ? smooth(15, 11.5, d) : 0;
+    if (outer.current) {
+      outer.current.visible = appear > 0.01;
+      outer.current.scale.setScalar(0.82 + 0.18 * appear);
+    }
     // white -> dark -> hue: the door ignites, it never shows a pale tint of its hue
     if (lit < 0.5) coreMat.color.copy(white).multiplyScalar(1 - lit * 2);
     else coreMat.color.copy(hue).multiplyScalar(lit * 2 - 1);
@@ -286,7 +297,7 @@ function Door({ index, onEnter }: { index: number; onEnter: (route: string) => v
   };
 
   return (
-    <group position={[0, y, DOOR_Z[index]]}>
+    <group ref={outer} position={[0, y, DOOR_Z[index]]}>
       <group scale={DOOR_SCALE}>
         <GlassLoop set={loops} coreMat={coreMat} near={near} />
         <mesh
@@ -306,7 +317,7 @@ function Door({ index, onEnter }: { index: number; onEnter: (route: string) => v
   );
 }
 
-/* ── the gate object: last door's glyph morphs into Contact's, cyan -> white ── */
+/* ── the gate object: last door's glyph morphs into Contact's hexagon, cyan -> white ── */
 
 function GateObject() {
   const group = useRef<THREE.Group>(null);
@@ -314,7 +325,7 @@ function GateObject() {
   const near = useNear((z) => z < DOOR_Z[2] + 1, false);
   const coreMat = useMemo(() => new THREE.MeshBasicMaterial({ color: WHITE, toneMapped: false }), []);
   const from = useMemo(() => glyphPoints("triangle", N), []);
-  const to = useMemo(() => glyphPoints("plus", N), []);
+  const to = useMemo(() => glyphPoints("hexagon", N), []);
   const cur = useMemo(() => new Float32Array(N * 2), []);
   const last = useRef(-1);
   const hue = useMemo(() => new THREE.Color(DOOR_ITEMS[2].hue), []);
@@ -325,7 +336,7 @@ function GateObject() {
   useFrame((state) => {
     const g = portalState.gate;
     // the morph is quick and decisive: the gate reads as a clean triangle or a
-    // clean cross, never as a long in-between lump
+    // clean hexagon, never as a long in-between lump
     const e = smooth(0.3, 0.55, g);
     if (Math.abs(e - last.current) > 0.002) {
       last.current = e;
@@ -339,6 +350,8 @@ function GateObject() {
 
     const t = state.clock.elapsedTime;
     if (group.current) {
+      // the gate only exists once the last door is passed (one focal glyph)
+      group.current.visible = portalState.doors > 0 && (state.camera.position.z < DOOR_Z[2] + 1 || g > 0);
       group.current.rotation.y = -0.35 + e * Math.PI + Math.sin(t * 0.3) * 0.12;
       group.current.position.y = GATE_POS.y + Math.sin(t * 0.8) * 0.06;
     }
@@ -386,7 +399,9 @@ function CameraRig() {
     let f = framing(hero, doors, gate, z);
     if (warpAt) f *= 1 - smooth(0, 650, performance.now() - warpAt);
     curFrame.current += (f - curFrame.current) * k;
-    const frameX = -1.6 * wide * curFrame.current;
+    // doors stand further off than the hero object and are larger, so they
+    // are pushed further aside to keep their copy card clear of them
+    const frameX = -(doors > 0 ? 2.9 : 1.6) * wide * curFrame.current;
 
     if (hero < 1 || doors <= 0) {
       // Hero: dolly straight through the signature object. A warp out of the
@@ -461,7 +476,9 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
     let t = 0;
     const onWarp = () => {
       window.clearTimeout(t);
-      t = window.setTimeout(() => setPaused(true), 820);
+      // the tunnel cover is ~full within 360ms; every frame after that goes to
+      // the tunnel and the destination
+      t = window.setTimeout(() => setPaused(true), 380);
     };
     window.addEventListener(WARP_EVENT, onWarp);
     return () => {
