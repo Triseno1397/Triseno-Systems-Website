@@ -101,8 +101,11 @@ export default function Capabilities() {
 
       let nearest = -1;
       let nearestD = Infinity;
+      // measure every card before styling any: interleaving read and write
+      // forced a layout per card per frame
+      const rects = cards.map((card) => card.getBoundingClientRect());
       cards.forEach((card, i) => {
-        const r = card.getBoundingClientRect();
+        const r = rects[i];
         const lx = x - r.left;
         const ly = y - r.top;
         const ring = rings[i];

@@ -57,7 +57,7 @@
 }
 @keyframes web-breathe { from { opacity: 0.32; transform: scale(0.94); } to { opacity: 0.72; transform: scale(1.04); } }
 .web-plate__haze {
-  position: absolute; left: -25%; right: -25%; height: 34vh; mix-blend-mode: screen; filter: blur(18px);
+  position: absolute; left: -25%; right: -25%; height: 34vh; mix-blend-mode: screen;
   background: radial-gradient(ellipse at center, rgba(200, 176, 255, 0.16) 0%, transparent 68%);
   animation: web-drift-x 30s ease-in-out infinite alternate;
 }
@@ -137,7 +137,8 @@
 .web-hero__copy::before, .web-demo__head::before, .web-compare__head::before, .web-compare__side::before,
 .web-stack__aside::before, .web-range__head::before, .web-range__list::before, .web-gate__copy::before {
   content: ""; position: absolute; inset: -28px -40px; z-index: -1; pointer-events: none;
-  background: rgba(0, 0, 0, 0.64); filter: blur(30px);
+  /* soft-edged by the gradient itself — a blur(30px) filter here was re-rasterised on every scroll frame */
+  background: radial-gradient(farthest-side, rgba(0, 0, 0, 0.66) 55%, rgba(0, 0, 0, 0.36) 78%, rgba(0, 0, 0, 0) 100%);
 }
 /* Mid-page sections do not carry a bottom lane: the next section's top lane
    already clears the chrome, and two lanes back to back left ~280px of bare

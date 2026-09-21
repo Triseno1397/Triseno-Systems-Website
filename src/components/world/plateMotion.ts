@@ -7,7 +7,14 @@
    the glass move in the same frame as the content.
    ───────────────────────────────────────────────────────────────────────── */
 
+import gsap from "gsap";
+
 const pointer = { x: 0, y: 0 };
+// scroll progress, measured once per GSAP tick: the first caller in a frame is
+// the frame loop's read phase, so later callers (overlays, canvases) never
+// force a layout by reading scrollHeight after the frame's style writes
+let progFrame = -1;
+let progValue = 0;
 let installed = false;
 
 function install() {
@@ -44,8 +51,13 @@ export function platePose(out: PlatePose): PlatePose {
     out.s = 1;
     return out;
   }
-  const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-  const prog = Math.min(1, Math.max(0, window.scrollY / max));
+  const frame = gsap.ticker.frame;
+  if (frame !== progFrame) {
+    progFrame = frame;
+    const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    progValue = Math.min(1, Math.max(0, window.scrollY / max));
+  }
+  const prog = progValue;
   out.tx = -pointer.x * 6;
   out.ty = -pointer.y * 4 - prog * 10;
   out.s = 1 + 0.12 * prog;

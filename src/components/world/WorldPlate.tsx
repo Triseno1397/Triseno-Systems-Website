@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import gsap from "gsap";
+import { addFrameJob } from "./frameLoop";
 import { plate as plateFor, stationPlates, type PlateWorld } from "./plates";
 import { setStationStarts, stationFrames, type StationStart } from "./stations";
 import { platePose, plateTransform, type PlatePose } from "./plateMotion";
@@ -87,17 +87,21 @@ export default function WorldPlate({
     const asked = plates.map((_, i) => i === 0);
     // same pose model, same station model and same clock as every GlassPanel's
     // copy of this plate
-    const tick = () => {
-      const t = plateTransform(platePose(pose));
+    let frames: ReturnType<typeof stationFrames> = [];
+    const read = () => {
+      platePose(pose);
+      frames = stationFrames(world);
+    };
+    const write = () => {
+      const t = plateTransform(pose);
       if (t !== last) {
         last = t;
         cam.style.transform = t;
       }
-      const frames = stationFrames(world);
       layerRefs.current.forEach((el, i) => {
         if (!el) return;
         const f = frames[i] ?? { alpha: 0, scale: 1, near: false };
-        const key = `${f.alpha.toFixed(3)}|${f.scale.toFixed(4)}`;
+        const key = f.alpha <= 0.001 ? "hidden" : `${f.alpha.toFixed(3)}|${f.scale.toFixed(4)}`;
         if (key !== lastLayer[i]) {
           lastLayer[i] = key;
           el.style.opacity = f.alpha.toFixed(3);
@@ -115,11 +119,12 @@ export default function WorldPlate({
       light.style.opacity = "1";
       light.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
     };
-    tick();
-    gsap.ticker.add(tick);
+    read();
+    write();
+    const stop = addFrameJob({ read, write });
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      gsap.ticker.remove(tick);
+      stop();
       window.removeEventListener("pointermove", onMove);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -34,11 +34,15 @@ export default function OrbitalProcess() {
   const sim = useRef({ angle: 0, locked: false, active: 0, visible: false, reduced: false });
   const resumeTimer = useRef(0);
   const tween = useRef<gsap.core.Tween | null>(null);
+  // the orbit's width, measured on resize only — reading offsetWidth every
+  // frame after moving the nodes forced a layout per frame
+  const orbitW = useRef(0);
 
   const place = useCallback(() => {
     const orbit = orbitRef.current;
     if (!orbit) return;
-    const radius = orbit.offsetWidth * 0.5 * 0.78;
+    if (!orbitW.current) orbitW.current = orbit.offsetWidth;
+    const radius = orbitW.current * 0.5 * 0.78;
     const a = sim.current.angle;
     nodeRefs.current.forEach((el, i) => {
       if (!el) return;
@@ -70,13 +74,17 @@ export default function OrbitalProcess() {
       }
       place();
     };
+    const ro = new ResizeObserver(() => {
+      orbitW.current = orbitRef.current?.offsetWidth ?? 0;
+      place();
+    });
+    if (orbitRef.current) ro.observe(orbitRef.current);
     gsap.ticker.add(tick);
     place();
-    window.addEventListener("resize", place);
     return () => {
       gsap.ticker.remove(tick);
       io.disconnect();
-      window.removeEventListener("resize", place);
+      ro.disconnect();
     };
   }, [place]);
 

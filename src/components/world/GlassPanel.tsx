@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import gsap from "gsap";
+import { addFrameJob } from "./frameLoop";
 import { plate as plateFor, stationPlates, type PlateWorld } from "./plates";
 import { stationFrames } from "./stations";
 import { platePose, plateTransform, type PlatePose } from "./plateMotion";
@@ -60,15 +60,23 @@ export default function GlassPanel({
     const painted: boolean[] = [];
     const io = new IntersectionObserver((e) => (visible = e[0]?.isIntersecting ?? true), { rootMargin: "20%" });
     io.observe(panel);
-    const tick = () => {
-      if (!visible) return;
-      const r = panel.getBoundingClientRect();
+    let r: DOMRect | null = null;
+    let frames: ReturnType<typeof stationFrames> = [];
+    // read phase: every layout-dependent value for this frame (panel rect,
+    // scroll pose, station hand-offs) — the write phase only applies them
+    const read = () => {
+      r = visible ? panel.getBoundingClientRect() : null;
+      if (!r) return;
+      platePose(pose);
+      frames = stationFrames(world);
+    };
+    const write = () => {
+      if (!visible || !r) return;
       // each copy is a viewport-sized plate; move it so its (0,0) sits on the
       // viewport's (0,0), then apply the plate's pose and, per station, the
       // same push-in and dissolve as WorldPlate — so the glass always shows
       // the room the camera is actually in
-      const base = plateTransform(platePose(pose), -r.left - 1, -r.top - 1);
-      const frames = stationFrames(world);
+      const base = plateTransform(pose, -r.left - 1, -r.top - 1);
       copyRefs.current.forEach((copy, i) => {
         if (!copy) return;
         const f = frames[i] ?? { alpha: 0, scale: 1, near: false };
@@ -76,7 +84,9 @@ export default function GlassPanel({
           painted[i] = true;
           copy.style.backgroundImage = `var(--glass-img-${i})`;
         }
-        const t = `${base} scale(${f.scale.toFixed(4)})|${f.alpha.toFixed(3)}`;
+        // a fully dissolved copy stays hidden and untouched — no per-frame writes
+        const t = f.alpha <= 0.001 ? "hidden" : `${base} scale(${f.scale.toFixed(4)})|${f.alpha.toFixed(3)}`;
+        if (t === "hidden" && last[i] === "hidden") return;
         if (t !== last[i]) {
           last[i] = t;
           copy.style.transform = `${base} scale(${f.scale.toFixed(4)})`;
@@ -85,10 +95,11 @@ export default function GlassPanel({
         }
       });
     };
-    tick();
-    gsap.ticker.add(tick);
+    read();
+    write();
+    const stop = addFrameJob({ read, write });
     return () => {
-      gsap.ticker.remove(tick);
+      stop();
       io.disconnect();
     };
   }, [world]);

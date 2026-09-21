@@ -505,11 +505,13 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
           ms={200}
           iterations={6}
           threshold={0.8}
-          bounds={() => [24, 50]}
+          // smoothness first: below ~45fps step down — resolution first (the
+          // look is unchanged, only sharpness), then the heavy effects
+          bounds={() => [45, 58]}
           flipflops={2}
           onDecline={() => {
-            setMaxDpr(1);
-            setTier("low");
+            if (maxDpr > 1) setMaxDpr(1);
+            else setTier("low");
           }}
           onFallback={() => setTier("low")}
         />

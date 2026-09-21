@@ -169,10 +169,14 @@ export default function StudioBackdrop() {
 
     // the air redraws at 30fps; its pose follows the plate on the GSAP ticker
     let lastAt = 0;
+    const root = document.documentElement;
     const loop = (now: number) => {
       if (!alive) return;
       raf = requestAnimationFrame(loop);
       if (now - lastAt < 32) return;
+      // the air holds still while the page scrolls: a full-viewport canvas
+      // redraw mid-scroll costs the frame, and a drift this slow is invisible
+      if (root.classList.contains("lenis-scrolling")) return;
       lastAt = now;
       t += 1 / 30;
       draw();

@@ -40,29 +40,27 @@ html.has-orb * { cursor: none !important; }
 .orb-cursor {
   position: fixed; top: 0; left: 0; z-index: 1100;
   width: 40px; height: 40px; border-radius: 50%;
-  pointer-events: none; will-change: transform;
+  pointer-events: none; will-change: transform; contain: strict;
   transition: opacity 500ms var(--ease-expo);
 }
 .orb-cursor > span { position: absolute; inset: 0; border-radius: 50%; }
-/* Clear glass: whatever is behind is softened and DESATURATED, never filled
-   with the scene's hue (the displacement lens sampled the lit object and read
-   as a solid amber / cyan disc, so it is gone). */
+/* Clear glass, drawn not lensed: a 1px white rim over a faint neutral wash.
+   (No backdrop-filter — a live blur on a moving element re-rasterises the
+   page behind it on every frame.) */
 .orb-cursor__glass {
   border: 1px solid #ffffff;
-  -webkit-backdrop-filter: blur(2px) saturate(0.25) brightness(1.08);
-  backdrop-filter: blur(2px) saturate(0.25) brightness(1.08);
-  transition: opacity 400ms var(--ease-expo);
+  background: rgba(255, 255, 255, 0.08);
+  transition: background-color 400ms var(--ease-expo), border-color 400ms var(--ease-expo);
 }
-/* docked beside a word: a bare 1px ring, nothing lensed, nothing covered */
-.orb-cursor[data-docked] .orb-cursor__glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
-.orb-cursor[data-docked] .orb-cursor__spec { opacity: 0; }
 .orb-cursor__spec {
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 24%),
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.2) 100%);
-  opacity: 0.8; transition: opacity 500ms var(--ease-expo);
+  opacity: 0.8; transition: opacity 400ms var(--ease-expo);
 }
-.orb-cursor[data-hot]:not([data-docked]) .orb-cursor__spec { opacity: 1; }
+/* over a target: a hollow ring centred on the pointer — nothing covers the letters */
+.orb-cursor[data-hot] .orb-cursor__glass { background-color: rgba(255, 255, 255, 0); }
+.orb-cursor[data-hot] .orb-cursor__spec { opacity: 0; }
 html[data-warping] .orb-cursor { opacity: 0 !important; }
 
 /* ── loader ── */
@@ -80,6 +78,12 @@ html[data-warping] .orb-cursor { opacity: 0 !important; }
 html[data-warping] .morph-nav,
 html[data-warping] .chrome-btn,
 html[data-warping] .progress-rail { opacity: 0; pointer-events: none; }
+
+/* --fade-y is rewritten every frame on each content section. Registered as
+   NON-inheriting, so an update restyles that one element only — as a plain
+   custom property it inherited into every descendant and forced the whole
+   page to restyle on every scroll frame. */
+@property --fade-y { syntax: "<length>"; inherits: false; initial-value: 0px; }
 
 /* ── CONTENT NEVER COLLIDES WITH CHROME (design-system §2) ─────────────────
    Technique: a CONTENT-ONLY viewport mask. ContentFade.tsx marks every direct
@@ -124,9 +128,11 @@ html[data-content-fade] main > [data-fade] {
   mask-repeat: no-repeat;
   -webkit-mask-clip: no-clip;
   mask-clip: no-clip;
+  /* its own compositor layer: the mask moves every frame, the content is not re-painted (opacity, not transform — a transform would break position: fixed pins inside) */
+  will-change: opacity;
 }
 /* the warp tunnel and poster captures show the page bare */
-html:has(.portal-world[data-capture]) main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
+html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
 
 /* neutral pool behind the rail: centred on it, fully faded inside its own box */
 .chrome-scrim {
@@ -438,7 +444,7 @@ html:has(.portal-world[data-capture]) main > [data-fade] { -webkit-mask-image: n
 
 /* poster capture (?capture=…): the bare scene */
 .portal-world[data-capture] > section { visibility: hidden; }
-html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rail, .orb-cursor) { display: none !important; }
+html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-cursor) { display: none !important; }
 
 /* ═══ THE LIT PLACE, COMPOSITED IN CSS ═══════════════════════════════════
    `WorldAtmosphere` is what every world falls back to on a phone, under
@@ -804,3 +810,25 @@ html:has(.portal-world[data-capture]) :is(.morph-nav, .chrome-btn, .progress-rai
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
 }
+
+/* ── SMOOTHNESS: ambience rests while the page moves ─────────────────────
+   The slow ambient drifts (7–46s haze, dust, breathing light) are invisible
+   mid-scroll, but each one keeps a full-viewport blended layer re-compositing
+   every frame. They freeze while Lenis is scrolling and resume on the frame
+   scrolling stops, so the GPU spends a scroll frame on the scroll. */
+html.lenis-scrolling :is(
+  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
+  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
+  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
+  .ai-world__glow, .ai-world__core
+) { animation-play-state: paused; }
+/* faint haze and dust read the same blended normally over the dark plate; the
+   screen blend is kept only where light really adds up (shafts, pointer light) */
+html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .web-plate__dust { mix-blend-mode: normal; }
+
+/* ── tap targets: small text links get an invisible 44px-tall hit area
+   (no layout change — the ::before only widens where a tap lands) */
+.world-underline::before, .web-subaction::before {
+  content: ""; position: absolute; inset: -14px -6px;
+}
+.web-subaction { position: relative; }

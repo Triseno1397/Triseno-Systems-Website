@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import gsap from "gsap";
+import { addFrameJob } from "./frameLoop";
 
 /* ─────────────────────────────────────────────────────────────────────────
    CONTENT NEVER COLLIDES WITH CHROME — and the world stays full-bleed.
@@ -49,18 +49,25 @@ export default function ContentFade() {
       tick();
     };
 
-    const tick = () => {
+    let ys: number[] = [];
+    const read = () => {
+      ys = list.map((el) => Math.round(-el.getBoundingClientRect().top));
+    };
+    const write = () => {
       if (window.innerHeight !== vh) {
         vh = window.innerHeight;
         root.style.setProperty("--fade-vh", `${vh}px`);
       }
-      for (const el of list) {
-        const y = Math.round(-el.getBoundingClientRect().top);
-        if (last.get(el) !== y) {
-          last.set(el, y);
-          el.style.setProperty("--fade-y", `${y}px`);
-        }
-      }
+      list.forEach((el, i) => {
+        const y = ys[i];
+        if (y === undefined || last.get(el) === y) return;
+        last.set(el, y);
+        el.style.setProperty("--fade-y", `${y}px`);
+      });
+    };
+    const tick = () => {
+      read();
+      write();
     };
 
     scan();
@@ -70,10 +77,10 @@ export default function ContentFade() {
     const mo = new MutationObserver(scan);
     if (main) mo.observe(main, { childList: true });
     const late = window.setTimeout(scan, 600);
-    gsap.ticker.add(tick);
+    const stop = addFrameJob({ read, write });
 
     return () => {
-      gsap.ticker.remove(tick);
+      stop();
       mo.disconnect();
       window.clearTimeout(late);
       list.forEach((el) => {

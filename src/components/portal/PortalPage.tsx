@@ -130,6 +130,7 @@ export default function PortalPage() {
       }
       setActive(portalState.active);
       setCapture(true);
+      document.documentElement.setAttribute("data-portal-capture", "");
       setMode("full");
       return;
     }

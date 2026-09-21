@@ -1,0 +1,13 @@
+import { chromium, devices } from '@playwright/test';
+const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const ctx = await b.newContext({ ...devices['iPhone 13'] }); const p = await ctx.newPage(); p.setDefaultTimeout(60000);
+await p.goto('http://localhost:3300/'); await p.waitForTimeout(6000);
+const w = p.locator('a.portal-word').filter({ hasText: /web design/i }).first();
+console.log('count', await w.count(), 'href', await w.getAttribute('href'));
+await w.scrollIntoViewIfNeeded(); await p.waitForTimeout(800);
+const bb = await w.boundingBox(); console.log('box', JSON.stringify(bb));
+console.log('under', await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? e.tagName + '.' + e.className : 'null'; }, [bb.x + bb.width / 2, bb.y + bb.height / 2]));
+await w.tap(); await p.waitForTimeout(1500); console.log('after 1.5s', p.url());
+await p.waitForTimeout(5000); console.log('after 6.5s', p.url());
+await p.screenshot({ path: 'design-loop/shots/phone/interact/portal-after-tap.png' });
+await b.close();

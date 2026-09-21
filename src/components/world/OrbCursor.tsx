@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * ~40px glass orb that lenses what is under it (design-system §4).
- * - It is clear white glass: the backdrop is desaturated inside it, so it can
- *   never read as a solid fill of the scene's hue.
- * - It never sits on a word: over a text target it docks beside it as a small
- *   ring (see onMove), so the hovered word's letters stay whole.
- * - Pointer devices only; touch keeps the native cursor. Transform-only motion.
+ * ~40px glass orb cursor (design-system §4).
+ * - It IS the pointer: its centre is always exactly where the mouse is (no
+ *   easing on position), so it never trails, and never leaves a target the
+ *   visitor is pointing at.
+ * - Over an interactive target it opens into a hollow 1px ring centred on the
+ *   pointer — the letters underneath stay whole and readable.
+ * - While the page scrolls under a still mouse, the target under the pointer is
+ *   re-checked once per frame, so the hover state is never stale.
+ * - No backdrop-filter: a live blur on a moving element re-rasterises the page
+ *   behind it every frame. Pointer devices only; touch keeps the native cursor.
  */
 
 const SIZE = 40;
@@ -29,80 +33,90 @@ export default function OrbCursor() {
   useEffect(() => {
     if (!enabled) return;
     const root = document.documentElement;
-    root.classList.add("has-orb");
-
     const orb = orbRef.current;
     if (!orb) return;
+    root.classList.add("has-orb");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    let tx = window.innerWidth / 2;
-    let ty = window.innerHeight / 2;
-    let x = tx;
-    let y = ty;
+    let x = -100;
+    let y = -100;
     let scale = 1;
     let targetScale = 1;
+    let pressed = false;
+    let hot = false;
     let visible = false;
     let raf = 0;
-    let dock: { x: number; y: number } | null = null;
+    let recheck = false;
+    let prev = performance.now();
+
+    const setHot = (el: Element | null) => {
+      const next = !!el?.closest?.(INTERACTIVE) || root.hasAttribute("data-cursor-hot");
+      if (next === hot) return;
+      hot = next;
+      orb.toggleAttribute("data-hot", hot);
+    };
+    const place = () => {
+      orb.style.transform = `translate3d(${x - SIZE / 2}px, ${y - SIZE / 2}px, 0) scale(${scale.toFixed(3)})`;
+    };
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
-      tx = e.clientX;
-      ty = e.clientY;
+      x = e.clientX;
+      y = e.clientY;
       if (!visible) {
         visible = true;
-        x = tx;
-        y = ty;
         orb.style.opacity = "1";
       }
-      const el = e.target as Element | null;
-      const hit = el?.closest?.(INTERACTIVE) as HTMLElement | null;
-      // Over a word-sized target (menu word, button, link) the orb DOCKS beside
-      // it instead of sitting on its letters: it shrinks to a small ring just
-      // left of the target (right, if there is no room), centred on its line.
-      dock = null;
-      if (hit && (hit.textContent ?? "").trim()) {
-        const r = hit.getBoundingClientRect();
-        if (r.height <= 160 && r.width <= 900) {
-          const leftX = r.left - 26;
-          dock = { x: leftX >= 12 ? leftX : r.right + 26, y: r.top + r.height / 2 };
-        }
-      }
-      const hot = !!hit || root.hasAttribute("data-cursor-hot");
-      targetScale = dock ? 0.45 : hot ? 1.12 : 1;
-      orb.toggleAttribute("data-hot", hot);
-      orb.toggleAttribute("data-docked", !!dock);
+      setHot(e.target as Element | null);
+      place();
+      kick();
+    };
+    // the page moves under a still mouse: re-test what is under it next frame
+    const onScroll = () => {
+      recheck = true;
+      kick();
     };
     const onLeave = () => {
       visible = false;
       orb.style.opacity = "0";
     };
-    const onDown = () => (targetScale *= 0.8);
-    const onUp = () => (targetScale = dock ? 0.45 : orb.hasAttribute("data-hot") ? 1.12 : 1);
-
-    let prev = performance.now();
-    const loop = (now: number) => {
-      // time-based easing: the orb arrives on wall-clock time even when the
-      // page can only draw a few frames a second, so a docked ring is always
-      // beside the word, never caught half-way across its letters
-      const dt = Math.min(0.25, Math.max(0, (now - prev) / 1000));
-      prev = now;
-      const k = reduced ? 1 : 1 - Math.exp(-dt * 16);
-      const ks = reduced ? 1 : 1 - Math.exp(-dt * 11);
-      const gx = dock ? dock.x : tx;
-      const gy = dock ? dock.y : ty;
-      x += (gx - x) * k;
-      y += (gy - y) * k;
-      scale += (targetScale - scale) * ks;
-      const tf = `translate3d(${x - SIZE / 2}px, ${y - SIZE / 2}px, 0) scale(${scale.toFixed(3)})`;
-      orb.style.transform = tf;
-      raf = requestAnimationFrame(loop);
+    const onDown = () => {
+      pressed = true;
+      kick();
     };
-    raf = requestAnimationFrame(loop);
+    const onUp = () => {
+      pressed = false;
+      kick();
+    };
+
+    // The loop only runs while something is still changing (scale easing or a
+    // scroll re-check), then parks itself — no idle 60fps work.
+    const loop = (now: number) => {
+      raf = 0;
+      const dt = Math.min(0.1, Math.max(0, (now - prev) / 1000));
+      prev = now;
+      if (recheck && visible) {
+        recheck = false;
+        setHot(document.elementFromPoint(x, y));
+      }
+      targetScale = (hot ? 1.5 : 1) * (pressed ? 0.85 : 1);
+      const ks = reduced ? 1 : 1 - Math.exp(-dt * 18);
+      scale += (targetScale - scale) * ks;
+      if (Math.abs(targetScale - scale) < 0.002) scale = targetScale;
+      place();
+      if (scale !== targetScale || recheck) kick();
+    };
+    const kick = () => {
+      if (!raf) {
+        prev = performance.now();
+        raf = requestAnimationFrame(loop);
+      }
+    };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onUp, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("pointerleave", onLeave);
 
     return () => {
@@ -111,6 +125,7 @@ export default function OrbCursor() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("pointerleave", onLeave);
     };
   }, [enabled]);
@@ -118,11 +133,9 @@ export default function OrbCursor() {
   if (!enabled) return null;
 
   return (
-    <>
-      <div ref={orbRef} aria-hidden="true" className="orb-cursor" style={{ opacity: 0 }}>
-        <span className="orb-cursor__glass" />
-        <span className="orb-cursor__spec" />
-      </div>
-    </>
+    <div ref={orbRef} aria-hidden="true" className="orb-cursor" style={{ opacity: 0 }}>
+      <span className="orb-cursor__glass" />
+      <span className="orb-cursor__spec" />
+    </div>
   );
 }

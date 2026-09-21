@@ -157,6 +157,7 @@ export default function Filmstrip() {
         if (st) {
           const o = Math.min(Math.min(1, p / fin), Math.min(1, (1 - p) / fout));
           st.style.opacity = Math.max(0, o).toFixed(3);
+          st.style.visibility = o <= 0.005 ? "hidden" : "visible";
           st.style.visibility = o < 0.005 ? "hidden" : "visible";
         }
       };

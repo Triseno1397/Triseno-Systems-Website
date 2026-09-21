@@ -81,6 +81,7 @@ export default function BehindReveal() {
           const o = Math.min(clamp01(p / 0.12), 1 - clamp01((p - 0.76) / 0.12));
           if (stage) {
             stage.style.opacity = o.toFixed(3);
+            stage.style.visibility = o <= 0.005 ? "hidden" : "visible";
             stage.style.visibility = o < 0.005 ? "hidden" : "visible";
           }
           prints.forEach((el, i) => {

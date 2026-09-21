@@ -44,7 +44,23 @@ export default function SmoothScroll() {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const coarse = window.matchMedia("(pointer: coarse)").matches;
-    if (reduced || coarse) return;
+    if (reduced || coarse) {
+      // native scrolling: mirror Lenis's `lenis-scrolling` flag so the ambient
+      // layers (world.css) and the studio's air canvas rest mid-scroll here too
+      const root = document.documentElement;
+      let idle = 0;
+      const onScroll = () => {
+        if (!root.classList.contains("lenis-scrolling")) root.classList.add("lenis-scrolling");
+        window.clearTimeout(idle);
+        idle = window.setTimeout(() => root.classList.remove("lenis-scrolling"), 180);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+        window.clearTimeout(idle);
+        root.classList.remove("lenis-scrolling");
+      };
+    }
 
     const lenis = new Lenis({
       duration: 1.15,

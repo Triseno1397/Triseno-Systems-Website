@@ -132,6 +132,8 @@ export default function ExpansionHero() {
           if (hint.current) hint.current.style.opacity = (1 - smooth(p / 0.12)).toFixed(3);
           if (stage.current) {
             stage.current.style.opacity = (1 - out).toFixed(3);
+            // gone = not hit-testable, so it never blocks the chapter beneath
+            stage.current.style.visibility = out >= 0.995 ? "hidden" : "visible";
             stage.current.style.visibility = out > 0.995 ? "hidden" : "visible";
           }
 
