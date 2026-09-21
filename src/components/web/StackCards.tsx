@@ -10,11 +10,12 @@ gsap.registerPlugin(ScrollTrigger);
 /**
  * What you get — sticky stacking cards, section 04, standing in the world.
  *
- * Each deliverable is a frosted sheet that sticks a few pixels below the last.
- * As the next sheet arrives, the one underneath scales back into the tray and
- * its CONTENT fades out before the incoming edge can reach its lowest row — so
- * no row is ever sliced mid-glyph; what remains of a covered sheet is its
- * hairline edge.
+ * Each deliverable is a lit glass sheet that sticks a few pixels below the
+ * last. As the next sheet slides up, the one underneath is clipped exactly at
+ * the incoming edge and settles back into the tray, and each of its rows fades
+ * out just before that edge reaches it. So a covered sheet is never an empty
+ * panel, no row is sliced mid-glyph, and nothing of it sits behind the sheet in
+ * front.
  *
  * Every sheet carries a small, live-built illustration of the thing it
  * delivers — a sitemap, a type specimen, the build, a performance meter, a
@@ -137,44 +138,55 @@ export default function StackCards() {
           if (!inner || !content) return;
           const depth = total - 1 - i;
           const top = () => parseFloat(getComputedStyle(card).top);
+          const nextTop = () => parseFloat(getComputedStyle(next).top);
+          /** how much of this sheet is still showing once the next one has stuck */
+          const sliver = () => Math.max(0, nextTop() - top());
+          const trig = (end: () => string, start = () => `top ${top() + inner.offsetHeight}px`) => ({
+            trigger: next,
+            start,
+            end,
+            scrub: true,
+            invalidateOnRefresh: true,
+          });
 
-          // Settle back into the tray, from the moment the next sheet touches
-          // this one until it has stuck on top of it.
+          // The covered sheet is CLIPPED at the incoming sheet's edge. Nothing
+          // of it ever sits behind the glass sheet in front (so no hidden edge
+          // crosses visible content), and what is visible of it is still whole.
+          // The next sheet moves 1:1 with scroll until it sticks, so a linear
+          // scrub tracks its edge exactly.
           gsap.fromTo(
             inner,
-            { scale: 1 },
+            { clipPath: "inset(0px 0px 0px 0px)", scale: 1 },
             {
-              scale: 1 - Math.min(depth, 4) * 0.03,
+              clipPath: () => `inset(0px 0px ${Math.max(0, inner.offsetHeight - sliver())}px 0px)`,
+              scale: 1 - Math.min(depth, 4) * 0.02,
               ease: "none",
               immediateRender: false,
-              scrollTrigger: {
-                trigger: next,
-                start: () => `top ${top() + inner.offsetHeight}px`,
-                end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
-                scrub: true,
-                invalidateOnRefresh: true,
-              },
+              scrollTrigger: trig(() => `top ${nextTop()}px`),
             },
           );
 
-          // Hand over cleanly: the content is gone before the incoming edge
-          // reaches this sheet's lowest row (the spec row starts ~80% down).
-          gsap.fromTo(
-            content,
-            { opacity: 1 },
-            {
-              opacity: 0,
-              ease: "none",
-              immediateRender: false,
-              scrollTrigger: {
-                trigger: next,
-                start: () => `top ${top() + inner.offsetHeight}px`,
-                end: () => `top ${top() + inner.offsetHeight * 0.84}px`,
-                scrub: true,
-                invalidateOnRefresh: true,
+          // Row by row, each line of the sheet fades out just before the
+          // incoming edge reaches it — the clip never slices a glyph, and the
+          // rows above the edge stay readable, so the sheet is never an empty
+          // panel.
+          Array.from(content.children).forEach((row) => {
+            const el = row as HTMLElement;
+            const bottom = () => el.offsetTop + el.offsetHeight;
+            gsap.fromTo(
+              el,
+              { opacity: 1 },
+              {
+                opacity: 0,
+                ease: "none",
+                immediateRender: false,
+                scrollTrigger: trig(
+                  () => `top ${top() + bottom() + 4}px`,
+                  () => `top ${top() + bottom() + 44}px`,
+                ),
               },
-            },
-          );
+            );
+          });
         });
       });
     },

@@ -26,8 +26,12 @@ import gsap from "gsap";
  * per pointer move; only clip-path and transform change.
  */
 
-/** Resting split: the rebuilt booking card shows whole on the right. */
-const START = 60;
+/**
+ * Resting split. The REBUILT site is uncovered to the LEFT of the handle, so
+ * at rest its whole first screen — headline, promise, both actions — reads
+ * clearly, and the old template shows on the right.
+ */
+const START = 62;
 
 interface Note {
   /** region on the stage, in % of the stage box */
@@ -39,7 +43,7 @@ interface Note {
   body: string;
 }
 
-/** Regions sit over the rebuilt (right) layer; see AfterMock's layout. */
+/** Regions sit over the rebuilt (left) layer; see AfterMock's layout. */
 const NOTES: Note[] = [
   {
     x: 3.5,
@@ -67,8 +71,8 @@ const NOTES: Note[] = [
   },
 ];
 
-/** The handle has to clear a region before that region's note lights. */
-const LIT_AT = [46, 28, 88];
+/** A region's note lights once the handle has uncovered most of it. */
+const LIT_AT = NOTES.map((n) => n.x + n.w * 0.7);
 
 export default function CompareReveal() {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -91,10 +95,10 @@ export default function CompareReveal() {
     const handle = handleRef.current;
     if (handle) {
       handle.setAttribute("aria-valuenow", String(Math.round(pos)));
-      handle.setAttribute("aria-valuetext", `${Math.round(100 - pos)} percent of the rebuilt site shown`);
+      handle.setAttribute("aria-valuetext", `${Math.round(pos)} percent of the rebuilt site shown`);
     }
     NOTES.forEach((note, i) => {
-      const lit = pos <= LIT_AT[i];
+      const lit = pos >= LIT_AT[i];
       stage.querySelector<HTMLElement>(`[data-region="${i}"]`)?.toggleAttribute("data-lit", lit);
       notesRef.current?.children[i]?.toggleAttribute("data-lit", lit);
     });
@@ -126,8 +130,8 @@ export default function CompareReveal() {
         const paint = () => apply(proxy.v);
         sweep.current = gsap
           .timeline({ defaults: { onUpdate: paint } })
-          .to(proxy, { v: 88, duration: 0.7, ease: "power3.inOut" })
-          .to(proxy, { v: 10, duration: 1.2, ease: "power3.inOut" })
+          .to(proxy, { v: 12, duration: 0.7, ease: "power3.inOut" })
+          .to(proxy, { v: 94, duration: 1.2, ease: "power3.inOut" })
           .to(proxy, { v: START, duration: 0.9, ease: "expo.out" });
       },
       { threshold: 0.55 },

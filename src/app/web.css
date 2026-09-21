@@ -121,6 +121,23 @@
 .web-scene[data-at="range"] .web-scene__haze { transform: translate3d(-16vw, 7vh, 0) scale(1.06); }
 .web-scene[data-at="gate"] .web-scene__haze { transform: translate3d(-22vw, -2vh, 0) scale(1.1); opacity: 0.85; }
 
+/* ── LIT OBJECTS ───────────────────────────────────────────────────────
+   Every component frame is an object standing in the atrium, not a flat
+   slab: a translucent glass bezel ring, a hairline edge catching the light,
+   the division's light glowing around it and spilling onto the floor
+   beneath. All box-shadow, so no layout moves and a frame's own overflow
+   never clips it. Glow is allowed on scene objects (design-system §2); the
+   concept sites inside stay fully legible. */
+.web-hero__site, .web-demo__device, .web-compare__stage, .web-tile, .web-stack__inner {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 0 7px rgba(255, 255, 255, 0.06),
+    0 0 0 8px rgba(255, 255, 255, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 0 46px 2px color-mix(in srgb, var(--hue) 38%, transparent),
+    0 44px 64px -30px color-mix(in srgb, var(--hue) 78%, transparent);
+}
+
 /* ── shared section primitives ── */
 /* Readable substrate: a soft neutral scrim behind every block of copy, so the
    world's light and bloom can never wash out resting type (design-system §2:
@@ -270,12 +287,6 @@
   position: relative; display: block; width: 100%; padding: 0; text-align: left;
   border: 1px solid #ffffff; background: #000000; color: #ffffff; cursor: pointer;
 }
-.web-hero__site::before,
-.web-hero__site::after {
-  content: ""; position: absolute; width: 14px; height: 14px; border: 0 solid var(--hue); pointer-events: none;
-}
-.web-hero__site::before { left: -7px; top: -7px; border-left-width: 1px; border-top-width: 1px; }
-.web-hero__site::after { right: -7px; bottom: -7px; border-right-width: 1px; border-bottom-width: 1px; }
 .web-hero__site-view {
   position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
   container-type: inline-size; background: #f4f1ea;
@@ -493,12 +504,13 @@
 .web-compare__layer { position: absolute; inset: 0; z-index: 1; overflow: hidden; isolation: isolate; }
 .web-compare__layer--after { z-index: 2; }
 .web-compare__label {
-  position: absolute; bottom: 12px; z-index: 3; padding: 6px 10px; border: 1px solid #ffffff; background: #000000;
+  position: absolute; top: 12px; z-index: 3; padding: 6px 10px; border: 1px solid #ffffff; background: #000000;
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em;
   text-transform: uppercase; color: #ffffff; pointer-events: none;
 }
-.web-compare__label--before { left: 12px; }
-.web-compare__label--after { right: 12px; }
+/* drag mode: rebuilt on the left of the handle, old template on the right */
+.web-compare__label--before { right: 12px; }
+.web-compare__label--after { left: 12px; }
 
 /* Annotation: a bracket AROUND the area that changed, with its number seated
    on the bracket's top edge — never a badge dropped on the mock's own words. */
@@ -524,7 +536,13 @@
   transition: color 400ms var(--ease-expo), background-color 400ms var(--ease-expo);
 }
 .web-compare__switch button + button { border-left: 0; }
-.web-compare__switch button[data-on] { background: #ffffff; color: #000000; }
+/* active = ghost: bright hairline, white type, a violet square — never a fill
+   (a white fill read as a grey gradient where the edge fade crossed it) */
+.web-compare__switch button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.web-compare__switch button::before { content: ""; width: 7px; height: 7px; border: 1px solid currentColor; }
+.web-compare__switch button[data-on] { color: #ffffff; border-color: #ffffff; box-shadow: inset 0 0 0 1px #ffffff; }
+.web-compare__switch button[data-on]::before { border-color: var(--hue); background: var(--hue); }
+.web-compare__switch button:not([data-on]) { border-color: rgba(255, 255, 255, 0.4); }
 
 .web-compare__handle {
   position: absolute; z-index: 4; top: 0; bottom: 0; left: 0; width: 44px; margin-left: -22px;
@@ -533,8 +551,9 @@
 .web-compare__handle:focus-visible { outline: none; }
 .web-compare__line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #ffffff; }
 .web-compare__knob {
-  position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
-  display: grid; place-items: center; border: 1px solid #ffffff; background: #000000;
+  position: absolute; left: 50%; top: 52px; width: 36px; height: 36px; margin: -18px 0 0 -18px;
+  display: grid; place-items: center; border: 1px solid #ffffff; background: rgba(0, 0, 0, 0.42);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   transition: transform 600ms var(--ease-expo);
 }
 .web-compare__knob i { display: block; width: 14px; height: 14px; border: 1px solid var(--hue); filter: drop-shadow(0 0 6px var(--hue)); transition: transform 600ms var(--ease-expo); }
@@ -559,9 +578,9 @@
   .web-compare__switch { display: none; }
   .web-compare__stage { cursor: ew-resize; }
   .web-compare__handle { display: block; }
-  .web-compare__regions { display: block; clip-path: inset(0 0 0 calc(var(--n) * 1%)); }
+  .web-compare__regions { display: block; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); }
   .web-compare__layer--after {
-    opacity: 1; transition: none; clip-path: inset(0 0 0 calc(var(--n) * 1%)); will-change: clip-path;
+    opacity: 1; transition: none; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); will-change: clip-path;
   }
 }
 
@@ -694,6 +713,7 @@
 .web-stack__list { display: grid; gap: 5dvh; margin: 0; padding: 0 0 3dvh; list-style: none; }
 .web-stack__card { position: sticky; top: calc(var(--lane-top) + var(--i) * 9px); }
 .web-stack__inner {
+  position: relative; /* offsetParent for the per-row fade in StackCards */
   display: flex; flex-direction: column; min-height: clamp(300px, 46dvh, 440px);
   padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
   /* Phone: a near-solid sheet. Seven stacked backdrop-filter layers are the
@@ -704,7 +724,7 @@
 @media (min-width: 900px) {
   /* frosted, like the shared WorldCard: the world stays visible through the sheet */
   .web-stack__inner {
-    background: rgba(17, 17, 17, 0.62);
+    background: rgba(16, 15, 20, 0.74);
     -webkit-backdrop-filter: blur(26px) brightness(0.7); backdrop-filter: blur(26px) brightness(0.7);
   }
 }
@@ -830,37 +850,17 @@
 }
 .web-range__caption > span:last-child { color: var(--ink-muted); }
 
-/* ── PHONE: the work is the section. A full-width snap carousel of the eight
-   concept sites, because there is no hover to hide them behind. ── */
-.web-range__rail {
-  margin: 0 calc(var(--gutter) * -1) 26px; padding: 0 var(--gutter);
-  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.web-range__rail::-webkit-scrollbar { display: none; }
-.web-range__slides { display: flex; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.web-range__slide { flex: 0 0 min(86vw, 420px); scroll-snap-align: start; }
-/* Style tile: the concept edge to edge, and a footer in its own paper and
-   ink — brand in its display voice, and its palette. Depicted content. */
-.web-tile { margin: 0; border: 1px solid #ffffff; background: #000000; }
-.web-tile__rail {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 12px; background: var(--paper); color: var(--ink);
-}
-.web-tile__face { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); line-height: 1.2; }
-.web-tile__face--serif { font-family: var(--concept-serif); letter-spacing: 0.02em; }
-.web-tile__face--cond { font-family: var(--concept-cond); letter-spacing: 0.04em; text-transform: uppercase; }
-.web-tile__face--sans { font-family: var(--concept-sans); font-weight: 600; letter-spacing: -0.01em; }
-.web-tile__face--sans-italic { font-family: var(--concept-sans); font-weight: 700; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; }
-.web-tile__sw { display: flex; flex: none; gap: 4px; }
-.web-tile__sw i { display: block; width: 14px; height: 14px; border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent); }
+/* ── PHONE: the work is the section. Every industry row carries its own
+   style tile directly beneath it, because there is no hover to hide the
+   concepts behind. ── */
+.web-range__inline { margin: 2px 0 22px; }
 .web-range__main { display: grid; gap: 30px; }
 .web-range__dock { display: none; }
 
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   /* The frame is docked in its own column: a panel that chases the cursor
      lands on top of the very words it is meant to illustrate. */
-  .web-range__rail { display: none; }
+  .web-range__inline { display: none; }
   .web-range__main { grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr); column-gap: 4vw; align-items: start; }
   .web-range__dock { display: block; position: sticky; top: var(--lane-top); }
   .web-range__window { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #000000; }

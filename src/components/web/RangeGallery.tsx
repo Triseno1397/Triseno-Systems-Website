@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { RANGE, type RangeItem } from "./RangeComps";
 
 /**
@@ -19,10 +19,9 @@ import { RANGE, type RangeItem } from "./RangeComps";
  * follows the cursor lands on top of the very words it is illustrating.
  *
  * PHONE: there is no hover, so the concept sites are not hidden behind one —
- * they are the section. A full-width snap carousel of the eight sites sits
- * under the heading, and tapping an industry in the list below runs the
- * carousel to it. The argument of this section is the work, so on the device
- * most prospects use, the work is what is on screen.
+ * they are the section. Every industry row carries its own style tile
+ * directly beneath it, so wherever a phone stops in this section, concept
+ * work is on screen.
  */
 
 export default function RangeGallery() {
@@ -30,9 +29,6 @@ export default function RangeGallery() {
   /** The reel keeps showing the last site while the panel settles. */
   const [shown, setShown] = useState(0);
   const [fine, setFine] = useState(true);
-
-  const railRef = useRef<HTMLDivElement>(null);
-  const slideRefs = useRef<Array<HTMLLIElement | null>>([]);
 
   useEffect(() => {
     // Matches the CSS dock query exactly.
@@ -49,39 +45,6 @@ export default function RangeGallery() {
   }, []);
   const release = useCallback((i: number) => setActiveRaw((v) => (v === i ? null : v)), []);
 
-  /** Phone: keep the list in step with whichever site the carousel has landed on. */
-  useEffect(() => {
-    const rail = railRef.current;
-    if (!rail || fine) return;
-    let frame = 0;
-    const read = () => {
-      frame = 0;
-      const mid = rail.scrollLeft + rail.clientWidth / 2;
-      let idx = 0;
-      slideRefs.current.forEach((slide, i) => {
-        if (slide && slide.offsetLeft <= mid) idx = i;
-      });
-      setShown(idx);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(read);
-    };
-    rail.addEventListener("scroll", onScroll, { passive: true });
-    read();
-    return () => {
-      rail.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, [fine]);
-
-  const runTo = (i: number) => {
-    const rail = railRef.current;
-    const slide = slideRefs.current[i];
-    if (!rail || !slide) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    rail.scrollTo({ left: slide.offsetLeft - rail.offsetLeft, behavior: reduced ? "auto" : "smooth" });
-  };
-
   const reelStyle = { transform: `translate3d(0, ${-shown * (100 / RANGE.length)}%, 0)` } as CSSProperties;
   const item = RANGE[shown];
 
@@ -95,37 +58,10 @@ export default function RangeGallery() {
         <p className="web-body">
           Eight concept directions, eight layouts, eight typographic voices.
           <span className="web-hover-only"> Hover a row to run the frame.</span>
-          <span className="web-touch-only"> Swipe the frames, or tap an industry.</span> Fictional brands,
+          <span className="web-touch-only"> Each industry, its own site.</span> Fictional brands,
           labelled as concepts.
         </p>
       </header>
-
-      {/* Phone: the work itself, full width and swipeable. */}
-      <div className="web-range__rail" ref={railRef}>
-        <ol className="web-range__slides">
-          {RANGE.map((entry, i) => (
-            <li
-              key={entry.industry}
-              className="web-range__slide"
-              ref={(el) => {
-                slideRefs.current[i] = el;
-              }}
-            >
-              <figure className="web-tile">
-                <div className="web-range__comp">{entry.comp}</div>
-                <TileRail item={entry} />
-              </figure>
-              <p className="web-range__caption">
-                <span>
-                  Concept {String(i + 1).padStart(2, "0")} / {String(RANGE.length).padStart(2, "0")} —{" "}
-                  {entry.industry}
-                </span>
-                <span>{entry.note}</span>
-              </p>
-            </li>
-          ))}
-        </ol>
-      </div>
 
       <div className="web-range__main">
         <ol className="web-range__list" data-active={active !== null ? "" : undefined}>
@@ -134,7 +70,7 @@ export default function RangeGallery() {
               <button
                 type="button"
                 className="web-range__row"
-                data-lit={(fine ? active === i : shown === i) ? "" : undefined}
+                data-lit={fine && active === i ? "" : undefined}
                 onPointerEnter={(e) => {
                   if (e.pointerType === "touch" || !fine) return;
                   activate(i);
@@ -144,9 +80,6 @@ export default function RangeGallery() {
                 }}
                 onFocus={() => fine && activate(i)}
                 onBlur={() => fine && release(i)}
-                onClick={() => {
-                  if (!fine) runTo(i);
-                }}
               >
                 <span className="web-range__n">{String(i + 1).padStart(2, "0")}</span>
                 <span className="web-range__word">{entry.industry}</span>
@@ -155,6 +88,12 @@ export default function RangeGallery() {
                   <span>{entry.note}</span>
                 </span>
               </button>
+              {/* Phone: the concept itself, directly under its industry (hidden
+                  where the docked tile shows it instead). */}
+              <figure className="web-tile web-range__inline" aria-label={`Concept site for ${entry.brand}`}>
+                <div className="web-range__comp">{entry.comp}</div>
+                <TileRail item={entry} />
+              </figure>
             </li>
           ))}
         </ol>
