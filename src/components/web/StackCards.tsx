@@ -111,22 +111,38 @@ export default function StackCards() {
       const cards = gsap.utils.toArray<HTMLElement>(".web-stack__card", root);
       const total = cards.length;
 
-      // Counter: the last card whose top has passed 60% of the viewport. Works with or without motion.
-      const count = () => {
+      // Counter: the last card whose top has passed 60% of the viewport. Works
+      // with or without motion. Where the cards sit in the page only changes
+      // when the page is laid out again, so they are measured on refresh and
+      // the counter is arithmetic from there — it used to measure every card on
+      // every scroll update, to print a number that changes six times a page.
+      let tops: number[] = [];
+      let line = 0;
+      let shown = "";
+      const measure = () => {
+        const y = window.scrollY;
+        tops = cards.map((card) => card.getBoundingClientRect().top + y);
+        line = window.innerHeight * 0.6;
+      };
+      const count = (self?: ScrollTrigger) => {
+        const y = self ? self.scroll() : window.scrollY;
         let idx = 0;
-        const line = window.innerHeight * 0.6;
-        cards.forEach((card, i) => {
-          if (card.getBoundingClientRect().top <= line) idx = i;
-        });
-        if (countRef.current)
-          countRef.current.textContent = String(idx + 1).padStart(2, "0");
+        for (let i = 0; i < tops.length; i++) if (tops[i] - y <= line) idx = i;
+        const text = String(idx + 1).padStart(2, "0");
+        if (countRef.current && text !== shown) {
+          shown = text;
+          countRef.current.textContent = text;
+        }
       };
       ScrollTrigger.create({
         trigger: root,
         start: "top bottom",
         end: "bottom top",
         onUpdate: count,
-        onRefresh: count,
+        onRefresh: (self) => {
+          measure();
+          count(self);
+        },
       });
 
       const mm = gsap.matchMedia();

@@ -54,7 +54,7 @@ async function run(css) {
       await p.mouse.wheel(0, 100);
       // the measuring rig moves the pointer while it scrolls, and so does a
       // visitor: hover work is part of the cost
-      if (i % 3 === 0) await p.mouse.move(300 + (i * 700) % 900, 250 + (i * 300) % 400);
+      if (i % 3 === 0 && !process.env.NOMOUSE) await p.mouse.move(300 + (i * 700) % 900, 250 + (i * 300) % 400);
     }
     await p.waitForTimeout(45);
   }

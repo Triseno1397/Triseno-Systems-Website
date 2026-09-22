@@ -3,9 +3,9 @@ import fs from 'fs';
 const url = process.argv[2];
 const b = await chromium.launch({ headless: false, args: ['--ignore-gpu-blocklist', '--window-position=-2400,0', '--disable-backgrounding-occluded-windows'] });
 const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
-await p.goto(url, { waitUntil: 'load' }); await p.waitForTimeout(6000); await p.mouse.move(720, 450);
+await p.goto(url, { waitUntil: 'load' }); await p.waitForTimeout(7000); if (process.env.FROM) { await p.evaluate(y => window.scrollTo(0, y), Number(process.env.FROM)); await p.waitForTimeout(1500); } await p.mouse.move(720, 450);
 await b.startTracing(p, { path: 'design-loop/trace2.json', categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.stack', 'v8.execute'] });
-for (let i = 0; i < 160; i++) { await p.mouse.wheel(0, 100); await p.waitForTimeout(45); }
+for (let i = 0; i < Number(process.env.STEPS || 160); i++) { await p.mouse.wheel(0, 100); await p.waitForTimeout(45); }
 await b.stopTracing(); await b.close();
 const raw = JSON.parse(fs.readFileSync('design-loop/trace2.json')); const ev = raw.traceEvents || raw;
 // forced layouts with JS stacks, and top-level heavy tasks

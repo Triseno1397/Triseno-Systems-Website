@@ -358,10 +358,22 @@ function ProgressRail({ pathname }: { pathname: string }) {
     // the rail never forces a style/layout pass in the middle of a frame
     let pending: { local: number; key: string; labels: RailLabels } | null = null;
 
+    // Which section is in view changes a few times a page; how far through it
+    // you are changes every frame. So the whole page is scanned a few times a
+    // second, and in between only the section being shown is measured — on a
+    // long page that is one box instead of eight, every frame.
+    let sections: HTMLElement[] = [];
+    let idx = 0;
+    let lastScan = 0;
     const read = () => {
       if (!dirty) return;
       dirty = false;
-      const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-rail]"));
+      const now = performance.now();
+      const rescan = now - lastScan > 120 || !sections.length;
+      if (rescan) {
+        lastScan = now;
+        sections = Array.from(document.querySelectorAll<HTMLElement>("[data-rail]"));
+      }
       if (!sections.length) {
         pending = { local: 0, key: "none", labels: { current: "", next: "", index: 0, total: 0 } };
         return;
@@ -370,18 +382,20 @@ function ProgressRail({ pathname }: { pathname: string }) {
       // viewport right now (pinned sections, pin-spacers and nested markers
       // all report their live on-screen box, so this never lags or sticks).
       const vh = window.innerHeight;
-      let idx = 0;
-      let best = -1;
-      const rects = sections.map((sec) => sec.getBoundingClientRect());
-      rects.forEach((r, i) => {
-        const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-        if (vis > best + 1) {
-          best = vis;
-          idx = i;
-        }
-      });
+      if (rescan) {
+        let best = -1;
+        sections.forEach((sec, i) => {
+          const r = sec.getBoundingClientRect();
+          const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+          if (vis > best + 1) {
+            best = vis;
+            idx = i;
+          }
+        });
+      }
+      if (idx >= sections.length) idx = sections.length - 1;
       const el = sections[idx];
-      const r = rects[idx];
+      const r = el.getBoundingClientRect();
       const local = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / Math.max(1, r.height)));
       const current = el.dataset.rail ?? "";
       const next = sections[idx + 1]?.dataset.rail ?? el.dataset.railNext ?? "";
