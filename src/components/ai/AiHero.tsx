@@ -32,8 +32,8 @@ export default function AiHero() {
   };
 
   return (
-    <section data-rail="Layer" aria-label="AI Infrastructure" className="ai-hero relative z-10 min-h-[100dvh]">
-      <div className="ai-hero__inner ai-wrap relative flex min-h-[100dvh] flex-col justify-center">
+    <section data-rail="Layer" aria-label="AI Infrastructure" className="ai-hero relative z-10 min-h-[100svh]">
+      <div className="ai-hero__inner ai-wrap relative flex min-h-[100svh] flex-col justify-center">
         <div className="ai-hero__stack">
           <span aria-hidden="true" className="ai-scrim ai-hero__scrim" />
           <p className="ai-label ai-rise mb-6 flex items-center justify-center gap-3" style={{ ["--d" as string]: 0 }}>

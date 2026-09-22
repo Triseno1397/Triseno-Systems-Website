@@ -54,6 +54,8 @@ export default function GlassPanel({
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
+    // touch devices show smoked glass (world.css): no plate copies to move
+    if (window.matchMedia("(pointer: coarse), (max-width: 767px)").matches) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let visible = true;
     const last: string[] = [];

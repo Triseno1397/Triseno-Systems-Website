@@ -128,8 +128,13 @@ html[data-content-fade] main > [data-fade] {
   mask-repeat: no-repeat;
   -webkit-mask-clip: no-clip;
   mask-clip: no-clip;
-  /* its own compositor layer: the mask moves every frame, the content is not re-painted (opacity, not transform — a transform would break position: fixed pins inside) */
-  will-change: opacity;
+}
+/* Desktop only: each faded section gets its own compositor layer so the moving
+   mask never re-paints the content (opacity, not transform — a transform would
+   break position: fixed pins inside). On phones these page-tall layers cost
+   hundreds of MB of GPU memory, which is what makes iOS kill the tab. */
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  html[data-content-fade] main > [data-fade] { will-change: opacity; }
 }
 /* the warp tunnel and poster captures show the page bare */
 html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
@@ -416,7 +421,7 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
 .lite-signature {
   position: relative; align-self: center;
   width: min(46vw, 210px); aspect-ratio: 1;
-  margin: clamp(18px, 4dvh, 40px) 0 clamp(26px, 6dvh, 56px);
+  margin: clamp(18px, 4svh, 40px) 0 clamp(26px, 6svh, 56px);
   pointer-events: none;
 }
 .lite-signature__halo {
@@ -681,8 +686,8 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
 }
 .glass-panel__world { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
 .glass-panel__plate {
-  position: absolute; left: -2vw; top: -2dvh;
-  width: 104vw; height: 104dvh;
+  position: absolute; left: -2vw; top: -2svh;
+  width: 104vw; height: 104svh;
   background: #0b0b0d var(--glass-img-0) 50% var(--glass-h) / cover no-repeat;
   transform-origin: 50% var(--glass-h);
   will-change: transform;
@@ -719,7 +724,7 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
 .world-section {
   position: relative; z-index: 10;
   display: flex; flex-direction: column; justify-content: center;
-  min-height: 100dvh;
+  min-height: 100svh;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
 /* Frosted substrate for copy over the scene — never an opaque rectangle. */
@@ -731,7 +736,7 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
 /* ── placeholder worlds: the atmosphere plus the division glyph ── */
 .placeholder-world__scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .placeholder-world__glyph {
-  position: absolute; right: max(8vw, 96px); top: 50dvh; margin-top: calc(min(440px, 52vw) * -0.5);
+  position: absolute; right: max(8vw, 96px); top: 50svh; margin-top: calc(min(440px, 52vw) * -0.5);
   width: min(440px, 52vw); aspect-ratio: 1;
   animation: placeholder-float 9s ease-in-out infinite alternate;
 }
@@ -789,11 +794,11 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   .portal-world .scroll-tick { display: none; }
   .portal-word { opacity: 0.9; }
   .door-card { padding: 20px; }
-  .portal-gate { justify-content: flex-end; padding-top: var(--lane-top); padding-bottom: calc(var(--lane-bottom) + 18dvh); }
+  .portal-gate { justify-content: flex-end; padding-top: var(--lane-top); padding-bottom: calc(var(--lane-bottom) + 18svh); }
   .portal-gate__copy { width: 100%; }
 
   .world-section { padding-left: var(--gutter); padding-right: var(--gutter); }
-  .placeholder-world__glyph { right: 50%; transform: translateX(50%); top: 28dvh; width: 44vw; margin-top: -22vw; animation: none; }
+  .placeholder-world__glyph { right: 50%; transform: translateX(50%); top: 28svh; width: 44vw; margin-top: -22vw; animation: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -832,3 +837,67 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
   content: ""; position: absolute; inset: -14px -6px;
 }
 .web-subaction { position: relative; }
+
+/* ── PHONES & TABLETS: memory diet ─────────────────────────────────────────
+   The frosted glass is made of full-viewport copies of the blurred world plate
+   (up to three per panel, one per camera station), each its own GPU layer at
+   the device pixel ratio. On a phone that is ~300 MB for one page and iOS
+   Safari kills the tab ("A problem repeatedly occurred"). On touch devices the
+   panel is smoked glass instead: the same 1px hairline and veil over the lit
+   world, which shows through the veil itself. */
+@media (pointer: coarse), (max-width: 767px) {
+  .glass-panel__world { display: none; }
+  .glass-panel__veil {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.035)),
+      rgba(8, 8, 10, calc(var(--glass-veil, 0.5) + 0.18));
+  }
+}
+
+/* Phones & tablets: the content-only mask is swapped for two soft neutral
+   scrims under the chrome (design-system §2 "chrome scrims"). Masking every
+   page-tall section forces each one onto its own GPU layer — on a phone that
+   is hundreds of MB — so here content dissolves into the scrim instead. */
+@media (pointer: coarse), (max-width: 767px) {
+  html[data-content-fade] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
+  html[data-content-fade] body::before,
+  html[data-content-fade] body::after {
+    content: ""; position: fixed; left: 0; right: 0; z-index: 790; pointer-events: none;
+  }
+  html[data-content-fade] body::before {
+    /* solid behind the two-line lockup and the menu trigger, then a long
+       soft falloff: copy dissolves before it can reach the chrome */
+    top: 0; height: 168px;
+    background: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.97) 44%, rgba(0, 0, 0, 0.72) 64%, rgba(0, 0, 0, 0.3) 84%, rgba(0, 0, 0, 0) 100%);
+  }
+  html[data-content-fade] body::after {
+    bottom: 0; height: 132px;
+    background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.95) 38%, rgba(0, 0, 0, 0.62) 62%, rgba(0, 0, 0, 0.24) 84%, rgba(0, 0, 0, 0) 100%);
+  }
+}
+
+/* Phones & tablets: the ambient drifts hold still. Each animated full-screen
+   layer is its own GPU surface at 3x pixel density (~12 MB apiece) and costs
+   frame time mid-scroll; held still they flatten into the world plate and the
+   look is the same frame. The pointer lights have no pointer here at all. */
+@media (pointer: coarse), (max-width: 767px) {
+  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
+  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
+  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
+  .ai-world__glow, .ai-world__core { animation: none !important; will-change: auto; }
+  .world-plate__light, .web-plate__light, .ai-world__light { display: none; }
+}
+/* Phones: drop standing GPU layers that are only worth it with a mouse or a
+   desktop GPU — one per letter in the rotating headlines, the spotlight
+   fields, the stacked gate frames. They still animate; they simply don't hold
+   a layer while at rest. */
+@media (pointer: coarse), (max-width: 767px) {
+  .text-rotate__char, .hrotate__char, .warp-title, .ai-card__field,
+  .web-gate__frame, .work-gate__part, .work-gate__diamond, .sx-print,
+  .sx-gate__iris, .sx-gate__body { will-change: auto; }
+}
+
+/* The lockup's box is wider and taller than its words on a phone; only the
+   words take a tap, so content passing under the empty part stays tappable. */
+.morph-nav__lockup { pointer-events: none !important; }
+.morph-nav__lockup > * { pointer-events: auto; }

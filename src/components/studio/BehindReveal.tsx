@@ -73,7 +73,7 @@ export default function BehindReveal() {
       // Desktop: pinned deal, driven directly by scroll progress.
       mm.add("(min-width: 768px) and (prefers-reduced-motion: no-preference)", () => {
         const n = PRINTS.length;
-        // Timeline over the pinned range (300dvh): fade in on the spot while
+        // Timeline over the pinned range (300svh): fade in on the spot while
         // the strip fades out (0-.12) · the deal (.12-.68) · hold (.68-.76) ·
         // fade out (.76-.88) · empty stage while the proof wall rises (.88-1).
         const render = (p: number) => {

@@ -87,12 +87,12 @@
 
 /* ═════ 1 · SHOWREEL — scroll-expansion hero ═════ */
 /* The reel is full-bleed: the hero runs under the rail lane like the world. */
-.sx-hero { position: relative; height: 300dvh; }
+.sx-hero { position: relative; height: 300svh; }
 .sx-hero__stage {
-  --s: min(30dvh, 21vw);
+  --s: min(30svh, 21vw);
   --gap: 20px;
   --hero-fs: var(--fs-display);
-  position: sticky; top: 0; height: 100dvh; min-height: 100dvh; overflow: clip;
+  position: sticky; top: 0; height: 100svh; min-height: 100svh; overflow: clip;
 }
 .sx-hero__edge,
 .sx-hero__clip { position: absolute; inset: 0; will-change: clip-path; }
@@ -162,15 +162,15 @@
 .sx-hero__readout b { font-weight: 400; color: var(--hue); font-variant-numeric: tabular-nums; }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .sx-hero__stage { --s: min(26dvh, 17vw); --gap: 16px; --hero-fs: 4.2vw; }
+  .sx-hero__stage { --s: min(26svh, 17vw); --gap: 16px; --hero-fs: 4.2vw; }
 }
 @media (max-width: 767px) {
   /* Phone hero, re-layered so nothing ever prints over anything else:
      headline above and below the window, both inside the chrome lanes; no HUD;
      no body paragraph (allowed on phones) — the CTA alone rests on the
      bottom lane once the reel is full-bleed. */
-  .sx-hero { height: 250dvh; } /* M5: pinned for 1.5 viewports (limit 2) */
-  .sx-hero__stage { --s: min(32dvh, 60vw); --hero-fs: clamp(32px, 9vw, 42px); }
+  .sx-hero { height: 250svh; } /* M5: pinned for 1.5 viewports (limit 2) */
+  .sx-hero__stage { --s: min(32svh, 60vw); --hero-fs: clamp(32px, 9vw, 42px); }
   .sx-hero__media { transform: scale(0.62); }
   .sx-hero__title {
     inset: var(--lane-top) 0 var(--lane-bottom);
@@ -201,16 +201,16 @@
 
 /* ═════ 2 · FORMATS — filmstrip ═════ */
 .sx-film { position: relative; }
-.sx-film[data-mode="scrub"] { height: calc(100dvh + (var(--frames) - 1) * var(--step)); }
+.sx-film[data-mode="scrub"] { height: calc(100svh + (var(--frames) - 1) * var(--step)); }
 .sx-film__stage {
-  --film-h: clamp(180px, 28dvh, 420px);
+  --film-h: clamp(180px, 28svh, 420px);
   --head-h: 204px;
-  position: relative; min-height: 100dvh; overflow: clip;
+  position: relative; min-height: 100svh; overflow: clip;
   display: flex; flex-direction: column;
   /* Everything read at rest sits inside the chrome lanes (division-world.md 6). */
   padding-top: var(--lane-top); padding-bottom: var(--lane-bottom);
 }
-.sx-film[data-mode="scrub"] .sx-film__stage { position: sticky; top: 0; height: 100dvh; }
+.sx-film[data-mode="scrub"] .sx-film__stage { position: sticky; top: 0; height: 100svh; }
 
 .sx-film__head {
   position: relative; flex: none; width: 100%; max-width: 1400px; margin-inline: auto;
@@ -346,21 +346,21 @@
 
 @media (min-width: 768px) {
   /* reduced motion / CMS preview on desktop: no pin, so the strip can be taller */
-  .sx-film[data-mode="native"] .sx-film__stage { --film-h: clamp(260px, 50dvh, 620px); }
+  .sx-film[data-mode="native"] .sx-film__stage { --film-h: clamp(260px, 50svh, 620px); }
 }
 @media (max-height: 960px) and (min-width: 768px) {
   .sx-film[data-mode="scrub"] .sx-film__lead { display: none; }
 }
 @media (max-height: 820px) and (min-width: 768px) {
-  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(160px, 25dvh, 400px); }
+  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(160px, 25svh, 400px); }
 }
 @media (max-height: 700px) and (min-width: 768px) {
-  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(140px, 22dvh, 380px); }
+  .sx-film[data-mode="scrub"] .sx-film__stage { --film-h: clamp(140px, 22svh, 380px); }
   .sx-film[data-mode="scrub"] .sx-film__specs { display: none; }
 }
 @media (max-width: 767px) {
   /* two portrait frames and a peek, not one frame and a cut-off neighbour */
-  .sx-film__stage { --film-h: 34dvh; }
+  .sx-film__stage { --film-h: 34svh; }
   .sx-film__head { padding-inline: var(--gutter); grid-template-columns: minmax(0, 1fr); }
   .sx-film__caption { grid-area: auto; order: 3; }
   /* the first (portrait) frame can reach the centre snap position at scrollLeft 0 */
@@ -375,15 +375,15 @@
 }
 
 /* ═════ 3 · BEHIND — the deal (pinned) ═════ */
-.sx-behind { position: relative; height: 400dvh; }
+.sx-behind { position: relative; height: 400svh; }
 .sx-behind__stage {
-  position: sticky; top: 0; height: 100dvh; overflow: clip;
+  position: sticky; top: 0; height: 100svh; overflow: clip;
   width: 100%; max-width: 1400px; margin-inline: auto;
   display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 96px); align-items: center;
   padding: var(--lane-top) calc(var(--gutter) + var(--rail-safe)) var(--lane-bottom) calc(var(--gutter) + 44px + 24px);
 }
-.sx-behind__text { max-width: 620px; padding: clamp(24px, 3.4dvh, 40px) clamp(24px, 3vw, 44px); }
-.sx-behind__title { font-size: clamp(26px, 2.9vw, 50px); line-height: 1.08; letter-spacing: 0.08em; margin-bottom: clamp(20px, 3dvh, 30px); }
+.sx-behind__text { max-width: 620px; padding: clamp(24px, 3.4svh, 40px) clamp(24px, 3vw, 44px); }
+.sx-behind__title { font-size: clamp(26px, 2.9vw, 50px); line-height: 1.08; letter-spacing: 0.08em; margin-bottom: clamp(20px, 3svh, 30px); }
 /* beats share one slot, so the panel never changes height between them */
 .sx-beats { display: grid; }
 .sx-beat {
@@ -436,7 +436,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sx-behind { height: auto; }
-  .sx-behind__stage { position: relative; height: auto; min-height: 100dvh; }
+  .sx-behind__stage { position: relative; height: auto; min-height: 100svh; }
   .sx-print:nth-child(1) { transform: translate(-38%, -10%) rotate(-7deg); }
   .sx-print:nth-child(2) { transform: translate(34%, -26%) rotate(6deg); }
   .sx-print:nth-child(3) { transform: translate(-22%, 28%) rotate(4deg); }
@@ -445,7 +445,7 @@
 
 /* ═════ 4 · PROOF — testimonial marquee ═════ */
 .sx-proof {
-  position: relative; min-height: 100dvh; overflow: clip;
+  position: relative; min-height: 100svh; overflow: clip;
   display: flex; flex-direction: column; justify-content: center;
   padding-block: var(--lane-top) var(--lane-bottom);
 }
@@ -454,7 +454,7 @@
 /* the headline band, set between the two counter-running rows */
 .sx-proof__band {
   position: relative; width: 100%; max-width: 1400px; margin-inline: auto;
-  padding: clamp(18px, 3dvh, 34px) calc(var(--gutter) + var(--rail-safe)) clamp(18px, 3dvh, 34px) calc(var(--gutter) + 44px + 24px);
+  padding: clamp(18px, 3svh, 34px) calc(var(--gutter) + var(--rail-safe)) clamp(18px, 3svh, 34px) calc(var(--gutter) + 44px + 24px);
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 12px clamp(24px, 4vw, 64px);
 }
 .sx-proof__band::before {
@@ -502,7 +502,7 @@
 .sx-card:hover .sx-card__note { opacity: 1; }
 
 .sx-proof__foot {
-  position: relative; width: 100%; max-width: 1400px; margin: clamp(22px, 3.4dvh, 36px) auto 0;
+  position: relative; width: 100%; max-width: 1400px; margin: clamp(22px, 3.4svh, 36px) auto 0;
   padding-inline: calc(var(--gutter) + 44px + 24px) calc(var(--gutter) + var(--rail-safe));
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 44ch); gap: 18px clamp(32px, 5vw, 96px); align-items: start;
 }
@@ -537,9 +537,9 @@
 /* ═════ 5 · GATE ═════ */
 /* The iris keeps stopping down to the last pixel of the document, so the page
    never ends on two identical frames. */
-.sx-gate { position: relative; height: 180dvh; }
+.sx-gate { position: relative; height: 180svh; }
 .sx-gate__stage {
-  position: sticky; top: 0; height: 100dvh; overflow: clip;
+  position: sticky; top: 0; height: 100svh; overflow: clip;
   display: grid; place-items: center; text-align: center;
   /* the whole gate — CTA and cross-links included — rests inside the chrome lanes */
   padding: var(--lane-top) calc(var(--gutter) + var(--rail-safe)) var(--lane-bottom);
@@ -551,14 +551,14 @@
   mask-image: linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }
 .sx-gate__iris {
-  position: absolute; left: 50%; top: 50%; width: min(112dvh, 112vw); aspect-ratio: 1;
+  position: absolute; left: 50%; top: 50%; width: min(112svh, 112vw); aspect-ratio: 1;
   translate: -50% -50%; will-change: transform;
 }
 
 /* The gate's copy rests on frosted glass: the iris blades pass behind it,
    blurred, never through the headline, the copy or the button. */
 .sx-gate__body { position: relative; z-index: 1; will-change: transform; }
-.sx-gate__glass { padding: clamp(28px, 4dvh, 44px) clamp(24px, 4vw, 64px); }
+.sx-gate__glass { padding: clamp(28px, 4svh, 44px) clamp(24px, 4vw, 64px); }
 .sx-gate__glass > .glass-panel__body { display: flex; flex-direction: column; align-items: center; }
 .sx-gate .sx-kicker { justify-content: center; margin-bottom: 26px; }
 .sx-gate__tick {
@@ -603,18 +603,18 @@
    (the fades are written by each section's own scroll timeline). The only
    free-scrolling chapter, the proof wall, rises over the dissolving contact
    sheet. Numbers must match the timelines:
-     hero out 32dvh (.84-1 of a 200dvh pin)  ↔ strip FADE_IN_VH 32
-     strip FADE_OUT_VH 36                    ↔ contact sheet in (.12 of 300dvh)
-     contact sheet out at .76 of 300dvh      ↔ proof enters 72dvh before release */
+     hero out 32svh (.84-1 of a 200svh pin)  ↔ strip FADE_IN_VH 32
+     strip FADE_OUT_VH 36                    ↔ contact sheet in (.12 of 300svh)
+     contact sheet out at .76 of 300svh      ↔ proof enters 72svh before release */
 @media (prefers-reduced-motion: no-preference) {
-  .sx-hero + .sx-film[data-mode="scrub"] { margin-top: -132dvh; }
-  .sx-film[data-mode="scrub"] + .sx-behind { margin-top: -136dvh; }
-  .sx-film[data-mode="scrub"] + .sx-behind + .sx-proof { margin-top: -88dvh; }
-  .sx-proof + .sx-gate { margin-top: -30dvh; }
+  .sx-hero + .sx-film[data-mode="scrub"] { margin-top: -132svh; }
+  .sx-film[data-mode="scrub"] + .sx-behind { margin-top: -136svh; }
+  .sx-film[data-mode="scrub"] + .sx-behind + .sx-proof { margin-top: -88svh; }
+  .sx-proof + .sx-gate { margin-top: -30svh; }
 }
 @media (prefers-reduced-motion: no-preference) and (max-width: 767px) {
-  /* phone hero dissolves over 24dvh; the strip is already rising beneath it */
-  .sx-hero + .sx-film { margin-top: -40dvh; }
+  /* phone hero dissolves over 24svh; the strip is already rising beneath it */
+  .sx-hero + .sx-film { margin-top: -40svh; }
   .sx-proof + .sx-gate { margin-top: 0; }
 }
 
@@ -627,8 +627,8 @@
   .sx-hero__media { transform: none; }
   .sx-hero__veil { opacity: 1; }
   .sx-hero__copy { opacity: 1; pointer-events: auto; }
-  .sx-hero__half--l { transform: translate3d(-10px, -12dvh, 0); }
-  .sx-hero__half--r { transform: translate3d(10px, -12dvh, 0); }
+  .sx-hero__half--l { transform: translate3d(-10px, -12svh, 0); }
+  .sx-hero__half--r { transform: translate3d(10px, -12svh, 0); }
   .sx-film__caption { animation: none; }
   .sx-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
   .sx-marquee__track { animation: none; }
@@ -636,12 +636,12 @@
   .sx-frame__media, .sx-frame__edge, .sx-card__iris, .sx-card__note,
   .sx-film__intro, .sx-film__now { transition-duration: 1ms !important; }
   .sx-gate { height: auto; }
-  .sx-gate__stage { position: relative; height: auto; min-height: 100dvh; }
+  .sx-gate__stage { position: relative; height: auto; min-height: 100svh; }
   .sx-gate__tick { display: none; }
 }
 @media (prefers-reduced-motion: reduce) and (max-width: 767px) {
-  .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 16px - 12dvh), 0); }
-  .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 16px) - 12dvh), 0); }
+  .sx-hero__half--l { transform: translate3d(0, calc(var(--s) / 2 + 16px - 12svh), 0); }
+  .sx-hero__half--r { transform: translate3d(0, calc(-1 * (var(--s) / 2 + 16px) - 12svh), 0); }
 }
 
 /* ═════ CLICKS THROUGH THE HANDOFFS ═════

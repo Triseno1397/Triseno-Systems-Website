@@ -45,7 +45,7 @@
 /* ── shared type ── */
 .contact-section {
   position: relative; z-index: 10;
-  min-height: 100dvh;
+  min-height: 100svh;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
   max-width: calc(1400px + 2 * var(--gutter)); margin: 0 auto;
 }

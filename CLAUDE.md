@@ -29,5 +29,5 @@ Read `node_modules/next/dist/docs/` before using a Next API (see AGENTS.md).
 ## Hard rules
 - No emojis. Realistic filler content is fine (showcase site) but only with fictional names/companies — never real brands or people.
 - Animate only transform/opacity/clip-path/filter/shader uniforms. Respect `prefers-reduced-motion`.
-- `min-h-[100dvh]`, never `h-screen`.
+- `min-h-[100svh]` (stable small-viewport units; never `h-screen`, and not `dvh`, which resizes as the phone address bar moves).
 - Do not generate Higgsfield video without Tristen approving the shot first.

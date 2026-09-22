@@ -296,7 +296,7 @@ export default function PortalPage() {
   }, [mode]);
 
   const full = mode !== "lite";
-  // Rail stops for the doors section (400dvh, scrubbed from "top bottom" to
+  // Rail stops for the doors section (400svh, scrubbed from "top bottom" to
   // "bottom bottom"): door i owns the scroll between the midpoints of its
   // neighbours' cards, placed where the viewport's centre is at that time.
   const railStops = useMemo(() => {
@@ -387,15 +387,15 @@ export default function PortalPage() {
         ref={heroRef}
         data-rail="Divisions"
         aria-label="Triseno Systems"
-        className={full ? "relative z-10 h-[200dvh]" : "relative z-10 min-h-[100dvh] overflow-hidden"}
+        className={full ? "relative z-10 h-[200svh]" : "relative z-10 min-h-[100svh] overflow-hidden"}
       >
 
         <div
           ref={heroInnerRef}
           data-leaving={leaving ? "" : undefined}
           className={`portal-hero ${
-            full ? "pointer-events-none fixed inset-0" : "relative min-h-[100dvh]"
-          } mx-auto flex max-w-[1400px] flex-col justify-between px-[var(--gutter)] pb-[var(--lane-bottom)] pt-[max(var(--lane-top),15dvh)]`}
+            full ? "pointer-events-none fixed inset-0" : "relative min-h-[100svh]"
+          } mx-auto flex max-w-[1400px] flex-col justify-between px-[var(--gutter)] pb-[var(--lane-bottom)] pt-[max(var(--lane-top),15svh)]`}
         >
           <div className="pointer-events-none">
             <h1 className="portal-headline font-display font-bold uppercase">
@@ -440,7 +440,7 @@ export default function PortalPage() {
 
       {/* ── 2. Three doors ───────────────────────────────────────────── */}
       {full ? (
-        <section ref={doorsRef} aria-label="Three divisions" className="relative z-10 h-[400dvh]">
+        <section ref={doorsRef} aria-label="Three divisions" className="relative z-10 h-[400svh]">
           {/* one rail stop per door, laid over the stretch of scroll where that
               door's card is up, so the rail names the door actually in view */}
           {DOOR_ITEMS.map((door, i) => (
@@ -449,7 +449,7 @@ export default function PortalPage() {
               aria-hidden="true"
               data-rail={door.name}
               className="pointer-events-none absolute inset-x-0"
-              style={{ top: `${railStops[i].top}dvh`, height: `${railStops[i].height}dvh` }}
+              style={{ top: `${railStops[i].top}svh`, height: `${railStops[i].height}svh` }}
             />
           ))}
           <div className="pointer-events-none fixed inset-0 mx-auto max-w-[1400px] px-[var(--gutter)]">
@@ -478,7 +478,7 @@ export default function PortalPage() {
       ) : (
         <section aria-label="Three divisions" className="relative z-10">
           {DOOR_ITEMS.map((door) => (
-            <div key={door.key} data-lite-door="" data-rail={door.name} className="lite-door relative flex min-h-[100dvh] flex-col justify-end overflow-hidden">
+            <div key={door.key} data-lite-door="" data-rail={door.name} className="lite-door relative flex min-h-[100svh] flex-col justify-end overflow-hidden">
               <LiteGlyph kind={door.glyph} hue={door.hue} />
               <GlassPanel world="portal" className="door-card door-card--static" veil={0.32}>
                 <DoorCardBody index={DOOR_ITEMS.indexOf(door)} />
@@ -500,7 +500,7 @@ export default function PortalPage() {
         data-rail="Gate"
         data-rail-next="Contact"
         aria-label="Start a conversation"
-        className="portal-gate relative z-10 mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col justify-center overflow-hidden px-[var(--gutter)]"
+        className="portal-gate relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center overflow-hidden px-[var(--gutter)]"
       >
         {mode === "lite" ? (
           <>

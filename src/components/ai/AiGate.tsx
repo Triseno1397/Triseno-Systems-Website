@@ -89,7 +89,7 @@ export default function AiGate() {
       data-rail="Gate"
       data-rail-next="Contact"
       aria-labelledby="ai-gate-title"
-      className="ai-gate relative z-10 min-h-[100dvh] overflow-hidden"
+      className="ai-gate relative z-10 min-h-[100svh] overflow-hidden"
     >
       <div className="ai-wrap ai-gate__inner">
       <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.8 -2 3.6 3.6">

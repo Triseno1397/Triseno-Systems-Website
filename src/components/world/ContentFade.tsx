@@ -77,7 +77,9 @@ export default function ContentFade() {
     const mo = new MutationObserver(scan);
     if (main) mo.observe(main, { childList: true });
     const late = window.setTimeout(scan, 600);
-    const stop = addFrameJob({ read, write });
+    // phones & tablets fade into fixed scrims (world.css) — no per-frame mask
+    const lite = window.matchMedia("(pointer: coarse), (max-width: 767px)").matches;
+    const stop = lite ? () => {} : addFrameJob({ read, write });
 
     return () => {
       stop();

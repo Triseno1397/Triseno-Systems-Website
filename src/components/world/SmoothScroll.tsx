@@ -7,6 +7,15 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
+// iOS/Android: the address bar sliding in and out resizes the viewport while
+// you scroll. Without this ScrollTrigger re-measures every pin mid-scroll and
+// the page visibly jumps.
+ScrollTrigger.config({ ignoreMobileResize: true });
+// Touch scrolling runs off the main thread, so a pin can engage a frame late
+// and visibly hop; anticipating it by one frame of scroll removes the hop.
+if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
+  ScrollTrigger.defaults({ anticipatePin: 1 });
+}
 
 // Module-level handle so chrome (menu overlay, back chevron) can drive the
 // same scroller without prop-drilling. null when Lenis is off (reduced motion,
@@ -81,11 +90,44 @@ export default function SmoothScroll() {
     };
   }, []);
 
-  // New route: start at the top and let ScrollTrigger re-measure the new page.
+  // Every page opens at the top — on every device. (Touch devices have no
+  // Lenis, and the browser's own restoration could land a new page mid-way.)
   useEffect(() => {
-    lenisInstance?.scrollTo(0, { immediate: true, force: true });
-    const id = window.setTimeout(() => ScrollTrigger.refresh(), 120);
-    return () => window.clearTimeout(id);
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  }, []);
+
+  // New route: start at the top and let ScrollTrigger re-measure the new page.
+  // The reset is repeated while the new page settles (the old page's pins
+  // unwinding, the new page's pin-spacers and images arriving can all move
+  // the scroll position) — until the visitor scrolls on their own.
+  useEffect(() => {
+    let userMoved = false;
+    const mark = () => (userMoved = true);
+    const top = () => {
+      if (userMoved) return;
+      if (lenisInstance) lenisInstance.scrollTo(0, { immediate: true, force: true });
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    top();
+    window.addEventListener("wheel", mark, { passive: true });
+    window.addEventListener("touchstart", mark, { passive: true });
+    window.addEventListener("keydown", mark);
+    const raf = window.requestAnimationFrame(top);
+    const timers = [
+      window.setTimeout(() => {
+        ScrollTrigger.refresh();
+        top();
+      }, 120),
+      window.setTimeout(top, 400),
+      window.setTimeout(top, 900),
+    ];
+    return () => {
+      window.cancelAnimationFrame(raf);
+      timers.forEach((t) => window.clearTimeout(t));
+      window.removeEventListener("wheel", mark);
+      window.removeEventListener("touchstart", mark);
+      window.removeEventListener("keydown", mark);
+    };
   }, [pathname]);
 
   return null;

@@ -143,12 +143,12 @@
 /* Mid-page sections do not carry a bottom lane: the next section's top lane
    already clears the chrome, and two lanes back to back left ~280px of bare
    world between sections. */
-.web-compare, .web-stack, .web-range { padding-top: clamp(72px, 10dvh, 104px); padding-bottom: 48px; }
+.web-compare, .web-stack, .web-range { padding-top: clamp(72px, 10svh, 104px); padding-bottom: 48px; }
 
 /* Sections sit above the world (z 10) and inside the chrome lanes, so no
    fixed chrome element lands on their content (design-loop/division-world.md). */
 .web-section {
-  position: relative; z-index: 10; min-height: 100dvh;
+  position: relative; z-index: 10; min-height: 100svh;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
 .web-eyebrow {
@@ -216,7 +216,7 @@
   .web-hero { justify-content: flex-end; }
   .web-hero__grid { grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr); align-items: end; gap: 3.4vw; }
   .web-hero__actions { margin-top: 34px; }
-  .web-hero__object { padding-bottom: 2dvh; }
+  .web-hero__object { padding-bottom: 2svh; }
 }
 
 /* Full width, not max-content: the bands are inset:0 copies of this box, so
@@ -280,7 +280,7 @@
   container-type: inline-size; background: #f4f1ea;
 }
 .web-hero__mirror {
-  display: none; width: 100%; height: 9dvh; margin-top: 8px; transform-origin: 50% 0;
+  display: none; width: 100%; height: 9svh; margin-top: 8px; transform-origin: 50% 0;
   border: 1px solid rgba(255, 255, 255, 0.7); border-bottom: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 26%, transparent), transparent 74%);
   -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 80%);
@@ -336,9 +336,9 @@
 }
 
 /* ═══ 2 · THE PAGE IS THE DEMO — container scroll ═══ */
-.web-demo { position: relative; z-index: 10; height: 260dvh; }
+.web-demo { position: relative; z-index: 10; height: 260svh; }
 .web-demo__stage {
-  position: sticky; top: 0; height: 100dvh; overflow: hidden;
+  position: sticky; top: 0; height: 100svh; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
@@ -364,7 +364,7 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 55%, transparent) 0%, transparent 60%);
 }
 .web-demo__mirror {
-  flex: none; width: 100%; height: 5dvh; margin-top: 8px; transform-origin: 50% 0;
+  flex: none; width: 100%; height: 5svh; margin-top: 8px; transform-origin: 50% 0;
   border: 1px solid rgba(255, 255, 255, 0.7); border-bottom: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 30%, transparent), transparent 75%);
   -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 82%);
@@ -372,17 +372,17 @@
   filter: blur(3px); opacity: 0.55;
 }
 @media (min-width: 768px) {
-  .web-demo { height: 340dvh; }
+  .web-demo { height: 340svh; }
   .web-demo__head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; column-gap: 5vw; }
   .web-demo__head .web-eyebrow { grid-column: 1 / -1; }
   /* device + mirror + heading rest inside the lanes (division-world.md #6) */
-  .web-demo__device { width: min(1180px, 100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
-  .web-demo__mirror { width: min(1180px, 100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
+  .web-demo__device { width: min(1180px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
+  .web-demo__mirror { width: min(1180px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
   .web-demo__viewport { aspect-ratio: 16 / 9.3; }
 }
 @media (max-width: 767px) {
   .web-demo__head .web-body { display: none; }
-  .web-demo__viewport { aspect-ratio: auto; height: min(120vw, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 220px)); }
+  .web-demo__viewport { aspect-ratio: auto; height: min(120vw, calc(100svh - var(--lane-top) - var(--lane-bottom) - 220px)); }
 }
 
 /* concept site inside the frame — "Hotel Quillon" (fictional) */
@@ -595,7 +595,7 @@
 }
 @media (min-width: 1024px) {
   .web-compare__main { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); column-gap: 4vw; align-items: start; }
-  .web-compare__stack { width: min(100%, calc((100dvh - var(--lane-top) - var(--lane-bottom) - 240px) * 1.6)); min-width: min(100%, 520px); margin: 0; justify-self: end; }
+  .web-compare__stack { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 240px) * 1.6)); min-width: min(100%, 520px); margin: 0; justify-self: end; }
   .web-compare__notes { margin-top: 0; gap: 22px; }
 }
 
@@ -694,11 +694,11 @@
 }
 /* the counter is a readout: chrome-size mono, never a fourth type size */
 .web-stack__count > span:first-child { font-weight: 500; }
-.web-stack__list { display: grid; gap: 5dvh; margin: 0; padding: 0 0 3dvh; list-style: none; }
+.web-stack__list { display: grid; gap: 5svh; margin: 0; padding: 0 0 3svh; list-style: none; }
 .web-stack__card { position: sticky; top: calc(var(--lane-top) + var(--i) * 9px); }
 .web-stack__inner {
   position: relative; /* offsetParent for the per-row fade in StackCards */
-  display: flex; flex-direction: column; min-height: clamp(300px, 46dvh, 440px);
+  display: flex; flex-direction: column; min-height: clamp(300px, 46svh, 440px);
   padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
   transform-origin: 50% 0; will-change: transform;
 }
@@ -721,7 +721,7 @@
 
 /* the illustrations — hairline white, one violet accent, chrome-size mono */
 .web-stack__viz {
-  display: flex; min-height: clamp(96px, 13dvh, 118px); padding: 12px 14px;
+  display: flex; min-height: clamp(96px, 13svh, 118px); padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.3); overflow: hidden;
 }
 .dv {
@@ -905,7 +905,7 @@
 }
 @media (min-width: 768px) {
   .web-range__head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; column-gap: 5vw; }
-  .web-range__row { grid-template-columns: 48px minmax(0, 1fr); padding: clamp(10px, 1.6dvh, 18px) 0; }
+  .web-range__row { grid-template-columns: 48px minmax(0, 1fr); padding: clamp(10px, 1.6svh, 18px) 0; }
   .web-range__word { font-size: clamp(26px, 3.1vw, 54px); }
   .web-range__row[data-lit] .web-range__word { transform: translate3d(14px, 0, 0); }
 }
@@ -1105,7 +1105,7 @@
 .web-gate__cross > span { color: var(--ink-muted); }
 @media (min-width: 900px) {
   .web-gate { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); column-gap: 5vw; }
-  .web-gate__object { --nest: min(32vw, 46dvh, 460px); }
+  .web-gate__object { --nest: min(32vw, 46svh, 460px); }
 }
 
 /* ═══ reduced motion: final states, nothing pinned ═══ */
@@ -1116,7 +1116,7 @@
   /* no stacking: every sheet is whole and readable in a plain column */
   .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }
-  .web-demo__stage { position: relative; height: auto; min-height: 100dvh; }
+  .web-demo__stage { position: relative; height: auto; min-height: 100svh; }
   .web-demo__viewport { overflow-y: auto; overscroll-behavior: contain; }
   .web-compare__region, .web-compare__note, .web-compare__note::after, .web-compare__grip,
   .web-compare__layer--after, .web-compare__switch button,

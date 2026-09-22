@@ -238,7 +238,7 @@ function MenuOverlay({
         })}
       </div>
 
-      <nav className="relative flex min-h-[100dvh] flex-col justify-center px-[var(--gutter)] pb-[96px] pt-[120px]">
+      <nav className="relative flex min-h-[100svh] flex-col justify-center px-[var(--gutter)] pb-[96px] pt-[120px]">
         <p className="mb-8 font-mono text-[12px] uppercase tracking-[0.2em] text-white">
           {String(items.indexOf(shown) + 1).padStart(2, "0")}/{String(items.length).padStart(2, "0")} —{" "}
           {shownDivision.name}
@@ -413,7 +413,7 @@ function ProgressRail({ pathname }: { pathname: string }) {
         {String(labels.index).padStart(2, "0")}
         <span className="opacity-45">/{String(labels.total).padStart(2, "0")}</span>
       </span>
-      <span className="relative block h-[clamp(72px,16dvh,160px)] w-px bg-white/25">
+      <span className="relative block h-[clamp(72px,16svh,160px)] w-px bg-white/25">
         <span ref={fillRef} className="absolute inset-0 origin-top bg-white" style={{ transform: "scaleY(0)" }} />
       </span>
       {labels.next ? (

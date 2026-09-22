@@ -123,10 +123,10 @@
    black before it reaches the lockup, trigger, chevron and contact icon, and
    the lanes are those bands plus 16px (division-world.md point 6). */
 .ai-section {
-  display: flex; align-items: center; min-height: 100dvh;
+  display: flex; align-items: center; min-height: 100svh;
   padding-block: var(--lane-top) var(--lane-bottom);
 }
-.ai-head { display: grid; gap: 16px; margin-bottom: clamp(28px, 4dvh, 52px); }
+.ai-head { display: grid; gap: 16px; margin-bottom: clamp(28px, 4svh, 52px); }
 @media (min-width: 1024px) {
   .ai-head { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); column-gap: 64px; align-items: end; }
   .ai-head > .ai-label { grid-column: 1 / -1; }
@@ -231,7 +231,7 @@
   opacity: 0.55; transition: opacity 700ms var(--ease-expo);
 }
 .ai-card[data-live] .ai-card__figure { opacity: 1; }
-.ai-card__figure .ai-dg { width: 100%; height: clamp(76px, 11dvh, 116px); }
+.ai-card__figure .ai-dg { width: 100%; height: clamp(76px, 11svh, 116px); }
 /* pointer devices: the description is read out in the caption, not the card */
 .ai-card__body { margin-top: 10px; }
 @media (hover: hover) and (pointer: fine) {
@@ -303,7 +303,7 @@
 
 /* ── 3. workflow compression: scroll-scrubbed line draw ── */
 .ai-compress__stage {
-  display: flex; align-items: center; min-height: 100dvh;
+  display: flex; align-items: center; min-height: 100svh;
   padding-block: var(--lane-top) var(--lane-bottom);
 }
 .ai-compress__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: center; }
@@ -317,7 +317,7 @@
   .ai-compress__copy .ai-h2 { font-size: clamp(22px, 2.5vw, 44px); }
 }
 .ai-readout {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.5em; margin-top: clamp(18px, 3dvh, 32px);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.5em; margin-top: clamp(18px, 3svh, 32px);
   font-family: var(--font-geist-mono), monospace; font-size: var(--ai-readout); line-height: 1.15;
   font-variant-numeric: tabular-nums; color: #ffffff; text-transform: uppercase; letter-spacing: 0.04em;
 }
@@ -331,11 +331,11 @@
   .ai-compress__note { display: none; }
 }
 .ai-flow {
-  display: block; width: 100%; height: auto; max-height: calc(100dvh - var(--lane-top) - var(--lane-bottom) - 40px); overflow: visible;
+  display: block; width: 100%; height: auto; max-height: calc(100svh - var(--lane-top) - var(--lane-bottom) - 40px); overflow: visible;
   font-family: var(--font-geist-mono), monospace; letter-spacing: 0.12em;
 }
 @media (max-width: 767px) {
-  .ai-flow { max-height: calc(100dvh - var(--lane-top) - var(--lane-bottom) - 250px); }
+  .ai-flow { max-height: calc(100svh - var(--lane-top) - var(--lane-bottom) - 250px); }
 }
 .ai-flow__path,
 .ai-flow__layer,
@@ -358,12 +358,12 @@
 @media (min-width: 1024px) {
   .ai-process { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
-.ai-process__stage { position: relative; isolation: isolate; display: grid; gap: clamp(20px, 3dvh, 32px); }
+.ai-process__stage { position: relative; isolation: isolate; display: grid; gap: clamp(20px, 3svh, 32px); }
 .ai-process__stage .ai-head { margin-bottom: 0; }
 @media (min-width: 1024px) {
   .ai-process__stage .ai-h2 { font-size: clamp(22px, 2.5vw, 44px); }
 }
-.ai-orbit { position: relative; width: min(100%, 440px, calc(100dvh - var(--lane-top) - var(--lane-bottom) - 170px)); aspect-ratio: 1; margin-inline: auto; }
+.ai-orbit { position: relative; width: min(100%, 440px, calc(100svh - var(--lane-top) - var(--lane-bottom) - 170px)); aspect-ratio: 1; margin-inline: auto; }
 @media (max-width: 767px) {
   .ai-orbit { width: min(100%, 320px); margin-block: 4px 20px; }
 }
@@ -423,7 +423,7 @@
 .ai-mini-btn:disabled { opacity: 0.35; pointer-events: none; }
 
 /* ── 5. industries: accordion + agent log ── */
-.glass-panel.ai-band { width: 100%; border-left: 0; border-right: 0; padding-block: clamp(24px, 3.4dvh, 40px); }
+.glass-panel.ai-band { width: 100%; border-left: 0; border-right: 0; padding-block: clamp(24px, 3.4svh, 40px); }
 @media (min-width: 1024px) {
   .ai-band .ai-wrap > div { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr); gap: 48px; align-items: start; }
   .ai-band .ai-head { margin-bottom: 0; }
@@ -433,7 +433,7 @@
 .ai-row { position: relative; border-bottom: 1px solid #ffffff; }
 .ai-row__trigger {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px; align-items: center; gap: 16px;
-  width: 100%; padding-block: clamp(12px, 1.6dvh, 18px); text-align: left; color: #ffffff;
+  width: 100%; padding-block: clamp(12px, 1.6svh, 18px); text-align: left; color: #ffffff;
 }
 .ai-row__title {
   font-size: var(--ai-readout); line-height: 1.12; letter-spacing: 0.08em; opacity: 0.6;
@@ -501,7 +501,7 @@
 .ai-why__panel { padding: clamp(20px, 2.4vw, 36px); }
 .ai-why__row {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 24px; align-items: baseline;
-  padding-block: clamp(12px, 1.8dvh, 18px); border-bottom: 1px solid #ffffff;
+  padding-block: clamp(12px, 1.8svh, 18px); border-bottom: 1px solid #ffffff;
 }
 .ai-why__row:first-child { padding-top: 0; }
 .ai-why__row:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -528,7 +528,7 @@
 
 /* ── 7. gate: a gate, not a footer — glyph above the copy, never over it ── */
 .ai-gate { display: flex; align-items: center; padding-block: var(--lane-top) var(--lane-bottom); }
-.ai-gate__inner { display: grid; justify-items: center; gap: clamp(16px, 3dvh, 28px); text-align: center; }
+.ai-gate__inner { display: grid; justify-items: center; gap: clamp(16px, 3svh, 28px); text-align: center; }
 .ai-gate__figure {
   --gate-ink: #00b4d8;
   display: block; width: clamp(96px, 11vw, 150px); height: auto; overflow: visible;
@@ -539,9 +539,9 @@
 .ai-gate__echo { fill: none; stroke: #ffffff; stroke-width: 1; }
 .ai-gate__copy { position: relative; isolation: isolate; display: grid; justify-items: center; max-width: 720px; }
 .ai-gate__copy .ai-h2 { max-width: 22ch; }
-.ai-gate__cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 20px 36px; margin-top: clamp(28px, 4.5dvh, 44px); }
+.ai-gate__cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 20px 36px; margin-top: clamp(28px, 4.5svh, 44px); }
 .ai-gate__cross {
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 28px; margin-top: clamp(28px, 4dvh, 44px);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 28px; margin-top: clamp(28px, 4svh, 44px);
   padding-top: 16px; border-top: 1px solid #ffffff;
 }
 .ai-gate__cross > .ai-label { opacity: 0.6; }

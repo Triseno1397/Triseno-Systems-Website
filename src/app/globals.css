@@ -75,9 +75,9 @@
      zone, then an eased falloff to 0. Content at rest keeps clear of the whole
      band, so the lanes are the band plus breathing room. */
   --fade-top-solid: 72px;
-  --fade-top: clamp(112px, 14dvh, 128px);
+  --fade-top: clamp(112px, 14svh, 128px);
   --fade-bottom-solid: 88px;
-  --fade-bottom: clamp(124px, 16dvh, 144px);
+  --fade-bottom: clamp(124px, 16svh, 144px);
   --lane-top: calc(var(--fade-top) + 16px);
   --lane-bottom: calc(var(--fade-bottom) + 16px);
   --lane-right: 0px;
@@ -539,7 +539,7 @@ main a {
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   background: var(--bg); color: var(--ink-1); font-family: var(--sans);
-  -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100dvh;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100svh;
 }
 .studio-page a { color: inherit; text-decoration: none; }
 
