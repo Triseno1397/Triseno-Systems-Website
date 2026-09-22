@@ -16,10 +16,25 @@ const pointer = { x: 0, y: 0 };
 let progFrame = -1;
 let progValue = 0;
 let installed = false;
+// The smooth scroller moves the page at the top of every frame. Asking the
+// document where it ended up (window.scrollY) straight afterwards makes the
+// browser flush style and layout mid-frame, every frame — so the scroller
+// hands its own number over instead, and nothing has to ask.
+let fedY = 0;
+let hasFeed = false;
 
 function install() {
   if (installed || typeof window === "undefined") return;
   installed = true;
+  // Touch scrolling is the browser's own, so nothing calls feedScroll: take the
+  // position from the scroll event instead, where layout is already settled,
+  // rather than asking the document for it in the middle of a frame.
+  const onScroll = () => {
+    fedY = window.scrollY;
+    hasFeed = true;
+  };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener(
     "pointermove",
     (e) => {
@@ -47,12 +62,19 @@ function watchSize() {
   window.addEventListener("resize", measure, { passive: true });
 }
 
+/** The scroller's own position for this frame, so no one reads it back off
+ *  the document after it has just been written. */
+export function feedScroll(y: number) {
+  fedY = y;
+  hasFeed = true;
+}
+
 export function primeScroll() {
   const frame = gsap.ticker.frame;
   if (frame === progFrame) return;
   progFrame = frame;
   watchSize();
-  progValue = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+  progValue = Math.min(1, Math.max(0, (hasFeed ? fedY : window.scrollY) / maxScroll));
 }
 
 export interface PlatePose {

@@ -88,6 +88,7 @@ export default function PortalPage() {
   const [hot, setHot] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [heroUp, setHeroUp] = useState(true);
+  const [beams, setBeams] = useState(false);
   // the Operator needs WebGL; without it the lite glyph stands in for him
   const [hasGL, setHasGL] = useState(false);
   const [capture, setCapture] = useState(false);
@@ -105,6 +106,9 @@ export default function PortalPage() {
   const doorsRef = useRef<HTMLElement>(null);
   const gateRef = useRef<HTMLElement>(null);
   const beamsRef = useRef<HTMLDivElement>(null);
+  // the beams layer is a fixed full-screen sheet that only fades in near the
+  // gate: this says when it is actually shown, so its canvas can park
+  const beamsShown = useRef(false);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const interacting = useRef(false);
   const resumeTimer = useRef(0);
@@ -282,6 +286,11 @@ export default function PortalPage() {
             const o = Math.min(1, Math.max(0, (self.progress - 0.55) / 0.4));
             beamsRef.current.style.opacity = o.toFixed(3);
             beamsRef.current.style.visibility = o <= 0.01 ? "hidden" : "visible";
+            const on = o > 0.01;
+            if (on !== beamsShown.current) {
+              beamsShown.current = on;
+              setBeams(on);
+            }
           }
         },
       });
@@ -512,7 +521,7 @@ export default function PortalPage() {
       {full ? (
         <div ref={beamsRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[5]" style={{ opacity: 0, visibility: "hidden" }}>
           {/* light raining onto the wet floor around the gate object; never over the copy column or the rail */}
-          <BeamsCollision getFloor={getFloor} xRange={[0.5, 0.9]} floorLine={false} />
+          <BeamsCollision getFloor={getFloor} xRange={[0.5, 0.9]} floorLine={false} active={beams} />
         </div>
       ) : null}
       <section

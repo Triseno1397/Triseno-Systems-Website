@@ -18,7 +18,10 @@ const OUTLINE = KINDS.map((k) => glyphPoints(k, 48));
  * (circle / square / triangle, laid flat in perspective) and a short spray of
  * light. Each shaft mirrors faintly below the line, like everything else in
  * this world. White only — the portal is achromatic. Single 2D canvas; runs
- * only while on screen; static frame for reduced motion.
+ * only while on screen AND while its layer is actually shown — the portal keeps
+ * it mounted in a fixed full-screen layer and fades it in near the gate, and an
+ * IntersectionObserver alone would have it drawing behind a hidden layer for
+ * the whole page. Static frame for reduced motion.
  */
 
 interface BeamsCollisionProps {
@@ -30,6 +33,8 @@ interface BeamsCollisionProps {
   xRange?: [number, number];
   /** Draw the 1px floor line (default true). Off when a rendered floor is already there. */
   floorLine?: boolean;
+  /** False while the layer holding it is faded out — the loop parks. */
+  active?: boolean;
   className?: string;
 }
 
@@ -69,8 +74,13 @@ export default function BeamsCollision({
   xRange,
   floorLine = true,
   className = "",
+  active = true,
 }: BeamsCollisionProps) {
   const getFloorRef = useRef(getFloor);
+  // the loop's handles, so showing or hiding the layer parks it in place
+  const run = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const activeRef = useRef(active);
+  const onScreen = useRef(false);
   useEffect(() => {
     getFloorRef.current = getFloor;
   }, [getFloor]);
@@ -97,6 +107,44 @@ export default function BeamsCollision({
     let beams: Beam[] = [];
     const sparks: Spark[] = [];
     const ripples: Ripple[] = [];
+
+    // A falling shaft is the same picture every frame, only longer or shorter,
+    // so it is drawn once into a small sprite and stamped from then on.
+    // Rebuilding its gradients per beam per frame was the most expensive thing
+    // on this canvas, and on a phone it showed.
+    const SHAFT_W = 8; // css px: a 1px core inside a 7px glow
+    const sprite = (paint: (g: CanvasRenderingContext2D, W: number, H: number) => void) => {
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(SHAFT_W * dpr));
+      c.height = Math.max(1, Math.round(256 * dpr));
+      const g = c.getContext("2d");
+      if (g) paint(g, c.width, c.height);
+      return c;
+    };
+    const core = Math.max(1, Math.round(dpr));
+    const shaft = sprite((g, W, H) => {
+      const glow = g.createLinearGradient(0, 0, 0, H);
+      glow.addColorStop(0, "rgba(255,255,255,0)");
+      glow.addColorStop(1, "rgba(255,255,255,0.14)");
+      g.fillStyle = glow;
+      g.fillRect(Math.round((W - 7 * dpr) / 2), 0, Math.round(7 * dpr), H);
+      const line = g.createLinearGradient(0, 0, 0, H);
+      line.addColorStop(0, "rgba(255,255,255,0)");
+      line.addColorStop(1, "rgba(255,255,255,0.95)");
+      g.fillStyle = line;
+      g.fillRect(Math.round(W / 2 - core / 2), 0, core, H);
+    });
+    // the same shaft mirrored in the wet floor, fading downward
+    const mirror = sprite((g, W, H) => {
+      const line = g.createLinearGradient(0, 0, 0, H);
+      line.addColorStop(0, "rgba(255,255,255,0.22)");
+      line.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = line;
+      g.fillRect(Math.round(W / 2 - core / 2), 0, core, H);
+    });
+    // the floor line only changes with the canvas width
+    let lineGrad: CanvasGradient | null = null;
+    let lineGradW = -1;
 
     const seed = () => {
       const count = Math.max(
@@ -185,12 +233,15 @@ export default function BeamsCollision({
 
       // floor line, fading out toward both edges
       if (floorLine) {
-        const line = ctx.createLinearGradient(0, 0, w, 0);
-        line.addColorStop(0, "rgba(255,255,255,0)");
-        line.addColorStop(0.18, "rgba(255,255,255,0.9)");
-        line.addColorStop(0.82, "rgba(255,255,255,0.9)");
-        line.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.strokeStyle = line;
+        if (!lineGrad || lineGradW !== w) {
+          lineGrad = ctx.createLinearGradient(0, 0, w, 0);
+          lineGrad.addColorStop(0, "rgba(255,255,255,0)");
+          lineGrad.addColorStop(0.18, "rgba(255,255,255,0.9)");
+          lineGrad.addColorStop(0.82, "rgba(255,255,255,0.9)");
+          lineGrad.addColorStop(1, "rgba(255,255,255,0)");
+          lineGradW = w;
+        }
+        ctx.strokeStyle = lineGrad;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, floorY);
@@ -204,42 +255,16 @@ export default function BeamsCollision({
           continue;
         }
         b.y += b.speed * dt;
-        const x = Math.round(b.x * w) + 0.5;
+        const x = Math.round(b.x * w);
         const head = Math.min(b.y, floorY);
         const tail = Math.max(0, b.y - b.len);
         if (head > tail) {
-          const g = ctx.createLinearGradient(0, tail, 0, head);
-          g.addColorStop(0, "rgba(255,255,255,0)");
-          g.addColorStop(1, "rgba(255,255,255,0.95)");
-          // a soft shaft of light: wide faint glow under a 1px core
-          const halo = ctx.createLinearGradient(0, tail, 0, head);
-          halo.addColorStop(0, "rgba(255,255,255,0)");
-          halo.addColorStop(1, "rgba(255,255,255,0.14)");
-          ctx.strokeStyle = halo;
-          ctx.lineWidth = 7;
-          ctx.beginPath();
-          ctx.moveTo(x, tail);
-          ctx.lineTo(x, head);
-          ctx.stroke();
-          ctx.strokeStyle = g;
-          ctx.lineWidth = b.width;
-          ctx.beginPath();
-          ctx.moveTo(x, tail);
-          ctx.lineTo(x, head);
-          ctx.stroke();
-
+          ctx.drawImage(shaft, x - SHAFT_W / 2, tail, SHAFT_W, head - tail);
           // faint mirror under the floor line — the ground here is wet
           const depth = Math.min(head - tail, h - floorY, 140);
           const near = floorY + (floorY - head);
-          if (near < h) {
-            const m = ctx.createLinearGradient(0, near, 0, near + depth);
-            m.addColorStop(0, "rgba(255,255,255,0.22)");
-            m.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.strokeStyle = m;
-            ctx.beginPath();
-            ctx.moveTo(x, near);
-            ctx.lineTo(x, near + depth);
-            ctx.stroke();
+          if (near < h && depth > 0) {
+            ctx.drawImage(mirror, x - SHAFT_W / 2, near, SHAFT_W, depth);
           }
         }
         if (!reduced && b.y - b.len >= floorY) {
@@ -312,14 +337,19 @@ export default function BeamsCollision({
     let raf = 0;
     let last = 0;
     let running = false;
+    // On a phone this is background weather behind the gate, and drawing it
+    // every frame costs more than it shows: half rate is indistinguishable for
+    // falling light and leaves the scroll the whole budget.
+    const minStep = coarse ? 1 / 32 : 0;
     const loop = (now: number) => {
+      raf = requestAnimationFrame(loop);
       const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+      if (dt < minStep) return;
       last = now;
       draw(dt);
-      raf = requestAnimationFrame(loop);
     };
     const start = () => {
-      if (running || reduced) return;
+      if (running || reduced || !activeRef.current) return;
       running = true;
       last = 0;
       raf = requestAnimationFrame(loop);
@@ -334,17 +364,30 @@ export default function BeamsCollision({
     resize();
 
     const io = new IntersectionObserver(
-      ([entry]) => (entry.isIntersecting ? start() : stop()),
+      ([entry]) => {
+        onScreen.current = entry.isIntersecting;
+        if (entry.isIntersecting) start();
+        else stop();
+      },
       { threshold: 0 },
     );
     io.observe(host);
+    run.current = { start, stop };
 
     return () => {
       stop();
       ro.disconnect();
       io.disconnect();
+      run.current = null;
     };
   }, [floor, x0, x1, floorLine]);
+
+  // shown or hidden: park the loop rather than rebuild the canvas
+  useEffect(() => {
+    activeRef.current = active;
+    if (active && onScreen.current) run.current?.start();
+    if (!active) run.current?.stop();
+  }, [active]);
 
   return (
     <canvas

@@ -1092,7 +1092,9 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 .glass-panel__world, .glass-panel__world *, .glass-panel__veil { pointer-events: none; }
 /* the Operator's label: he stands in the scene, this names the interaction */
 .portal-operator-hint {
-  position: absolute; right: calc(var(--rail-safe) + 1vw); bottom: calc(var(--lane-bottom) + 1svh);
+  /* clear of the progress rail's lane (--rail-safe belongs to /studio and does
+     not exist here, which left this sitting on top of the menu) */
+  position: absolute; right: calc(var(--lane-right, 0px) + 1vw); bottom: calc(var(--lane-bottom) + 1svh);
   color: rgba(255, 255, 255, 0.5); pointer-events: none;
   transition: color 600ms var(--ease-expo);
 }
