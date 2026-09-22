@@ -11,6 +11,7 @@ import Glyph from "@/components/world/Glyph";
 import Loader from "@/components/world/Loader";
 import WorldPlate from "@/components/world/WorldPlate";
 import GlassPanel from "@/components/world/GlassPanel";
+import RobotSection from "./RobotSection";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -487,6 +488,9 @@ export default function PortalPage() {
           ))}
         </section>
       )}
+
+      {/* ── 3. The Operator: an interactive rigged robot ─────────────── */}
+      <RobotSection />
 
       {/* ── 3. Gate ──────────────────────────────────────────────────── */}
       {full ? (

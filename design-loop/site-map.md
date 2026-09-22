@@ -10,7 +10,8 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 ## `/` Portal — achromatic
 1. **Signature object menu** — R3F object on a wet reflective floor; menu of 5 words (CREATIVE · WEB DESIGN · AI INFRASTRUCTURE · WORK · CONTACT); hovering a word swaps the object's glyph + hue. Headline uses **text-rotate** (21st): "WE BUILD [AD CREATIVE | WEBSITES | AI SYSTEMS]".
 2. **Three doors** — scroll-scrubbed camera dolly past three lit portals (amber circle, violet square, cyan triangle), one line of positioning each, click = warp.
-3. **Gate** — final CTA "Start a Conversation" over **background beams with collision** (21st), white beams only.
+3. **The Operator** (21st: splite, rebuilt) — a generated, rigged Triseno robot on its own dark stage; hips-to-visor pointer tracking; click forges a ninja hilt between its palms (scan-line fabrication), draws it, ignites the blade in the next division hue and alternates a twin-blade spin and a 360 spin jump, with blade trails.
+4. **Gate** — final CTA "Start a Conversation" over **background beams with collision** (21st), white beams only.
 
 ## `/studio` Creative — amber
 1. Hero: **scroll-expansion hero** (21st) — the showreel starts as a small framed window and expands to full-bleed as you scroll.

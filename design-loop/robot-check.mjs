@@ -1,0 +1,15 @@
+import { chromium } from '@playwright/test';
+const out = 'design-loop/shots/robot-'; const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } }); p.setDefaultTimeout(150000);
+const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 200))); p.on('console', m => m.type() === 'error' && errs.push(m.text().slice(0, 200)));
+await p.goto((process.env.BASE || 'http://localhost:3300') + '/', { waitUntil: 'load' }); await p.waitForTimeout(4000);
+await p.evaluate(() => { const s = document.querySelector('.portal-robot'); window.scrollTo(0, s.getBoundingClientRect().top + scrollY); });
+await p.waitForTimeout(9000);
+const st = await p.locator('.portal-robot__stage').boundingBox();
+await p.mouse.move(st.x + st.width + 400, st.y + 100); await p.waitForTimeout(2500); await p.screenshot({ path: out + '1-right.png' });
+await p.mouse.move(80, st.y + st.height * 0.8); await p.waitForTimeout(2500); await p.screenshot({ path: out + '2-left.png' });
+await p.mouse.click(st.x + st.width / 2, st.y + st.height / 2); await p.waitForTimeout(1300); await p.screenshot({ path: out + '3-strike-a.png' });
+await p.waitForTimeout(1000); await p.screenshot({ path: out + '4-strike-b.png' });
+await p.waitForTimeout(1000); await p.screenshot({ path: out + '5-strike-c.png' });
+console.log('errors:', errs.length ? errs : 'none', '| ready:', await p.locator('.portal-robot__stage[data-ready]').count());
+await b.close();
