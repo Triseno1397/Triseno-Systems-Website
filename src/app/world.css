@@ -902,6 +902,125 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 .morph-nav__lockup { pointer-events: none !important; }
 .morph-nav__lockup > * { pointer-events: auto; }
 
+/* ── THE OPERATOR (portal hero: interactive 3D robot) ────────────────────
+   He stands in the portal's own hall: a transparent canvas over the world,
+   no stage, no scrim, no panel. The canvas spans the right half of the hero
+   and his feet land on the world's floor line. */
+.portal-robot {
+  position: absolute; right: 0; bottom: 0;
+  width: min(52vw, 700px); height: min(88svh, 840px);
+  cursor: pointer; outline: none;
+}
+.portal-robot:focus-visible { outline: 1px solid #ffffff; outline-offset: 8px; }
+.portal-robot__gl { position: absolute; inset: 0; }
+.portal-robot canvas { opacity: 0; transition: opacity 1400ms var(--ease-expo); }
+.portal-robot[data-ready] canvas { opacity: 1; }
+.portal-robot__hint {
+  position: absolute; left: 50%; bottom: 2.2svh; transform: translateX(-50%);
+  white-space: nowrap; color: rgba(255, 255, 255, 0.55);
+  opacity: 0; transition: opacity 900ms var(--ease-expo) 400ms;
+}
+.portal-robot[data-ready] .portal-robot__hint { opacity: 1; }
+.portal-robot:hover .portal-robot__hint { color: #ffffff; }
+@media (max-width: 1023px) {
+  .portal-robot { width: min(62vw, 420px); height: min(58svh, 520px); right: -2vw; }
+}
+@media (max-width: 767px) {
+  /* on a phone the hall is narrow: he stands in the column, above the list,
+     where the signature glyph would be — nothing overlaps the words */
+  .portal-robot {
+    position: relative; right: auto; bottom: auto; order: 3;
+    width: 100%; height: 30svh; margin: 2svh 0 0;
+  }
+  .portal-robot__hint { left: auto; right: 0; bottom: -0.4svh; transform: none; }
+}
+
+/* ── SMOOTHNESS: ambience rests while the page moves ─────────────────────
+   The slow ambient drifts (7–46s haze, dust, breathing light) are invisible
+   mid-scroll, but each one keeps a full-viewport blended layer re-compositing
+   every frame. They freeze while Lenis is scrolling and resume on the frame
+   scrolling stops, so the GPU spends a scroll frame on the scroll. */
+html.lenis-scrolling :is(
+  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
+  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
+  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
+  .ai-world__glow, .ai-world__core
+) { animation-play-state: paused; }
+/* faint haze and dust read the same blended normally over the dark plate; the
+   screen blend is kept only where light really adds up (shafts, pointer light) */
+html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .web-plate__dust { mix-blend-mode: normal; }
+
+/* ── tap targets: small text links get an invisible 44px-tall hit area
+   (no layout change — the ::before only widens where a tap lands) */
+.world-underline::before, .web-subaction::before {
+  content: ""; position: absolute; inset: -14px -6px;
+}
+.web-subaction { position: relative; }
+
+/* ── PHONES & TABLETS: memory diet ─────────────────────────────────────────
+   The frosted glass is made of full-viewport copies of the blurred world plate
+   (up to three per panel, one per camera station), each its own GPU layer at
+   the device pixel ratio. On a phone that is ~300 MB for one page and iOS
+   Safari kills the tab ("A problem repeatedly occurred"). On touch devices the
+   panel is smoked glass instead: the same 1px hairline and veil over the lit
+   world, which shows through the veil itself. */
+@media (pointer: coarse), (max-width: 767px) {
+  .glass-panel__world { display: none; }
+  .glass-panel__veil {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.035)),
+      rgba(8, 8, 10, calc(var(--glass-veil, 0.5) + 0.18));
+  }
+}
+
+/* Phones & tablets: the content-only mask is swapped for two soft neutral
+   scrims under the chrome (design-system §2 "chrome scrims"). Masking every
+   page-tall section forces each one onto its own GPU layer — on a phone that
+   is hundreds of MB — so here content dissolves into the scrim instead. */
+@media (pointer: coarse), (max-width: 767px) {
+  html[data-content-fade] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
+  html[data-content-fade] body::before,
+  html[data-content-fade] body::after {
+    content: ""; position: fixed; left: 0; right: 0; z-index: 790; pointer-events: none;
+  }
+  html[data-content-fade] body::before {
+    /* solid behind the two-line lockup and the menu trigger, then a long
+       soft falloff: copy dissolves before it can reach the chrome */
+    top: 0; height: 168px;
+    background: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.97) 44%, rgba(0, 0, 0, 0.72) 64%, rgba(0, 0, 0, 0.3) 84%, rgba(0, 0, 0, 0) 100%);
+  }
+  html[data-content-fade] body::after {
+    bottom: 0; height: 132px;
+    background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.95) 38%, rgba(0, 0, 0, 0.62) 62%, rgba(0, 0, 0, 0.24) 84%, rgba(0, 0, 0, 0) 100%);
+  }
+}
+
+/* Phones & tablets: the ambient drifts hold still. Each animated full-screen
+   layer is its own GPU surface at 3x pixel density (~12 MB apiece) and costs
+   frame time mid-scroll; held still they flatten into the world plate and the
+   look is the same frame. The pointer lights have no pointer here at all. */
+@media (pointer: coarse), (max-width: 767px) {
+  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
+  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
+  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
+  .ai-world__glow, .ai-world__core { animation: none !important; will-change: auto; }
+  .world-plate__light, .web-plate__light, .ai-world__light { display: none; }
+}
+/* Phones: drop standing GPU layers that are only worth it with a mouse or a
+   desktop GPU — one per letter in the rotating headlines, the spotlight
+   fields, the stacked gate frames. They still animate; they simply don't hold
+   a layer while at rest. */
+@media (pointer: coarse), (max-width: 767px) {
+  .text-rotate__char, .hrotate__char, .warp-title, .ai-card__field,
+  .web-gate__frame, .work-gate__part, .work-gate__diamond, .sx-print,
+  .sx-gate__iris, .sx-gate__body { will-change: auto; }
+}
+
+/* The lockup's box is wider and taller than its words on a phone; only the
+   words take a tap, so content passing under the empty part stays tappable. */
+.morph-nav__lockup { pointer-events: none !important; }
+.morph-nav__lockup > * { pointer-events: auto; }
+
 /* ── THE OPERATOR (portal: interactive 3D robot) ─────────────────────── */
 .portal-robot { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 72px); padding-top: var(--lane-top); padding-bottom: var(--lane-bottom); }
 .portal-robot__title { font-size: var(--fs-display); line-height: 1.06; letter-spacing: 0.08em; }
@@ -967,3 +1086,15 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
     mask-position: -100vw calc(100% + var(--fade-vh, 100vh));
   }
 }
+/* the glass panel's own layers are decoration: they never take a click (their
+   per-frame visibility write would otherwise re-enable hit-testing inside a
+   hidden card and swallow clicks meant for what is underneath) */
+.glass-panel__world, .glass-panel__world *, .glass-panel__veil { pointer-events: none; }
+/* the Operator's label: he stands in the scene, this names the interaction */
+.portal-operator-hint {
+  position: absolute; right: calc(var(--rail-safe) + 1vw); bottom: calc(var(--lane-bottom) + 1svh);
+  color: rgba(255, 255, 255, 0.5); pointer-events: none;
+  transition: color 600ms var(--ease-expo);
+}
+.portal-world[data-hot] .portal-operator-hint { color: rgba(255, 255, 255, 0.75); }
+@media (max-width: 1023px) { .portal-operator-hint { display: none; } }

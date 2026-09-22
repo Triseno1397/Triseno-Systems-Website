@@ -33,6 +33,7 @@ import {
 } from "@/components/world/scene/pieces";
 import { makeGlowTexture, makeHazeTexture } from "@/components/world/scene/textures";
 import { WARP_EVENT } from "@/components/world/WarpProvider";
+import Operator, { type OperatorState } from "./Operator";
 import { plate } from "@/components/world/plates";
 import { PlateBackdrop } from "@/components/world/scene/plate";
 import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState } from "./portalState";
@@ -378,6 +379,42 @@ function GateObject() {
  */
 const PLATE_HORIZON = plate("portal").horizon.desktop;
 
+/* The Operator stands in the portal's own hall, inside this scene: one WebGL
+   context, the world's own light and reflections on his chrome. He is only up
+   while the hero is (the camera leaves him behind on the way to the doors). */
+function OperatorInWorld({ state }: { state: OperatorState }) {
+  const group = useRef<THREE.Group>(null);
+  const busy = useRef(false);
+  const stand = useMemo(() => {
+    const u = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+    const n = (k: string, d: number) => Number(u?.get(k) ?? d);
+    const scale = n("ops", 2.05);
+    return {
+      position: [n("opx", 0.45), n("opy", 0.5 * scale), n("opz", 1.9)] as [number, number, number],
+      scale,
+      yaw: n("opyaw", -0.35),
+    };
+  }, []);
+  useFrame(() => {
+    state.px = portalState.px;
+    state.py = portalState.py;
+    if (group.current) group.current.visible = portalState.hero < 0.55 && portalState.warpAt === 0;
+  });
+  return (
+    <group
+      ref={group}
+      onClick={(e) => {
+        e.stopPropagation();
+        state.strike += 1;
+      }}
+      onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
+      onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
+    >
+      <Operator state={state} busy={busy} stand={stand} />
+    </group>
+  );
+}
+
 function CameraRig() {
   const { camera, size } = useThree();
   const pos = useMemo(() => new THREE.Vector3(0, CAM_Y, 7.6), []);
@@ -472,14 +509,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   // destination world booting underneath it, and the travel plays at its full
   // length instead of stuttering through a heavy scene nobody can see.
   const [paused, setPaused] = useState(false);
-  // the Operator's dark stage covers the portal world: while it fills the
-  // screen the portal stops drawing and the GPU goes to the robot
-  const [covered, setCovered] = useState(false);
-  useEffect(() => {
-    const on = (e: Event) => setCovered(!!(e as CustomEvent<boolean>).detail);
-    window.addEventListener("portal:covered", on);
-    return () => window.removeEventListener("portal:covered", on);
-  }, []);
+  const operatorState = useMemo<OperatorState>(() => ({ px: 0, py: 0, fine: true, strike: 0 }), []);
   useEffect(() => {
     let t = 0;
     const onWarp = () => {
@@ -498,7 +528,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   return (
     <Canvas
       flat // no tone mapping: a division hue must reach the screen as that hue
-      frameloop={paused || covered ? "never" : "always"}
+      frameloop={paused ? "never" : "always"}
       dpr={dpr}
       gl={{ antialias: false, powerPreference: "high-performance", alpha: false, preserveDrawingBuffer: false }}
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}
@@ -535,6 +565,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         <PlateBackdrop world="portal" pointer={() => [portalState.px, portalState.py]} />
         {DBG.includes("h") ? null : <Haze texture={haze} />}
         <SignatureObject glow={glow} />
+        <OperatorInWorld state={operatorState} />
         {DOOR_ITEMS.map((_, i) => (
           <Door key={i} index={i} onEnter={onEnter} />
         ))}

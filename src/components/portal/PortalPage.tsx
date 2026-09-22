@@ -11,7 +11,7 @@ import Glyph from "@/components/world/Glyph";
 import Loader from "@/components/world/Loader";
 import WorldPlate from "@/components/world/WorldPlate";
 import GlassPanel from "@/components/world/GlassPanel";
-import RobotSection from "./RobotSection";
+import RobotStage from "./RobotStage";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -87,6 +87,9 @@ export default function PortalPage() {
   const [active, setActive] = useState(0);
   const [hot, setHot] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [heroUp, setHeroUp] = useState(true);
+  // the Operator needs WebGL; without it the lite glyph stands in for him
+  const [hasGL, setHasGL] = useState(false);
   const [capture, setCapture] = useState(false);
   // lite world: the one fixed backdrop takes the hue of the door that owns the
   // viewport, and is white light everywhere else (D2)
@@ -138,7 +141,9 @@ export default function PortalPage() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const small = window.matchMedia("(max-width: 767px)").matches;
-    const lite = reduced || small || !canRunWebGL();
+    const gl = canRunWebGL();
+    setHasGL(gl);
+    const lite = reduced || small || !gl;
     setMode(lite ? "lite" : "full");
     if (lite) {
       const done = () => setReady(true);
@@ -238,6 +243,8 @@ export default function PortalPage() {
           portalState.hero = self.progress;
           if (heroInner) {
             const o = 1 - Math.min(1, self.progress / 0.4);
+            // the Operator's canvas stops drawing once the hero has faded out
+            setHeroUp((up) => (up === o > 0.02 ? up : o > 0.02));
             heroInner.style.opacity = o.toFixed(3);
             heroInner.style.visibility = o <= 0.01 ? "hidden" : "visible";
             heroInner.style.transform = `translate3d(0, ${(-self.progress * 60).toFixed(1)}px, 0)`;
@@ -256,6 +263,8 @@ export default function PortalPage() {
             const v = cardVisible(i, z);
             card.style.opacity = v.toFixed(3);
             card.style.visibility = v <= 0.01 ? "hidden" : "visible";
+            // a card that is not up must not take a click meant for the menu
+            card.style.pointerEvents = v <= 0.01 ? "none" : "auto";
             card.style.transform = `translate3d(0, ${((1 - v) * 40).toFixed(1)}px, 0)`;
           });
         },
@@ -364,7 +373,7 @@ export default function PortalPage() {
 
       {/* The world: one fixed canvas behind every section. */}
       {mode === "full" ? (
-        <div className="fixed inset-0 z-0" data-world-layer="" data-scene-ready={ready ? "" : undefined}>
+        <div className="pointer-events-auto fixed inset-0 z-0" data-world-layer="" data-scene-ready={ready ? "" : undefined}>
           {/* the plate paints at once; the 3D world (which draws the same plate
               as its own deep background) covers it when its first frame is up */}
           <WorldPlate world="portal" />
@@ -388,7 +397,7 @@ export default function PortalPage() {
         ref={heroRef}
         data-rail="Divisions"
         aria-label="Triseno Systems"
-        className={full ? "relative z-10 h-[200svh]" : "relative z-10 min-h-[100svh] overflow-hidden"}
+        className={full ? "pointer-events-none relative z-10 h-[200svh]" : "relative z-10 min-h-[100svh] overflow-hidden"}
       >
 
         <div
@@ -416,7 +425,17 @@ export default function PortalPage() {
             </p>
           </div>
 
-          {mode === "lite" ? <LiteSignature active={active} /> : null}
+          {mode === "lite" && !hasGL ? <LiteSignature active={active} /> : null}
+
+          {/* the Operator stands in the hall: beside the division list on a
+              desktop, above it in the column on a phone */}
+          {hasGL && mode === "lite" ? <RobotStage active={heroUp} hue={hot ? current.hue : null} /> : null}
+          {/* he is rendered inside the portal scene on a desktop; this is his label */}
+          {hasGL && full ? (
+            <p aria-hidden="true" className="portal-operator-hint chrome-label font-mono">
+              Click the operator
+            </p>
+          ) : null}
 
           <nav aria-label="Divisions" className="portal-menu pointer-events-auto mt-8 w-fit max-w-full" onMouseLeave={release}>
             <p className="chrome-label mb-5 font-mono text-white" aria-live="off">
@@ -466,7 +485,7 @@ export default function PortalPage() {
                     cardRefs.current[i] = el;
                   }}
                   className="pointer-events-auto"
-                  style={{ opacity: 0, visibility: "hidden" }}
+                  style={{ opacity: 0, visibility: "hidden", pointerEvents: "none" }}
                 >
                   <GlassPanel world="portal" className="door-card" veil={0.32}>
                     <DoorCardBody index={i} />
@@ -488,9 +507,6 @@ export default function PortalPage() {
           ))}
         </section>
       )}
-
-      {/* ── 3. The Operator: an interactive rigged robot ─────────────── */}
-      <RobotSection />
 
       {/* ── 3. Gate ──────────────────────────────────────────────────── */}
       {full ? (
