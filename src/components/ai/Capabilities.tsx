@@ -38,7 +38,31 @@ export default function Capabilities() {
     if (!section || !grid) return;
     const hover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!hover) return;
+    if (!hover) {
+      // A thumb has no hover for the spotlight to follow, and this used to bail
+      // here — so on a phone no card ever went live and the readout never
+      // changed. A tap makes a card live now, and the first card starts live so
+      // the readout is never empty.
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ai-card"));
+      let live = -1;
+      const pick = (i: number) => {
+        if (i === live) return;
+        if (live >= 0) cards[live].removeAttribute("data-live");
+        live = i;
+        cards[i].setAttribute("data-live", "");
+        const cap = CAPABILITIES[i];
+        if (capIndexRef.current) capIndexRef.current.textContent = String(i + 1).padStart(2, "0");
+        if (capTitleRef.current) capTitleRef.current.textContent = cap.title;
+        if (capBodyRef.current) capBodyRef.current.textContent = cap.body;
+      };
+      const taps = cards.map((card, i) => {
+        const on = () => pick(i);
+        card.addEventListener("click", on);
+        return on;
+      });
+      pick(0);
+      return () => cards.forEach((card, i) => card.removeEventListener("click", taps[i]));
+    }
 
     const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ai-card"));
     const rings = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__ring"));

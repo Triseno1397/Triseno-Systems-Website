@@ -930,9 +930,13 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
      where the signature glyph would be — nothing overlaps the words */
   .portal-robot {
     position: relative; right: auto; bottom: auto; order: 3;
-    width: 100%; height: 30svh; margin: 2svh 0 0;
+    width: 100%; height: 44svh; margin: 1svh 0 0;
   }
   .portal-robot__hint { left: auto; right: 0; bottom: -0.4svh; transform: none; }
+  /* he is the last thing in the hero on a phone: no lane of padding under his
+     feet, and the doors follow him directly (measured: 334px of empty hall
+     between his feet and the first door, on a 664px screen) */
+  main.portal-world .portal-hero { padding-bottom: 1svh; }
 }
 
 /* ── SMOOTHNESS: ambience rests while the page moves ─────────────────────

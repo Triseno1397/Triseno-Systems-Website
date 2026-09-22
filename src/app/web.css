@@ -382,7 +382,12 @@
 }
 @media (max-width: 767px) {
   .web-demo__head .web-body { display: none; }
-  .web-demo__viewport { aspect-ratio: auto; height: min(120vw, calc(100svh - var(--lane-top) - var(--lane-bottom) - 220px)); }
+  /* the device fills the phone: with the head above it, most of the screen
+     (it measured 146px tall before — a letterbox of the concept site) */
+  .web-demo__viewport { aspect-ratio: auto; height: clamp(320px, calc(100svh - var(--lane-top) - var(--lane-bottom) - 150px), 640px); }
+  /* and a shorter run, so the sticky stage does not outlast a device this size
+     by a screen of empty hall */
+  .web-demo { height: 220svh; }
 }
 
 /* concept site inside the frame — "Hotel Quillon" (fictional) */
@@ -484,7 +489,6 @@
 .web-compare__head .web-eyebrow { margin-bottom: 14px; }
 .web-compare__stack { display: grid; gap: 12px; min-width: 0; }
 .web-compare__stage {
-  --n: 50;
   position: relative; width: 100%; margin: 0 auto; aspect-ratio: 4 / 5.4; overflow: hidden;
   container-type: inline-size; border: 1px solid #ffffff; background: #000000;
   touch-action: pan-y; user-select: none; -webkit-user-select: none;
@@ -529,7 +533,8 @@
 
 .web-compare__handle {
   position: absolute; z-index: 4; top: 0; bottom: 0; left: 0; width: 44px; margin-left: -22px;
-  transform: translate3d(calc(var(--n) * 1cqw), 0, 0); will-change: transform; touch-action: none;
+  /* the resting split (START in CompareReveal); the script moves it from there */
+  transform: translate3d(62cqw, 0, 0); will-change: transform; touch-action: pan-y;
 }
 .web-compare__handle:focus-visible { outline: none; }
 .web-compare__line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #ffffff; }
@@ -552,7 +557,7 @@
 .web-compare__handle { display: block; }
 .web-compare__regions { display: none; }
 .web-compare__layer--after {
-  opacity: 1; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); will-change: clip-path;
+  opacity: 1; clip-path: inset(0 38% 0 0); will-change: clip-path;
 }
 /* the label that names the interaction: it rides the divider, nudges sideways
    to say which way it goes, and leaves the moment the divider is taken hold of */
@@ -573,9 +578,9 @@
 }
 .web-compare__hint i:first-child { transform: rotate(-135deg); }
 @keyframes web-compare-nudge {
-  0%, 100% { transform: translate(-50%, -50%); }
-  38% { transform: translate(calc(-50% - 7px), -50%); }
-  70% { transform: translate(calc(-50% + 7px), -50%); }
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  38% { transform: translate(-50%, -50%) translateX(-7px); }
+  70% { transform: translate(-50%, -50%) translateX(7px); }
 }
 .web-compare__stage[data-touched] .web-compare__hint,
 .web-compare__stage[data-dragging] .web-compare__hint { opacity: 0; }
@@ -585,7 +590,7 @@
   .web-compare__switch { display: none; }
   .web-compare__legend { display: flex; }
   .web-compare__hint { display: none; }
-  .web-compare__regions { display: block; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); }
+  .web-compare__regions { display: block; clip-path: inset(0 38% 0 0); }
 }
 
 /* ── touch: a grip a thumb can find ── */

@@ -87,6 +87,8 @@ const LIT_AT = NOTES.map((n) => n.x + n.w * 0.7);
 export default function CompareReveal() {
   const stageRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
+  const afterRef = useRef<HTMLDivElement>(null);
+  const regionsRef = useRef<HTMLDivElement>(null);
   const notesRef = useRef<HTMLOListElement>(null);
   const posRef = useRef(START);
   const dragging = useRef(false);
@@ -102,9 +104,16 @@ export default function CompareReveal() {
     if (!stage) return;
     const pos = Math.min(100, Math.max(0, value));
     posRef.current = pos;
-    stage.style.setProperty("--n", pos.toFixed(3));
+    // Written straight to the three things that move. As a custom property on
+    // the stage it restyled both concept mocks underneath it on every frame of
+    // the sweep and every move of a thumb — about 290ms of style work a second
+    // on a phone, on the very component being dragged.
+    const cut = `inset(0 ${(100 - pos).toFixed(3)}% 0 0)`;
+    if (afterRef.current) afterRef.current.style.clipPath = cut;
+    if (regionsRef.current) regionsRef.current.style.clipPath = cut;
     const handle = handleRef.current;
     if (handle) {
+      handle.style.transform = `translate3d(${pos.toFixed(3)}cqw, 0, 0)`;
       handle.setAttribute("aria-valuenow", String(Math.round(pos)));
       handle.setAttribute(
         "aria-valuetext",
@@ -287,6 +296,7 @@ export default function CompareReveal() {
                 <BeforeMock />
               </div>
               <div
+                ref={afterRef}
                 className="web-compare__layer web-compare__layer--after"
                 aria-label="After: rebuilt layout"
                 role="img"
@@ -295,7 +305,7 @@ export default function CompareReveal() {
               </div>
 
               {/* Region brackets, clipped to the same edge as the rebuilt layer. */}
-              <div aria-hidden="true" className="web-compare__regions">
+              <div ref={regionsRef} aria-hidden="true" className="web-compare__regions">
                 {NOTES.map((note, i) => (
                   <span
                     key={note.title}
