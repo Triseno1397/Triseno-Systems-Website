@@ -39,6 +39,7 @@ export default function StudioGate() {
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        let lastD = "";
         const render = (p: number) => {
           // The payoff lands before the page ends: the iris is fully shut at
           // SHUT_AT and holds there, and the gate says so.
@@ -48,7 +49,12 @@ export default function StudioGate() {
             if (shut >= 1) root.current.dataset.shut = "";
             else delete root.current.dataset.shut;
           }
-          iris.current?.setAttribute("d", aperturePath(OPEN_FROM + (OPEN_TO - OPEN_FROM) * eased));
+          // redraw only when the opening actually changes (every stroke of the glow too)
+          const d = aperturePath(OPEN_FROM + (OPEN_TO - OPEN_FROM) * eased);
+          if (d !== lastD) {
+            lastD = d;
+            spin.current?.querySelectorAll("path[data-iris]").forEach((el) => el.setAttribute("d", d));
+          }
           if (spin.current)
             spin.current.style.transform = `rotate(${(-96 + eased * 96).toFixed(2)}deg) scale(${(1.55 - eased * 0.62).toFixed(3)})`;
           // Type at rest is solid: the body only settles into place, it is

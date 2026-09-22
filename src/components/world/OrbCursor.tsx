@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from "react";
  * - Over an interactive target it opens into a hollow 1px ring centred on the
  *   pointer — the letters underneath stay whole and readable.
  * - While the page scrolls under a still mouse, the target under the pointer is
- *   re-checked once per frame, so the hover state is never stale.
+ *   re-checked a few times a second and once at rest, so the hover state is
+ *   never stale (a per-frame hit test forced a full layout every frame).
  * - No backdrop-filter: a live blur on a moving element re-rasterises the page
  *   behind it every frame. Pointer devices only; touch keeps the native cursor.
  */
@@ -71,10 +72,23 @@ export default function OrbCursor() {
       place();
       kick();
     };
-    // the page moves under a still mouse: re-test what is under it next frame
+    // the page moves under a still mouse: re-test what is under it — but a hit
+    // test forces a full style + layout pass, so only ~8 times a second while
+    // scrolling, and once more when the scroll comes to rest
+    let lastCheck = 0;
+    let settle = 0;
     const onScroll = () => {
-      recheck = true;
-      kick();
+      const now = performance.now();
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        recheck = true;
+        kick();
+      }, 140);
+      if (now - lastCheck > 120) {
+        lastCheck = now;
+        recheck = true;
+        kick();
+      }
     };
     const onLeave = () => {
       visible = false;
@@ -126,6 +140,7 @@ export default function OrbCursor() {
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(settle);
       document.removeEventListener("pointerleave", onLeave);
     };
   }, [enabled]);

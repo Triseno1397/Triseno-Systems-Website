@@ -653,3 +653,5 @@
   .sx-behind__stage, .sx-behind__table, .sx-prints, .sx-gate__stage { pointer-events: none; }
   :is(.sx-film, .sx-behind, .sx-proof, .sx-gate) :is(a, button, input, label, video, [role="button"], [tabindex], .sx-print, .sx-card, .sx-frame, .sx-marquee) { pointer-events: auto; }
 }
+/* the pinned strip's edge fade: its own layer, so the moving track never re-paints the mask */
+.sx-film[data-mode="scrub"] .sx-film__viewport { will-change: transform; }

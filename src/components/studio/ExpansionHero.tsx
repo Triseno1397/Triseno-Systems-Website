@@ -67,6 +67,7 @@ export default function ExpansionHero() {
         let vh = 0;
         let s = 0;
         let last = -1;
+        let lastD = "";
 
         const measure = () => {
           // the stage, not the window: <main> keeps the rail's lane
@@ -105,7 +106,11 @@ export default function ExpansionHero() {
             ring.current.style.opacity = (1 - smooth((p - 0.06) / 0.2)).toFixed(3);
             ring.current.style.transform = `translate(-50%, -50%) rotate(${(p * 160).toFixed(2)}deg) scale(${(1 + grow * 2).toFixed(3)})`;
           }
-          iris.current?.setAttribute("d", aperturePath(0.12 + open * 0.88));
+          const d = aperturePath(0.12 + open * 0.88);
+          if (d !== lastD) {
+            lastD = d;
+            iris.current?.parentElement?.querySelectorAll("path[data-iris]").forEach((el) => el.setAttribute("d", d));
+          }
 
           const drift = grow * 10;
           if (vw >= 768) {

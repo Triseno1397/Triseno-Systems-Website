@@ -31,6 +31,30 @@ function install() {
   );
 }
 
+/** Measure this frame's scroll progress now (called first in the frame loop). */
+// the scrollable height, re-measured only when the document or viewport
+// actually changes size — never read mid-frame
+let maxScroll = -1;
+let watching = false;
+function watchSize() {
+  if (watching || typeof window === "undefined") return;
+  watching = true;
+  const measure = () => {
+    maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  };
+  measure();
+  new ResizeObserver(measure).observe(document.body);
+  window.addEventListener("resize", measure, { passive: true });
+}
+
+export function primeScroll() {
+  const frame = gsap.ticker.frame;
+  if (frame === progFrame) return;
+  progFrame = frame;
+  watchSize();
+  progValue = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+}
+
 export interface PlatePose {
   /** translate of the plate layer, px */
   tx: number;
@@ -52,11 +76,7 @@ export function platePose(out: PlatePose): PlatePose {
     return out;
   }
   const frame = gsap.ticker.frame;
-  if (frame !== progFrame) {
-    progFrame = frame;
-    const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    progValue = Math.min(1, Math.max(0, window.scrollY / max));
-  }
+  if (frame !== progFrame) primeScroll();
   const prog = progValue;
   out.tx = -pointer.x * 6;
   out.ty = -pointer.y * 4 - prog * 10;

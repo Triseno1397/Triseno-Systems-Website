@@ -15,6 +15,7 @@ import Glyph from "./Glyph";
 import ContentFade from "./ContentFade";
 import { WarpLink, useWarp } from "./WarpProvider";
 import { lockScroll, scrollToTop } from "./SmoothScroll";
+import { addFrameJob } from "./frameLoop";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Persistent chrome — exactly five elements (design-system §4):
@@ -26,6 +27,13 @@ import { lockScroll, scrollToTop } from "./SmoothScroll";
 const CONTACT_EMAIL = "Tristen@trisenosystems.com";
 const MORPH_AT = 80;
 
+interface RailLabels {
+  current: string;
+  next: string;
+  index: number;
+  total: number;
+}
+
 export default function Chrome() {
   const pathname = usePathname() ?? "/";
   const division = divisionForPath(pathname);
@@ -33,20 +41,22 @@ export default function Chrome() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    let raf = 0;
-    const read = () => {
-      raf = 0;
-      setCompact(window.scrollY > MORPH_AT);
-    };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(read);
-    };
-    read();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    // read in the frame loop's read phase: a stray rAF that reads scroll after
+    // the frame's style writes forced a full style pass every frame
+    let next = window.scrollY > MORPH_AT;
+    let shown = next;
+    setCompact(next);
+    return addFrameJob({
+      read: () => {
+        next = window.scrollY > MORPH_AT;
+      },
+      write: () => {
+        if (next !== shown) {
+          shown = next;
+          setCompact(next);
+        }
+      },
+    });
   }, [pathname]);
 
   useEffect(() => {
@@ -334,7 +344,7 @@ function ContactIcon({ division }: { division: Division }) {
 
 function ProgressRail({ pathname }: { pathname: string }) {
   const fillRef = useRef<HTMLSpanElement>(null);
-  const [labels, setLabels] = useState<{ current: string; next: string; index: number; total: number }>({
+  const [labels, setLabels] = useState<RailLabels>({
     current: "",
     next: "",
     index: 0,
@@ -342,17 +352,18 @@ function ProgressRail({ pathname }: { pathname: string }) {
   });
 
   useEffect(() => {
-    let raf = 0;
     let lastKey = "";
+    let dirty = true;
+    // measured in the frame loop's read phase, applied in its write phase, so
+    // the rail never forces a style/layout pass in the middle of a frame
+    let pending: { local: number; key: string; labels: RailLabels } | null = null;
 
     const read = () => {
-      raf = 0;
+      if (!dirty) return;
+      dirty = false;
       const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-rail]"));
       if (!sections.length) {
-        if (lastKey !== "none") {
-          lastKey = "none";
-          setLabels({ current: "", next: "", index: 0, total: 0 });
-        }
+        pending = { local: 0, key: "none", labels: { current: "", next: "", index: 0, total: 0 } };
         return;
       }
       // The section actually in view: the one covering the most of the
@@ -361,7 +372,7 @@ function ProgressRail({ pathname }: { pathname: string }) {
       const vh = window.innerHeight;
       let idx = 0;
       let best = -1;
-      const rects = sections.map((s) => s.getBoundingClientRect());
+      const rects = sections.map((sec) => sec.getBoundingClientRect());
       rects.forEach((r, i) => {
         const vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
         if (vis > best + 1) {
@@ -372,29 +383,37 @@ function ProgressRail({ pathname }: { pathname: string }) {
       const el = sections[idx];
       const r = rects[idx];
       const local = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / Math.max(1, r.height)));
-      if (fillRef.current) fillRef.current.style.transform = `scaleY(${local.toFixed(4)})`;
-
       const current = el.dataset.rail ?? "";
       const next = sections[idx + 1]?.dataset.rail ?? el.dataset.railNext ?? "";
-      const key = `${idx}|${current}|${next}|${sections.length}`;
-      if (key !== lastKey) {
-        lastKey = key;
-        setLabels({ current, next, index: idx + 1, total: sections.length });
+      pending = {
+        local,
+        key: `${idx}|${current}|${next}|${sections.length}`,
+        labels: { current, next, index: idx + 1, total: sections.length },
+      };
+    };
+    const write = () => {
+      if (!pending) return;
+      const p = pending;
+      pending = null;
+      if (fillRef.current) fillRef.current.style.transform = `scaleY(${p.local.toFixed(4)})`;
+      if (p.key !== lastKey) {
+        lastKey = p.key;
+        setLabels(p.labels);
       }
     };
     const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(read);
+      dirty = true;
     };
 
-    read();
-    const late = window.setTimeout(read, 400);
+    const stop = addFrameJob({ read, write });
+    const late = window.setTimeout(onScroll, 400);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      stop();
       window.clearTimeout(late);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
     };
   }, [pathname]);
 

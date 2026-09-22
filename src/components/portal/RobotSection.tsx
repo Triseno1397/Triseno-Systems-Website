@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { OperatorState } from "./RobotScene";
+import { addFrameJob } from "@/components/world/frameLoop";
 
 const RobotScene = dynamic(() => import("./RobotScene"), { ssr: false });
 
@@ -25,13 +26,32 @@ export default function RobotSection() {
     state.current.fine = fine;
     setTouch(!fine);
     const nearIo = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "120% 0px" });
+    // mount while the browser is idle after load, not mid-scroll on the way
+    // down (building the scene on a phone is a few hundred ms of work)
+    const hasIdle = "requestIdleCallback" in window;
+    const idleId = hasIdle
+      ? window.requestIdleCallback(() => setNear(true), { timeout: 4000 })
+      : window.setTimeout(() => setNear(true), 2500);
     const viewIo = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: "10% 0px" });
+    // when the stage fills the screen, tell the portal world behind it to rest
+    const coverIo = new IntersectionObserver(
+      ([e]) => window.dispatchEvent(new CustomEvent("portal:covered", { detail: e.intersectionRatio > 0.72 })),
+      { threshold: [0, 0.72, 1] },
+    );
     nearIo.observe(el);
     viewIo.observe(el);
+    coverIo.observe(el);
     // the pointer, relative to the robot: it looks at you wherever you are on the page
+    // the stage's box is measured in the frame loop's read phase, never inside
+    // a pointer event (where a layout read can force a mid-frame layout)
+    let r: DOMRect | null = null;
+    const stopMeasure = addFrameJob({
+      read: () => {
+        r = stage.current?.getBoundingClientRect() ?? null;
+      },
+    });
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
-      const r = stage.current?.getBoundingClientRect();
       if (!r) return;
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height * 0.3;
@@ -42,7 +62,12 @@ export default function RobotSection() {
     return () => {
       nearIo.disconnect();
       viewIo.disconnect();
+      if (hasIdle) window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId);
+      coverIo.disconnect();
+      window.dispatchEvent(new CustomEvent("portal:covered", { detail: false }));
       window.removeEventListener("pointermove", onMove);
+      stopMeasure();
     };
   }, []);
 

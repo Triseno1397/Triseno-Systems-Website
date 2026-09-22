@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { setPreFrame } from "./frameLoop";
 
 gsap.registerPlugin(ScrollTrigger);
 // iOS/Android: the address bar sliding in and out resizes the viewport while
@@ -79,12 +80,13 @@ export default function SmoothScroll() {
     lenisInstance = lenis;
 
     lenis.on("scroll", ScrollTrigger.update);
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
+    // first in every frame: the page moves before anything measures or writes
+    // (otherwise Lenis's scrollTo forces a full style pass over the frame's writes)
+    setPreFrame((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
 
     return () => {
-      gsap.ticker.remove(tick);
+      setPreFrame(null);
       lenis.destroy();
       lenisInstance = null;
     };

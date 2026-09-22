@@ -3,7 +3,7 @@ const headed = process.env.HEADED === '1';
 const b = await chromium.launch(headed ? { headless: false, args: ['--ignore-gpu-blocklist', '--window-position=-2400,0', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 1440, height: 900 } }); p.setDefaultTimeout(150000);
 const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 300))); p.on('console', m => m.type() === 'error' && errs.push(m.text().slice(0, 300)));
-await p.goto('http://localhost:3300/', { waitUntil: 'load' }); await p.waitForTimeout(3000);
+await p.goto((process.env.BASE || 'http://localhost:3300') + '/', { waitUntil: 'load' }); await p.waitForTimeout(3000);
 await p.evaluate(() => { const s = document.querySelector('.portal-robot'); window.scrollTo(0, s.getBoundingClientRect().top + scrollY); });
 await p.waitForTimeout(8000);
 const st = await p.locator('.portal-robot__stage').boundingBox();

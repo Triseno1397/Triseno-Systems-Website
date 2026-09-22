@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { addFrameJob } from "@/components/world/frameLoop";
 import GlassPanel from "@/components/world/GlassPanel";
 import CapabilityDiagram from "./CapabilityDiagram";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
@@ -43,7 +44,6 @@ export default function Capabilities() {
     const rings = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__ring"));
     const fields = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__field"));
 
-    let raf = 0;
     let visible = false;
     let px = -9999;
     let py = -9999;
@@ -68,19 +68,27 @@ export default function Capabilities() {
       lastMove = performance.now();
     };
 
-    const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
+    // measured in the frame loop's read phase, styled in its write phase:
+    // the spotlight never forces a layout in the middle of a frame
+    let g: DOMRect | null = null;
+    let rects: DOMRect[] = [];
+    const read = () => {
       if (!visible) return;
+      g = grid.getBoundingClientRect();
+      rects = cards.map((card) => card.getBoundingClientRect());
+    };
+    const write = () => {
+      if (!visible || !g) return;
+      const now = performance.now();
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const g = grid.getBoundingClientRect();
       const inside = px >= g.left - 60 && px <= g.right + 60 && py >= g.top - 60 && py <= g.bottom + 60;
       const idle = !inside || now - lastMove > 4000;
       let tx = px;
       let ty = py;
       if (idle) {
         if (reduced) {
-          const r0 = cards[0].getBoundingClientRect();
+          const r0 = rects[0];
           tx = r0.left + r0.width / 2;
           ty = r0.top + r0.height / 2;
         } else {
@@ -101,9 +109,6 @@ export default function Capabilities() {
 
       let nearest = -1;
       let nearestD = Infinity;
-      // measure every card before styling any: interleaving read and write
-      // forced a layout per card per frame
-      const rects = cards.map((card) => card.getBoundingClientRect());
       cards.forEach((card, i) => {
         const r = rects[i];
         const lx = x - r.left;
@@ -129,9 +134,9 @@ export default function Capabilities() {
     const io = new IntersectionObserver(([entry]) => (visible = entry.isIntersecting), { threshold: 0 });
     io.observe(section);
     window.addEventListener("pointermove", onMove, { passive: true });
-    raf = requestAnimationFrame(frame);
+    const stop = addFrameJob({ read, write });
     return () => {
-      cancelAnimationFrame(raf);
+      stop();
       io.disconnect();
       window.removeEventListener("pointermove", onMove);
     };

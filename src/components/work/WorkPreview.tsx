@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import gsap from "gsap";
+import { addFrameJob } from "@/components/world/frameLoop";
 import { DIVISIONS } from "@/lib/divisions";
 import type { WorkItem } from "./content";
 
@@ -91,8 +91,16 @@ export default function WorkPreview({ stageRef, item, order, targetRef }: WorkPr
       cy = e.clientY;
     };
 
+    // sizes are measured in the frame loop's read phase; the tick only writes
+    let r = stage.getBoundingClientRect();
+    let w = frame.offsetWidth;
+    let h = frame.offsetHeight;
+    const read = () => {
+      r = stage.getBoundingClientRect();
+      w = frame.offsetWidth;
+      h = frame.offsetHeight;
+    };
     const tick = (_t: number, dt: number) => {
-      const r = stage.getBoundingClientRect();
       const dock = targetRef.current?.dock ?? null;
       let tx: number;
       let ty: number;
@@ -123,8 +131,6 @@ export default function WorkPreview({ stageRef, item, order, targetRef }: WorkPr
       }
       const speed = Math.hypot(svx, svy);
 
-      const w = frame.offsetWidth;
-      const h = frame.offsetHeight;
       const rot = clamp(svx * 0.32, -9, 9);
       const sc = 1 + Math.min(speed, 70) * 0.0022;
       // the sheet shears: trailing edge lags behind, leading edge pulls ahead
@@ -140,18 +146,31 @@ export default function WorkPreview({ stageRef, item, order, targetRef }: WorkPr
         frame.style.transform = transform;
         media.style.clipPath = clip;
       }
-      const disp = rippleOk ? Math.round(Math.min(46, speed * 1.1)) : 0;
+      // the ripple is an SVG displacement filter, rasterised on the CPU over a
+      // playing video: it runs only on a real flick of the cursor, and never
+      // while the page is scrolling (the sheet still leans and shears then)
+      const scrolling = document.documentElement.classList.contains("lenis-scrolling");
+      const disp = rippleOk && !scrolling && speed > 10 ? Math.round(Math.min(46, (speed - 10) * 1.3)) : 0;
       if (disp !== lastDisp) {
         lastDisp = disp;
         dispRef.current?.setAttribute("scale", String(disp));
-        media.style.filter = disp > 0 ? "url(#work-ripple) brightness(0.72)" : "brightness(0.72)";
+        media.style.filter = disp > 0 ? "url(#work-ripple)" : "";
       }
     };
 
-    gsap.ticker.add(tick);
+    let lastT = performance.now();
+    const stop = addFrameJob({
+      read,
+      write: () => {
+        const now = performance.now();
+        const dt = now - lastT;
+        lastT = now;
+        tick(0, dt);
+      },
+    });
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      gsap.ticker.remove(tick);
+      stop();
       window.removeEventListener("pointermove", onMove);
     };
   }, [stageRef, targetRef]);

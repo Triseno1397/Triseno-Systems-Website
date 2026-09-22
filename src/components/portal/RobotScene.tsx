@@ -56,43 +56,6 @@ const ease = (x: number) => {
   return 1 - Math.pow(1 - t, 3);
 };
 
-/** The auto-rig ties the big shoulder plates to the upper arm, so they tear
- *  when the arm lifts. Re-bind them to the collarbone: they ride as one plate. */
-function rigidifyShoulders(mesh: THREE.SkinnedMesh) {
-  const geo = mesh.geometry;
-  const si = geo.attributes.skinIndex as THREE.BufferAttribute;
-  const sw = geo.attributes.skinWeight as THREE.BufferAttribute;
-  const bones = mesh.skeleton.bones;
-  const idx = (n: string) => bones.findIndex((b) => b.name === n);
-  const v = new THREE.Vector3();
-  const A = new THREE.Vector3();
-  mesh.updateMatrixWorld(true);
-  for (const side of ["Right", "Left"]) {
-    const sh = idx(`${side}Shoulder`);
-    const arm = idx(`${side}Arm`);
-    const fore = idx(`${side}ForeArm`);
-    if (sh < 0 || arm < 0) continue;
-    bones[arm].getWorldPosition(A);
-    for (let i = 0; i < si.count; i++) {
-      let wArm = 0;
-      for (let k = 0; k < 4; k++) {
-        const b = si.getComponent(i, k);
-        if (b === arm || b === fore) wArm += sw.getComponent(i, k);
-      }
-      if (wArm < 0.05) continue;
-      mesh.getVertexPosition(i, v);
-      mesh.localToWorld(v);
-      const outward = Math.sign(A.x) * (v.x - A.x);
-      if (v.distanceTo(A) < 0.3 && v.y > A.y - 0.1 && outward > -0.06) {
-        si.setXYZW(i, sh, arm, 0, 0);
-        sw.setXYZW(i, 1, 0, 0, 0);
-      }
-    }
-  }
-  si.needsUpdate = true;
-  sw.needsUpdate = true;
-}
-
 /* ── two-bone arm IK, world space ─────────────────────────────────────── */
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -351,7 +314,9 @@ function Operator({ state, onHue }: { state: OperatorState; onHue?: (hex: string
     mat.metalness = 0.82;
     mat.roughness = 0.3;
     mat.envMapIntensity = 1.25;
-    rigidifyShoulders(skinned);
+    // the shoulder plates are re-bound to the collarbone in the model file
+    // itself (design-loop/art-src/robot/_gt/bake-shoulders.mjs) — no per-load
+    // pass over every vertex on the visitor's device
     const bone = (n: string) => skinned.skeleton.bones.find((b) => b.name === n)!;
     const b = {
       hips: bone("Hips"),
@@ -499,7 +464,19 @@ function Operator({ state, onHue }: { state: OperatorState; onHue?: (hex: string
     [],
   );
 
-  const { camera } = useThree();
+  const { camera, gl, scene } = useThree();
+  // compile every shader and upload the textures in the background as soon as
+  // the robot exists, so the first visible frame doesn't stall the GPU
+  useEffect(() => {
+    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+    swords.forEach((sw) => (sw.group.visible = true));
+    const done = () => swords.forEach((sw) => (sw.group.visible = false));
+    if (r.compileAsync) r.compileAsync(scene, camera).then(done, done);
+    else {
+      r.compile(scene, camera);
+      done();
+    }
+  }, [gl, scene, camera, swords]);
   const dbg = useMemo(() => {
     if (typeof window === "undefined") return null;
     const u = new URLSearchParams(window.location.search);

@@ -11,10 +11,11 @@ const raw = JSON.parse(fs.readFileSync('design-loop/trace2.json')); const ev = r
 // forced layouts with JS stacks, and top-level heavy tasks
 const forced = {}; const fn = {}; const tasks = [];
 for (const e of ev) {
+  if (e.name === 'UpdateLayoutTree' && e.args?.beginData?.stackTrace?.length) { const f = e.args.beginData.stackTrace[0]; const k = 'STYLE ' + (f.functionName || '(anon)') + ' ' + f.url.split('/').pop() + ':' + f.lineNumber + ':' + f.columnNumber; forced[k] = (forced[k] || 0) + (e.dur || 0); }
   if (e.name === 'Layout' && e.args?.beginData?.stackTrace?.length) { const f = e.args.beginData.stackTrace[0]; const k = (f.functionName || '(anon)') + ' ' + f.url.split('/').pop() + ':' + f.lineNumber; forced[k] = (forced[k] || 0) + (e.dur || 0); }
   if (e.name === 'FunctionCall' && e.dur > 2000) { const d = e.args?.data || {}; const k = (d.functionName || '(anon)') + ' ' + (d.url || '').split('/').pop() + ':' + d.lineNumber; fn[k] = (fn[k] || 0) + e.dur; }
   if (e.name === 'RunTask' && e.dur > 20000) tasks.push(e.dur);
 }
-console.log('forced layouts (ms):'); Object.entries(forced).sort((a, b) => b[1] - a[1]).slice(0, 8).forEach(([k, v]) => console.log('  ', (v / 1000).toFixed(1), k));
+console.log('forced layouts (ms):'); Object.entries(forced).sort((a, b) => b[1] - a[1]).slice(0, 14).forEach(([k, v]) => console.log('  ', (v / 1000).toFixed(1), k));
 console.log('heavy fn calls (ms):'); Object.entries(fn).sort((a, b) => b[1] - a[1]).slice(0, 8).forEach(([k, v]) => console.log('  ', (v / 1000).toFixed(1), k));
 console.log('tasks >20ms:', tasks.length, tasks.map(t => (t / 1000).toFixed(0)).join(','));

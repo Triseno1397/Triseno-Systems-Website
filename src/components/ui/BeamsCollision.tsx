@@ -87,7 +87,10 @@ export default function BeamsCollision({
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // phones: 1.5x is indistinguishable for thin light lines and draws about
+    // half the pixels of a 2-3x screen every frame
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
     let w = 0;
     let h = 0;
     let floorY = 0;

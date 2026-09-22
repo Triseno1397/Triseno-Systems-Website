@@ -33,6 +33,9 @@ export interface GlassPanelProps {
   style?: CSSProperties;
   /** 0..1 darkening of the glass so copy on it reads; default 0.5 */
   veil?: number;
+  /** smoked glass: no plate copies — for panels that are always moving
+   *  (a marquee), where frosting would cost a re-position every frame */
+  smoked?: boolean;
   children?: ReactNode;
 }
 
@@ -42,6 +45,7 @@ export default function GlassPanel({
   className = "",
   style,
   veil = 0.5,
+  smoked = false,
   children,
 }: GlassPanelProps) {
   // every allowed tag is a plain block element; typed as div for the ref
@@ -54,8 +58,8 @@ export default function GlassPanel({
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    // touch devices show smoked glass (world.css): no plate copies to move
-    if (window.matchMedia("(pointer: coarse), (max-width: 767px)").matches) return;
+    // touch devices (world.css) and smoked panels have no plate copies to move
+    if (smoked || window.matchMedia("(pointer: coarse), (max-width: 767px)").matches) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let visible = true;
     const last: string[] = [];
@@ -104,7 +108,7 @@ export default function GlassPanel({
       stop();
       io.disconnect();
     };
-  }, [world]);
+  }, [world, smoked]);
 
   const vars = {
     ...style,
@@ -120,7 +124,8 @@ export default function GlassPanel({
   } as CSSProperties;
 
   return (
-    <Tag ref={panelRef} className={`glass-panel ${className}`} style={vars}>
+    <Tag ref={panelRef} className={`glass-panel ${smoked ? "glass-panel--smoked " : ""}${className}`} style={vars}>
+      {smoked ? null : (
       <span aria-hidden="true" className="glass-panel__world">
         {stations.map((st, i) => (
           <span
@@ -133,6 +138,7 @@ export default function GlassPanel({
           />
         ))}
       </span>
+      )}
       <span aria-hidden="true" className="glass-panel__veil" />
       <div className="glass-panel__body">{children}</div>
     </Tag>

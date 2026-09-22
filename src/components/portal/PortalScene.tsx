@@ -472,6 +472,14 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   // destination world booting underneath it, and the travel plays at its full
   // length instead of stuttering through a heavy scene nobody can see.
   const [paused, setPaused] = useState(false);
+  // the Operator's dark stage covers the portal world: while it fills the
+  // screen the portal stops drawing and the GPU goes to the robot
+  const [covered, setCovered] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => setCovered(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("portal:covered", on);
+    return () => window.removeEventListener("portal:covered", on);
+  }, []);
   useEffect(() => {
     let t = 0;
     const onWarp = () => {
@@ -490,7 +498,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   return (
     <Canvas
       flat // no tone mapping: a division hue must reach the screen as that hue
-      frameloop={paused ? "never" : "always"}
+      frameloop={paused || covered ? "never" : "always"}
       dpr={dpr}
       gl={{ antialias: false, powerPreference: "high-performance", alpha: false, preserveDrawingBuffer: false }}
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}

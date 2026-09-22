@@ -79,7 +79,18 @@ export default function ContentFade() {
     const late = window.setTimeout(scan, 600);
     // phones & tablets fade into fixed scrims (world.css) — no per-frame mask
     const lite = window.matchMedia("(pointer: coarse), (max-width: 767px)").matches;
-    const stop = lite ? () => {} : addFrameJob({ read, write });
+    // where the browser can drive the mask from scroll itself (world.css), the
+    // script only keeps --fade-vh current on resize — no per-frame work
+    const native = !lite && typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()");
+    const onResize = () => {
+      vh = window.innerHeight;
+      root.style.setProperty("--fade-vh", `${vh}px`);
+    };
+    if (native) {
+      onResize();
+      window.addEventListener("resize", onResize, { passive: true });
+    }
+    const stop = lite || native ? () => window.removeEventListener("resize", onResize) : addFrameJob({ read, write });
 
     return () => {
       stop();

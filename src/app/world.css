@@ -937,3 +937,33 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 @media (max-width: 767px) {
   .portal-robot::before { background: radial-gradient(ellipse 90% 60% at 50% 62%, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.94) 72%), #000; }
 }
+/* smoked glass (moving panels): the same hairline and veil, a touch denser */
+.glass-panel--smoked .glass-panel__veil {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.035)),
+    rgba(8, 8, 10, calc(var(--glass-veil, 0.5) + 0.18));
+}
+
+/* The mask follows the viewport natively: a scroll-driven animation moves
+   it with the page, so no script rewrites every section's style each frame
+   (that per-frame rewrite was ~40% of all style work on the division pages).
+   ContentFade keeps the script path only where this is unsupported. */
+@supports (animation-timeline: view()) {
+  @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+    html[data-content-fade] main > [data-fade] {
+      animation: content-fade-track linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+@keyframes content-fade-track {
+  from {
+    -webkit-mask-position: -100vw calc(0% - var(--fade-vh, 100vh));
+    mask-position: -100vw calc(0% - var(--fade-vh, 100vh));
+  }
+  to {
+    -webkit-mask-position: -100vw calc(100% + var(--fade-vh, 100vh));
+    mask-position: -100vw calc(100% + var(--fade-vh, 100vh));
+  }
+}

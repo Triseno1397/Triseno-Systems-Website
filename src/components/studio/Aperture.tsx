@@ -56,6 +56,7 @@ export default function Aperture({
   className,
   pathRef,
 }: ApertureProps) {
+  const d = aperturePath(open);
   return (
     <svg
       aria-hidden="true"
@@ -64,16 +65,21 @@ export default function Aperture({
       height={size}
       viewBox="-1.2 -1.2 2.4 2.4"
       fill="none"
-      style={{
-        overflow: "visible",
-        filter: glow
-          ? `drop-shadow(0 0 ${typeof size === "number" ? Math.max(4, size / 6) : 18}px ${color})`
-          : undefined,
-      }}
+      style={{ overflow: "visible" }}
     >
+      {/* the glow is drawn, not filtered: two soft under-strokes instead of a
+          drop-shadow, which re-blurred the whole drawing on every frame the
+          iris moved */}
+      {glow ? (
+        <>
+          <path data-iris="" d={d} stroke={color} strokeWidth={strokeWidth * 9} strokeOpacity={0.07} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path data-iris="" d={d} stroke={color} strokeWidth={strokeWidth * 3.5} strokeOpacity={0.22} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </>
+      ) : null}
       <path
         ref={pathRef}
-        d={aperturePath(open)}
+        data-iris=""
+        d={d}
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinejoin="miter"

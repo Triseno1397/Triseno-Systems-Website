@@ -154,7 +154,6 @@
 .work-preview__media {
   position: absolute; inset: 0; overflow: hidden;
   clip-path: polygon(6% 6%, 94% 6%, 94% 94%, 6% 94%);
-  filter: brightness(0.72);
   background: #0b0b0d;
 }
 .work-preview__layer { position: absolute; inset: 0; animation: work-wipe-down 800ms var(--ease-expo) both; }
@@ -254,4 +253,11 @@
   .work-row__icon, .work-preview { transition-duration: 1ms !important; }
   .work-preview__layer, .work-preview__layer > video, .work-preview__layer > img,
   .work-row__panel > * { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}
+
+/* the media is dimmed by an overlay, not a brightness() filter: a filter on a
+   playing video re-rasterises every video frame */
+.work-preview__media::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: rgba(0, 0, 0, 0.28);
 }

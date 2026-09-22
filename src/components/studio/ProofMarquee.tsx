@@ -52,7 +52,7 @@ function Portrait({ name }: { name: string }) {
 // The wall's second (looping) copy is aria-hidden at the set level.
 function Card({ t }: { t: Testimonial }) {
   return (
-    <GlassPanel world="creative" as="article" className="sx-card">
+    <GlassPanel world="creative" as="article" className="sx-card" smoked>
       <header className="sx-card__head font-mono">
         <span className="sx-card__glyph">
           <Aperture size={22} open={0.28} strokeWidth={1.25} className="sx-card__iris sx-card__iris--shut" />
