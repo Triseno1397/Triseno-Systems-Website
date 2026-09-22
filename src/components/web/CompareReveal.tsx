@@ -24,11 +24,13 @@ import GlassPanel from "@/components/world/GlassPanel";
  * dropped on the mock's own words, and the Before / After legend sits above
  * the stage, never on it.
  *
- * PHONE — a drag line over two full-width sites does not communicate anything
- * at 390px, so there is no drag line. The stage shows ONE site at a time at
- * full width, and a ghost two-state switch (or a tap anywhere on the stage)
- * cuts between them, with the numbered changes listed underneath. The same
- * information, read the way a phone can read it.
+ * PHONE — the same drag line, with the affordance said out loud: a wider grip
+ * with arrows, a DRAG label riding on the divider until the first drag, and an
+ * opening sweep that shows the thing moving before anyone touches it. The
+ * two-state switch stays underneath — it names both sides, and one tap takes
+ * the divider all the way over. Vertical scrolling is untouched: the stage and
+ * the handle are touch-action: pan-y, so the page still scrolls under a thumb
+ * that moves up and down and only the sideways part is ours.
  *
  * Position is written straight to one CSS custom property — no React re-render
  * per pointer move; only clip-path and transform change.
@@ -90,9 +92,10 @@ export default function CompareReveal() {
   const dragging = useRef(false);
   const sweep = useRef<gsap.core.Timeline | null>(null);
 
-  /** Phone: which site is on the stage. Ignored on a fine pointer. */
-  const [view, setView] = useState<"before" | "after">("before");
+  /** Which side the divider is favouring — only for the switch's own state. */
+  const [view, setView] = useState<"before" | "after">("after");
   const [fine, setFine] = useState(true);
+  const touched = useRef(false);
 
   const apply = useCallback((value: number) => {
     const stage = stageRef.current;
@@ -108,6 +111,7 @@ export default function CompareReveal() {
         `${Math.round(pos)} percent of the rebuilt site shown`,
       );
     }
+    setView(pos < 50 ? "before" : "after");
     NOTES.forEach((note, i) => {
       const lit = pos >= LIT_AT[i];
       stage
@@ -131,7 +135,7 @@ export default function CompareReveal() {
 
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage || !fine) return;
+    if (!stage) return;
     apply(posRef.current);
 
     const reduced = window.matchMedia(
@@ -158,7 +162,7 @@ export default function CompareReveal() {
       io.disconnect();
       sweep.current?.kill();
     };
-  }, [apply, fine]);
+  }, [apply]);
 
   /** Phone: every note is relevant, so all of them read at full strength. */
   useEffect(() => {
@@ -166,30 +170,6 @@ export default function CompareReveal() {
     NOTES.forEach((_, i) =>
       notesRef.current?.children[i]?.toggleAttribute("data-lit", true),
     );
-  }, [fine]);
-
-  /**
-   * Phone: the first time the stage is properly on screen, show the old site
-   * for a beat and then cut to the rebuild by itself, so the change is SEEN
-   * even by someone who never touches the switch.
-   */
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage || fine) return;
-    let timer = 0;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        io.disconnect();
-        timer = window.setTimeout(() => setView("after"), 1400);
-      },
-      { threshold: 0.6 },
-    );
-    io.observe(stage);
-    return () => {
-      io.disconnect();
-      window.clearTimeout(timer);
-    };
   }, [fine]);
 
   const fromPointer = (clientX: number) => {
@@ -200,21 +180,38 @@ export default function CompareReveal() {
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!fine || e.button !== 0) return;
+    if (e.button !== 0) return;
     sweep.current?.kill();
     dragging.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     stageRef.current?.setAttribute("data-dragging", "");
+    // the label has done its job the moment someone takes hold of the divider
+    if (!touched.current) {
+      touched.current = true;
+      stageRef.current?.setAttribute("data-touched", "");
+    }
     fromPointer(e.clientX);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (fine && dragging.current) fromPointer(e.clientX);
+    if (dragging.current) fromPointer(e.clientX);
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     dragging.current = false;
     stageRef.current?.removeAttribute("data-dragging");
     if (e.currentTarget.hasPointerCapture(e.pointerId))
       e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  /** The switch takes the divider all the way across, in one move. */
+  const slideTo = (target: number) => {
+    sweep.current?.kill();
+    const proxy = { v: posRef.current };
+    sweep.current = gsap.timeline().to(proxy, {
+      v: target,
+      duration: 0.55,
+      ease: "power3.inOut",
+      onUpdate: () => apply(proxy.v),
+    });
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -257,7 +254,10 @@ export default function CompareReveal() {
             {" "}
             Drag the frame, or use the arrow keys.
           </span>
-          <span className="web-touch-only"> Tap to cut between them.</span>
+          <span className="web-touch-only">
+            {" "}
+            Drag the divider across the frame.
+          </span>
         </p>
       </header>
 
@@ -278,10 +278,6 @@ export default function CompareReveal() {
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-              onClick={() => {
-                if (!fine)
-                  setView((v) => (v === "before" ? "after" : "before"));
-              }}
             >
               <div
                 className="web-compare__layer"
@@ -331,6 +327,12 @@ export default function CompareReveal() {
               >
                 <span aria-hidden="true" className="web-compare__line" />
                 <span aria-hidden="true" className="web-compare__grip" />
+                {/* says what the thing is, and rides on it, until it is used */}
+                <span aria-hidden="true" className="web-compare__hint">
+                  <i />
+                  Drag
+                  <i />
+                </span>
               </div>
             </div>
           </GlassPanel>
@@ -348,7 +350,7 @@ export default function CompareReveal() {
                 type="button"
                 data-on={view === v ? "" : undefined}
                 aria-pressed={view === v}
-                onClick={() => setView(v)}
+                onClick={() => slideTo(v === "before" ? 0 : 100)}
               >
                 {v === "before" ? "Before — template" : "After — rebuilt"}
               </button>

@@ -544,27 +544,56 @@
 .web-compare__handle:focus-visible .web-compare__grip { transform: scaleY(1.3); border-color: var(--hue); }
 .web-compare__handle:focus-visible .web-compare__line { background: var(--hue); }
 
-/* ── DEFAULT (phone): one full-width site at a time, cut by the switch ──
-   A drag line over two full-width sites communicates nothing at 390px, so
-   the phone never gets one. */
-.web-compare__stage { cursor: pointer; }
-/* Each site carries its own label; the rebuilt layer covers the old one, so
-   the label on screen always names the site on screen. */
-.web-compare__handle,
+/* ── DRAG, on every input ──────────────────────────────────────────────
+   The divider is the component. A phone gets the same one, said out loud: a
+   wider grip, and a DRAG label riding on it until the first drag. The regions
+   are annotation sized for the wide stage, so they stay on the wide stage. */
+.web-compare__stage { cursor: ew-resize; }
+.web-compare__handle { display: block; }
 .web-compare__regions { display: none; }
-.web-compare__layer--after { opacity: 0; transition: opacity 520ms var(--ease-expo); }
-.web-compare__stage[data-view="after"] .web-compare__layer--after { opacity: 1; }
+.web-compare__layer--after {
+  opacity: 1; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); will-change: clip-path;
+}
+/* the label that names the interaction: it rides the divider, nudges sideways
+   to say which way it goes, and leaves the moment the divider is taken hold of */
+.web-compare__hint {
+  position: absolute; left: 50%; top: 50%; z-index: 1;
+  display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #ffffff; background: rgba(0, 0, 0, 0.62);
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: #ffffff; white-space: nowrap;
+  animation: web-compare-nudge 2.8s var(--ease-expo) infinite;
+  transition: opacity 500ms var(--ease-expo);
+}
+/* the arrows, drawn rather than typed: two 1px chevrons */
+.web-compare__hint i {
+  width: 7px; height: 7px; border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;
+  transform: rotate(45deg);
+}
+.web-compare__hint i:first-child { transform: rotate(-135deg); }
+@keyframes web-compare-nudge {
+  0%, 100% { transform: translate(-50%, -50%); }
+  38% { transform: translate(calc(-50% - 7px), -50%); }
+  70% { transform: translate(calc(-50% + 7px), -50%); }
+}
+.web-compare__stage[data-touched] .web-compare__hint,
+.web-compare__stage[data-dragging] .web-compare__hint { opacity: 0; }
 
-/* ── DRAG MODE: only where there is a fine pointer AND room for two sites ── */
+/* ── the wide stage: annotations, legend, no label needed ── */
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .web-compare__switch { display: none; }
   .web-compare__legend { display: flex; }
-  .web-compare__stage { cursor: ew-resize; }
-  .web-compare__handle { display: block; }
+  .web-compare__hint { display: none; }
   .web-compare__regions { display: block; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); }
-  .web-compare__layer--after {
-    opacity: 1; transition: none; clip-path: inset(0 calc(100% - var(--n) * 1%) 0 0); will-change: clip-path;
-  }
+}
+
+/* ── touch: a grip a thumb can find ── */
+@media (hover: none), (max-width: 767px) {
+  .web-compare__legend { display: flex; }
+  .web-compare__handle { width: 64px; margin-left: -32px; }
+  .web-compare__grip { width: 11px; height: 62px; margin: -31px 0 0 -5.5px; }
+  .web-compare__line { background: #ffffff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
 }
 
 .web-compare__notes {

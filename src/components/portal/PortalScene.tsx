@@ -401,7 +401,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   useFrame(() => {
     state.px = portalState.px;
     state.py = portalState.py;
-    if (group.current) group.current.visible = portalState.hero < 0.55 && portalState.warpAt === 0;
+    // not group.visible: see OperatorState.hidden
+    state.hidden = !(portalState.hero < 0.55 && portalState.warpAt === 0);
   });
   return (
     <group

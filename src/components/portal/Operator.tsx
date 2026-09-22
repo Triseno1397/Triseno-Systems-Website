@@ -31,6 +31,11 @@ export interface OperatorState {
   fine: boolean;
   /** incremented by the section to request an action */
   strike: number;
+  /** true while the page has scrolled him out of the picture. The scene sets
+   *  this rather than hiding his group: his light lives in that group, and a
+   *  light inside a hidden group stops being counted — which changes how many
+   *  lights three builds into every shader, and the whole world recompiles. */
+  hidden?: boolean;
 }
 
 const DESK = "/models/robot-desk.glb";
@@ -293,18 +298,28 @@ function solveArm(upper: THREE.Bone, fore: THREE.Bone, hand: THREE.Bone, T: THRE
 interface SwordRig {
   group: THREE.Group;
   plane: THREE.Plane;
+  /** hilt + blade + ring: what is hidden between moves. The group itself, and
+   *  the light it carries, stay in the scene — see the note in makeSword. */
+  body: THREE.Group;
   ring: THREE.Mesh;
   blade: THREE.Group;
   core: THREE.MeshBasicMaterial;
   glow: THREE.MeshBasicMaterial;
   halo: THREE.MeshBasicMaterial;
   ringMat: THREE.MeshBasicMaterial;
-  light: THREE.PointLight;
 }
 
 function makeSword(src: THREE.Object3D): SwordRig {
+  // The group stays visible for good and the body inside it is what appears and
+  // disappears. three only counts the lights it can reach when it decides how
+  // many to build into every shader, so a light inside a hidden group counts
+  // for nothing — and showing that group at the click changed the count, which
+  // recompiled every material in the world. That was the half-second freeze at
+  // the moment of the click.
   const group = new THREE.Group();
-  group.visible = false;
+  const body = new THREE.Group();
+  body.visible = false;
+  group.add(body);
   const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
   const hilt = src.clone(true);
   const box = new THREE.Box3().setFromObject(hilt);
@@ -325,7 +340,7 @@ function makeSword(src: THREE.Object3D): SwordRig {
       m.material = mat;
     }
   });
-  group.add(hilt);
+  body.add(hilt);
 
   // blade runs out of the emitter at the top of the hilt
   const base = (0.5 - GRIP) * HILT;
@@ -344,21 +359,17 @@ function makeSword(src: THREE.Object3D): SwordRig {
   const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.05, 4), glow);
   tip.position.y = BLADE + 0.022;
   blade.add(tip);
-  const light = new THREE.PointLight("#ffffff", 0, 1.2, 1.6);
-  light.visible = false;
-  light.position.y = BLADE * 0.45;
-  blade.add(light);
   blade.scale.set(1, 0.001, 1);
   blade.visible = false;
-  group.add(blade);
+  body.add(blade);
 
   // the fabrication ring that travels up the hilt with the scan
   const ringMat = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0025, 6, 32), ringMat);
   ring.rotation.x = Math.PI / 2;
   ring.visible = false;
-  group.add(ring);
-  return { group, plane, ring, blade, core, glow, halo, ringMat, light };
+  body.add(ring);
+  return { group, body, plane, ring, blade, core, glow, halo, ringMat };
 }
 
 const _up = new THREE.Vector3();
@@ -383,9 +394,6 @@ function setBlade(sw: SwordRig, k: number, hue: THREE.Color) {
   sw.glow.color.copy(hue).multiplyScalar(1.4);
   sw.halo.color.copy(hue);
   sw.ringMat.color.copy(hue).multiplyScalar(1.6);
-  sw.light.color.copy(hue);
-  sw.light.intensity = 5 * k;
-  sw.light.visible = k > 0.01;
 }
 
 /* ── blade trails: a short ribbon of the blade's last positions ─────────── */
@@ -474,6 +482,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
   const jumpG = useGLTF(JUMP, false, true);
   const swordG = useGLTF(SWORD, false, true);
   const root = useRef<THREE.Group>(null);
+  const shown = useRef<THREE.Group>(null);
 
   const rig = useMemo(() => {
     const scene = robot.scene;
@@ -545,11 +554,14 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       new THREE.SphereGeometry(0.035, 20, 16),
       new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
-    const l = new THREE.PointLight("#ffffff", 0, 1, 1.6);
-    l.visible = false;
-    m.add(l);
-    return { mesh: m, mat: m.material as THREE.MeshBasicMaterial, light: l };
+    return { mesh: m, mat: m.material as THREE.MeshBasicMaterial };
   }, []);
+
+  /** The only light he carries: between the palms while the blade is forged,
+   *  then on the blade itself. Always in the scene, at zero brightness when
+   *  there is nothing to light — switching a light on and off changes how many
+   *  three builds into every shader, and the whole world recompiles. */
+  const forge = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
 
   // grip frames in each fist, measured off the model (see measureFist)
   const mounts = useMemo(() => ({ r: new THREE.Object3D(), l: new THREE.Object3D() }), []);
@@ -687,28 +699,58 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     [],
   );
 
+  // Clicking him used to cost about 200ms per pointer event — three works out
+  // where every skinned vertex is, on the CPU, to hit-test a SkinnedMesh, and
+  // pointerdown, pointerup and click each paid for it. Nothing he is made of is
+  // hit-tested now; the plain box below stands in for his silhouette, which is
+  // also a kinder target than his actual outline.
+  useEffect(() => {
+    const none = () => {};
+    const blank = (o: THREE.Object3D) => o.traverse((c) => ((c as THREE.Mesh).raycast = none));
+    blank(rig.scene);
+    swords.forEach((sw) => blank(sw.group));
+    trails.forEach((t) => blank(t.mesh));
+    blank(sparks.pts);
+    blank(orb.mesh);
+  }, [rig, swords, trails, sparks, orb]);
+
   const { camera, gl, scene } = useThree();
-  // compile every shader and upload the textures in the background as soon as
-  // the robot exists, so the first visible frame doesn't stall the GPU
+  // Compile every shader and upload the textures in the background as soon as
+  // the robot exists, so the first visible frame doesn't stall the GPU.
+  //
+  // The three lights he carries — one in each blade, one in the forge orb —
+  // are in the scene from here on, at zero intensity. three counts the VISIBLE
+  // lights when it builds a program, so switching one on at the moment of the
+  // click made every material in the world recompile: one frozen frame of
+  // 762ms, right where the move was supposed to start. Their brightness is
+  // animated instead, and nothing recompiles.
   useEffect(() => {
     const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+    // three only builds programs for what it can see, so everything he brings
+    // out mid-move is shown for the compile and hidden again: the blades, the
+    // fabrication ring, the trail ribbons, the sparks and the forge orb. Left
+    // hidden, each one linked its shader at the moment it first appeared —
+    // which is the moment of the click.
+    const hidden: THREE.Object3D[] = [];
+    const show = (o: THREE.Object3D | null | undefined) => {
+      if (!o || o.visible) return;
+      hidden.push(o);
+      o.visible = true;
+    };
     swords.forEach((sw) => {
-      sw.group.visible = true;
-      sw.light.visible = true;
+      show(sw.body);
+      show(sw.blade);
+      show(sw.ring);
     });
-    orb.light.visible = true;
-    const done = () =>
-      swords.forEach((sw) => {
-        sw.group.visible = false;
-        sw.light.visible = false;
-        orb.light.visible = false;
-      });
+    trails.forEach((t) => show(t.mesh));
+    [sparks.pts, orb.mesh].forEach((o) => show(o));
+    const done = () => hidden.forEach((o) => (o.visible = false));
     if (r.compileAsync) r.compileAsync(scene, camera).then(done, done);
     else {
       r.compile(scene, camera);
       done();
     }
-  }, [gl, scene, camera, swords, orb]);
+  }, [gl, scene, camera, swords, orb, trails, sparks]);
   const dbg = useMemo(() => {
     if (typeof window === "undefined") return null;
     const u = new URLSearchParams(window.location.search);
@@ -726,6 +768,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     const s = sim.current;
     const r = root.current;
     if (!r) return;
+    if (shown.current) shown.current.visible = !state.hidden;
     if (dbg) {
       // inspection: the whole choreography held at one instant
       dt = 0;
@@ -863,14 +906,18 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     }
     // the orb between the palms swells, then is spent into the hilt
     const orbK = t >= 0 && t < FORGE_END + 0.25 ? ease(t / GATHER) * (1 - THREE.MathUtils.clamp((t - FORGE_END + 0.2) / 0.45, 0, 1)) : 0;
-    orb.mesh.visible = orbK > 0.001;
+    // never hidden: the forge orb carries a light, and hiding it would change
+    // how many lights three builds into every shader (see makeSword). At rest
+    // its opacity is zero, so there is nothing to see either way.
     orb.mesh.position.copy(tmp.FL);
     orb.mesh.scale.setScalar(0.4 + orbK * (0.8 + 0.15 * Math.sin(s.t * 30)));
     orb.mat.opacity = orbK;
     orb.mat.color.copy(hue).lerp(WHITE, 0.5).multiplyScalar(1.5);
-    orb.light.color.copy(hue);
-    orb.light.intensity = orbK * 4;
-    orb.light.visible = orbK > 0.01;
+
+    // the one light: with the orb while it is burning, then on the blade
+    forge.color.copy(hue);
+    let lit = orbK * 4;
+    if (orbK > 0.001) forge.position.copy(tmp.FL);
 
     // ── swords: forged upright at the meeting point, then carried by the fists ──
     const end = t > moveEnd - 0.75 ? ease((t - (moveEnd - 0.75)) / 0.6) : 0;
@@ -878,8 +925,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     swords.forEach((sw, i) => {
       const isTwin = i === 1;
       const start = isTwin ? FORGE_END : GATHER * 0.7;
-      sw.group.visible = t >= start && (!isTwin || twin);
-      if (!sw.group.visible) return;
+      sw.body.visible = t >= start && (!isTwin || twin);
+      if (!sw.body.visible) return;
       // scan: the main hilt builds at the chest; the twin builds in the left fist as the hands part
       const scan = isTwin ? ease((t - FORGE_END) / 0.45) : ease((t - start) / (FORGE_END - start));
       const mount = isTwin ? mounts.l : mounts.r;
@@ -894,11 +941,18 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       // blade: ignites as the draw completes, retracts before the end
       const on = isTwin ? ease((t - FORGE_END - 0.3) / 0.3) : ease((t - (FORGE_END + 0.15)) / 0.32);
       setBlade(sw, on * (1 - end), hue);
+      // the brighter of the two blades carries the light
+      const bladeLit = 5 * on * (1 - end);
+      if (bladeLit > lit) {
+        lit = bladeLit;
+        forge.position.copy(tmp.pos).addScaledVector(tmp.F.set(0, 1, 0).applyQuaternion(tmp.quat), BLADE * 0.45);
+      }
       if (!dbg) stepTrail(trails[i], sw, r, on * (1 - end), hue);
     });
     swords.forEach((sw, i) => {
-      if (!sw.group.visible) stepTrail(trails[i], sw, r, 0, hue);
+      if (!sw.body.visible) stepTrail(trails[i], sw, r, 0, hue);
     });
+    forge.intensity = lit;
 
     if (dbg && dbg.cam !== "body") {
       // inspection only: hold the camera on one hand, at the robot's own scale
@@ -913,6 +967,17 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
   const scale = 1 / rig.height;
   return (
     <group ref={root} position={stand?.position} scale={stand?.scale ?? 1}>
+      {/* the light stays outside the part of him that can be hidden (see
+          OperatorState.hidden); at rest it is at zero and lights nothing */}
+      <primitive object={forge} />
+      <group ref={shown}>
+      {/* what the pointer actually hits (see the note above): a box his size.
+          It paints nothing — but it cannot be visible={false}, because three
+          does not hit-test what it cannot see. */}
+      <mesh position={[0, 0.02, 0]}>
+        <boxGeometry args={[0.62, 1.08, 0.5]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+      </mesh>
       <group scale={scale} position={[0, -rig.minY * scale - 0.5, 0]}>
         <primitive object={rig.scene} />
       </group>
@@ -922,6 +987,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       <primitive object={trails[1].mesh} />
       <primitive object={sparks.pts} />
       <primitive object={orb.mesh} />
+      </group>
     </group>
   );
 }
