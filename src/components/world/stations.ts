@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { stationPlates, type PlateWorld } from "./plates";
+import { scrollMetrics } from "./plateMotion";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Camera stations — one continuous camera move through a world, not a
@@ -51,6 +52,11 @@ export function setStationStarts(world: PlateWorld, starts: StationStart[] | "of
 
 let reduced: boolean | null = null;
 const cache = new Map<PlateWorld, { tick: number; frames: StationFrame[] }>();
+// Where each station begins is a property of the page's layout, not of the
+// frame: resolving it means a querySelector and a measurement per station, and
+// this runs for the plate and for every panel of frosted glass on the page. It
+// is worked out once per shape of page instead.
+const bounds = new Map<PlateWorld, { epoch: number; b: number[] }>();
 
 const smooth = (a: number, b: number, v: number) => {
   const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
@@ -87,23 +93,27 @@ export function stationFrames(world: PlateWorld): StationFrame[] {
   const frames: StationFrame[] = Array.from({ length: n }, (_, i) => ({ alpha: i === 0 ? 1 : 0, scale: 1, near: i === 0 }));
   if (n > 1 && typeof window !== "undefined") {
     if (reduced === null) reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const vh = window.innerHeight;
-    const max = Math.max(1, document.documentElement.scrollHeight - vh);
-    const p = Math.min(1, Math.max(0, window.scrollY / max));
+    const { p, vh, max, epoch } = scrollMetrics();
 
-    const spec = (spec0 && spec0 !== "off" ? spec0 : undefined) ?? defaultStarts(n);
-    const b: number[] = [];
-    for (let i = 0; i < n; i++) {
-      const s = spec[i];
-      if (i === 0) b.push(0);
-      else if (s === "__mid__" || s === undefined) b.push(NaN);
-      else b.push(resolve(s, max, vh) ?? NaN);
+    let known = bounds.get(world);
+    if (!known || known.epoch !== epoch || known.b.length !== n) {
+      const spec = (spec0 && spec0 !== "off" ? spec0 : undefined) ?? defaultStarts(n);
+      const fresh: number[] = [];
+      for (let i = 0; i < n; i++) {
+        const s = spec[i];
+        if (i === 0) fresh.push(0);
+        else if (s === "__mid__" || s === undefined) fresh.push(NaN);
+        else fresh.push(resolve(s, max, vh) ?? NaN);
+      }
+      // unresolved starts: spread evenly between their neighbours
+      const lastB = Number.isNaN(fresh[n - 1]) ? 0.82 : fresh[n - 1];
+      fresh[n - 1] = lastB;
+      for (let i = 1; i < n - 1; i++) if (Number.isNaN(fresh[i])) fresh[i] = (lastB * i) / (n - 1);
+      for (let i = 1; i < n; i++) fresh[i] = Math.max(fresh[i], fresh[i - 1] + 0.02);
+      known = { epoch, b: fresh };
+      bounds.set(world, known);
     }
-    // unresolved starts: spread evenly between their neighbours
-    const lastB = Number.isNaN(b[n - 1]) ? 0.82 : b[n - 1];
-    b[n - 1] = lastB;
-    for (let i = 1; i < n - 1; i++) if (Number.isNaN(b[i])) b[i] = (lastB * i) / (n - 1);
-    for (let i = 1; i < n; i++) b[i] = Math.max(b[i], b[i - 1] + 0.02);
+    const b = known.b;
 
     // the dissolve spans about one viewport of scroll either side of a start
     const d = Math.min(0.08, (0.5 * vh) / max);

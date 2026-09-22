@@ -12,7 +12,7 @@ for (const r of routes) {
   const p = await ctx.newPage(); p.setDefaultTimeout(120000);
   const cdp = await ctx.newCDPSession(p); await cdp.send('Performance.enable');
   if (mode === 'phone') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  await p.goto(base + r, { waitUntil: 'load' }); await p.waitForTimeout(mode === 'phone' ? 9000 : 6000);
+  await p.goto(base + r, { waitUntil: 'load' }); await p.waitForTimeout(mode === 'phone' ? 10000 : 8000);
   // sections: direct content children of <main> with a rail label, else every section
   const secs = await p.evaluate(() => {
     const list = [...document.querySelectorAll('main section, main [data-rail]')].filter(el => el.getBoundingClientRect().height > 200);
@@ -24,6 +24,19 @@ for (const r of routes) {
   });
   out[r] = [];
   for (const s of secs) {
+    // Find the section again right before measuring it. Pinned sections add
+    // their spacers as ScrollTrigger sets up, which moves everything below them
+    // down by thousands of pixels — the offsets read at load had this rig
+    // measuring the middle of a pinned sequence and calling it the section
+    // after it.
+    const here = await p.evaluate((name) => {
+      const el = [...document.querySelectorAll('main section, main [data-rail]')]
+        .find(e => ((e.getAttribute('data-rail') || e.getAttribute('aria-label') || e.className.split(' ')[0] || e.tagName).slice(0, 28)) === name);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { top: Math.round(r.top + scrollY), h: Math.round(r.height) };
+    }, s.name);
+    if (here) { s.top = here.top; s.h = here.h; }
     await p.evaluate(y => window.scrollTo(0, y), Math.max(0, s.top - 50)); await p.waitForTimeout(1200);
     await p.evaluate(() => { window.__f = []; window.__lt = 0; let last = performance.now(); const loop = t => { window.__f.push(t - last); last = t; window.__raf = requestAnimationFrame(loop); }; requestAnimationFrame(loop);
       try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__lt += e.duration)).observe({ type: 'longtask' }); } catch {} });
@@ -38,6 +51,7 @@ for (const r of routes) {
     }
     await p.waitForTimeout(700);
     const secsT = (Date.now() - t0) / 1000;
+    if (process.env.WHERE) console.log('   ', s.name, 'measured from', await p.evaluate(() => Math.round(scrollY)), 'section top', s.top);
     const m1 = Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]));
     const f = await p.evaluate(() => { cancelAnimationFrame(window.__raf); return { f: window.__f.slice(3), lt: window.__lt }; });
     const fr = f.f.filter(x => x > 0); const so = [...fr].sort((a, b) => a - b);

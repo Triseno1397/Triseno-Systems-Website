@@ -50,16 +50,31 @@ function install() {
 // the scrollable height, re-measured only when the document or viewport
 // actually changes size — never read mid-frame
 let maxScroll = -1;
+let viewport = 0;
+// bumped whenever the page's shape changes, so anything that measured the page
+// (where a camera station begins, say) knows to measure again — and knows not
+// to on every other frame
+let epoch = 0;
 let watching = false;
 function watchSize() {
   if (watching || typeof window === "undefined") return;
   watching = true;
   const measure = () => {
-    maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    viewport = window.innerHeight;
+    maxScroll = Math.max(1, document.documentElement.scrollHeight - viewport);
+    epoch++;
   };
   measure();
   new ResizeObserver(measure).observe(document.body);
   window.addEventListener("resize", measure, { passive: true });
+}
+
+/** This frame's scroll, the viewport, the scrollable height, and which shape of
+ *  page they belong to. Everything that used to read the document for these
+ *  reads them here instead. */
+export function scrollMetrics(): { p: number; vh: number; max: number; epoch: number } {
+  primeScroll();
+  return { p: progValue, vh: viewport, max: maxScroll, epoch };
 }
 
 /** The scroller's own position for this frame, so no one reads it back off
