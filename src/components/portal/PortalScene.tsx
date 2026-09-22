@@ -34,6 +34,7 @@ import {
 import { makeGlowTexture, makeHazeTexture } from "@/components/world/scene/textures";
 import { WARP_EVENT } from "@/components/world/WarpProvider";
 import Operator, { type OperatorState } from "./Operator";
+import Mechanisms from "./Mechanisms";
 import { plate } from "@/components/world/plates";
 import { PlateBackdrop } from "@/components/world/scene/plate";
 import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState } from "./portalState";
@@ -180,6 +181,8 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     <>
       <group ref={group} position={[0, RING_Y, 0]} scale={RING_SCALE}>
         <GlassLoop set={loops} coreMat={coreMat} near={near} />
+        {/* what each division is, machined inside its own shape */}
+        <Mechanisms hues={MENU_ITEMS.slice(0, 3).map((m) => m.hue)} />
       </group>
       <mesh ref={halo} position={[0, RING_Y, -0.8]} material={haloMat} renderOrder={20}>
         <planeGeometry args={[7, 7]} />
@@ -417,6 +420,13 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
 
 function CameraRig() {
   const { camera, size } = useThree();
+  // inspection (?opc=hand|lhand): the Operator holds the camera on one fist, so
+  // the rig stands down for that one frozen shot
+  const inspect = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const c = new URLSearchParams(window.location.search).get("opc");
+    return !!c && c !== "body";
+  }, []);
   const pos = useMemo(() => new THREE.Vector3(0, CAM_Y, 7.6), []);
   const look = useMemo(() => new THREE.Vector3(0, CAM_Y, 0), []);
   const curLook = useRef(new THREE.Vector3(0, CAM_Y, 0));
@@ -426,6 +436,7 @@ function CameraRig() {
   const probe = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((_, dt) => {
+    if (inspect) return;
     const { hero, doors, gate, px, py, warpAt, capture } = portalState;
     const h = ease(Math.min(1, hero));
     let z = 7.6 - 9.6 * h;

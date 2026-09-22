@@ -46,7 +46,7 @@ const DRAW_END = 1.8; // the right hand has drawn it
 const BLEND = 0.35; // hand-off from the forge pose into the move
 
 /* sizes in scene units (the robot stands 1 unit tall) */
-const HILT = 0.19;
+const HILT = 0.15;
 const GRIP = 0.2; // where the fist closes, above the hilt's centre (just under the guard)
 const BLADE = 0.56;
 
@@ -55,6 +55,194 @@ const ease = (x: number) => {
   const t = THREE.MathUtils.clamp(x, 0, 1);
   return 1 - Math.pow(1 - t, 3);
 };
+
+/** eigenvectors of a symmetric 3x3, largest first (cyclic Jacobi) */
+function principalAxes(cov: number[][]) {
+  const a = cov.map((r) => r.slice());
+  const v = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+  ];
+  for (let sweep = 0; sweep < 24; sweep++) {
+    let off = 0;
+    for (let p = 0; p < 3; p++) for (let q = p + 1; q < 3; q++) off += a[p][q] * a[p][q];
+    if (off < 1e-20) break;
+    for (let p = 0; p < 3; p++)
+      for (let q = p + 1; q < 3; q++) {
+        if (Math.abs(a[p][q]) < 1e-18) continue;
+        const theta = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+        const t = (theta >= 0 ? 1 : -1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+        const c = 1 / Math.sqrt(t * t + 1);
+        const s = t * c;
+        for (let k = 0; k < 3; k++) {
+          const kp = a[k][p];
+          const kq = a[k][q];
+          a[k][p] = c * kp - s * kq;
+          a[k][q] = s * kp + c * kq;
+        }
+        for (let k = 0; k < 3; k++) {
+          const pk = a[p][k];
+          const qk = a[q][k];
+          a[p][k] = c * pk - s * qk;
+          a[q][k] = s * pk + c * qk;
+        }
+        for (let k = 0; k < 3; k++) {
+          const kp = v[k][p];
+          const kq = v[k][q];
+          v[k][p] = c * kp - s * kq;
+          v[k][q] = s * kp + c * kq;
+        }
+      }
+  }
+  return [0, 1, 2]
+    .sort((i, j) => a[j][j] - a[i][i])
+    .map((i) => new THREE.Vector3(v[0][i], v[1][i], v[2][i]).normalize());
+}
+
+type Fist = {
+  /** the middle of the channel through the fist */
+  hold: THREE.Vector3;
+  /** the channel's axis: the shaft runs along it */
+  axis: THREE.Vector3;
+  /** across the shaft, for the blade's flats */
+  flat: THREE.Vector3;
+  /** how much room the channel has, in bone units */
+  room: number;
+};
+
+const WEDGES = 8; // octants: classified by sign and slope, no atan2 per point
+
+/** The fattest circle that fits in a fist's cross-section. A circle only counts
+ *  if the hand rings it — hand in every direction around it — otherwise the
+ *  widest gap found is the open side of the curl, out in front of the fingers,
+ *  and not a channel at all. Among circles of much the same size it takes the
+ *  one nearest the middle of the hand, so the two fists settle alike instead of
+ *  each landing on its own local best. */
+function widestGap(flat: number[][], reach: number, cx: number, cy: number) {
+  const xs = flat.map((q) => q[0]);
+  const ys = flat.map((q) => q[1]);
+  let box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  let best = { r: -1, x: 0, y: 0 };
+  const seen = new Array<boolean>(WEDGES);
+  const room = (x: number, y: number) => {
+    seen.fill(false);
+    let near = Infinity;
+    let ringed = 0;
+    for (const q of flat) {
+      const dx = q[0] - x;
+      const dy = q[1] - y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < near) near = d;
+      if (d > reach) continue;
+      const w = (dy >= 0 ? 4 : 0) | (dx >= 0 ? 2 : 0) | (Math.abs(dy) > Math.abs(dx) ? 1 : 0);
+      if (!seen[w]) {
+        seen[w] = true;
+        ringed++;
+      }
+    }
+    return ringed === WEDGES ? near : -1;
+  };
+  const cell: number[] = [];
+  for (let pass = 0; pass < 3; pass++) {
+    const N = pass === 0 ? 20 : 8;
+    const stepX = (box[2] - box[0]) / N;
+    const stepY = (box[3] - box[1]) / N;
+    cell.length = 0;
+    let top = -1;
+    for (let i = 0; i <= N; i++)
+      for (let j = 0; j <= N; j++) {
+        const x = box[0] + stepX * i;
+        const y = box[1] + stepY * j;
+        const r = room(x, y);
+        if (r < 0) continue;
+        cell.push(x, y, r);
+        if (r > top) top = r;
+      }
+    if (top < 0) break;
+    best = { r: -1, x: 0, y: 0 };
+    let nearest = Infinity;
+    for (let k = 0; k < cell.length; k += 3) {
+      if (cell[k + 2] < top * 0.9) continue;
+      const d = (cell[k] - cx) * (cell[k] - cx) + (cell[k + 1] - cy) * (cell[k + 1] - cy);
+      if (d < nearest) {
+        nearest = d;
+        best = { r: cell[k + 2], x: cell[k], y: cell[k + 1] };
+      }
+    }
+    box = [best.x - stepX, best.y - stepY, best.x + stepX, best.y + stepY];
+  }
+  return best;
+}
+
+/* ── where a sword actually sits in the fist ──────────────────────────────
+   Nothing here is guessed at. The hands are closed in the model itself (see
+   design-loop/art-src/robot/_gt/curl-fingers.mjs), which leaves a channel
+   through each fist. This finds it: every vertex skinned to the hand is read
+   in the bind pose, and for each of the hand's own principal axes the widest
+   circle that fits inside its outline is measured. The roomiest of the three
+   is the channel a hilt can lie in, and its centre is where the sword goes. */
+function measureFist(skinned: THREE.SkinnedMesh, boneIndex: number): Fist[] | null {
+  const geo = skinned.geometry;
+  const pos = geo.attributes.position;
+  const si = geo.attributes.skinIndex;
+  const sw = geo.attributes.skinWeight;
+  if (!pos || !si || !sw || boneIndex < 0) return null;
+  // bind-pose vertex → hand-bone space, whatever pose happens to be playing
+  const toBone = skinned.skeleton.boneInverses[boneIndex].clone().multiply(skinned.bindMatrix);
+  const v = new THREE.Vector3();
+  const pts: THREE.Vector3[] = [];
+  const centre = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    let w = 0;
+    for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === boneIndex) w += sw.getComponent(i, k);
+    if (w < 0.6) continue; // the hand proper, not the wrist blend
+    v.fromBufferAttribute(pos, i).applyMatrix4(toBone);
+    pts.push(v.clone());
+    centre.add(v);
+  }
+  if (pts.length < 64) return null;
+  centre.multiplyScalar(1 / pts.length);
+  const cov = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  for (const q of pts) {
+    const d = [q.x - centre.x, q.y - centre.y, q.z - centre.z];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cov[i][j] += d[i] * d[j];
+  }
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cov[i][j] /= pts.length;
+  const axes = principalAxes(cov);
+  // a few hundred points describe the outline as well as thousands do, and
+  // this runs on the visitor's device
+  const step = Math.max(1, Math.ceil(pts.length / 400));
+  const sample = pts.filter((_, i) => i % step === 0);
+
+  // how far out to look for hand around a candidate channel: a fist is about a
+  // third of the hand's length across
+  let reach = 0;
+  for (const q of sample) reach = Math.max(reach, q.distanceTo(centre));
+
+  const found: Fist[] = [];
+  const e1 = new THREE.Vector3();
+  const e2 = new THREE.Vector3();
+  for (const axis of axes) {
+    e1.copy(axes[0] === axis ? axes[1] : axes[0]).projectOnPlane(axis).normalize();
+    e2.crossVectors(axis, e1).normalize();
+    const flat = sample.map((q) => [q.dot(e1), q.dot(e2)]);
+    const gap = widestGap(flat, reach * 0.9, centre.dot(e1), centre.dot(e2));
+    const mid = sample.reduce((t, q) => t + q.dot(axis), 0) / sample.length;
+    found.push({
+      room: gap.r,
+      hold: new THREE.Vector3().addScaledVector(e1, gap.x).addScaledVector(e2, gap.y).addScaledVector(axis, mid),
+      axis: axis.clone(),
+      flat: e1.clone(),
+    });
+  }
+  return found;
+}
+
 
 /* ── two-bone arm IK, world space ─────────────────────────────────────── */
 const _a = new THREE.Vector3();
@@ -363,7 +551,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     return { mesh: m, mat: m.material as THREE.MeshBasicMaterial, light: l };
   }, []);
 
-  // grip frames in each fist (bone space is centimetres: undo the scale)
+  // grip frames in each fist, measured off the model (see measureFist)
   const mounts = useMemo(() => ({ r: new THREE.Object3D(), l: new THREE.Object3D() }), []);
   useEffect(() => {
     rig.b.rHand.add(mounts.r);
@@ -372,24 +560,72 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     while (top.parent) top = top.parent;
     top.updateMatrixWorld(true);
     const s = rig.b.rHand.getWorldScale(new THREE.Vector3()).x || 1;
-    // grip calibration (scene units / degrees in hand-bone axes); ?mo= / ?mr= override while tuning
     const u = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    const off = (u?.get("mo") || "0,0.065,0").split(",").map(Number);
-    const rot = (u?.get("mr") || "0,0,90").split(",").map((d) => (Number(d) * Math.PI) / 180);
-    for (const [m, sign] of [
-      [mounts.r, 1],
-      [mounts.l, -1],
-    ] as const) {
-      m.scale.setScalar(1 / s);
-      m.position.set((sign * off[0]) / s, off[1] / s, off[2] / s);
-      m.rotation.set(rot[0], sign * rot[1], sign * rot[2]);
+    // seating nudges while tuning: along the channel, and around it
+    const along = Number(u?.get("galong") ?? 0);
+    const roll = (Number(u?.get("groll") ?? 0) * Math.PI) / 180;
+    const bones = rig.skinned.skeleton.bones;
+    const basis = new THREE.Matrix4();
+    const x = new THREE.Vector3();
+    const z = new THREE.Vector3();
+    const probe = new THREE.Vector3();
+    const hands = [
+      [mounts.r, rig.b.rHand, 1],
+      [mounts.l, rig.b.lHand, -1],
+    ] as const;
+    const t0 = performance.now();
+    const found = hands.map(([, hand]) => measureFist(rig.skinned, bones.indexOf(hand)));
+    if (u?.has("gdbg")) console.log("[grip] measured both hands in", (performance.now() - t0).toFixed(1), "ms");
+    // the hands are mirrors of each other, so they take the same channel: the
+    // one with the most room across the pair, never one each
+    let pick = 0;
+    if (found[0] && found[1]) {
+      let bestRoom = -Infinity;
+      for (let i = 0; i < found[0].length; i++) {
+        const room = Math.min(found[0][i].room, found[1][i].room);
+        if (room > bestRoom) {
+          bestRoom = room;
+          pick = i;
+        }
+      }
     }
-    const lr = u?.get("ml");
-    if (lr) {
-      const v = lr.split(",").map((d) => (Number(d) * Math.PI) / 180);
-      mounts.l.rotation.set(v[0], v[1], v[2]);
-      const lo = (u?.get("mlo") || "0,0.065,0").split(",").map(Number);
-      mounts.l.position.set(lo[0] / s, lo[1] / s, lo[2] / s);
+    for (const [h, [m, hand, sign]] of hands.entries()) {
+      m.scale.setScalar(1 / s);
+      const fist = found[h]?.[pick];
+      if (!fist || fist.room <= 0) {
+        // no skin data to read: a plain fixed seating, so he still holds something
+        m.position.set(0, 0.065 / s, 0);
+        m.rotation.set(0, 0, (sign * Math.PI) / 2);
+        continue;
+      }
+      // +Y of the mount is the blade, up the channel. Both ends of the channel
+      // are the same line, so the blade takes the one that leaves the fist
+      // upward in the rest stance — which mirrors onto the other hand by itself.
+      const y = fist.axis.clone();
+      probe.copy(fist.hold).add(y);
+      hand.localToWorld(probe).sub(hand.localToWorld(fist.hold.clone()));
+      if (probe.y < 0) y.negate();
+      if (u?.has("gflip")) y.negate();
+      x.copy(fist.flat).projectOnPlane(y).normalize();
+      if (roll) x.applyAxisAngle(y, sign * roll).normalize();
+      z.crossVectors(x, y).normalize();
+      basis.makeBasis(x, y, z);
+      m.quaternion.setFromRotationMatrix(basis);
+      m.position.copy(fist.hold).addScaledVector(y, along * fist.room);
+      if (u?.has("gdbg")) {
+        console.log("[grip]", sign > 0 ? "right" : "left", {
+          hold: fist.hold.toArray().map((n) => +n.toFixed(3)),
+          axis: y.toArray().map((n) => +n.toFixed(3)),
+          room: +fist.room.toFixed(3),
+        });
+        const ball = new THREE.Mesh(
+          new THREE.SphereGeometry(fist.room, 10, 8),
+          new THREE.MeshBasicMaterial({ color: sign > 0 ? "#ff4466" : "#44aaff", wireframe: true, depthTest: false }),
+        );
+        ball.renderOrder = 999;
+        ball.position.copy(fist.hold);
+        hand.add(ball);
+      }
     }
     if (u?.has("axes")) {
       // tuning aid: the raw hand-bone axes (red X, green Y, blue Z)
@@ -477,7 +713,12 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     if (typeof window === "undefined") return null;
     const u = new URLSearchParams(window.location.search);
     if (!u.has("opt")) return null;
-    return { t: Number(u.get("opt")), move: (u.get("opm") === "jump" ? "jump" : "spin") as Move, cam: u.get("opc") || "body" };
+    return {
+      t: Number(u.get("opt")),
+      move: (u.get("opm") === "jump" ? "jump" : "spin") as Move,
+      cam: u.get("opc") || "body",
+      zoom: Number(u.get("opz") ?? 1),
+    };
   }, []);
 
   useFrame((_, rawDt) => {
@@ -659,10 +900,12 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       if (!sw.group.visible) stepTrail(trails[i], sw, r, 0, hue);
     });
 
-    if (dbg && dbg.cam !== "body" && !stand) {
+    if (dbg && dbg.cam !== "body") {
+      // inspection only: hold the camera on one hand, at the robot's own scale
       const h = dbg.cam === "lhand" ? rig.b.lHand : rig.b.rHand;
       const at = h.getWorldPosition(new THREE.Vector3());
-      camera.position.set(at.x + (dbg.cam === "lhand" ? -0.12 : 0.12), at.y + 0.06, at.z + 0.42);
+      const k = (stand?.scale ?? 1) * dbg.zoom;
+      camera.position.set(at.x + (dbg.cam === "lhand" ? -0.12 : 0.12) * k, at.y + 0.06 * k, at.z + 0.42 * k);
       camera.lookAt(at);
     }
   });
