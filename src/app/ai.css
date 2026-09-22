@@ -562,3 +562,23 @@
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
 }
+
+/* ── phones: the diagrams hold still ───────────────────────────────────────
+   These loops animate SVG transforms with transform-box: fill-box, which no
+   browser composites — every frame of every one of them is a style pass and a
+   layout pass over its drawing. On a throttled phone that measured 170ms of
+   style and 150ms of layout per second, on the sections carrying the diagrams.
+   Each one is parked on the state that reads best instead, so the card still
+   says what it says. (The ambience elsewhere in the world is frozen on phones
+   for the same reason.) */
+@media (max-width: 767px), (hover: none) {
+  .ai-dg-run { animation: none; transform: translateX(0); opacity: 1; }
+  .ai-dg-set, .ai-dg-set--4 { animation: none; opacity: 1; }
+  .ai-dg-squeeze { animation: none; transform: scaleX(1); opacity: 1; }
+  .ai-dg-layers { animation: none; opacity: 1; }
+  .ai-dg-fill { animation: none; transform: scaleX(0.8); opacity: 0.85; }
+  .ai-dg-rise { animation: none; transform: scaleY(1); opacity: 1; }
+  /* the nave's own breathing glow: a still frame on a phone */
+  .ai-world__glow { animation: none; opacity: 0.32; }
+  .ai-world__core { animation: none; }
+}

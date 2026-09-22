@@ -62,9 +62,15 @@ export default function OrbitalProcess() {
     const io = new IntersectionObserver(([entry]) => (s.visible = entry.isIntersecting), { threshold: 0.15 });
     io.observe(section);
 
+    // A phone holds the orbit still: the ring is an SVG <g>, and rotating it is
+    // a style and layout pass every frame that no browser composites. Tapping a
+    // step still turns it — that tween moves the angle, and the write below
+    // follows the angle, not the clock.
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    let placed = NaN;
     const tick = (_time: number, deltaMs: number) => {
       if (!s.visible) return;
-      if (!s.locked && !s.reduced) {
+      if (!s.locked && !s.reduced && !coarse) {
         s.angle -= DRIFT * Math.min(0.05, deltaMs / 1000);
         const current = ((Math.round(-s.angle / STEP) % N) + N) % N;
         if (current !== s.active) {
@@ -72,6 +78,8 @@ export default function OrbitalProcess() {
           setActive(current);
         }
       }
+      if (s.angle === placed) return;
+      placed = s.angle;
       place();
     };
     const ro = new ResizeObserver(() => {

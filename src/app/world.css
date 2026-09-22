@@ -1100,3 +1100,12 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 }
 .portal-world[data-hot] .portal-operator-hint { color: rgba(255, 255, 255, 0.75); }
 @media (max-width: 1023px) { .portal-operator-hint { display: none; } }
+
+/* Animations do not run in rooms you are not in (PauseOffscreen.tsx marks the
+   sections that are on screen). An infinite animation on an off-screen SVG
+   still recalculates style every frame, which is what the AI diagrams were
+   doing on every other section of their page. */
+html[data-pause-offscreen] main [data-rail]:not([data-inview]),
+html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
+  animation-play-state: paused;
+}

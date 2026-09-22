@@ -13,6 +13,7 @@ import {
 } from "@/lib/divisions";
 import Glyph from "./Glyph";
 import ContentFade from "./ContentFade";
+import PauseOffscreen from "./PauseOffscreen";
 import { WarpLink, useWarp } from "./WarpProvider";
 import { lockScroll, scrollToTop } from "./SmoothScroll";
 import { addFrameJob } from "./frameLoop";
@@ -82,6 +83,8 @@ export default function Chrome() {
           transparent before it can reach the lockup, the trigger, the chevron
           or the contact icon. Only content — the world stays full-bleed. */}
       <ContentFade />
+      {/* a section you cannot see does not animate */}
+      <PauseOffscreen />
       <MorphNav
         division={division}
         compact={compact && !menuOpen}

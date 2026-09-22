@@ -28,6 +28,7 @@ function AgentLog({ industry, run }: { industry: Industry; run: boolean }) {
       return;
     }
     let raf = 0;
+    let shown = -1;
     const start = performance.now();
     const frame = (now: number) => {
       const t = (now - start) / 1000;
@@ -41,7 +42,13 @@ function AgentLog({ industry, run }: { industry: Industry; run: boolean }) {
         budget -= take;
         if (take === line.length) budget -= LINE_PAUSE * CHARS_PER_SECOND;
       }
-      setTyped(Math.floor(count));
+      // the log types at about forty characters a second, so most frames add
+      // nothing: re-render only when another character has actually landed
+      const n = Math.floor(count);
+      if (n !== shown) {
+        shown = n;
+        setTyped(n);
+      }
       if (count < total) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
