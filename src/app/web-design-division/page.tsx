@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLdHtml, pageJsonLd, pageMetadata } from "@/lib/seo";
 import { Anton, Instrument_Serif } from "next/font/google";
 import WebDivisionPage from "@/components/web/WebDivisionPage";
 import "../web.css";
@@ -23,20 +24,13 @@ const conceptCondensed = Anton({
   preload: false,
 });
 
-export const metadata: Metadata = {
-  title: "Web Design Division · Triseno Systems",
-  description:
-    "Custom, conversion-built websites. No templates: strategy, design, build, performance of 90 or higher, SEO-ready structure, integrations and ongoing iteration.",
-  alternates: { canonical: "/web-design-division" },
-  openGraph: {
-    title: "Web Design Division · Triseno Systems",
-    description: "Custom, conversion-built websites. No templates. The page is the demo.",
-    url: "https://trisenosystems.com/web-design-division",
-    siteName: "Triseno Systems",
-    type: "website",
-  },
-};
+export const metadata: Metadata = pageMetadata("web");
 
 export default function WebDesignDivisionRoute() {
-  return <WebDivisionPage fontClassName={`${conceptSerif.variable} ${conceptCondensed.variable}`} />;
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(pageJsonLd("web")) }} />
+      <WebDivisionPage fontClassName={`${conceptSerif.variable} ${conceptCondensed.variable}`} />
+    </>
+  );
 }

@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
+import { jsonLdHtml, pageJsonLd, pageMetadata } from "@/lib/seo";
 import PortfolioShowcase from "@/components/studio/PortfolioShowcase";
 import ReelsProvider from "@/content/ReelsProvider";
 
-export const metadata: Metadata = {
-  title: "Work · Triseno Studio product ad reels",
-  description:
-    "Selected work from Triseno Studio — product hero, UGC, direct-response, apparel try-on, ASMR, and demo reels, built to perform on Instagram, TikTok, and YouTube.",
-  alternates: {
-    canonical: "/portfolio",
-  },
-};
+export const metadata: Metadata = pageMetadata("portfolio");
 
 // Rendered outside the (site) route group so it brings its own Studio chrome —
 // nav + rotating marquee footer — instead of the division-agnostic navbar/footer.
 export default function PortfolioPage() {
   return (
-    <ReelsProvider>
-      <PortfolioShowcase />
-    </ReelsProvider>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(pageJsonLd("portfolio")) }} />
+      <ReelsProvider>
+        <PortfolioShowcase />
+      </ReelsProvider>
+    </>
   );
 }

@@ -1,33 +1,29 @@
 import type { MetadataRoute } from "next";
+import { PAGES, SITE } from "@/lib/seo";
 
 // Emit as a file at build time rather than a per-request function — this route
 // has no dynamic input, so there is nothing to gain from rendering it live.
 export const dynamic = "force-static";
 
-const BASE_URL = "https://trisenosystems.com";
-
-// Crawl map for search engines. Keep in sync with the App Router routes.
-// The Web Design division lives as a static page in /public and is linked
-// from the nav/footer; it is not an App Router route, so it is not listed here.
+// Every indexable route, from the same table the pages draw their metadata
+// from, so a page cannot exist without being listed. The three division pages
+// carry the search intent; the portal is the brand result.
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
-
-  const routes: Array<{
-    path: string;
-    priority: number;
-    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
-  }> = [
-    { path: "/", priority: 1, changeFrequency: "monthly" },
-    { path: "/studio", priority: 0.9, changeFrequency: "monthly" },
-    { path: "/work", priority: 0.7, changeFrequency: "monthly" },
-    { path: "/portfolio", priority: 0.7, changeFrequency: "monthly" },
-    { path: "/contact", priority: 0.6, changeFrequency: "yearly" },
-  ];
-
-  return routes.map((route) => ({
-    url: `${BASE_URL}${route.path}`,
+  const weight: Record<keyof typeof PAGES, { priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }> = {
+    home: { priority: 1, changeFrequency: "monthly" },
+    studio: { priority: 0.9, changeFrequency: "monthly" },
+    web: { priority: 0.9, changeFrequency: "monthly" },
+    ai: { priority: 0.9, changeFrequency: "monthly" },
+    work: { priority: 0.7, changeFrequency: "monthly" },
+    portfolio: { priority: 0.6, changeFrequency: "monthly" },
+    contact: { priority: 0.6, changeFrequency: "yearly" },
+  };
+  return (Object.keys(PAGES) as Array<keyof typeof PAGES>).map((key) => ({
+    url: `${SITE.url}${PAGES[key].path}`,
     lastModified,
-    changeFrequency: route.changeFrequency,
-    priority: route.priority,
+    changeFrequency: weight[key].changeFrequency,
+    priority: weight[key].priority,
+    images: [`${SITE.url}${PAGES[key].og}`],
   }));
 }
