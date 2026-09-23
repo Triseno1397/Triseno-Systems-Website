@@ -28,6 +28,14 @@ export const SITE = {
    * city is stated in the organisation data, the descriptions and the copy,
    * and served alongside a Google Business Profile.
    */
+  /**
+   * The number on the Google Business Profile, in the profile's own format
+   * and in E.164 for machines. Name, area and phone must read the same on the
+   * profile and on the site: mismatched details are one of the things Google
+   * checks when it decides whether a service-area business is what it says.
+   */
+  phone: "(661) 476-0505",
+  phoneE164: "+16614760505",
   city: "Los Angeles",
   region: "CA",
   country: "US",
@@ -352,6 +360,7 @@ export const ORGANIZATION_JSON_LD = {
       description:
         "Three separate divisions: paid-social ad creative, custom conversion-built websites, and AI infrastructure consulting, architecture and implementation.",
       email: SITE.email,
+      telephone: SITE.phoneE164,
       sameAs: [SITE.instagram],
       // city level only: a service-area studio, no shopfront to send anyone to
       address: {
@@ -370,6 +379,7 @@ export const ORGANIZATION_JSON_LD = {
           "@type": "ContactPoint",
           contactType: "sales",
           email: SITE.email,
+          telephone: SITE.phoneE164,
           url: `${SITE.url}/contact`,
           availableLanguage: ["en"],
         },

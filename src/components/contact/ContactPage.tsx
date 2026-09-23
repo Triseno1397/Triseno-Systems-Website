@@ -8,6 +8,7 @@ import { DIVISIONS, WHITE } from "@/lib/divisions";
 import InquiryForm from "./InquiryForm";
 import HiddenPortalSeal from "./HiddenPortalSeal";
 import { EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL, type ContactDivision } from "./form";
+import { SITE } from "@/lib/seo";
 
 /**
  * /contact — achromatic (white hexagon glyph), on the revamp foundation: the
@@ -68,6 +69,12 @@ export default function ContactPage() {
               <span className="contact-label contact-direct__kind">Email</span>
               <a href={`mailto:${EMAIL}`} className="contact-direct__link world-underline">
                 {EMAIL}
+              </a>
+            </li>
+            <li>
+              <span className="contact-label contact-direct__kind">Phone</span>
+              <a href={`tel:${SITE.phoneE164}`} className="contact-direct__link world-underline">
+                {SITE.phone}
               </a>
             </li>
             <li>

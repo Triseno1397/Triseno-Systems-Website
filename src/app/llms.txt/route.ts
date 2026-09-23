@@ -30,7 +30,7 @@ Triseno Systems designs and builds three things, and keeps them separate because
 
 Based in Los Angeles, California; working with brands anywhere.
 
-Contact: ${SITE.email} · ${SITE.url}/contact · replies within one business day.
+Contact: ${SITE.email} · ${SITE.phone} · ${SITE.url}/contact · replies within one business day.
 
 ## Divisions
 
