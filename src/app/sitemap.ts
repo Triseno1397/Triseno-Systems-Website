@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { ANSWERS } from "@/lib/answers";
 import { PAGES, SITE } from "@/lib/seo";
 
 // Emit as a file at build time rather than a per-request function — this route
@@ -19,11 +20,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     portfolio: { priority: 0.6, changeFrequency: "monthly" },
     contact: { priority: 0.6, changeFrequency: "yearly" },
   };
-  return (Object.keys(PAGES) as Array<keyof typeof PAGES>).map((key) => ({
+  const pages = (Object.keys(PAGES) as Array<keyof typeof PAGES>).map((key) => ({
     url: `${SITE.url}${PAGES[key].path}`,
     lastModified,
     changeFrequency: weight[key].changeFrequency,
     priority: weight[key].priority,
     images: [`${SITE.url}${PAGES[key].og}`],
   }));
+  // the answer pages: the buying-stage questions, each its own entry
+  const answers = ANSWERS.map((a) => ({
+    url: `${SITE.url}/answers/${a.slug}`,
+    lastModified: new Date(a.updated),
+    changeFrequency: "yearly" as const,
+    priority: 0.7,
+  }));
+  return [...pages, ...answers];
 }

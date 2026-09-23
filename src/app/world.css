@@ -1211,3 +1211,82 @@ html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
   .faq-a { animation-duration: 1ms !important; }
   .faq-q, .faq-q__mark::before, .faq-q__mark::after { transition-duration: 1ms !important; }
 }
+
+/* ═══ ANSWERS — /answers/[slug] ════════════════════════════════════════
+   A buying-stage question, answered, inside the ordinary world rather than in
+   a blog template: the division's plate behind (contact.css supplies the
+   scene and scrims, which this page imports), one glass panel, the same type
+   and the same chrome. Long-form copy is the only thing here that the rest of
+   the site does not already have, so that is all this block styles.        */
+.answer-section {
+  position: relative; z-index: 10;
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  max-width: calc(900px + 2 * var(--gutter)); margin: 0 auto;
+}
+.answer-panel { padding: clamp(24px, 3vw, 56px); }
+.answer-crumbs {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55);
+}
+.answer-crumb { display: inline-flex; align-items: center; gap: 8px; color: var(--hue, #ffffff); }
+.answer-crumb--here { color: rgba(255, 255, 255, 0.55); }
+.answer-h1 {
+  margin-top: 22px; font-size: clamp(30px, 4.2vw, 56px); line-height: 1.06; letter-spacing: 0.04em;
+  text-wrap: balance;
+}
+/* the answer itself, before anything else */
+.answer-lede {
+  margin-top: 24px; padding-left: clamp(16px, 1.8vw, 24px); border-left: 2px solid var(--hue, #ffffff);
+  font-family: var(--font-geist-sans), sans-serif; font-size: clamp(17px, 1.5vw, 21px); font-weight: 300;
+  line-height: 1.5; color: #ffffff; max-width: 60ch;
+}
+.answer-body { margin-top: clamp(32px, 4vw, 56px); display: grid; gap: clamp(28px, 3.2vw, 44px); }
+.answer-h2 { font-size: clamp(20px, 2.1vw, 28px); line-height: 1.2; letter-spacing: 0.03em; text-wrap: balance; }
+.answer-block p {
+  margin-top: 14px; max-width: 68ch;
+  font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.65;
+  color: rgba(255, 255, 255, 0.82);
+}
+.answer-list { margin-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.answer-list__row {
+  display: grid; grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr); gap: 4px 24px;
+  padding: 14px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+.answer-list dt {
+  font-family: var(--font-geist-sans), sans-serif; font-size: 15px; font-weight: 500; line-height: 1.35; color: #ffffff;
+}
+.answer-list dd {
+  margin: 0; font-family: var(--font-geist-sans), sans-serif; font-size: 15px; font-weight: 300; line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+}
+.answer-foot { margin-top: clamp(36px, 4.4vw, 60px); padding-top: 28px; border-top: 1px solid rgba(255, 255, 255, 0.22); }
+.answer-foot__line {
+  font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82); max-width: 54ch;
+}
+.answer-foot__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 26px; margin-top: 22px; }
+.answer-textlink {
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.2em; text-transform: uppercase; color: #ffffff;
+}
+.answer-more { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 10px; }
+.answer-updated {
+  margin-top: 26px; font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.4);
+}
+@media (max-width: 767px) {
+  .answer-panel { padding: 22px 18px; }
+  .answer-list__row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+
+/* the link out of the questions block into the long answer */
+.faq-more { margin-top: 26px; }
+.faq-more__label {
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--hue, #ffffff); opacity: 0.85;
+}
+.faq-more ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.faq-more__link {
+  font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.4; color: #ffffff;
+}

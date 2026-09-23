@@ -1,5 +1,6 @@
 import Glyph from "@/components/world/Glyph";
 import { DIVISIONS } from "@/lib/divisions";
+import { answersFor } from "@/lib/answers";
 import { FAQ, type FaqDivision } from "@/lib/faq";
 import { jsonLdHtml } from "@/lib/seo";
 
@@ -22,6 +23,7 @@ import { jsonLdHtml } from "@/lib/seo";
  */
 export default function FaqSection({ division }: { division: FaqDivision }) {
   const items = FAQ[division];
+  const reading = answersFor(division);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -65,6 +67,24 @@ export default function FaqSection({ division }: { division: FaqDivision }) {
             </details>
           ))}
         </div>
+
+        {/* the longer answers, linked from the question that raises them: a
+            contextual link is worth more than a nav entry, and at this point
+            in the page it is the route a reader actually wants */}
+        {reading.length ? (
+          <div className="faq-more">
+            <p className="faq-more__label">The longer answer</p>
+            <ul>
+              {reading.map((answer) => (
+                <li key={answer.slug}>
+                  <a href={"/answers/" + answer.slug} className="faq-more__link world-underline">
+                    {answer.h1}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </section>
   );

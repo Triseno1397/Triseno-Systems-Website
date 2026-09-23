@@ -1,3 +1,4 @@
+import { ANSWERS } from "./answers";
 // Route -> division map. The single source for the division name shown in the
 // chrome lockup, the division hue (design-system §1) and the glyph.
 
@@ -58,6 +59,13 @@ export function divisionForPath(pathname: string): Division {
     (d) => d.route !== "/" && (pathname === d.route || pathname.startsWith(d.route + "/")),
   );
   if (match) return match;
+  // an answer page belongs to the division whose question it answers, so the
+  // lockup, the hue and the menu all read as that division rather than as the portal
+  if (pathname.startsWith("/answers/")) {
+    const slug = pathname.slice("/answers/".length).replace(/\/$/, "");
+    const answer = ANSWERS.find((x) => x.slug === slug);
+    if (answer) return DIVISIONS[answer.division];
+  }
   if (pathname.startsWith("/portfolio")) return DIVISIONS.work;
   return DIVISIONS.portal;
 }
@@ -75,5 +83,7 @@ export function divisionForHref(href: string): Division {
 const REVAMPED = ["/", "/ai-infrastructure", "/work", "/web-design-division", "/studio", "/contact"];
 
 export function isRevampedRoute(pathname: string): boolean {
-  return REVAMPED.includes(pathname);
+  // /answers/* is built on the same foundation as the pages that raise the
+  // question, so it carries the same chrome rather than arriving bare
+  return REVAMPED.includes(pathname) || pathname.startsWith("/answers/");
 }
