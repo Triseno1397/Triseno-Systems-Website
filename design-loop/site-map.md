@@ -53,14 +53,19 @@ division page. World: portal plate via `WorldPlate`, colourless; intro + gate co
 
 ## `/contact` — achromatic (white hexagon) until a division is chosen
 On the world chrome (the old (site) navbar/footer group is gone). World: portal plate via `WorldPlate`.
-1. Conversation: **one-question-at-a-time form with line-draw progress** — a hexagon node per step, the line draws
-   forward (scaleX). The first question picks the division; from then on the scene light (plate grade + floor
-   spill, and the glass that frosts it) and the line take that division's hue, UI stays white. Steps: division,
-   name, email, phone + preferred contact, company, project type (per division), current site (Web only),
-   timeline, message. Enter advances (Ctrl/Cmd+Enter in the message), a click on a choice answers it, Back sits
-   before the field (Shift+Tab reaches it), each step validates, aria-live announces the step, focus follows.
-   `?division=creative|web|ai` preselects and opens on the name (division CTAs and the chrome contact icon pass it).
-   Same web3forms endpoint, key and field names as before; success and error states.
+1. Inquiry: **one form, all of it on screen, tick what applies** — four numbered blocks (what you need, when,
+   who you are, how to reach you) on glass, with the intro pinned beside it on desktop. Picking a division takes
+   the scene light (plate grade + floor spill, and the glass that frosts it) and the form's accents into that
+   division's hue; the UI stays white. Blocks: division (3 cards) + project types as **checkboxes, tick all that
+   apply** (they follow the division); timeline chips; name / email / company / phone (+ current site, Web only);
+   an **"I'd rather you call me" option** that makes the number required and reveals best-time-to-call chips;
+   an optional message. Validation runs once on send and only on what we need (division, name, email, and a
+   number when a call is asked for), then focus moves to the first field that needs it.
+   `?division=creative|web|ai` preselects the division (division CTAs and the chrome contact icon pass it).
+   Same web3forms endpoint, key and field names as before (`project_type` is a comma-joined list, `best_time`
+   is new); success and error states.
+   It replaced a one-question-at-a-time flow: nine screens, no way to see what was coming, no way to say two
+   things at once.
 2. Direct: email + Instagram on glass, and the **hidden portal seal** easter egg (drag-to-collapse) kept.
 
 ## Loop pieces

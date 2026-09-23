@@ -21,6 +21,12 @@ export const SITE = {
   email: "Tristen@trisenosystems.com",
   instagram: "https://instagram.com/trisenosystems",
   ink: "#0b0b0d",
+  /**
+   * Google Search Console, "HTML tag" method: the content value of the
+   * <meta name="google-site-verification"> it hands out. Paste it here (or
+   * set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION); empty means no tag is emitted.
+   */
+  googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
   description:
     "Three divisions, one standard: paid-social ad creative, custom conversion-built websites, and AI infrastructure for business operations.",
 } as const;

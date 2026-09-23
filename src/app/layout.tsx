@@ -60,6 +60,7 @@ export const metadata: Metadata = {
     },
   },
   formatDetection: { telephone: false },
+  verification: SITE.googleSiteVerification ? { google: SITE.googleSiteVerification } : undefined,
 };
 
 export const viewport: Viewport = {
