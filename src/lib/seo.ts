@@ -22,6 +22,16 @@ export const SITE = {
   instagram: "https://instagram.com/trisenosystems",
   ink: "#0b0b0d",
   /**
+   * Where the studio is. A service business is found locally long before it
+   * is found nationally — "ad creative agency los angeles" is a search a
+   * small studio can actually win, where "ad creative agency" is not — so the
+   * city is stated in the organisation data, the descriptions and the copy,
+   * and served alongside a Google Business Profile.
+   */
+  city: "Los Angeles",
+  region: "CA",
+  country: "US",
+  /**
    * Google Search Console, "HTML tag" method: the content value of the
    * <meta name="google-site-verification"> it hands out. Paste it here (or
    * set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION); empty means no tag is emitted.
@@ -54,6 +64,7 @@ interface PageSeo {
 
 const CORE_KEYWORDS = [
   "Triseno Systems",
+  "creative agency Los Angeles",
   "ad creative agency",
   "custom website design",
   "AI infrastructure consulting",
@@ -64,7 +75,7 @@ export const PAGES: Record<PageKey, PageSeo> = {
     path: "/",
     title: "Triseno Systems | Ad Creative, Web Design & AI Infrastructure",
     description:
-      "Three divisions, one standard: paid-social ad creative, custom conversion-built websites, and AI infrastructure for business operations. Start a conversation.",
+      "A Los Angeles studio in three divisions: paid-social ad creative, custom conversion-built websites, and AI infrastructure for business operations.",
     keywords: [
       ...CORE_KEYWORDS,
       "paid social creative",
@@ -98,6 +109,8 @@ export const PAGES: Record<PageKey, PageSeo> = {
       "video ad studio",
       "creative testing ad variations",
       "Triseno Studio",
+      "ad creative agency Los Angeles",
+      "UGC ads agency Los Angeles",
     ],
     og: "/og/studio.png",
     ogAlt: "Triseno Studio — paid social ad creative",
@@ -135,6 +148,8 @@ export const PAGES: Record<PageKey, PageSeo> = {
       "SEO-ready web design",
       "web design division",
       "Triseno Systems web design",
+      "web design agency Los Angeles",
+      "website designer Los Angeles",
     ],
     og: "/og/web-design.png",
     ogAlt: "Triseno Web Design Division — custom, conversion-built websites",
@@ -171,6 +186,8 @@ export const PAGES: Record<PageKey, PageSeo> = {
       "business process automation AI",
       "decision automation",
       "Triseno AI Infrastructure",
+      "AI consultant Los Angeles",
+      "AI automation agency Los Angeles",
     ],
     og: "/og/ai-infrastructure.png",
     ogAlt: "Triseno AI Infrastructure — consulting, architecture, implementation",
@@ -230,7 +247,7 @@ export const PAGES: Record<PageKey, PageSeo> = {
     path: "/contact",
     title: "Contact Triseno Systems | Start a Conversation",
     description:
-      "Start a conversation with Triseno Systems about ad creative, a conversion-built website or AI infrastructure. One question at a time; we reply within one business day.",
+      "Talk to Triseno Systems about ad creative, a conversion-built website or AI infrastructure. Based in Los Angeles, working with brands anywhere. We reply within one business day.",
     keywords: [
       ...CORE_KEYWORDS,
       "hire ad creative agency",
@@ -306,6 +323,10 @@ export function pageJsonLd(key: PageKey): Record<string, unknown> {
       serviceType: p.service.serviceType,
       description: p.service.description,
       provider: { "@id": ORG_ID },
+      areaServed: [
+        { "@type": "City", name: "Los Angeles" },
+        { "@type": "Country", name: "United States" },
+      ],
       url,
     });
   }
@@ -332,6 +353,18 @@ export const ORGANIZATION_JSON_LD = {
         "Three separate divisions: paid-social ad creative, custom conversion-built websites, and AI infrastructure consulting, architecture and implementation.",
       email: SITE.email,
       sameAs: [SITE.instagram],
+      // city level only: a service-area studio, no shopfront to send anyone to
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: SITE.city,
+        addressRegion: SITE.region,
+        addressCountry: SITE.country,
+      },
+      areaServed: [
+        { "@type": "City", name: "Los Angeles" },
+        { "@type": "AdministrativeArea", name: "California" },
+        { "@type": "Country", name: "United States" },
+      ],
       contactPoint: [
         {
           "@type": "ContactPoint",

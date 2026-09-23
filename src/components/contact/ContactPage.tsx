@@ -77,7 +77,9 @@ export default function ContactPage() {
               </a>
             </li>
           </ul>
-          <p className="contact-body">We reply within one business day, often sooner.</p>
+          <p className="contact-body">
+            Los Angeles, California — working with brands anywhere. We reply within one business day, often sooner.
+          </p>
         </GlassPanel>
         <div className="contact-direct__seal">
           <HiddenPortalSeal />
