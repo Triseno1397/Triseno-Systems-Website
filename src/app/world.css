@@ -66,7 +66,8 @@ html[data-warping] .orb-cursor { opacity: 0 !important; }
 /* ── loader ── */
 .world-loader {
   clip-path: inset(0 0 0 0);
-  transition: opacity 800ms var(--ease-expo), clip-path 900ms var(--ease-expo);
+  /* the leave fits inside the 600ms the Loader gives it before it unmounts */
+  transition: opacity 520ms var(--ease-expo), clip-path 580ms var(--ease-expo);
 }
 .world-loader[data-leaving] { opacity: 0; clip-path: inset(0 0 100% 0); pointer-events: none; }
 
@@ -138,6 +139,13 @@ html[data-content-fade] main > [data-fade] {
 }
 /* the warp tunnel and poster captures show the page bare */
 html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
+
+/* The portal's DOM plate paints first and the opaque canvas covers it once
+   its first frame is up — but a covered layer is still composited: seven
+   full-viewport layers, two blended and animated, ~2ms of every 1080p frame
+   on an integrated GPU (design-loop/tier-probe.mjs). Hidden, it costs nothing
+   and is back the moment the canvas is gone. */
+[data-scene-ready] > .world-plate { visibility: hidden; }
 
 /* neutral pool behind the rail: centred on it, fully faded inside its own box */
 .chrome-scrim {
@@ -1098,7 +1106,9 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 .portal-operator-hint {
   /* clear of the progress rail's lane (--rail-safe belongs to /studio and does
      not exist here, which left this sitting on top of the menu) */
-  position: absolute; right: calc(var(--lane-right, 0px) + 1vw); bottom: calc(var(--lane-bottom) + 1svh);
+  /* under his feet, not across his shins now that he stands taller; and in
+     from the corner icon */
+  position: absolute; right: calc(var(--lane-right, 0px) + 4vw); bottom: 0.8svh;
   color: rgba(255, 255, 255, 0.5); pointer-events: none;
   transition: color 600ms var(--ease-expo);
 }

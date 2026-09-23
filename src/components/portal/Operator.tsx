@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { DBG } from "@/components/world/scene/env";
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE OPERATOR — Triseno's rigged robot (21st: splite, rebuilt).
@@ -44,6 +45,18 @@ const SPIN = "/models/robot-anim-spin.glb";
 const JUMP = "/models/robot-anim-jump.glb";
 const SWORD = "/models/robot-sword.glb";
 
+// Four useGLTF calls in one component suspend one after another: the clips
+// and the sword were not even requested until the body had loaded and parsed,
+// 3.5s in. Asked for here, together, they are all in flight from the moment
+// this chunk lands.
+if (typeof window !== "undefined") {
+  const small = window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
+  useGLTF.preload(small ? MOB : DESK);
+  useGLTF.preload(SPIN);
+  useGLTF.preload(JUMP);
+  useGLTF.preload(SWORD);
+}
+
 /* choreography, seconds from the click */
 const GATHER = 0.6; // hands meet, light spirals in
 const FORGE_END = 1.45; // the scan has built the hilt
@@ -59,6 +72,10 @@ const damp = (c: number, t: number, l: number, dt: number) => THREE.MathUtils.le
 const ease = (x: number) => {
   const t = THREE.MathUtils.clamp(x, 0, 1);
   return 1 - Math.pow(1 - t, 3);
+};
+const smooth = (x: number) => {
+  const t = THREE.MathUtils.clamp(x, 0, 1);
+  return t * t * (3 - 2 * t);
 };
 
 /** eigenvectors of a symmetric 3x3, largest first (cyclic Jacobi) */
@@ -267,7 +284,8 @@ function aimBone(bone: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, p
   _a.subVectors(from, pivot).normalize();
   _b.subVectors(to, pivot).normalize();
   _dq.setFromUnitVectors(_a, _b);
-  if (w < 1) _dq.copy(_id).slerp(_dq, w);
+  // part of the way: the full correction eased back toward no rotation
+  if (w < 1) _dq.slerp(_id, 1 - w);
   bone.parent!.getWorldQuaternion(_pw);
   bone.getWorldQuaternion(_bw);
   bone.quaternion.copy(_pw.invert().multiply(_dq.multiply(_bw)));
@@ -397,7 +415,7 @@ function setBlade(sw: SwordRig, k: number, hue: THREE.Color) {
 }
 
 /* ── blade trails: a short ribbon of the blade's last positions ─────────── */
-const TRAIL = 16;
+const TRAIL = 10; // ten frames of ribbon: a streak, not a fan
 function makeTrail() {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(TRAIL * 2 * 3);
@@ -475,7 +493,21 @@ function makeSparks() {
 
 type Move = "spin" | "jump";
 
-export default function Operator({ state, onHue, busy, stand }: { state: OperatorState; onHue?: (hex: string) => void; busy: { current: boolean }; stand?: { position: [number, number, number]; scale: number; yaw?: number } }) {
+export default function Operator({
+  state,
+  onHue,
+  busy,
+  stand,
+  light,
+}: {
+  state: OperatorState;
+  onHue?: (hex: string) => void;
+  busy: { current: boolean };
+  stand?: { position: [number, number, number]; scale: number; yaw?: number };
+  /** the forge light, when the host owns it (see OperatorInWorld): in the
+   *  scene before he is, so his arrival never changes the light count */
+  light?: THREE.PointLight;
+}) {
   const small = typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
   const robot = useGLTF(small ? MOB : DESK, false, true);
   const spinG = useGLTF(SPIN, false, true);
@@ -493,6 +525,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     const skinned = mesh as unknown as THREE.SkinnedMesh;
     skinned.frustumCulled = false;
     const mat = skinned.material as THREE.MeshStandardMaterial;
+    // ?dbg=F for the design-loop fps series: his shell drawn front faces only
+    if (DBG.includes("F")) mat.side = THREE.FrontSide;
     // the rig bakes base colour only: chrome comes from real reflections
     mat.metalness = 0.82;
     mat.roughness = 0.3;
@@ -524,11 +558,49 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       const clip = src.clone();
       const hp = clip.tracks.find((t) => /Hips\.position/.test(t.name));
       if (hp) {
-        const y0 = hp.values[1];
-        for (let i = 0; i < hp.values.length; i += 3) {
-          hp.values[i] = restHips.x;
-          hp.values[i + 1] = y0 + (hp.values[i + 1] - y0) * lift;
-          hp.values[i + 2] = restHips.z;
+        // The exported track has rest-pose keyframes scattered through the move
+        // — single frames where the hips sit at their bind height (109.38)
+        // while the clip is crouched at 62 — so he jumped a quarter of his
+        // height and back at random, one keyframe at a time. Measured off the
+        // rig: hips.y 61.7 -> 109.380 -> 61.7 with the arm rotations perfectly
+        // smooth. A three-wide median takes single-frame outliers out of the
+        // height without softening the move, and the track is read linearly so
+        // what remains is never held as a step.
+        const n = hp.values.length / 3;
+        const ys = new Float32Array(n);
+        for (let i = 0; i < n; i++) ys[i] = hp.values[i * 3 + 1];
+        // the outliers come in short runs, so each key is judged against the
+        // median of the seven around it and replaced by it when it sits more
+        // than a tenth of the rig's height away — a real crouch or leap never
+        // moves that far between neighbouring keys
+        const half = 3;
+        const win: number[] = [];
+        const bindY = b.hips.position.y;
+        const gate = Math.abs(bindY) * 0.1;
+        const smooth = new Float32Array(n);
+        let outliers = 0;
+        for (let i = 0; i < n; i++) {
+          win.length = 0;
+          for (let k = Math.max(0, i - half); k <= Math.min(n - 1, i + half); k++) win.push(ys[k]);
+          win.sort((a, c) => a - c);
+          const m = win[win.length >> 1];
+          const far = Math.abs(ys[i] - m) > gate;
+          if (far) outliers++;
+          smooth[i] = far ? m : ys[i];
+        }
+        const y0 = smooth[0];
+        for (let i = 0; i < n; i++) {
+          hp.values[i * 3] = restHips.x;
+          hp.values[i * 3 + 1] = y0 + (smooth[i] - y0) * lift;
+          hp.values[i * 3 + 2] = restHips.z;
+        }
+        hp.setInterpolation(THREE.InterpolateLinear);
+        if (typeof window !== "undefined" && window.location.search.includes("gdbg")) {
+          let nearBind = 0;
+          for (let i = 0; i < n; i++) if (Math.abs(hp.values[i * 3 + 1] - bindY) < 0.5) nearBind++;
+          console.log("[hips]", src.name || "clip", "keys", n, "at", (1 / (hp.times[1] - hp.times[0])).toFixed(0) + "fps",
+            "interp", hp.getInterpolation(), "bind y", bindY.toFixed(2), "range", Math.min(...ys).toFixed(1) + "-" + Math.max(...ys).toFixed(1),
+            "outliers replaced", outliers, "keys still at bind height", nearBind);
         }
       }
       const action = mixer.clipAction(clip);
@@ -538,8 +610,12 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       return { clip, action, duration: clip.duration / speed };
     };
     const moves = {
-      spin: prep(spinG.animations[0], 1, 1.12),
-      jump: prep(jumpG.animations[0], 0.55, 1),
+      // Speeds that 60 frames a second can actually show. At 1.12x the sword
+      // hand crossed 110-390 thousandths of the scene per frame through the
+      // blade spin — four revolutions a second — which strobes, and its trail
+      // ribbons opened into the big flat fans that read as glitching.
+      spin: prep(spinG.animations[0], 1, 0.72),
+      jump: prep(jumpG.animations[0], 0.55, 0.85),
     };
     const box = new THREE.Box3().setFromObject(scene);
     const height = box.getSize(new THREE.Vector3()).y;
@@ -561,7 +637,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
    *  then on the blade itself. Always in the scene, at zero brightness when
    *  there is nothing to light — switching a light on and off changes how many
    *  three builds into every shader, and the whole world recompiles. */
-  const forge = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
+  const own = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
+  const forge = light ?? own;
 
   // grip frames in each fist, measured off the model (see measureFist)
   const mounts = useMemo(() => ({ r: new THREE.Object3D(), l: new THREE.Object3D() }), []);
@@ -652,6 +729,14 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     };
   }, [rig, mounts]);
 
+  // ?opmotion=1 — per-frame trace of the move (design-loop/move-trace.mjs)
+  const trace = useMemo(() => {
+    if (typeof window === "undefined" || !window.location.search.includes("opmotion")) return null;
+    const w = window as unknown as { __motion?: unknown[] };
+    w.__motion = [];
+    return { rows: w.__motion as number[][], last: new THREE.Quaternion(), lastHand: new THREE.Vector3() };
+  }, []);
+
   const hue = useMemo(() => new THREE.Color(OPERATOR_HUES[0]), []);
   const sim = useRef({
     yaw: 0,
@@ -666,6 +751,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     playing: false,
     queued: false,
     ik: 0,
+    arrive: 0, // 0 -> 1 over his first half second on screen
   });
 
   const q = useMemo(() => new THREE.Quaternion(), []);
@@ -715,6 +801,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
   }, [rig, swords, trails, sparks, orb]);
 
   const { camera, gl, scene } = useThree();
+  const [warmedEnv, setWarmedEnv] = useState(false);
   // Compile every shader and upload the textures in the background as soon as
   // the robot exists, so the first visible frame doesn't stall the GPU.
   //
@@ -725,7 +812,6 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
   // 762ms, right where the move was supposed to start. Their brightness is
   // animated instead, and nothing recompiles.
   useEffect(() => {
-    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
     // three only builds programs for what it can see, so everything he brings
     // out mid-move is shown for the compile and hidden again: the blades, the
     // fabrication ring, the trail ribbons, the sparks and the forge orb. Left
@@ -745,12 +831,59 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     trails.forEach((t) => show(t.mesh));
     [sparks.pts, orb.mesh].forEach((o) => show(o));
     const done = () => hidden.forEach((o) => (o.visible = false));
-    if (r.compileAsync) r.compileAsync(scene, camera).then(done, done);
-    else {
-      r.compile(scene, camera);
-      done();
-    }
-  }, [gl, scene, camera, swords, orb, trails, sparks]);
+    // A real draw, into a 1x1 target nobody sees: it links exactly the programs
+    // a real draw needs and uploads every texture on the way. compileAsync
+    // could not promise the same program key as the click's own draw — three
+    // programs linked on every first click regardless, ~175ms.
+    // The programs link in the background first (KHR_parallel_shader_compile,
+    // with the target bound so they are the ones a draw into the composer's
+    // buffer needs), and only then does the draw run — by then it has nothing
+    // left to do but upload his textures. Linking inside the draw held the
+    // main thread ~600ms while the loader was trying to animate.
+    const tiny = new THREE.WebGLRenderTarget(1, 1);
+    const prev = gl.getRenderTarget();
+    let alive = true;
+    const draw = () => {
+      if (!alive) return;
+      try {
+        gl.setRenderTarget(tiny);
+        gl.render(scene, camera);
+      } finally {
+        gl.setRenderTarget(prev);
+        tiny.dispose();
+        done();
+      }
+    };
+    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+    if (r.compileAsync) {
+      gl.setRenderTarget(tiny);
+      r.compileAsync(scene, camera).then(
+        () => {
+          gl.setRenderTarget(prev);
+          draw();
+        },
+        () => {
+          gl.setRenderTarget(prev);
+          draw();
+        },
+      );
+    } else draw();
+    return () => {
+      // unmounted mid-compile: leave nothing shown that should be hidden
+      if (alive) {
+        alive = false;
+        done();
+      }
+    };
+  }, [gl, scene, camera, swords, orb, trails, sparks, warmedEnv]);
+
+  // The world's environment map arrives after he does, and a material compiled
+  // without it is compiled again the first time it is drawn with it — for the
+  // hilt and the trails, that was the first click (three programs, ~175ms).
+  // The pass above runs once more the frame the environment lands.
+  useFrame(() => {
+    if (!warmedEnv && scene.environment) setWarmedEnv(true);
+  });
   const dbg = useMemo(() => {
     if (typeof window === "undefined") return null;
     const u = new URLSearchParams(window.location.search);
@@ -769,6 +902,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     const r = root.current;
     if (!r) return;
     if (shown.current) shown.current.visible = !state.hidden;
+    s.arrive = damp(s.arrive, 1, 5, dt);
+    r.scale.setScalar((stand?.scale ?? 1) * (0.001 + 0.999 * ease(s.arrive)));
     if (dbg) {
       // inspection: the whole choreography held at one instant
       dt = 0;
@@ -805,8 +940,17 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     const moveEnd = DRAW_END + mv.duration;
 
     // ── base pose: the rest pose, with the move blended over it ──
-    rig.rest.forEach((qr, bn) => bn.quaternion.copy(qr));
-    rig.b.hips.position.copy(rig.restHips);
+    // Only while the mixer is not driving him. three's PropertyMixer writes
+    // a bone only when the clip's value differs from what it wrote last frame,
+    // so on the flat stretches of a crouch (hips at 61.750 two frames running)
+    // it writes nothing — and a rest-pose reset made every frame stood, with
+    // the hips back at their bind height of 109.38. He jumped a quarter of his
+    // height and back, one flat frame at a time. Rotations never showed it: a
+    // spinning body's rotations are never equal two frames running.
+    if (!s.playing || dbg) {
+      rig.rest.forEach((qr, bn) => bn.quaternion.copy(qr));
+      rig.b.hips.position.copy(rig.restHips);
+    }
     if (t >= DRAW_END - BLEND && !s.playing) {
       s.playing = true;
       rig.mixer.stopAllAction();
@@ -824,7 +968,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       }
     } else if (s.playing) {
       rig.mixer.update(dt);
-      if (t > moveEnd - 0.5 && mv.action.getEffectiveWeight() > 0.99) mv.action.fadeOut(0.5);
+      // he stands back up over most of a second; half a second read as a snap
+      if (t > moveEnd - 0.9 && mv.action.getEffectiveWeight() > 0.99) mv.action.fadeOut(0.9);
     }
     if (t >= moveEnd && !dbg) {
       s.seq = -1;
@@ -842,7 +987,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       ty = Math.sin(s.t * 0.29 + 1.2) * 0.25;
     }
     s.follow = damp(s.follow, s.seq >= 0 ? 0 : 1, 4, dt);
-    s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.25, 3.4, dt);
+    s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.05, 3.4, dt);
     s.pitch = damp(s.pitch, THREE.MathUtils.clamp(ty, -1, 1) * 0.6, 3.4, dt);
     const y = s.yaw * s.follow;
     const p = s.pitch * s.follow;
@@ -855,9 +1000,12 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     r.updateMatrixWorld(true);
 
     // ── the forge: both hands meet at the chest, then the right hand draws ──
+    // the hands are gathered over GATHER and, once the draw is done, released
+    // to the clip over BLEND — velocity-continuous at both ends, so neither
+    // hand-off reads as a cut
     if (t < 0) s.ik = 0;
     else if (t < DRAW_END) s.ik = ease(t / GATHER);
-    else s.ik = Math.max(0, 1 - (t - DRAW_END + BLEND) / BLEND);
+    else s.ik = 1 - smooth((t - DRAW_END) / BLEND);
     rig.b.chest.getWorldPosition(tmp.chest);
     tmp.fwd.set(0, 0, 1).transformDirection(r.matrixWorld);
     tmp.side.set(1, 0, 0).transformDirection(r.matrixWorld); // the robot's left
@@ -880,6 +1028,19 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     tmp.PL.y -= 0.35;
     solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, s.ik);
     solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, s.ik);
+    // At rest the hands follow the pointer as well, a little and after the
+    // head: each fist drifts toward the cursor's side and lifts with it, so he
+    // reaches toward the visitor rather than only looking at them.
+    if (s.seq < 0 && state.fine) {
+      const reach = 0.42 * s.follow;
+      const lift = 0.05 - s.pitch * 0.14;
+      rig.b.rHand.getWorldPosition(tmp.TR).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
+      tmp.TR.y += lift;
+      rig.b.lHand.getWorldPosition(tmp.TL).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
+      tmp.TL.y += lift;
+      solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, reach);
+      solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, reach);
+    }
     r.updateMatrixWorld(true);
     tmp.FL.copy(tmp.F);
     r.worldToLocal(tmp.FL);
@@ -917,7 +1078,8 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     // the one light: with the orb while it is burning, then on the blade
     forge.color.copy(hue);
     let lit = orbK * 4;
-    if (orbK > 0.001) forge.position.copy(tmp.FL);
+    // his own light sits under his root; a lent one lives in the host's space
+    if (orbK > 0.001) forge.position.copy(light ? tmp.F : tmp.FL);
 
     // ── swords: forged upright at the meeting point, then carried by the fists ──
     const end = t > moveEnd - 0.75 ? ease((t - (moveEnd - 0.75)) / 0.6) : 0;
@@ -946,6 +1108,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       if (bladeLit > lit) {
         lit = bladeLit;
         forge.position.copy(tmp.pos).addScaledVector(tmp.F.set(0, 1, 0).applyQuaternion(tmp.quat), BLADE * 0.45);
+        if (light) r.localToWorld(forge.position);
       }
       if (!dbg) stepTrail(trails[i], sw, r, on * (1 - end), hue);
     });
@@ -953,6 +1116,32 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
       if (!sw.body.visible) stepTrail(trails[i], sw, r, 0, hue);
     });
     forge.intensity = lit;
+
+    if (trace) {
+      const q = rig.b.chest.quaternion;
+      const turn = 2 * Math.acos(Math.min(1, Math.abs(q.dot(trace.last))));
+      trace.last.copy(q);
+      const hand = rig.b.rHand.getWorldPosition(tmp.PL);
+      const moved = trace.lastHand.lengthSq() === 0 ? 0 : hand.distanceTo(trace.lastHand);
+      trace.lastHand.copy(hand);
+      trace.rows.push([
+        +(t >= 0 ? t : -1).toFixed(3),
+        +(turn * 1000).toFixed(2),
+        +(moved * 1000).toFixed(2),
+        swords[0].body.visible ? 1 : 0,
+        trails[0].mesh.visible ? 1 : 0,
+        +mv.action.getEffectiveWeight().toFixed(3),
+        +rawDt.toFixed(4),
+        +mv.action.time.toFixed(3),
+        +hand.x.toFixed(4),
+        +hand.y.toFixed(4),
+        +hand.z.toFixed(4),
+        +rig.b.hips.position.y.toFixed(4),
+        +rig.b.rArm.getWorldPosition(tmp.PR).y.toFixed(4),
+        +rig.b.rArm.quaternion.x.toFixed(4),
+        +rig.b.rHand.quaternion.x.toFixed(4),
+      ]);
+    }
 
     if (dbg && dbg.cam !== "body") {
       // inspection only: hold the camera on one hand, at the robot's own scale
@@ -969,7 +1158,7 @@ export default function Operator({ state, onHue, busy, stand }: { state: Operato
     <group ref={root} position={stand?.position} scale={stand?.scale ?? 1}>
       {/* the light stays outside the part of him that can be hidden (see
           OperatorState.hidden); at rest it is at zero and lights nothing */}
-      <primitive object={forge} />
+      {light ? null : <primitive object={forge} />}
       <group ref={shown}>
       {/* what the pointer actually hits (see the note above): a box his size.
           It paints nothing — but it cannot be visible={false}, because three

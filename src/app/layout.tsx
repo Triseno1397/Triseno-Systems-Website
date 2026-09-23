@@ -50,10 +50,6 @@ export const metadata: Metadata = {
     "AI infrastructure consulting",
     "AI systems implementation",
   ],
-  icons: {
-    icon: "/images/triseno-logo-v2.png",
-    apple: "/images/triseno-logo-v2.png",
-  },
   openGraph: {
     title: "Triseno Systems · ad creative, web design, AI infrastructure",
     description:
@@ -148,6 +144,20 @@ export default function RootLayout({
           (warp transition everywhere; chrome/cursor/smooth scroll on revamped
           routes). /portfolio and /edit bring their own chrome. */}
       <body>
+        {/* The first video a browser decodes in a session costs a freeze: on
+            Windows, Chrome builds its hardware video pipeline the first time
+            any page plays a clip, and the GPU process holds still for 1-2s
+            while it does. Measured: it landed on the studio hero's showreel,
+            right on arrival. A 2KB clip of black, started here at parse time,
+            takes that once-per-browser cost before hydration has even created
+            the WebGL context — while nothing is on screen but the loader mark.
+            A browser that has already played a video pays nothing. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{if(navigator.connection&&navigator.connection.saveData)return;if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;var v=document.createElement("video");v.muted=true;v.playsInline=true;v.setAttribute("playsinline","");v.setAttribute("aria-hidden","true");v.preload="auto";v.style.cssText="position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1";v.src="/videos/warm.mp4";var done=false;var end=function(){if(done)return;done=true;try{v.pause();v.removeAttribute("src");v.load();v.remove()}catch(e){}};v.addEventListener("ended",end);v.addEventListener("error",end);document.body.appendChild(v);var p=v.play();if(p&&p.catch)p.catch(end);setTimeout(end,4000)}catch(e){}})();',
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

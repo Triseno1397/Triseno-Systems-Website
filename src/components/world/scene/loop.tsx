@@ -4,7 +4,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { MeshTransmissionMaterial } from "@react-three/drei";
-import { TierContext } from "./env";
+import { TierContext, DBG } from "./env";
 
 /* ─────────────────────────────────────────────────────────────────────────
    The signature form every Triseno world is built from: a square-section tube
@@ -138,7 +138,11 @@ export function GlassLoop({
   near: boolean;
 }) {
   const high = useContext(TierContext) === "high";
-  const refract = near && high;
+  // Refraction (MeshTransmissionMaterial) is off by default: its shader alone
+  // was 0.8s of the startup compile, it re-renders the scene every frame, and
+  // swapping it out on a tier drop was a 220ms hitch mid-session. At these
+  // sizes the plain clear-coated glass below reads the same. ?dbg=R turns it on.
+  const refract = near && high && DBG.includes("R");
   return (
     <>
       <mesh geometry={set.glass}>

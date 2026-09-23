@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
@@ -167,8 +167,10 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     if (group.current) {
       group.current.position.y = RING_Y + Math.sin(t * 0.9) * 0.05 * still;
       group.current.rotation.y =
-        m.spin + (REST_YAW * away + Math.sin(t * 0.35) * 0.2 * still + portalState.px * 0.18) * (1 - warp);
-      group.current.rotation.x = (Math.sin(t * 0.27) * 0.05 * still - portalState.py * 0.08) * (1 - warp);
+        // the object turns away from the pointer as he turns toward it — the
+        // layers separate under the cursor instead of moving as one
+        m.spin + (REST_YAW * away + Math.sin(t * 0.35) * 0.2 * still - portalState.px * 0.14) * (1 - warp);
+      group.current.rotation.x = (Math.sin(t * 0.27) * 0.05 * still + portalState.py * 0.05) * (1 - warp);
     }
     // the glow is a billboard — it has to be gone before the camera reaches it
     haloMat.opacity = 0.08 * (1 - Math.min(1, Math.max(0, portalState.hero / 0.45))) * (1 - warp);
@@ -388,12 +390,18 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
 function OperatorInWorld({ state }: { state: OperatorState }) {
   const group = useRef<THREE.Group>(null);
   const busy = useRef(false);
+  // His forge light, here from the first frame at zero brightness. His files
+  // arrive seconds after the world has compiled, and a light that came with
+  // them changed the light count — three built every lit shader in the world
+  // again (~2s on the main thread, the transmission glass alone 1.1s), right
+  // as the loader left. Measured with design-loop/program-census.mjs.
+  const forge = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
   const stand = useMemo(() => {
     const u = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
     const n = (k: string, d: number) => Number(u?.get(k) ?? d);
-    const scale = n("ops", 2.05);
+    const scale = n("ops", 2.6);
     return {
-      position: [n("opx", 0.45), n("opy", 0.5 * scale), n("opz", 1.9)] as [number, number, number],
+      position: [n("opx", 0.25), n("opy", 0.5 * scale), n("opz", 1.9)] as [number, number, number],
       scale,
       yaw: n("opyaw", -0.35),
     };
@@ -401,6 +409,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   useFrame(() => {
     state.px = portalState.px;
     state.py = portalState.py;
+    portalState.performing = busy.current;
     // not group.visible: see OperatorState.hidden
     state.hidden = !(portalState.hero < 0.55 && portalState.warpAt === 0);
   });
@@ -414,7 +423,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
       onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
     >
-      <Operator state={state} busy={busy} stand={stand} />
+      <primitive object={forge} />
+      <Operator state={state} busy={busy} stand={stand} light={forge} />
     </group>
   );
 }
@@ -501,13 +511,19 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   const haze = useMemo(() => makeHazeTexture(), []);
   // never render above the device's own pixel ratio; cap at 1.5 and fall to 1 if frames drop
   const [maxDpr, setMaxDpr] = useState(1.5);
+  // then, still short of the frame rate, render a little under the device's
+  // pixels (0.875, then 0.75 — the post chain resolves it back up, and at
+  // those scales the softening is well under what the drop to the low tier
+  // costs the look); only after that does the tier fall
+  const [under, setUnder] = useState(1);
+  const [armed, setArmed] = useState(false);
   // "H" pins the high tier so headless/software-GPU captures show what a real
   // GPU renders; without it PerformanceMonitor degrades to "low" within a second.
   const pinHigh = DBG.includes("H");
   const [tier, setTier] = useState<Tier>(DBG.includes("l") ? "low" : "high");
   const dpr = DBG.includes("r")
     ? 0.5
-    : Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, maxDpr);
+    : Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, maxDpr) * under;
   useEffect(
     () => () => {
       glow.dispose();
@@ -520,6 +536,11 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
   // it stops rendering: every frame of GPU goes to the tunnel and to the
   // destination world booting underneath it, and the travel plays at its full
   // length instead of stuttering through a heavy scene nobody can see.
+  // what the page is really running at, for the design-loop tools
+  useEffect(() => {
+    document.documentElement.dataset.portalTier = tier;
+    document.documentElement.dataset.portalDpr = String(dpr);
+  }, [tier, dpr]);
   const [paused, setPaused] = useState(false);
   const operatorState = useMemo<OperatorState>(() => ({ px: 0, py: 0, fine: true, strike: 0 }), []);
   useEffect(() => {
@@ -546,21 +567,43 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}
       onCreated={({ gl, scene }) => {
         gl.setClearColor("#000000", 1);
+        // ?dbg=g: the renderer on window, for the design-loop draw-call probe
+        if (DBG.includes("g")) (window as unknown as { __gl: THREE.WebGLRenderer }).__gl = gl;
+        // On the way out — the visitor has clicked a division and the warp is
+        // covering the screen — fiber tears this context down by forcing it lost,
+        // and the driver blocks the main thread for ~850ms destroying everything
+        // the world built. That was the freeze on the way into every division
+        // page (13% of the whole hop). An abandoned context is reclaimed by the
+        // browser off the main thread once its canvas is collected, so on a
+        // desktop it is simply let go. A phone keeps the explicit loss — there,
+        // GPU memory left hanging is what kills the tab — but takes it in idle
+        // time, after the destination has drawn, instead of mid-transition.
+        const lose = gl.forceContextLoss.bind(gl);
+        const coarse = window.matchMedia("(pointer: coarse)").matches;
+        gl.forceContextLoss = () => {
+          if (!coarse) return;
+          const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 2500));
+          idle(() => lose(), { timeout: 6000 });
+        };
         // light fog: far doors recede into the plate's haze, never into murk
         scene.fog = new THREE.Fog("#0a0a0a", 16, 120);
       }}
     >
-      {pinHigh ? null : (
+      {pinHigh || !armed ? null : (
         <PerformanceMonitor
-          ms={200}
-          iterations={6}
+          ms={150}
+          iterations={4}
           threshold={0.8}
           // smoothness first: below ~45fps step down — resolution first (the
           // look is unchanged, only sharpness), then the heavy effects
-          bounds={() => [45, 58]}
-          flipflops={2}
+          // no upper bound to climb back over: a climb-and-fall pair counts
+          // as a flip-flop, and enough of those hands the scene straight to
+          // the low tier without ever trying the resolution steps
+          bounds={() => [55, 1000]}
+          flipflops={50}
           onDecline={() => {
-            if (maxDpr > 1) setMaxDpr(1);
+            if (maxDpr > 1 && (typeof window === "undefined" ? 1 : window.devicePixelRatio) > 1) setMaxDpr(1);
+            else if (under > 0.8) setUnder(+(under - 0.125).toFixed(3));
             else setTier("low");
           }}
           onFallback={() => setTier("low")}
@@ -574,17 +617,28 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         <KeyLight />
         {/* the painted gallery is the deep background; the monoliths, sky and
             floor it paints are not duplicated in 3D */}
-        <PlateBackdrop world="portal" pointer={() => [portalState.px, portalState.py]} />
+        <PlateBackdrop world="portal" pointer={() => [-portalState.px * 0.6, -portalState.py * 0.6]} />
         {DBG.includes("h") ? null : <Haze texture={haze} />}
         <SignatureObject glow={glow} />
-        <OperatorInWorld state={operatorState} />
+        {/* his files (1.6MB of GLB) load behind the world, not in front of it:
+            the scene draws its first frames — and the loader leaves — without him */}
+        <Suspense fallback={null}>
+          <OperatorInWorld state={operatorState} />
+        </Suspense>
         {DOOR_ITEMS.map((_, i) => (
           <Door key={i} index={i} onEnter={onEnter} />
         ))}
         <GateObject />
         {DBG.includes("d") ? null : <Dust sprite={glow} />}
         {DBG.includes("p") ? null : <Post focusY={RING_Y} dof={false} />}
-        <ReadySignal onReady={onReady} />
+        <ReadySignal
+          onReady={() => {
+            onReady?.();
+            // the monitor only judges frames once the loader has left and the
+            // compile is behind us — startup frames would step it down for nothing
+            window.setTimeout(() => setArmed(true), 1500);
+          }}
+        />
       </TierContext.Provider>
     </Canvas>
   );

@@ -143,13 +143,14 @@ export default function Loader({ ready }: LoaderProps) {
   // (canvas and rAF loop included) 0.9s after that — nothing lingers.
   useEffect(() => {
     if (!ready) return;
-    const id = window.setTimeout(() => setPhase((p) => (p === "loading" ? "leaving" : p)), 1400);
+    // the world is drawn: half a second for the count to land on 100, then go
+    const id = window.setTimeout(() => setPhase((p) => (p === "loading" ? "leaving" : p)), 500);
     return () => window.clearTimeout(id);
   }, [ready]);
 
   useEffect(() => {
     if (phase !== "leaving") return;
-    const id = window.setTimeout(() => setPhase("gone"), 900);
+    const id = window.setTimeout(() => setPhase("gone"), 600);
     return () => window.clearTimeout(id);
   }, [phase]);
 

@@ -2,11 +2,11 @@
 
 import { useContext, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, MeshReflectorMaterial } from "@react-three/drei";
-import { Bloom, DepthOfField, EffectComposer, SMAA, Vignette } from "@react-three/postprocessing";
+import { Bloom, DepthOfField, EffectComposer, FXAA, SMAA, Vignette } from "@react-three/postprocessing";
 import type { DepthOfFieldEffect } from "postprocessing";
-import { TierContext, WHITE, env } from "./env";
+import { TierContext, WHITE, env, DBG } from "./env";
 import type { FloorMaps } from "./textures";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -343,6 +343,13 @@ export function WorldEnvironment() {
 
 /* ── post: depth of field that follows the focal object, bloom, vignette ── */
 
+// ?bl=N for the design-loop fps series; the default is postprocessing's own
+const BLOOM_LEVELS =
+  typeof window === "undefined" ? 8 : Number(new URLSearchParams(window.location.search).get("bl") || 8);
+
+const BLOOM_SCALE =
+  typeof window === "undefined" ? 0.5 : Number(new URLSearchParams(window.location.search).get("bs") || 0.5);
+
 export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; dof?: boolean }) {
   // depth of field is off in front of a painted plate: the plate has no depth
   // buffer, so DOF would smear the whole backdrop
@@ -353,12 +360,20 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
     focus.lerp(env.focus, 1 - Math.exp(-Math.min(dt, 1) * 3));
     if (dof.current) dof.current.target = focus;
   });
-  const bloom = (
-    <Bloom mipmapBlur intensity={0.5} luminanceThreshold={0.82} luminanceSmoothing={0.12} radius={0.72} />
+  // ?dbg switches for the design-loop fps series: b no bloom, s no AA at all,
+  // v no vignette, 8 byte frame buffer, m 4x MSAA in place of the AA pass
+  const bloom = DBG.includes("b") ? null : (
+    <Bloom mipmapBlur intensity={0.5} luminanceThreshold={0.82} luminanceSmoothing={0.12} radius={0.72} levels={BLOOM_LEVELS} resolutionScale={BLOOM_SCALE} />
   );
-  const vignette = <Vignette eskil={false} offset={0.22} darkness={0.72} />;
+  const vignette = DBG.includes("v") ? null : <Vignette eskil={false} offset={0.22} darkness={0.72} />;
+  // FXAA, not SMAA: at 1080p on an integrated GPU SMAA's three passes were
+  // 5.4ms of a 26ms frame (design-loop/tier-probe.mjs); FXAA is one pass.
+  // S forces SMAA back for the A/B.
+  const smaa = DBG.includes("s") || DBG.includes("m") ? null : DBG.includes("S") ? <SMAA /> : <FXAA />;
+  const msaa = DBG.includes("m") ? 4 : 0;
+  const fbType = DBG.includes("8") ? THREE.UnsignedByteType : undefined;
   return high ? (
-    <EffectComposer key="hi" multisampling={0} enableNormalPass={false}>
+    <EffectComposer key="hi" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
       <DepthOfField
         ref={dof}
         target={[0, focusY, 0]}
@@ -368,26 +383,67 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
       />
       {bloom}
       {vignette}
-      <SMAA />
+      {smaa}
     </EffectComposer>
   ) : (
-    <EffectComposer key="lo" multisampling={0} enableNormalPass={false}>
+    <EffectComposer key="lo" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
       {bloom}
       {vignette}
-      <SMAA />
+      {smaa}
     </EffectComposer>
   );
 }
 
 /* ── ready signal ──────────────────────────────────────────────────────── */
 
+/* The world's shaders are linked before its first frame, off the main thread
+   where the driver allows it (KHR_parallel_shader_compile), with the render
+   loop held until they are. Letting the first frames compile as they went was
+   2.5s of the main thread on the portal alone — 27% of the entire startup —
+   and the 1.5s freeze on the way into every division page. The loader and the
+   warp were already covering that time; now nothing is frozen underneath them. */
 export function ReadySignal({ onReady }: { onReady: () => void }) {
+  const { gl, scene, camera, set } = useThree();
   const frames = useRef(0);
   const sent = useRef(false);
+  const resumed = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    set({ frameloop: "never" });
+    const resume = () => {
+      if (!alive || resumed.current) return;
+      resumed.current = true;
+      set({ frameloop: "always" });
+    };
+    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+    // never trap the visitor behind a driver that will not answer
+    const guard = window.setTimeout(resume, 4000);
+    // Compiled with a render target bound: a program built for the canvas is
+    // not the one a draw into the composer's buffer needs (no tone mapping,
+    // a different output transform), so compiling for the canvas built every
+    // shader twice — once here, once more, synchronously, on the first real
+    // frame. With KHR_parallel_shader_compile these links finish off the main
+    // thread while the loader animates. Measured with program-census.mjs.
+    if (r.compileAsync) {
+      const tiny = new THREE.WebGLRenderTarget(1, 1);
+      const prev = gl.getRenderTarget();
+      gl.setRenderTarget(tiny);
+      const done = () => {
+        gl.setRenderTarget(prev);
+        tiny.dispose();
+        resume();
+      };
+      r.compileAsync(scene, camera).then(done, done);
+    } else resume();
+    return () => {
+      alive = false;
+      window.clearTimeout(guard);
+    };
+  }, [gl, scene, camera, set]);
   useFrame(() => {
-    if (sent.current) return;
+    if (sent.current || !resumed.current) return;
     frames.current += 1;
-    if (frames.current >= 4) {
+    if (frames.current >= 2) {
       sent.current = true;
       onReady();
     }

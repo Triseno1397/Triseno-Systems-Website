@@ -201,7 +201,9 @@ export default function PortalPage() {
     if (mode === "pending" || !ready || capture) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = window.setInterval(() => {
-      if (interacting.current || document.hidden || portalState.hero > 0.35 || portalState.warpAt) return;
+      // and not while he is mid-move: the object morphing behind a spin read
+      // as the whole scene glitching
+      if (interacting.current || document.hidden || portalState.hero > 0.35 || portalState.warpAt || portalState.performing) return;
       show((portalState.active + 1) % 3, false);
     }, 3600);
     return () => window.clearInterval(id);

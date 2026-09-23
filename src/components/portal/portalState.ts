@@ -25,6 +25,8 @@ export const portalState = {
   hoverDoor: -1,
   /** performance.now() when a warp out of the portal started, else 0 */
   warpAt: 0,
+  /** true while the Operator is mid-move: the hall holds still for him */
+  performing: false,
   /** screen-space y (0..1) of the wet floor at the gate object's base — the beams land here */
   gateFloorY: 0.8,
   /** poster capture mode (?capture=…): no view offset, fixed framing */
