@@ -7,6 +7,7 @@ import CompareReveal from "./CompareReveal";
 import StackCards from "./StackCards";
 import RangeGallery from "./RangeGallery";
 import WebGate from "./WebGate";
+import FaqSection from "@/components/world/FaqSection";
 
 /**
  * Web Design Division — violet world, square / frame glyph.
@@ -30,6 +31,7 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
       <CompareReveal />
       <StackCards />
       <RangeGallery />
+      <FaqSection division="web" />
       <WebGate />
     </main>
   );

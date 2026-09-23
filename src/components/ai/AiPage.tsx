@@ -9,6 +9,7 @@ import OrbitalProcess from "./OrbitalProcess";
 import Industries from "./Industries";
 import WhyTriseno from "./WhyTriseno";
 import AiGate from "./AiGate";
+import FaqSection from "@/components/world/FaqSection";
 
 /**
  * /ai-infrastructure. One world (AiWorld) renders behind every section from the
@@ -30,6 +31,7 @@ export default function AiPage() {
       <OrbitalProcess />
       <Industries />
       <WhyTriseno />
+      <FaqSection division="ai" />
       <AiGate />
     </main>
   );

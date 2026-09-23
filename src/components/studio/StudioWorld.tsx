@@ -6,6 +6,7 @@ import Filmstrip from "./Filmstrip";
 import BehindReveal from "./BehindReveal";
 import ProofMarquee from "./ProofMarquee";
 import StudioGate from "./StudioGate";
+import FaqSection from "@/components/world/FaqSection";
 
 /**
  * Triseno Creative — the Creative division world (`/studio`, amber, aperture).
@@ -35,6 +36,7 @@ export default function StudioWorld() {
         <Filmstrip />
         <BehindReveal />
         <ProofMarquee />
+        <FaqSection division="creative" />
         <StudioGate />
       </div>
     </main>

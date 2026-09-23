@@ -1123,3 +1123,91 @@ html[data-pause-offscreen] main [data-rail]:not([data-inview]),
 html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
   animation-play-state: paused;
 }
+
+/* ═══ QUESTIONS — the FAQ block that closes each division page ═════════
+   One shared section across Creative, Web Design and AI Infrastructure: each
+   division's <main> sets --hue, and everything here that lights takes it. The
+   answers are real page copy (search ranks what a visitor can read) laid out
+   as question-then-answer pairs (answer engines cite that shape), so the block
+   earns its place twice. Native <details>: the text is in the document whether
+   or not it is open. Only transform / opacity animate.                     */
+.faq-section {
+  position: relative; z-index: 10;
+  padding: clamp(72px, 9vh, 128px) var(--gutter);
+  max-width: calc(1400px + 2 * var(--gutter)); margin: 0 auto;
+}
+/* a soft pool of shade under the block: the amber and cyan worlds are bright
+   where this sits, and six paragraphs of body copy need to read. It fades to
+   nothing well inside the section box, so there is no edge to see. */
+.faq-section::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  /* An even wash, faded out on all four sides by a mask, rather than a radial:
+     a radial bright enough to carry the copy at the edges of the column is
+     still visibly opaque where the section box ends, and you could see the
+     rectangle against the amber world. */
+  background: rgba(0, 0, 0, 0.6);
+  --faq-fade-x: linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  --faq-fade-y: linear-gradient(to bottom, transparent 0%, #000 13%, #000 87%, transparent 100%);
+  -webkit-mask-image: var(--faq-fade-x), var(--faq-fade-y);
+  mask-image: var(--faq-fade-x), var(--faq-fade-y);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.faq-wrap { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(28px, 4vw, 80px); align-items: start; }
+.faq-head { position: sticky; top: calc(var(--lane-top) + 8px); }
+.faq-label {
+  display: inline-flex; align-items: center; gap: 12px; color: var(--hue, #ffffff);
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); font-weight: 400;
+  line-height: 1.4; letter-spacing: 0.2em; text-transform: uppercase;
+}
+.faq-title { margin-top: 18px; font-size: clamp(28px, 3.4vw, 52px); line-height: 1.08; letter-spacing: 0.06em; }
+.faq-lead {
+  margin-top: 18px; max-width: 34ch;
+  font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.5;
+  color: var(--ink-secondary, rgba(255, 255, 255, 0.66));
+}
+.faq-list { border-top: 1px solid rgba(255, 255, 255, 0.22); }
+.faq-item { border-bottom: 1px solid rgba(255, 255, 255, 0.22); }
+.faq-q {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) 20px; align-items: baseline; gap: 6px;
+  padding: 20px 0; cursor: pointer; list-style: none;
+  font-family: var(--font-geist-sans), sans-serif; font-size: clamp(16px, 1.3vw, 19px); font-weight: 400; line-height: 1.35;
+  opacity: 0.82; transition: opacity 400ms var(--ease-expo);
+}
+.faq-q::-webkit-details-marker { display: none; }
+.faq-q:hover, .faq-item[open] .faq-q { opacity: 1; }
+.faq-q:focus-visible { outline: 1px solid var(--hue, #ffffff); outline-offset: 4px; }
+.faq-q__num { font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.14em; opacity: 0.5; }
+.faq-item[open] .faq-q__num { color: var(--hue, #ffffff); opacity: 1; }
+/* the marker: a plus that becomes a minus, drawn in two rules so nothing repaints */
+.faq-q__mark { position: relative; align-self: center; width: 14px; height: 14px; }
+.faq-q__mark::before, .faq-q__mark::after {
+  content: ""; position: absolute; left: 0; top: 50%; width: 14px; height: 1px; background: currentColor;
+  transition: transform 500ms var(--ease-expo);
+}
+.faq-q__mark::after { transform: rotate(90deg); }
+.faq-item[open] .faq-q__mark::after { transform: rotate(0deg); }
+.faq-a {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); padding: 0 0 22px;
+  animation: faq-open 600ms var(--ease-expo) both;
+}
+.faq-a p {
+  grid-column: 2; max-width: 62ch;
+  font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+@keyframes faq-open { from { opacity: 0; transform: translate3d(0, -6px, 0); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 1023px) {
+  .faq-wrap { grid-template-columns: minmax(0, 1fr); }
+  .faq-head { position: static; }
+}
+@media (max-width: 767px) {
+  .faq-section { padding: 56px var(--gutter); }
+  .faq-q { grid-template-columns: 28px minmax(0, 1fr) 16px; padding: 16px 0; }
+  .faq-a { grid-template-columns: 28px minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .faq-a { animation-duration: 1ms !important; }
+  .faq-q, .faq-q__mark::before, .faq-q__mark::after { transition-duration: 1ms !important; }
+}
