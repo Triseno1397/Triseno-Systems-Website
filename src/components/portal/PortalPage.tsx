@@ -243,10 +243,17 @@ export default function PortalPage() {
   useEffect(() => {
     if (mode === "pending" || !ready || capture) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // ?glyph=0..4 — hold one glyph (and the Operator's pose on it) for a look
+    const held = new URLSearchParams(window.location.search).get("glyph");
+    if (held !== null) {
+      show(Number(held), false);
+      return;
+    }
     const id = window.setInterval(() => {
       // and not while he is mid-move: the object morphing behind a spin read
       // as the whole scene glitching
-      if (interacting.current || document.hidden || portalState.hero > 0.35 || portalState.warpAt || portalState.performing) return;
+      // nor once the page moves: the Operator is on his way off the statue
+      if (interacting.current || document.hidden || portalState.hero > 0.01 || portalState.warpAt || portalState.performing) return;
       show((portalState.active + 1) % 3, false);
     }, 3600);
     return () => window.clearInterval(id);

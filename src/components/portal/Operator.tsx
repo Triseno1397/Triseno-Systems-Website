@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DBG } from "@/components/world/scene/env";
 import { deviceClass } from "@/lib/device";
+import type { Build } from "./statue";
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE OPERATOR — Triseno's rigged robot (21st: splite, rebuilt).
@@ -38,12 +39,34 @@ export interface OperatorState {
    *  light inside a hidden group stops being counted — which changes how many
    *  lights three builds into every shader, and the whole world recompiles. */
   hidden?: boolean;
-  /** 0..1 — how far into his roll-out of the frame he is (the scene drives
-   *  the travel and the roll; he tucks himself to match) */
+  /** 0..1 — how far into his exit of the frame he is */
   exit?: number;
+  /** 0..1 — knees to the chest, fists in, chin down (the somersault) */
+  tuck?: number;
+  /** his facing, when the scene decides it (otherwise stand.yaw) */
+  yaw?: number;
+  /** hands and feet placed on things, world space (see statue.ts) */
+  limbs?: Limbs;
+  /** his measurements at his stand scale, written by him once his rig is read */
+  build?: Build;
   /** touch screens: performance.now() of the last touch — he looks at the
    *  finger (px/py) while it is down and for a moment after */
   touchAt?: number;
+}
+
+export interface Limbs {
+  feet: [THREE.Vector3 | null, THREE.Vector3 | null];
+  footW: [number, number];
+  hands: [THREE.Vector3 | null, THREE.Vector3 | null];
+  handW: [number, number];
+  /** the hand rests on its own knee instead of a point */
+  knee: [boolean, boolean];
+  /** chest pitch forward, radians */
+  lean: number;
+  /** 0 knees forward (standing, crouching) .. 1 knees up (sitting) */
+  kneesUp: number;
+  /** knees out to the sides, for a wide stance */
+  kneesOut: number;
 }
 
 const DESK = "/models/robot-desk.glb";
@@ -76,8 +99,8 @@ const DRAW_END = 1.8; // the right hand has drawn it
 const BLEND = 0.35; // hand-off from the forge pose into the move
 
 /* the tuck of the roll-out, radians at full tuck: thigh up, knee bent */
-const TUCK_THIGH = 1.1;
-const TUCK_KNEE = 1.5;
+const TUCK_THIGH = 1.55;
+const TUCK_KNEE = 1.9;
 
 /* sizes in scene units (the robot stands 1 unit tall) */
 const BLADE = 0.5;
@@ -481,6 +504,8 @@ export default function Operator({
       lLeg: skinned.skeleton.bones.find((b) => b.name === "LeftLeg"),
       rUp: skinned.skeleton.bones.find((b) => b.name === "RightUpLeg"),
       rLeg: skinned.skeleton.bones.find((b) => b.name === "RightLeg"),
+      lFoot: skinned.skeleton.bones.find((b) => b.name === "LeftFoot"),
+      rFoot: skinned.skeleton.bones.find((b) => b.name === "RightFoot"),
     };
     const rest = new Map<THREE.Bone, THREE.Quaternion>();
     skinned.skeleton.bones.forEach((bn) => rest.set(bn, bn.quaternion.clone()));
@@ -553,7 +578,24 @@ export default function Operator({
     };
     const box = new THREE.Box3().setFromObject(scene);
     const height = box.getSize(new THREE.Vector3()).y;
-    return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y };
+    // his measurements in the bind pose, in his root's own units (he is one
+    // unit tall there, feet at -0.5): where the hips, ankles and shoulders are,
+    // so the scene can seat him and plant his feet on real surfaces
+    scene.updateMatrixWorld(true);
+    const at = (bn: THREE.Object3D | undefined) => {
+      const v = bn ? bn.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3();
+      return v.set(v.x / height, (v.y - box.min.y) / height - 0.5, v.z / height);
+    };
+    const lHip = at(b.lUp);
+    const rHip = at(b.rUp);
+    const unit = {
+      hipY: (lHip.y + rHip.y) / 2,
+      hipW: Math.abs(lHip.x - rHip.x) / 2,
+      ankleY: (at(b.lFoot).y + at(b.rFoot).y) / 2 + 0.5,
+      shoulderY: (at(b.lArm).y + at(b.rArm).y) / 2,
+      legLen: lHip.distanceTo(at(b.lFoot)),
+    };
+    return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y, unit };
   }, [robot, spinG, jumpG]);
 
   const swords = useMemo(() => [makeSword(), makeSword()], []);
@@ -980,7 +1022,9 @@ export default function Operator({
     if (s.seq < 0) turn(rig.b.chest, 0, Math.sin(s.t * 1.3) * 0.012); // breathing
     // ── the roll-out (OperatorInWorld drives the travel and the roll): he
     //    tucks — chin down, knees up, fists to the chest — as he goes ──
-    const tuck = smooth((state.exit ?? 0) * 1.7);
+    const tuck = smooth(state.tuck ?? 0);
+    const L = state.limbs;
+    if (L && L.lean) turn(rig.b.chest, 0, L.lean);
     if (tuck > 0.001) {
       turn(rig.b.chest, 0, tuck * 0.55);
       turn(rig.b.neck, 0, tuck * 0.35);
@@ -995,8 +1039,41 @@ export default function Operator({
         if (low) turn(low, 0, tuck * TUCK_KNEE);
       }
     }
-    r.rotation.y = (stand?.yaw ?? 0) + y * 0.22;
+    // planted, he turns from the waist up rather than swivelling on his seat
+    const planted = L ? Math.max(L.footW[0], L.footW[1]) : 0;
+    r.rotation.y = (state.yaw ?? stand?.yaw ?? 0) + y * 0.22 * (1 - 0.8 * planted);
     r.updateMatrixWorld(true);
+    if (!state.build) {
+      const k = stand?.scale ?? 1;
+      state.build = { hipY: rig.unit.hipY * k, hipW: rig.unit.hipW * k, ankleY: rig.unit.ankleY * k, shoulderY: rig.unit.shoulderY * k, legLen: rig.unit.legLen * k };
+    }
+
+    // ── feet on surfaces: two-bone IK down each leg, the foot kept level ──
+    tmp.fwd.set(0, 0, 1).transformDirection(r.matrixWorld);
+    tmp.side.set(1, 0, 0).transformDirection(r.matrixWorld);
+    if (L) {
+      const legs = [
+        [rig.b.lUp, rig.b.lLeg, rig.b.lFoot, 1],
+        [rig.b.rUp, rig.b.rLeg, rig.b.rFoot, -1],
+      ] as const;
+      for (let i = 0; i < 2; i++) {
+        const [up, low, foot, sd] = legs[i];
+        const T = L.feet[i];
+        const w = L.footW[i];
+        if (!up || !low || !foot || !T || w < 0.001) continue;
+        foot.getWorldQuaternion(tmp.quat2);
+        // knees forward and a touch outward; up toward the chest when seated
+        up.getWorldPosition(tmp.PL);
+        tmp.PL.addScaledVector(tmp.fwd, 1.2).addScaledVector(tmp.side, sd * (0.25 + L.kneesOut * 1.1));
+        tmp.PL.y += L.kneesUp * 1.1;
+        solveArm(up, low, foot, T, tmp.PL, w);
+        // the sole stays flat on what it stands on
+        low.getWorldQuaternion(_pw);
+        _bw.copy(_pw).invert().multiply(tmp.quat2);
+        foot.quaternion.slerp(_bw, w);
+        foot.updateMatrixWorld(true);
+      }
+    }
 
     // ── the forge: both hands meet at the chest, then the right hand draws ──
     // the hands are gathered over GATHER and, once the draw is done, released
@@ -1033,7 +1110,8 @@ export default function Operator({
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
     if (s.seq < 0 && (state.fine || touching) && tuck < 0.999) {
-      const reach = 0.42 * s.follow * (1 - tuck);
+      const placed = L ? Math.max(L.handW[0], L.handW[1], L.footW[0] * 0.6) : 0;
+      const reach = 0.42 * s.follow * (1 - tuck) * (1 - placed);
       const lift = 0.05 - s.pitch * 0.14;
       rig.b.rHand.getWorldPosition(tmp.TR).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
       tmp.TR.y += lift;
@@ -1041,6 +1119,29 @@ export default function Operator({
       tmp.TL.y += lift;
       solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, reach);
       solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, reach);
+    }
+    // ── hands on things: a palm on the glass, a forearm across a knee ──
+    if (L) {
+      const arms = [
+        [rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.PL, rig.b.lLeg, 1],
+        [rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.PR, rig.b.rLeg, -1],
+      ] as const;
+      for (let i = 0; i < 2; i++) {
+        const [arm, fore, handB, pole, knee, sd] = arms[i];
+        const w = L.handW[i] * (1 - s.ik);
+        if (w < 0.001) continue;
+        let T = L.hands[i];
+        if (L.knee[i] && knee) {
+          // the wrist just past the kneecap, the forearm lying along the thigh
+          T = knee.getWorldPosition(tmp.TL);
+          T.y += 0.07 * (stand?.scale ?? 1) / 2.6;
+          T.addScaledVector(tmp.fwd, 0.05).addScaledVector(tmp.side, -sd * 0.02);
+        }
+        if (!T) continue;
+        arm.getWorldPosition(pole).addScaledVector(tmp.side, sd * 0.4).addScaledVector(tmp.fwd, -0.15);
+        pole.y -= 0.3;
+        solveArm(arm, fore, handB, T, pole, w);
+      }
     }
     r.updateMatrixWorld(true);
     tmp.FL.copy(tmp.F);
