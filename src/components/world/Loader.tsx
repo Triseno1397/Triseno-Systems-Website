@@ -25,6 +25,14 @@ export default function Loader({ ready }: LoaderProps) {
   const countRef = useRef<HTMLSpanElement>(null);
   const readyRef = useRef(ready);
   const [phase, setPhase] = useState<"loading" | "leaving" | "gone">("loading");
+  // The component stays mounted once it is gone (it renders null), so its
+  // effect is never cleaned up: without this the draw loop kept running into
+  // a detached canvas for as long as the page was open — a wasted frame of
+  // canvas work on every tick of every visit.
+  const goneRef = useRef(false);
+  useEffect(() => {
+    goneRef.current = phase === "gone";
+  }, [phase]);
 
   useEffect(() => {
     readyRef.current = ready;
@@ -48,6 +56,7 @@ export default function Loader({ ready }: LoaderProps) {
     let last = start;
 
     const draw = (now: number) => {
+      if (goneRef.current) return; // the loader has left: the loop ends here
       // rAF timestamps can predate performance.now() taken in the effect — clamp.
       const t = Math.max(0, (now - start) / 1000);
       const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
