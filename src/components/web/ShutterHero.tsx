@@ -54,6 +54,11 @@ export default function ShutterHero() {
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        // On a phone the hero is taller than the screen and the concept wheel
+        // is its last thing: fading from the first pixel of scroll meant the
+        // wheel was half gone by the time it was in view. There the hero only
+        // fades as its bottom leaves the top part of the screen.
+        const phone = window.matchMedia("(max-width: 899px)").matches;
         gsap.fromTo(
           ".web-hero__grid",
           { opacity: 1, y: 0 },
@@ -63,8 +68,8 @@ export default function ShutterHero() {
             ease: "none",
             scrollTrigger: {
               trigger: rootRef.current,
-              start: "top top-=40",
-              end: "bottom 55%",
+              start: phone ? "bottom 62%" : "top top-=40",
+              end: phone ? "bottom 12%" : "bottom 55%",
               scrub: true,
             },
           },
