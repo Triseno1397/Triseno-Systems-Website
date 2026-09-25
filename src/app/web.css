@@ -1158,3 +1158,81 @@
     transition-duration: 1ms !important;
   }
 }
+
+/* ── the concept wheel (ConceptWheel.tsx): concept sites orbiting the browser ── */
+.cw {
+  position: relative; width: 100%;
+  /* room above and below the browser for the orbit */
+  padding: clamp(46px, 7svh, 78px) 11%;
+}
+.cw__centre { position: relative; z-index: 2; }
+.cw__card {
+  position: absolute; left: 50%; top: 50%; z-index: 3;
+  width: 104px; aspect-ratio: 16 / 10; margin: -32.5px 0 0 -52px; padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72); background: #0b0b0d; cursor: pointer;
+  overflow: hidden; will-change: transform, opacity;
+  box-shadow: 0 10px 26px -12px color-mix(in srgb, var(--hue) 70%, transparent);
+  transition: border-color 300ms var(--ease-expo);
+}
+.cw__card img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
+.cw__card:hover, .cw__card:focus-visible { border-color: var(--hue); outline: none; }
+/* the pick, laid over the live concept site in the browser */
+.web-hero__pick {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0;
+  opacity: 0; transition: opacity 320ms var(--ease-expo); pointer-events: none;
+}
+.web-hero__pick[data-on] { opacity: 1; }
+@media (max-width: 899px) {
+  /* a narrower browser, so the orbit passes round it rather than over it */
+  .cw { padding: 52px 17%; }
+  .cw__card { width: 66px; margin: -20.5px 0 0 -33px; }
+}
+
+/* ── Carbon Forge: the moving concept site (CarbonForgeSite.tsx) ── */
+.cw__live { position: absolute; inset: 0; display: block; container-type: inline-size; }
+.web-hero__pick--live { display: block; }
+.cf {
+  --u: 1cqw; --copper: #d08a52; --ink: #f3ede6;
+  position: absolute; inset: 0; display: block; overflow: hidden; background: #050505; color: var(--ink);
+  font-family: var(--font-geist-sans), sans-serif; font-size: calc(var(--u) * 1.5); line-height: 1.4;
+}
+.cf-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 50%; }
+.cf-shade {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.94) 0%, rgba(5, 5, 5, 0.72) 34%, rgba(5, 5, 5, 0) 62%),
+    linear-gradient(180deg, rgba(5, 5, 5, 0.55) 0%, rgba(5, 5, 5, 0) 22%, rgba(5, 5, 5, 0) 74%, rgba(5, 5, 5, 0.8) 100%);
+}
+.cf-nav {
+  position: absolute; left: calc(var(--u) * 4); right: calc(var(--u) * 4); top: calc(var(--u) * 3);
+  display: flex; align-items: center; gap: calc(var(--u) * 3);
+}
+.cf-logo { font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: calc(var(--u) * 1.9); letter-spacing: 0.22em; text-transform: uppercase; }
+.cf-links { display: flex; gap: calc(var(--u) * 2.6); margin-left: auto; font-size: calc(var(--u) * 1.35); letter-spacing: 0.08em; opacity: 0.78; }
+.cf-btn {
+  display: inline-block; padding: calc(var(--u) * 0.9) calc(var(--u) * 1.8);
+  border: 1px solid var(--copper); color: var(--copper);
+  font-size: calc(var(--u) * 1.25); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
+}
+.cf-btn--solid { background: var(--copper); color: #0b0806; }
+.cf-copy {
+  position: absolute; left: calc(var(--u) * 4); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 1.8); width: 46%;
+}
+.cf-kicker { font-size: calc(var(--u) * 1.2); letter-spacing: 0.3em; text-transform: uppercase; color: var(--copper); }
+.cf-h {
+  display: flex; flex-direction: column;
+  font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: calc(var(--u) * 4.6);
+  line-height: 1.02; letter-spacing: -0.01em; text-transform: uppercase;
+}
+.cf-h em { font-style: normal; color: var(--copper); }
+.cf-p { max-width: 34ch; font-size: calc(var(--u) * 1.55); color: rgba(243, 237, 230, 0.72); }
+.cf-actions { display: flex; align-items: center; gap: calc(var(--u) * 2.4); }
+.cf-link { font-size: calc(var(--u) * 1.25); letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 1px solid rgba(243, 237, 230, 0.5); padding-bottom: 2px; }
+.cf-specs {
+  position: absolute; left: calc(var(--u) * 4); right: calc(var(--u) * 4); bottom: calc(var(--u) * 3);
+  display: flex; gap: calc(var(--u) * 5); padding-top: calc(var(--u) * 1.4);
+  border-top: 1px solid rgba(243, 237, 230, 0.22);
+  font-size: calc(var(--u) * 1.15); letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243, 237, 230, 0.6);
+}
+.cf-specs b { display: block; font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: calc(var(--u) * 2.4); letter-spacing: 0; color: var(--ink); }

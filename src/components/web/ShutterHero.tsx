@@ -7,6 +7,9 @@ import { useGSAP } from "@gsap/react";
 import GhostButton from "@/components/ui/GhostButton";
 import GlassPanel from "@/components/world/GlassPanel";
 import { getLenis } from "@/components/world/SmoothScroll";
+import ConceptWheel from "./ConceptWheel";
+import { SITE_TEMPLATES } from "./siteTemplates";
+import CarbonForgeSite from "./CarbonForgeSite";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -41,6 +44,9 @@ export default function ShutterHero() {
   const [run, setRun] = useState(0);
   const replay = () => setRun((v) => v + 1);
   const rootRef = useRef<HTMLElement>(null);
+  // which concept site the browser shows: null = its own live Vale & Hollis
+  const [pick, setPick] = useState<number | null>(null);
+  const picked = pick === null ? null : SITE_TEMPLATES[pick];
 
   // Leaving: the whole hero fades and lifts away as it scrolls out, so no
   // part of it (the CTA row least of all) lingers under the lockup.
@@ -154,28 +160,47 @@ export default function ShutterHero() {
         </div>
 
         <div className="web-hero__object">
-          <GlassPanel world="web" className="web-bezel">
-            <button
-              type="button"
-              key={`s${run}`}
-              className="web-hero__site"
-              onClick={replay}
-              aria-label="Concept site for Vale and Hollis. Replay the shutter."
-            >
-              <span className="web-browser__bar">
-                <span aria-hidden="true" className="web-browser__dots">
-                  <i />
-                  <i />
-                  <i />
+          <ConceptWheel templates={SITE_TEMPLATES} sectionRef={rootRef} onPick={setPick}>
+            <GlassPanel world="web" className="web-bezel">
+              <button
+                type="button"
+                key={`s${run}`}
+                className="web-hero__site"
+                onClick={replay}
+                aria-label={`Concept site for ${picked ? picked.name : "Vale and Hollis"}. Replay the shutter.`}
+              >
+                <span className="web-browser__bar">
+                  <span aria-hidden="true" className="web-browser__dots">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="web-browser__url">{picked ? picked.url : "valeandhollis.example"}</span>
+                  <span className="web-browser__tag">Concept</span>
                 </span>
-                <span className="web-browser__url">valeandhollis.example</span>
-                <span className="web-browser__tag">Concept</span>
-              </span>
-              <span className="web-hero__site-view">
-                <HeroSite />
-              </span>
-            </button>
-          </GlassPanel>
+                <span className="web-hero__site-view">
+                  <HeroSite />
+                  {/* the orbit's pick, laid over the live site */}
+                  {picked?.live ? (
+                    <span className="web-hero__pick web-hero__pick--live" data-on="">
+                      <CarbonForgeSite />
+                    </span>
+                  ) : null}
+                  {SITE_TEMPLATES.filter((tpl) => !tpl.live).map((tpl) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={tpl.key}
+                      src={picked?.key === tpl.key ? tpl.full : undefined}
+                      alt=""
+                      aria-hidden="true"
+                      className="web-hero__pick"
+                      data-on={picked?.key === tpl.key ? "" : undefined}
+                    />
+                  ))}
+                </span>
+              </button>
+            </GlassPanel>
+          </ConceptWheel>
           <span aria-hidden="true" className="web-hero__mirror" />
         </div>
       </div>
