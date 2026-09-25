@@ -365,6 +365,12 @@ export interface Quality {
 export function initialQuality(): Quality {
   if (DBG.includes("H")) return { maxDpr: 1.5, under: 1, tier: "high", cap30: false };
   const dc = deviceClass();
+  // A phone: its screen is small in CSS pixels, so twice its density is about
+  // a laptop's worth of pixels — below that a 3x screen looks smeared. It
+  // keeps the lighter pass chain. (Phones rarely report their memory, and
+  // iOS reports few cores, so the class alone would leave them at 1x.)
+  if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse) and (max-width: 1023px)").matches && dc !== "low")
+    return { maxDpr: 2, under: 1, tier: "low", cap30: false };
   if (dc === "low") return { maxDpr: 1, under: 0.75, tier: "low", cap30: false };
   if (dc === "mid") return { maxDpr: 1, under: 1, tier: "low", cap30: false };
   return { maxDpr: 1.5, under: 1, tier: DBG.includes("l") ? "low" : "high", cap30: false };
@@ -380,6 +386,7 @@ export function gpuQuality(q: Quality, cls: ReturnType<typeof gpuClass>): Qualit
  *  nothing is left to give. */
 export function stepDown(q: Quality): Quality | null {
   const device = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  if (q.maxDpr > 1.5 && device > 1.5) return { ...q, maxDpr: 1.5 };
   if (q.maxDpr > 1 && device > 1) return { ...q, maxDpr: 1 };
   if (q.under > 0.8) return { ...q, under: +(q.under - 0.125).toFixed(3) };
   if (q.tier === "high") return { ...q, tier: "low" };

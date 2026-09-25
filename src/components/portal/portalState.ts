@@ -21,6 +21,9 @@ export const portalState = {
   /** normalised pointer, -1..1 */
   px: 0,
   py: 0,
+  /** performance.now() of the last touch on the screen, 0 = never: the
+   *  Operator follows a finger while it is down and a little after */
+  touchAt: 0,
   /** door index under the pointer in 3D, or -1 */
   hoverDoor: -1,
   /** performance.now() when a warp out of the portal started, else 0 */

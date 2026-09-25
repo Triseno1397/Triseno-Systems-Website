@@ -387,6 +387,8 @@ function GateObject() {
  * sideways camera move, never a lens shift — a level camera moved sideways
  * keeps the vanishing point where the plate has it.
  */
+const PHONE_FOV = 50;
+const PHONE_LIFT = 0.12;
 const PLATE_HORIZON = plate("portal").horizon.desktop;
 
 /* The Operator stands in the portal's own hall, inside this scene: one WebGL
@@ -402,6 +404,11 @@ const EXIT_DX = 3.4;
 
 function OperatorInWorld({ state }: { state: OperatorState }) {
   const group = useRef<THREE.Group>(null);
+  const { size } = useThree();
+  // a phone held upright: he stands centred, further down the hall, inside
+  // the glyph and between the headline and the menu (the desktop has him
+  // forward and to the right of the copy)
+  const tall = size.width < 768 && size.height > size.width;
   const busy = useRef(false);
   // His forge light, here from the first frame at zero brightness. His files
   // arrive seconds after the world has compiled, and a light that came with
@@ -414,11 +421,13 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     const n = (k: string, d: number) => Number(u?.get(k) ?? d);
     const scale = n("ops", 2.6);
     return {
-      position: [n("opx", 0.25), n("opy", 0.5 * scale), n("opz", 1.9)] as [number, number, number],
+      position: [n("opx", tall ? 0.35 : 0.25), n("opy", 0.5 * scale), n("opz", tall ? 0.2 : 1.9)] as [number, number, number],
       scale,
-      yaw: n("opyaw", -0.35),
+      yaw: n("opyaw", tall ? -0.2 : -0.35),
     };
-  }, []);
+  }, [tall]);
+  // on touch he looks around on his own, and at a finger while one is down
+  const coarse = useMemo(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches, []);
   // ?opexit=0.5 — hold him mid-roll for a look
   const holdExit = useMemo(() => {
     if (typeof window === "undefined") return -1;
@@ -428,6 +437,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   useFrame(() => {
     state.px = portalState.px;
     state.py = portalState.py;
+    state.fine = !coarse;
+    state.touchAt = portalState.touchAt;
     portalState.performing = busy.current;
     // the roll-out: 0 standing, 1 gone. Ease-in on the travel so he gathers
     // himself first, then whips away; the roll turns with the distance he
@@ -505,7 +516,10 @@ function CameraRig() {
       pos.set(frameX + px * 0.35 * kk * (1 - w), CAM_Y + (RING_Y - CAM_Y) * Math.max(h, w) + py * 0.12 * kk * (1 - w), z);
     }
     if (doors > 0) {
-      z = dollyZ(doors) - gate * 4.5;
+      // on an upright phone it stops further off, so the gate sits above its
+      // copy instead of behind it
+      const tall = size.width < 768 && size.height > size.width;
+      z = dollyZ(doors) - gate * (tall ? 1.5 : 4.5);
       pos.set(frameX + px * 0.2, DOOR_CAM_Y + py * 0.08 + gate * 0.35, z);
     }
     // level gaze, straight down the corridor
@@ -522,7 +536,15 @@ function CameraRig() {
     if (lens.current !== key) {
       lens.current = key;
       const cam = camera as THREE.PerspectiveCamera;
-      cam.setViewOffset(size.width, size.height, 0, -Math.round((PLATE_HORIZON - 0.5) * size.height), size.width, size.height);
+      // A phone held upright is a third as wide as a laptop: at the desktop's
+      // lens every door and the gate filled it edge to edge, with the copy on
+      // top of them. A wider lens there keeps each object in the space the
+      // copy leaves it.
+      const tall = size.width < 768 && size.height > size.width;
+      cam.fov = tall ? PHONE_FOV : 36;
+      // and the hall sits higher in the frame, so what stands on its floor is
+      // up between the headline and the menu rather than under the menu
+      cam.setViewOffset(size.width, size.height, 0, -Math.round((PLATE_HORIZON - 0.5 - (tall ? PHONE_LIFT : 0)) * size.height), size.width, size.height);
     }
 
     // where the floor under the gate object lands on screen — the beams fall to it

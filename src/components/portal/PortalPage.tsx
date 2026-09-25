@@ -32,12 +32,35 @@ gsap.registerPlugin(ScrollTrigger);
 const PortalScene = dynamic(() => import("./PortalScene"), { ssr: false });
 // …but its chunk is asked for the moment this one runs, not after hydration:
 // on a desktop that had it arriving 2.4s in, with the loader waiting on it.
-if (typeof window !== "undefined" && !window.matchMedia("(max-width: 767px), (prefers-reduced-motion: reduce)").matches) {
+if (typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
   void import("./PortalScene");
 }
 
 
 type Mode = "pending" | "full" | "lite";
+
+/* iOS Safari does not lose a WebGL context when it runs short of memory: it
+   kills the whole tab and reloads the page. So a phone marks the world as
+   booting before it builds it and clears the mark once it has run a while (or
+   the visitor leaves the portal normally). A mark still there on the next load
+   means the last attempt took the tab down: that phone gets the 2D world for
+   the next half hour instead of a crash loop. */
+const GUARD_KEY = "triseno:world-guard";
+const GUARD_HOLD = 30 * 60 * 1000;
+function guardTripped(): boolean {
+  try {
+    const at = Number(localStorage.getItem(GUARD_KEY) || 0);
+    return at > 0 && Date.now() - at < GUARD_HOLD;
+  } catch {
+    return false;
+  }
+}
+function guardSet(on: boolean) {
+  try {
+    if (on) localStorage.setItem(GUARD_KEY, String(Date.now()));
+    else localStorage.removeItem(GUARD_KEY);
+  } catch {}
+}
 
 const WHITE = "#ffffff";
 
@@ -90,6 +113,7 @@ export default function PortalPage() {
   const [beams, setBeams] = useState(false);
   // the Operator needs WebGL; without it the lite glyph stands in for him
   const [hasGL, setHasGL] = useState(false);
+  const [touch, setTouch] = useState(false);
   const [capture, setCapture] = useState(false);
   // lite world: the one fixed backdrop takes the hue of the door that owns the
   // viewport, and is white light everywhere else (D2)
@@ -143,14 +167,21 @@ export default function PortalPage() {
     }
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const small = window.matchMedia("(max-width: 767px)").matches;
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    setTouch(coarse);
     // the API existing is the check; a context that then fails to create is
     // caught by SceneGuard and the page falls back to the lite world
     const gl = typeof WebGL2RenderingContext !== "undefined" || typeof WebGLRenderingContext !== "undefined";
     setHasGL(gl);
     // an old phone or a machine that says it is short on memory/cores gets the
     // 2D world outright (lib/device.ts)
-    const lite = reduced || small || !gl || prefersLite();
+    // ?world=full|lite forces a world, for checking either one on any device
+    const force = new URLSearchParams(window.location.search).get("world");
+    // Phones get the full world too, now that it tiers itself down (lib/device,
+    // the Governor) — unless the guard says it took this phone's tab down.
+    const lite = force === "full" ? false : force === "lite" ? true : reduced || !gl || prefersLite() || (coarse && guardTripped());
+    const guarded = !lite && coarse;
+    if (guarded) guardSet(true);
     setMode(lite ? "lite" : "full");
     if (lite) {
       const done = () => setReady(true);
@@ -158,8 +189,17 @@ export default function PortalPage() {
     }
     return () => {
       portalState.warpAt = 0;
+      // leaving the portal normally is not a crash
+      if (guarded) guardSet(false);
     };
   }, []);
+
+  // ...and a world that has run for a while on this phone has proved itself
+  useEffect(() => {
+    if (mode !== "full" || !ready || !touch) return;
+    const id = window.setTimeout(() => guardSet(false), 20000);
+    return () => window.clearTimeout(id);
+  }, [mode, ready, touch]);
 
   useEffect(() => {
     if (!viaWarp) return;
@@ -235,8 +275,30 @@ export default function PortalPage() {
       portalState.px = (e.clientX / window.innerWidth) * 2 - 1;
       portalState.py = (e.clientY / window.innerHeight) * 2 - 1;
     };
+    // A finger is the pointer on a phone: the hall and the Operator follow it
+    // while it is down, and settle back when it lifts. Passive, so scrolling
+    // is never held up by it.
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      portalState.px = (t.clientX / window.innerWidth) * 2 - 1;
+      portalState.py = (t.clientY / window.innerHeight) * 2 - 1;
+      portalState.touchAt = performance.now();
+    };
+    const onLift = () => {
+      portalState.px = 0;
+      portalState.py = 0;
+    };
     window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("touchmove", onTouch, { passive: true });
+    window.addEventListener("touchend", onLift, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("touchend", onLift);
+    };
   }, [mode, capture]);
 
   /* ── scroll -> camera (full mode) ── */
@@ -432,7 +494,7 @@ export default function PortalPage() {
           ref={heroInnerRef}
           data-leaving={leaving ? "" : undefined}
           className={`portal-hero ${
-            full ? "pointer-events-none fixed inset-0" : "relative min-h-[100svh]"
+            full ? "portal-hero--full pointer-events-none fixed inset-0" : "relative min-h-[100svh]"
           } mx-auto flex max-w-[1400px] flex-col justify-between px-[var(--gutter)] pb-[var(--lane-bottom)] pt-[max(var(--lane-top),15svh)]`}
         >
           <div className="pointer-events-none">
@@ -461,7 +523,7 @@ export default function PortalPage() {
           {/* he is rendered inside the portal scene on a desktop; this is his label */}
           {hasGL && full ? (
             <p aria-hidden="true" className="portal-operator-hint chrome-label font-mono">
-              Click the operator
+              {touch ? "Tap" : "Click"} the operator
             </p>
           ) : null}
 
@@ -504,7 +566,7 @@ export default function PortalPage() {
             {DOOR_ITEMS.map((door, i) => (
               <div
                 key={door.key}
-                className={`absolute top-1/2 w-[min(440px,40vw)] -translate-y-1/2 ${
+                className={`door-slot absolute top-1/2 w-[min(440px,40vw)] -translate-y-1/2 ${
                   doorSide(i) < 0 ? "right-[calc(var(--gutter)+72px)]" : "left-[var(--gutter)]"
                 }`}
               >
@@ -548,7 +610,7 @@ export default function PortalPage() {
         data-rail="Gate"
         data-rail-next="Contact"
         aria-label="Start a conversation"
-        className="portal-gate relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center overflow-hidden px-[var(--gutter)]"
+        className={`portal-gate ${full ? "portal-gate--full" : ""} relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center overflow-hidden px-[var(--gutter)]`}
       >
         {mode === "lite" ? (
           <>

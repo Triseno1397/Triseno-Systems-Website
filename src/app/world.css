@@ -1038,40 +1038,7 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 .morph-nav__lockup > * { pointer-events: auto; }
 
 /* ── THE OPERATOR (portal: interactive 3D robot) ─────────────────────── */
-.portal-robot { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 72px); padding-top: var(--lane-top); padding-bottom: var(--lane-bottom); }
-.portal-robot__title { font-size: var(--fs-display); line-height: 1.06; letter-spacing: 0.08em; }
 .portal-robot__hint { color: var(--robot-hue, #ffffff); transition: color 700ms var(--ease-expo); }
-.portal-robot__stage { height: min(88svh, 900px); cursor: pointer; outline: none; }
-.portal-robot__stage:focus-visible { outline: 1px solid #ffffff; outline-offset: 6px; }
-/* the white backlight behind the figure; it takes the blade's hue on a strike */
-.portal-robot__aura {
-  position: absolute; left: 50%; top: 44%; width: 62%; aspect-ratio: 1; transform: translate(-50%, -50%);
-  border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.13) 46%, rgba(255, 255, 255, 0) 100%);
-  opacity: 0; transition: opacity 1200ms var(--ease-expo);
-}
-.portal-robot__stage[data-ready] .portal-robot__aura { opacity: 1; }
-.portal-robot[style*="--robot-hue"] .portal-robot__aura {
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--robot-hue) 40%, transparent), color-mix(in srgb, var(--robot-hue) 12%, transparent) 46%, transparent 100%);
-}
-.portal-robot__stage canvas { opacity: 0; transition: opacity 1200ms var(--ease-expo); }
-.portal-robot__stage[data-ready] canvas { opacity: 1; }
-@media (max-width: 767px) {
-  .portal-robot { grid-template-columns: minmax(0, 1fr); gap: 0; align-content: center; }
-  .portal-robot__stage { height: 64svh; margin-top: -2svh; }
-}
-/* its own dark stage over the portal world: soft-edged top and bottom so the
-   world dissolves into it and back out, and the white backlight carries it */
-.portal-robot::before {
-  content: ""; position: absolute; inset: 0 calc(50% - 50vw); z-index: -1; pointer-events: none;
-  background: radial-gradient(ellipse 60% 70% at 68% 50%, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.93) 72%), #000;
-  opacity: 0.94;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
-}
-@media (max-width: 767px) {
-  .portal-robot::before { background: radial-gradient(ellipse 90% 60% at 50% 62%, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.94) 72%), #000; }
-}
 /* smoked glass (moving panels): the same hairline and veil, a touch denser */
 .glass-panel--smoked .glass-panel__veil {
   background:
@@ -1118,6 +1085,48 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 }
 .portal-world[data-hot] .portal-operator-hint { color: rgba(255, 255, 255, 0.75); }
 @media (max-width: 1023px) { .portal-operator-hint { display: none; } }
+
+/* ── PHONE, FULL WORLD ──────────────────────────────────────────────────
+   The same 3D hall as the desktop, composed for a tall screen: the headline
+   up top, the Operator standing in the glyph between it and the menu, the
+   menu tucked above the bottom bar; each door's card along the bottom, under
+   its door; the gate's copy under the gate. */
+@media (max-width: 767px) {
+  main.portal-world .portal-hero--full { padding-top: 12svh; padding-bottom: 12svh; }
+  .portal-hero--full .portal-sub { display: none; }
+  .portal-hero--full .portal-menu { margin-top: 0; }
+  .portal-hero--full .portal-menu > .chrome-label { margin-bottom: 0.9rem; }
+  .portal-hero--full .portal-menu__group { font-size: clamp(1.05rem, 5.4vw, 1.4rem); }
+  .portal-hero--full .scroll-tick { display: none; }
+  /* WORK and CONTACT live in the top menu too: on a phone the hero keeps the
+     three divisions, and the room goes to the Operator */
+  .portal-hero--full .portal-menu__rule,
+  .portal-hero--full .portal-menu__rule + div { display: none; }
+  .portal-hero--full .portal-menu,
+  .portal-hero--full .portal-headline { text-shadow: 0 1px 18px rgba(0, 0, 0, 0.55); }
+  .portal-operator-hint {
+    display: block; right: var(--gutter); left: auto; bottom: auto; top: 63svh;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .door-slot {
+    left: var(--gutter) !important; right: var(--gutter) !important; width: auto !important;
+    top: auto !important; bottom: 11svh;
+    /* Tailwind 4 centres with the translate property; the minifier folds a
+       plain translate: none into a transform, so zero its variable instead */
+    --tw-translate-y: 0px !important;
+  }
+  .portal-gate--full { justify-content: flex-end; padding-bottom: 11svh; }
+  .portal-gate--full .gate-title { font-size: clamp(1.6rem, 8vw, 2.2rem); }
+  .portal-gate--full .portal-gate__copy > .chrome-label { margin-bottom: 1rem; }
+  .portal-gate--full .portal-gate__copy > p + p { margin-top: 1rem; }
+  .portal-gate--full .portal-gate__copy > a { margin-top: 1.5rem; }
+  .portal-gate--full .portal-gate__copy { text-shadow: 0 1px 18px rgba(0, 0, 0, 0.6); }
+  /* a lower-third fade: the gate glows above, the copy reads over the dark */
+  .portal-gate--full::before {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 70%; pointer-events: none;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.62) 55%, rgba(0, 0, 0, 0));
+  }
+}
 
 /* Animations do not run in rooms you are not in (PauseOffscreen.tsx marks the
    sections that are on screen). An infinite animation on an off-screen SVG

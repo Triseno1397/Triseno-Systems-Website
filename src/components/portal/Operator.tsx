@@ -41,6 +41,9 @@ export interface OperatorState {
   /** 0..1 — how far into his roll-out of the frame he is (the scene drives
    *  the travel and the roll; he tucks himself to match) */
   exit?: number;
+  /** touch screens: performance.now() of the last touch — he looks at the
+   *  finger (px/py) while it is down and for a moment after */
+  touchAt?: number;
 }
 
 const DESK = "/models/robot-desk.glb";
@@ -878,6 +881,8 @@ export default function Operator({
     const r = root.current;
     if (!r) return;
     if (shown.current) shown.current.visible = !state.hidden && linked.current;
+    // ?dbg=o: where he is in his start-up, for the design-loop tools
+    if (DBG.includes("o")) (window as unknown as { __op: unknown }).__op = { linked: linked.current, env: !!scene.environment, warmedEnv, hidden: !!state.hidden, arrive: s.arrive };
     s.arrive = damp(s.arrive, 1, 5, dt);
     r.scale.setScalar((stand?.scale ?? 1) * (0.001 + 0.999 * ease(s.arrive)));
     if (dbg) {
@@ -955,7 +960,8 @@ export default function Operator({
 
     // ── look at the visitor (or scan around on touch) ──
     let tx: number, ty: number;
-    if (state.fine) {
+    const touching = !state.fine && !!state.touchAt && performance.now() - state.touchAt < 1800;
+    if (state.fine || touching) {
       tx = state.px;
       ty = state.py;
     } else {
@@ -1026,7 +1032,7 @@ export default function Operator({
     // At rest the hands follow the pointer as well, a little and after the
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
-    if (s.seq < 0 && state.fine && tuck < 0.999) {
+    if (s.seq < 0 && (state.fine || touching) && tuck < 0.999) {
       const reach = 0.42 * s.follow * (1 - tuck);
       const lift = 0.05 - s.pitch * 0.14;
       rig.b.rHand.getWorldPosition(tmp.TR).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
