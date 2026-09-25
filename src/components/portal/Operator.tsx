@@ -81,10 +81,23 @@ export interface Limbs {
 /** how long looking his blade over takes, seconds */
 export const INSPECT = 7;
 
-/* the blade inspection, seconds: the hilt is built in his fist as it comes up,
-   the blade runs out, he turns it in the light at arm's length, the blade runs
-   back in and the hilt dissolves before the arm comes down */
-const INS = { scan: [0.3, 0.85], out: [0.95, 1.35], turn: [1.5, 4.5], in: [4.7, 5.1], gone: [5.2, 5.8], down: [5.9, 6.9] } as const;
+/* the blade inspection, seconds. A cross-draw: his right hand goes to his
+   left hip, where the hilt forms in his grip as if from a scabbard; he draws
+   in one sweep up and out, the blade running out of the guard along the
+   swing, and it locks upright at arm's length with a glint down the steel.
+   He turns it in the light, then sheathes it the same way back to the hip —
+   the blade running in as it goes — and the hilt is gone. */
+const INS = {
+  hilt: [0.3, 0.5],
+  draw: [0.5, 1.1],
+  out: [0.62, 0.95],
+  glint: [0.92, 1.3],
+  turn: [1.45, 4.25],
+  sheathe: [4.4, 5.1],
+  in: [4.55, 4.9],
+  gone: [5.15, 5.35],
+  down: [5.4, 6.3],
+} as const;
 
 /* ── the jets under his feet ───────────────────────────────────────────────
    Two flames per boot, a white-hot core inside a wider pale-blue plume, drawn
@@ -272,6 +285,9 @@ const _pw = new THREE.Quaternion();
 const _bw = new THREE.Quaternion();
 const _id = new THREE.Quaternion();
 const insQ = {
+  hip: new THREE.Vector3(),
+  front: new THREE.Vector3(),
+  q2: new THREE.Quaternion(),
   dir: new THREE.Vector3(),
   x: new THREE.Vector3(),
   z: new THREE.Vector3(),
@@ -324,12 +340,12 @@ interface SwordRig {
   plane: THREE.Plane;
   /** the guard's mouth: the blade is only drawn above it, so it can slide out */
   bladePlane: THREE.Plane;
-  /** hilt + blade + ring: what is hidden between moves. The group itself
-   *  stays in the scene — see the note in makeSword. */
+  /** hilt + blade: what is hidden between moves. The group itself stays in
+   *  the scene — see the note in makeSword. */
   body: THREE.Group;
-  ring: THREE.Mesh;
   blade: THREE.Group;
-  ringMat: THREE.MeshBasicMaterial;
+  /** the blade's mirror-polished edges: lit for the glint when it locks */
+  edge: THREE.MeshStandardMaterial;
 }
 
 const GRIP_LO = -0.05; // pommel end of the grip, below the fist's centre
@@ -466,7 +482,9 @@ function makeSword(): SwordRig {
   const bladePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   // his three finishes: mirror chrome, a satin grade, and gunmetal
   const kit = (clip: THREE.Plane) => [
-    new THREE.MeshStandardMaterial({ color: "#f4f6f9", metalness: 1, roughness: 0.1, envMapIntensity: 2, clippingPlanes: [clip], side: THREE.DoubleSide }),
+    // emissive white at zero intensity: the glint animates the intensity,
+    // which (unlike switching emissive on) never rebuilds the shader
+    new THREE.MeshStandardMaterial({ color: "#f4f6f9", metalness: 1, roughness: 0.1, envMapIntensity: 2, clippingPlanes: [clip], side: THREE.DoubleSide, emissive: "#ffffff", emissiveIntensity: 0 }),
     new THREE.MeshStandardMaterial({ color: "#c3c8cf", metalness: 0.92, roughness: 0.28, envMapIntensity: 1.8, clippingPlanes: [clip], side: THREE.DoubleSide }),
     new THREE.MeshStandardMaterial({ color: "#2b2e34", metalness: 0.9, roughness: 0.4, envMapIntensity: 1.1, clippingPlanes: [clip], side: THREE.DoubleSide }),
   ];
@@ -480,39 +498,29 @@ function makeSword(): SwordRig {
   blade.position.y = BLADE_BASE - BLADE;
   blade.visible = false;
   body.add(blade);
-
-  // the fabrication ring that travels up the hilt with the scan
-  const ringMat = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0018, 6, 32), ringMat);
-  ring.rotation.x = Math.PI / 2;
-  ring.visible = false;
-  body.add(ring);
-  return { group, body, plane, bladePlane, ring, blade, ringMat };
+  return { group, body, plane, bladePlane, blade, edge: bladeMats[0] };
 }
 
 const _up = new THREE.Vector3();
 const _p = new THREE.Vector3();
-/** Reveal (0..1) the hilt from its pommel up; the ring rides the cut. */
+/** Reveal (0..1) the hilt from its pommel up. */
 function setScan(sw: SwordRig, k: number) {
   sw.group.updateMatrixWorld(true);
   _up.set(0, 1, 0).transformDirection(sw.group.matrixWorld);
   const y = THREE.MathUtils.lerp(POMMEL_LO - 0.003, BLADE_BASE + 0.004, k);
   _p.set(0, y, 0).applyMatrix4(sw.group.matrixWorld);
   sw.plane.setFromNormalAndCoplanarPoint(_up.negate(), _p);
-  sw.ring.position.set(0, y, 0);
-  sw.ring.visible = k > 0.001 && k < 0.999;
 }
 
 const WHITE = new THREE.Color("#ffffff");
 /** Deploy (0..1) the blade: it runs up out of the guard and locks. */
-function setBlade(sw: SwordRig, k: number, hue: THREE.Color) {
+function setBlade(sw: SwordRig, k: number) {
   sw.blade.visible = k > 0.002;
   sw.blade.position.y = BLADE_BASE - BLADE * (1 - k);
   // the group's world matrix is fresh from setScan this frame
   _up.set(0, 1, 0).transformDirection(sw.group.matrixWorld);
   _p.set(0, BLADE_BASE, 0).applyMatrix4(sw.group.matrixWorld);
   sw.bladePlane.setFromNormalAndCoplanarPoint(_up, _p);
-  sw.ringMat.color.copy(hue).multiplyScalar(1.6);
 }
 
 /* ── light gathering into the palms ─────────────────────────────────────── */
@@ -705,6 +713,7 @@ export default function Operator({
   const swords = useMemo(() => [makeSword(), makeSword()], []);
   const jets = useMemo(() => makeJets(), []);
   const bladeMid = useMemo(() => new THREE.Vector3(), []);
+  const fistAt = useMemo(() => new THREE.Vector3(), []);
   const sparks = useMemo(() => makeSparks(), []);
   const orb = useMemo(() => {
     const m = new THREE.Mesh(
@@ -942,7 +951,7 @@ export default function Operator({
     const rootObj = root.current;
     if (!rootObj) return;
     // everything he brings out mid-move is shown for the compile and the
-    // texture upload, then hidden again: the blades, the fabrication ring,
+    // texture upload, then hidden again: the blades, the jets,
     // the sparks and the forge orb.
     const hidden: THREE.Object3D[] = [];
     const show = (o: THREE.Object3D | null | undefined) => {
@@ -953,9 +962,8 @@ export default function Operator({
     swords.forEach((sw) => {
       show(sw.body);
       show(sw.blade);
-      show(sw.ring);
     });
-    [sparks.pts, orb.mesh].forEach((o) => show(o));
+    [sparks.pts, orb.mesh, jets.group].forEach((o) => show(o));
     const done = () => hidden.forEach((o) => (o.visible = false));
     // A real draw, into a 1x1 target nobody sees: it links exactly the programs
     // a real draw needs and uploads every texture on the way. compileAsync
@@ -1003,7 +1011,7 @@ export default function Operator({
         done();
       }
     };
-  }, [gl, scene, camera, swords, orb, sparks, warmedEnv]);
+  }, [gl, scene, camera, swords, orb, sparks, jets, warmedEnv]);
 
   // The world's environment map arrives after he does, and a material compiled
   // without it is compiled again the first time it is drawn with it — for the
@@ -1118,7 +1126,10 @@ export default function Operator({
       ty = Math.sin(s.t * 0.29 + 1.2) * 0.25;
     }
     const ins = s.seq < 0 ? state.inspect ?? -1 : -1;
-    const look = state.gaze ?? (ins >= INS.out[0] && ins < INS.in[1] ? bladeMid : null);
+    // his eyes: on the fist as it draws and as it sheathes, on the blade while
+    // it is held out (following the blade to his hip twisted his whole spine)
+    const held = ins >= INS.draw[1] - 0.15 && ins < INS.sheathe[0] + 0.15;
+    const look = state.gaze ?? (held ? bladeMid : ins >= INS.hilt[0] && ins < INS.gone[1] ? fistAt : null);
     if (look) {
       // a look at something in the world, turned into the same yaw and pitch
       // the pointer drives (the spine, neck and head share ~1.4x of the yaw
@@ -1283,36 +1294,59 @@ export default function Operator({
         solveArm(arm, fore, handB, T, pole, w);
       }
     }
-    // ── looking his blade over: the right fist held out at arm's length,
-    //    the blade standing up out of it well clear of his face, turned
-    //    slowly to catch the light and tipped across, then put away ──
+    // ── looking his blade over: drawn from the left hip in one sweep, held
+    //    out at arm's length and turned in the light, sheathed the same way ──
     if (ins >= 0) {
-      const w = smooth(ins / 0.7) * (1 - smooth((ins - INS.down[0]) / (INS.down[1] - INS.down[0])));
-      // his right: -side. The fist out in front of his chest, a little to his right
-      tmp.TR.copy(tmp.chest).addScaledVector(tmp.fwd, 0.44).addScaledVector(tmp.side, -0.16);
-      tmp.TR.y += 0.02 + Math.sin(ins * 0.9) * 0.015;
+      const span = (x: readonly [number, number]) => ease((ins - x[0]) / (x[1] - x[0]));
+      const w = smooth(ins / 0.35) * (1 - smooth((ins - INS.down[0]) / (INS.down[1] - INS.down[0])));
+      // the scabbard's mouth at his left hip, and where he holds the blade out
+      // (within his reach: the arm is ~0.85 long, and a target past it leaves
+      // the arm locked straight and straining)
+      insQ.hip.copy(tmp.chest).addScaledVector(tmp.side, 0.17).addScaledVector(tmp.fwd, 0.2);
+      insQ.hip.y -= 0.26;
+      insQ.front.copy(tmp.chest).addScaledVector(tmp.fwd, 0.44).addScaledVector(tmp.side, -0.16);
+      insQ.front.y += 0.02 + Math.sin(ins * 0.9) * 0.015;
+      // k: 0 at the hip .. 1 held out. The fist travels an arc, out to his
+      // right and up, so the blade sweeps clear of his body both ways.
+      const k = span(INS.draw) * (1 - span(INS.sheathe));
+      const arc = Math.sin(Math.PI * k);
+      tmp.TR.lerpVectors(insQ.hip, insQ.front, k).addScaledVector(tmp.side, -arc * 0.24).addScaledVector(tmp.fwd, arc * 0.14);
+      tmp.TR.y += arc * 0.1;
       solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, w);
-      // the blade's line: upright, leaning a touch away from him, tipped
-      // across in front of him while he turns it
+      // his left hand steadies the scabbard at the hip for the draw and the sheathe
+      const lw = w * (1 - smooth((k - 0.15) / 0.45));
+      if (lw > 0.001) {
+        tmp.TL.copy(insQ.hip).addScaledVector(tmp.side, 0.1).addScaledVector(tmp.fwd, -0.05);
+        tmp.TL.y -= 0.1;
+        solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, lw);
+      }
+      // held out: upright, leaning a touch away, tipped out to his right and
+      // rolled to catch the light — never across his face
       const turnK = smooth((ins - INS.turn[0]) / 0.6) * (1 - smooth((ins - (INS.turn[1] - 0.6)) / 0.6));
-      // tipped out to his right and away, never across his face
       const tip = -0.42 * turnK * Math.sin(((ins - INS.turn[0]) / (INS.turn[1] - INS.turn[0])) * Math.PI);
       const roll = 1.1 * turnK * Math.sin((ins - INS.turn[0]) * 1.25);
       insQ.dir.set(0, 1, 0).multiplyScalar(Math.cos(0.14)).addScaledVector(tmp.fwd, Math.sin(0.14));
       insQ.dir.multiplyScalar(Math.cos(tip)).addScaledVector(tmp.side, Math.sin(tip)).addScaledVector(tmp.fwd, Math.abs(Math.sin(tip)) * 0.5).normalize();
-      // its broad face toward him, rolled about the blade's own line
       insQ.z.copy(tmp.fwd).multiplyScalar(-1).projectOnPlane(insQ.dir).normalize();
       insQ.z.applyAxisAngle(insQ.dir, roll);
       insQ.x.crossVectors(insQ.dir, insQ.z).normalize();
       insQ.m.makeBasis(insQ.x, insQ.dir, insQ.z);
-      insQ.q.setFromRotationMatrix(insQ.m); // the mount's world rotation we want
-      // the hand that gives the mount that rotation, in the hand's parent space
-      insQ.q.multiply(insQ.mInv.copy(mounts.r.quaternion).invert());
+      insQ.q.setFromRotationMatrix(insQ.m);
+      // at the hip: the line a scabbard hangs on — down, back and out along
+      // his thigh, the flat against it
+      insQ.dir.set(0, -0.8, 0).addScaledVector(tmp.fwd, -0.45).addScaledVector(tmp.side, 0.3).normalize();
+      insQ.z.copy(tmp.side).projectOnPlane(insQ.dir).normalize();
+      insQ.x.crossVectors(insQ.dir, insQ.z).normalize();
+      insQ.m.makeBasis(insQ.x, insQ.dir, insQ.z);
+      insQ.q2.setFromRotationMatrix(insQ.m);
+      // the mount's world rotation along the sweep, then the hand that gives it
+      insQ.q2.slerp(insQ.q, k);
+      insQ.q2.multiply(insQ.mInv.copy(mounts.r.quaternion).invert());
       rig.b.rFore.getWorldQuaternion(_pw);
-      insQ.q.premultiply(_pw.invert());
-      const hw = w * smooth((ins - 0.2) / 0.5);
-      rig.b.rHand.quaternion.slerp(insQ.q, hw);
+      insQ.q2.premultiply(_pw.invert());
+      rig.b.rHand.quaternion.slerp(insQ.q2, w);
       rig.b.rHand.updateMatrixWorld(true);
+      rig.b.rHand.getWorldPosition(fistAt);
     }
     r.updateMatrixWorld(true);
     tmp.FL.copy(tmp.F);
@@ -1359,10 +1393,11 @@ export default function Operator({
     const end = t > moveEnd - 0.75 ? ease((t - (moveEnd - 0.75)) / 0.6) : 0;
     tmp.inv.copy(r.matrixWorld).invert();
     swords.forEach((sw, i) => {
+      sw.edge.emissiveIntensity = 0;
       if (ins >= 0) {
         // looking it over: only the main blade, built in the fist, run out,
         // run back in, and the hilt dissolved again
-        sw.body.visible = i === 0 && ins > INS.scan[0] && ins < INS.gone[1];
+        sw.body.visible = i === 0 && ins > INS.hilt[0] && ins < INS.gone[1];
         if (!sw.body.visible) return;
         mounts.r.updateMatrixWorld(true);
         tmp.m.multiplyMatrices(tmp.inv, mounts.r.matrixWorld);
@@ -1370,8 +1405,11 @@ export default function Operator({
         sw.group.position.copy(tmp.pos);
         sw.group.quaternion.copy(tmp.quat);
         const span = (a: readonly [number, number]) => ease((ins - a[0]) / (a[1] - a[0]));
-        setScan(sw, span(INS.scan) * (1 - span(INS.gone)));
-        setBlade(sw, span(INS.out) * (1 - span(INS.in)), hue);
+        setScan(sw, span(INS.hilt) * (1 - span(INS.gone)));
+        setBlade(sw, span(INS.out) * (1 - span(INS.in)));
+        // the glint: light runs off the polished edges as the blade locks
+        const g = (ins - INS.glint[0]) / (INS.glint[1] - INS.glint[0]);
+        sw.edge.emissiveIntensity = g > 0 && g < 1 ? Math.sin(Math.PI * g) ** 2 * 1.4 : 0;
         // where his eyes go next frame: halfway up the blade
         bladeMid.set(0, BLADE_BASE + BLADE * 0.45, 0).applyQuaternion(tmp.quat).add(tmp.pos);
         r.localToWorld(bladeMid);
@@ -1394,7 +1432,7 @@ export default function Operator({
       setScan(sw, scan * (1 - end));
       // blade: runs out of the guard as the draw completes, back in before the end
       const on = isTwin ? ease((t - FORGE_END - 0.3) / 0.28) : ease((t - (FORGE_END + 0.15)) / 0.28);
-      setBlade(sw, on * (1 - end), hue);
+      setBlade(sw, on * (1 - end));
     });
     forge.intensity = lit;
 
@@ -1405,10 +1443,12 @@ export default function Operator({
     jets.core.uniforms.uTime.value = s.t;
     jets.plume.uniforms.uTime.value = s.t;
     jets.nozzle.opacity = Math.min(1, thrust * 1.6);
-    jets.group.visible = true;
+    // not drawn at all while they are out (six transparent draws saved every
+    // frame); their program was linked with his at start-up
+    jets.group.visible = thrust > 0.001;
     if (DBG.includes("o")) (window as unknown as { __jets: unknown }).__jets = jets;
     const feet = [rig.b.lFoot, rig.b.rFoot];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2 && jets.group.visible; i++) {
       const j = jets.boots[i];
       const f = feet[i];
       if (!f) continue;
