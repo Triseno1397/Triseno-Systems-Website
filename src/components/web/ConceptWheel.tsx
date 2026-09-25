@@ -13,10 +13,11 @@ gsap.registerPlugin(ScrollTrigger);
    rebuilt for this page).
 
    Ten of this division's concept sites orbit the hero's browser:
-     · arrival — the deck bursts out from behind the browser: card by card,
-       clockwise, each one spirals out, flips in from edge-on and overshoots
-       into its place in the orbit, while a shockwave rings out from the
-       browser (time-based, once);
+     · arrival — a ring of light collapses from the edges of the screen onto
+       the browser; then the deck is thrown in from beyond the edges, card
+       by card, clockwise: each one comes in huge, spinning and blurred,
+       slams past its place in the orbit and settles back; as the last one
+       lands a shockwave and a flash fire out from the browser (once);
      · rest — the orbit drifts. Cards on the far side pass BEHIND the browser
        (smaller, dimmer); cards on the near side pass in front of it;
      · hover / tap — the browser loads that site (`onPick`), and the orbit
@@ -62,13 +63,19 @@ const smooth = (v: number) => {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 const DRIFT = 0.07; // radians a second: one lap in ~90s
-/** how much of the arrival is spent dealing: the last card leaves at this point */
-const DEAL = 0.55;
-/** how far (radians) a card swings round on its way out */
-const SPIRAL = 1.5;
+/** how much of the arrival is spent dealing: the last card is thrown at this point */
+const DEAL = 0.5;
+/** how far out a card starts, in orbit radii: well beyond the screen's edges */
+const THROW = 3.8;
+/** how far (radians) a card curves round on its way in */
+const CURVE = 0.9;
+/** the arrival, seconds: the collapse, the throw, the burst */
+const T_CONVERGE = 0.5;
+const T_THROW = 2.6;
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeOutBack = (t: number) => {
-  const c = 1.9;
+  // a short overshoot: past its slot by about a tenth of the way in
+  const c = 1.3;
   return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
 };
 
@@ -103,6 +110,12 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       sw: 0,
       sh: 0,
       vh: 0,
+      // the largest orbit that clears the chrome (measured, see measure())
+      maxRx: 1e9,
+      // room above and below the browser, separately (the menu is above,
+      // the floor is below: the orbit may reach further down than up)
+      maxUp: 1e9,
+      maxDown: 1e9,
       visible: true,
       last: -1,
       z: [] as number[],
@@ -117,6 +130,22 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       st.sw = s.width;
       st.sh = s.height;
       st.vh = window.innerHeight;
+      // The orbit is as big as the screen allows, and no bigger: its cards
+      // stop short of the progress rail on the right and of the chrome
+      // lanes at the top (the menu) and bottom (the chevron, the contact
+      // icon), measured at the hero's resting scroll. A card's rotated,
+      // scaled box is taken as ~0.62 of its width/height either side.
+      const card = cards.current[0];
+      const cw = card?.offsetWidth || 150;
+      const ch = card?.offsetHeight || 94;
+      const cx = r.left + r.width / 2;
+      const cy = r.top + window.scrollY + r.height / 2;
+      const rail = document.querySelector<HTMLElement>(".progress-rail")?.getBoundingClientRect();
+      const right = rail && rail.width > 0 ? rail.left - 16 : window.innerWidth - 12;
+      st.maxRx = Math.max(60, right - cx - cw * 0.62);
+      const phone = window.innerWidth < 900;
+      st.maxUp = phone ? 1e9 : Math.max(60, cy - 92 - ch * 0.62);
+      st.maxDown = phone ? 1e9 : Math.max(60, st.vh - 84 - cy - ch * 0.62);
       st.dx = r.left + r.width / 2 - (s.left + s.width / 2);
       st.dy = r.top + r.height / 2 - (s.top + s.height / 2);
     };
@@ -132,8 +161,19 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       const sweep = smooth((st.p - 0.3) / 0.7);
       // the orbit: a flattened ring round the browser, a little wider than it
       // (inside the column: its right edge is the progress rail's lane)
-      const rx = w * 0.5 - (mobile ? 8 : 44);
-      const ry = h * 0.5;
+      // (desktop: the cards' outer edges stop short of the progress rail)
+      const rx = Math.min(st.maxRx, w * 0.5 - (mobile ? 34 : 40));
+      // taller than the box: the orbit rides up into the open space above the
+      // browser and down toward the floor, without the box taking the room
+      const ryBase = h * 0.5 + (mobile ? 10 : Math.min(110, st.vh * 0.12));
+      const ryUp = Math.min(st.maxUp, ryBase);
+      const ryDown = Math.min(st.maxDown, ryBase);
+      // vertical radius for an angle: the upper half of the orbit uses the
+      // room above, the lower half the room below
+      const vy = (ang: number) => {
+        const sn = Math.sin(ang);
+        return sn * (sn < 0 ? ryUp : ryDown);
+      };
       // the arc: across the whole section, crowned in its lower part
       const spread = mobile ? 96 : 118;
       const arcR = Math.min(st.sw, st.sh * 1.6) * (mobile ? 1.3 : 1.05);
@@ -153,27 +193,28 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         const depth = Math.sin(a); // -1 far (top) .. 1 near (bottom)
         const orbit = {
           x: Math.cos(a) * rx,
-          y: Math.sin(a) * ry,
+          y: vy(a),
           r: -Math.cos(a) * 7, // a slight lean with the orbit, never on its side
           s: 0.84 + 0.26 * (depth * 0.5 + 0.5),
           o: 0.55 + 0.45 * (depth * 0.5 + 0.5),
         };
-        // the burst: card i leaves on its own beat, clockwise from the top
+        // the throw: card i comes in on its own beat, clockwise from the top
         const e = clamp01((k - (i / n) * DEAL) / (1 - DEAL));
         const out = easeOutCubic(e);
         let x: number, y: number, r: number, s: number, o: number;
         let flip = 0;
         if (e < 1) {
-          // spirals out from the centre: the angle trails behind and the
-          // radius overshoots, so it swings round into its slot and settles
-          const reach = easeOutBack(e);
-          const lag = (1 - out) * SPIRAL;
-          x = Math.cos(a - lag) * rx * reach;
-          y = Math.sin(a - lag) * ry * reach;
-          r = orbit.r - (1 - out) * 50;
-          s = lerp(0.3, orbit.s, out);
-          o = orbit.o * smooth(e / 0.22);
-          flip = (1 - out) * 88; // edge-on -> face
+          // from beyond the screen's edge along its own direction, curving
+          // in; the back-ease carries it PAST its slot, inside the orbit,
+          // before it settles back out into place
+          const reach = lerp(THROW, 1, easeOutBack(e));
+          const lag = (1 - out) * CURVE;
+          x = Math.cos(a + lag) * rx * reach;
+          y = vy(a + lag) * reach;
+          r = orbit.r + (1 - out) * (i % 2 ? 190 : -190);
+          s = lerp(2.4, orbit.s, out);
+          o = orbit.o * smooth(e / 0.1);
+          flip = (1 - out) * 72; // edge-on -> face
         } else {
           x = orbit.x;
           y = orbit.y;
@@ -190,7 +231,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           x = lerp(x, ax, morph);
           y = lerp(y, ay, morph);
           r = lerp(r, deg + 90, morph);
-          s = lerp(s, mobile ? 1.1 : 1.35, morph);
+          s = lerp(s, mobile ? 1.1 : 1.05, morph);
           o = lerp(o, edge, morph);
         }
         card.style.transform =
@@ -200,15 +241,15 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         card.style.opacity = o.toFixed(3);
         // motion blur while it flies, sharp as it lands (desktop only: a
         // filter per card per frame is not worth it on a phone GPU)
-        const blur = e < 1 && !mobile ? (1 - out) * 5 : 0;
+        const blur = e < 1 && !mobile ? (1 - out) * 14 : 0;
         if (blur > 0.2 || st.blur[i]) {
           st.blur[i] = blur > 0.2;
           card.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "";
         }
         card.style.visibility = o < 0.01 ? "hidden" : "visible";
-        // far side of the orbit passes behind the browser (it sits at z 2)
-        // mid-burst a card is still coming out from behind the browser
-        const z = morph > 0.5 ? 3 : e < 0.45 || depth < 0 ? 1 : 3;
+        // far side of the orbit passes behind the browser (it sits at z 2);
+        // in flight a card comes in over everything
+        const z = morph > 0.5 ? 3 : e < 0.9 ? 4 : depth < 0 ? 1 : 3;
         if (st.z[i] !== z) {
           st.z[i] = z;
           card.style.zIndex = String(z);
@@ -224,6 +265,14 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     });
     ro.observe(el);
     ro.observe(section);
+    // the progress rail mounts a moment after the page: measure again once
+    // it is there, and whenever the window changes size
+    const remeasure = () => {
+      measure();
+      place();
+    };
+    const late = [window.setTimeout(remeasure, 900), window.setTimeout(remeasure, 2200)];
+    window.addEventListener("resize", remeasure, { passive: true });
 
     const io = new IntersectionObserver(([e]) => (st.visible = e.isIntersecting), { rootMargin: "10% 0px" });
     io.observe(section);
@@ -232,21 +281,32 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     // ?cwt=0..1 — the entrance frozen at one instant, for a look (the rings'
     // CSS animation is held at the matching moment)
     const hold = new URLSearchParams(window.location.search).get("cwt");
+    // the burst fires as the last cards land
+    const T_BURST = T_CONVERGE + T_THROW * 0.9;
     if (hold !== null && !reduced) {
       st.intro = Math.min(1, Math.max(0, Number(hold)));
+      const at = T_CONVERGE + st.intro * T_THROW;
+      el.setAttribute("data-converge", "");
       el.setAttribute("data-burst", "");
+      el.querySelectorAll<HTMLElement>(".cw__converge").forEach((w) => {
+        w.style.animationPlayState = "paused";
+        w.style.animationDelay = `${(-at).toFixed(2)}s`;
+      });
       el.querySelectorAll<HTMLElement>(".cw__flash, .cw__wave").forEach((w) => {
         w.style.animationPlayState = "paused";
-        w.style.animationDelay = `${(-st.intro * 2.1).toFixed(2)}s`;
+        w.style.animationDelay = `${(T_BURST - at).toFixed(2)}s`;
       });
       st.spin = 0;
       place();
     } else if (!reduced) {
       // after the headline's shutter has opened (~0.7s)
-      tl = gsap.timeline({ delay: 0.6, onUpdate: place, onComplete: () => setLanded(true) });
-      // the shockwave and the browser's flash go off as the first card leaves
-      tl.call(() => el.setAttribute("data-burst", ""));
-      tl.to(st, { intro: 1, duration: 2.1, ease: "none" });
+      tl = gsap.timeline({ delay: 0.5, onUpdate: place, onComplete: () => setLanded(true) });
+      // a ring collapses from the screen's edges onto the browser...
+      tl.call(() => el.setAttribute("data-converge", ""), undefined, 0);
+      // ...the deck is thrown in...
+      tl.to(st, { intro: 1, duration: T_THROW, ease: "none" }, T_CONVERGE);
+      // ...and it goes off as the last cards land
+      tl.call(() => el.setAttribute("data-burst", ""), undefined, T_BURST);
     }
 
     const trig = reduced
@@ -279,6 +339,8 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     el.addEventListener("pointerleave", holdOff);
 
     return () => {
+      late.forEach((t) => window.clearTimeout(t));
+      window.removeEventListener("resize", remeasure);
       ro.disconnect();
       io.disconnect();
       tl?.kill();
@@ -325,9 +387,11 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
   return (
     <div ref={root} className="cw" onPointerLeave={() => pickRef.current(null)}>
       {/* the burst: a flash behind the browser and two rings running out */}
+      <span aria-hidden="true" className="cw__converge" />
       <span aria-hidden="true" className="cw__flash" />
       <span aria-hidden="true" className="cw__wave" />
       <span aria-hidden="true" className="cw__wave cw__wave--2" />
+      <span aria-hidden="true" className="cw__wave cw__wave--3" />
       <div className="cw__centre">{children}</div>
       {templates.map((t, i) => (
         <button

@@ -1163,13 +1163,32 @@
 .cw {
   position: relative; width: 100%;
   /* room above and below the browser for the orbit */
-  padding: clamp(46px, 7svh, 78px) 11%;
+  /* side padding = how much narrower the browser is than the wheel: the
+     cards need that room to orbit AROUND it rather than across it */
+  --cw-px: clamp(96px, 8.6vw, 150px);
+  /* the orbit reaches above and below this box (ConceptWheel adds to its
+     vertical radius), so it is tall without pushing the hero's copy down */
+  padding: clamp(46px, 7svh, 78px) var(--cw-px);
 }
 .cw__centre { position: relative; z-index: 2; }
 .cw__card {
   position: absolute; left: 50%; top: 50%; z-index: 3;
-  width: 104px; aspect-ratio: 16 / 10; margin: -32.5px 0 0 -52px; padding: 0;
+  /* big, but scaled to the screen: 150px on a 1440x900 laptop, ~120 on a
+     1280x720 one (where the orbit has less height), 170 at most */
+  --cw-cw: clamp(100px, min(10.4vw, 16.5svh), 170px);
+  width: var(--cw-cw); aspect-ratio: 16 / 10; padding: 0;
+  margin: calc(var(--cw-cw) * -0.3125) 0 0 calc(var(--cw-cw) * -0.5);
   border: 0; background: none; cursor: pointer; will-change: transform, opacity;
+}
+/* Desktop: the wheel reaches left into the open floor between the headline
+   and the browser (clear of the type), so it can be this big without
+   touching the progress rail on the right. */
+@media (min-width: 900px) {
+  .cw { width: calc(100% + clamp(90px, 8vw, 130px)); margin-left: calc(clamp(90px, 8vw, 130px) * -1); }
+  /* the copy is layered over the wheel: a card that reaches under the
+     headline passes behind the type, never over it */
+  .web-hero__copy { z-index: 2; }
+  .web-hero__object { position: relative; z-index: 1; }
 }
 /* under the pointer a card comes forward of everything, the browser included */
 .cw__card:hover, .cw__card:focus-visible { z-index: 5 !important; outline: none; }
@@ -1207,28 +1226,31 @@
 .cw__card:focus-visible .cw__face { --hs: 1.2; border-color: var(--hue); }
 .cw__card:focus-visible .cw__face::before { opacity: 1; }
 
-/* the burst (ConceptWheel sets data-burst as the first card leaves) */
-.cw__flash, .cw__wave { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 1; }
+/* the arrival (ConceptWheel sets data-converge, then data-burst) */
+.cw__flash, .cw__wave, .cw__converge { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 1; }
 .cw__flash {
-  width: 115%; aspect-ratio: 16 / 11; translate: -50% -50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--hue) 80%, transparent), transparent 100%);
+  width: 150%; aspect-ratio: 16 / 11; translate: -50% -50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--hue) 85%, #ffffff 5%), color-mix(in srgb, var(--hue) 30%, transparent) 45%, transparent 100%);
   opacity: 0;
 }
-/* the ring leaves from the browser's own outline (it is the browser's width,
-   78% of the wheel) and runs out over everything */
-.cw__wave {
-  width: 78%; aspect-ratio: 16 / 10.6; translate: -50% -50%; z-index: 4;
-  border: 2px solid color-mix(in srgb, var(--hue) 70%, #ffffff);
-  box-shadow: 0 0 26px 3px color-mix(in srgb, var(--hue) 85%, transparent), inset 0 0 22px color-mix(in srgb, var(--hue) 60%, transparent);
+/* the rings are the browser's own outline: the wheel less its side padding */
+.cw__wave, .cw__converge {
+  width: calc(100% - var(--cw-px) * 2); aspect-ratio: 16 / 10.6; translate: -50% -50%; z-index: 5;
+  border: 2px solid color-mix(in srgb, var(--hue) 65%, #ffffff);
+  box-shadow: 0 0 34px 5px color-mix(in srgb, var(--hue) 85%, transparent), inset 0 0 28px color-mix(in srgb, var(--hue) 60%, transparent);
   opacity: 0;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .cw[data-burst] .cw__flash { animation: cw-flash 1100ms var(--ease-expo) both; }
-  .cw[data-burst] .cw__wave { animation: cw-wave 1500ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-  .cw[data-burst] .cw__wave--2 { animation-delay: 220ms; animation-duration: 1800ms; }
+  .cw[data-converge] .cw__converge { animation: cw-converge 720ms cubic-bezier(0.55, 0, 0.9, 0.45) both; }
+  .cw[data-burst] .cw__flash { animation: cw-flash 1300ms var(--ease-expo) both; }
+  .cw[data-burst] .cw__wave { animation: cw-wave 1700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .cw[data-burst] .cw__wave--2 { animation-delay: 160ms; animation-duration: 1900ms; }
+  .cw[data-burst] .cw__wave--3 { animation-delay: 320ms; animation-duration: 2100ms; }
 }
-@keyframes cw-flash { 0% { opacity: 0; transform: scale(0.8); } 14% { opacity: 1; } 100% { opacity: 0; transform: scale(1.9); } }
-@keyframes cw-wave { 0% { opacity: 0; transform: scale(1); } 8% { opacity: 1; } 100% { opacity: 0; transform: scale(2.1); } }
+/* collapses from beyond the screen's edges onto the browser, accelerating */
+@keyframes cw-converge { 0% { opacity: 0; transform: scale(4.2); } 20% { opacity: 0.95; } 92% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.96); } }
+@keyframes cw-flash { 0% { opacity: 0; transform: scale(0.7); } 12% { opacity: 1; } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes cw-wave { 0% { opacity: 0; transform: scale(1); } 7% { opacity: 1; } 100% { opacity: 0; transform: scale(3.3); } }
 @media (prefers-reduced-motion: reduce) {
   .cw__face { transform: none !important; transition: none; }
 }
@@ -1240,9 +1262,8 @@
 .web-hero__pick[data-on] { opacity: 1; }
 @media (max-width: 899px) {
   /* a narrower browser, so the orbit passes round it rather than over it */
-  .cw { padding: 52px 17%; }
-  .cw__card { width: 66px; margin: -20.5px 0 0 -33px; }
-  .cw__wave { width: 66%; }
+  .cw { --cw-px: 17vw; padding: 70px var(--cw-px); margin-left: 0; width: 100%; }
+  .cw__card { --cw-cw: 84px; }
 }
 
 /* ── Carbon Forge: the moving concept site (CarbonForgeSite.tsx) ── */
