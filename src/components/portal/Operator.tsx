@@ -489,13 +489,19 @@ export default function Operator({
     // light did, the reflections washed out. A trace of it stays, so the
     // white armour still reads in the dark corners of the world.
     mat.emissiveIntensity = 0.34;
-    mat.metalness = 0.78;
-    mat.roughness = 0.26;
+    // The desktop body carries the source's own detail maps: a normal map (his
+    // panel lines and machining catch the light) and a metal/roughness map
+    // whose gloss averages ~0.12, so the factors scale it to the satin chrome
+    // he always had (~0.26) while keeping its variation panel to panel. The
+    // light phone body has neither and takes the flat values.
+    mat.metalness = mat.metalnessMap ? 0.85 : 0.78;
+    mat.roughness = mat.roughnessMap ? 2.2 : 0.26;
     mat.envMapIntensity = 1.6;
     // the sharpest filtering the GPU has (three clamps to its maximum): his
     // panel lines stay crisp where the armour turns away from the camera
     if (mat.map) mat.map.anisotropy = 16;
     if (mat.emissiveMap) mat.emissiveMap.anisotropy = 16;
+    if (mat.normalMap) mat.normalMap.anisotropy = 16;
     // the shoulder plates are re-bound to the collarbone in the model file
     // itself (design-loop/art-src/robot/_gt/bake-shoulders.mjs) — no per-load
     // pass over every vertex on the visitor's device
