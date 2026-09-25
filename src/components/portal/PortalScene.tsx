@@ -177,6 +177,7 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     statue.y = m.y;
     statue.yaw = REST_YAW * away * (1 - warp);
     statue.points = m.cur;
+    statue.morphing = m.t < 1;
     if (group.current) {
       group.current.position.y = m.y;
       group.current.rotation.y = statue.yaw;
@@ -400,49 +401,67 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
    context, the world's own light and reflections on his chrome. He is only up
    while the hero is (the camera leaves him behind on the way to the doors).
 
-   He keeps himself busy on the statue (statue.ts), one thing at a time, for a
-   while each, picked at random: leaning on its side with his arms folded,
-   sitting inside it, looking his blade over in front of it, doing pull-ups off
-   its top. Between them he pushes off, crosses in the air and lands in the
-   next. Tapped, he hops down to the floor in front of it to perform. */
+   He keeps himself busy on the statue (statue.ts), one thing for about a
+   minute, picked at random: leaning back on its rail with his arms folded,
+   sitting inside it, looking his blade over in front of it, doing sets of
+   pull-ups off its top. Between two of them nothing jumps: he eases out of
+   the one, stands, walks over on his own two feet, and settles into the next.
+   Tapped, he hops down to the floor in front of the statue to perform.
 
-/** seconds of a hop between two things: the push-off, the air, the landing */
+   Everything he does runs on its own clock, not on the scroll: a page left
+   half-scrolled can never leave him frozen half-way through a move. */
+
+/** the things he does, and for how long (seconds, picked in the range) */
+const ACTS = ["lean", "sit", "blade", "pull"] as const;
+type Act = (typeof ACTS)[number];
+const ACT_TIME: [number, number] = [55, 70];
+/** easing out of a pose to stand, and into the next from standing, seconds */
+const EASE_OUT = 1.6;
+const EASE_IN = 1.9;
+/** walking: pace (world units a second) and one step's length */
+const WALK_SPEED = 0.62;
+const STEP = 0.4;
+/** a pull-up rep: up, hold at the top, down, hang; sets with a rest between */
+const REP = { up: 0.7, top: 0.25, down: 0.85, hang: 0.3 };
+const REP_T = REP.up + REP.top + REP.down + REP.hang;
+const SET = { reps: 5, rest: 4.5 };
+/** the blade: first look soon after he arrives, then again every so often */
+const BLADE_FIRST = 2.5;
+const BLADE_EVERY = 19;
+/** the tap: a quick hop down to the floor in front of the statue */
 const HOP_PUSH = 0.2;
 const HOP_AIR = 0.62;
 const HOP_LAND = 0.24;
 
-/** the things he does, and for how long (seconds, picked in the range) */
-const ACTS: Record<"lean" | "sit" | "blade" | "pull", [number, number]> = {
-  lean: [7, 11],
-  sit: [8, 12],
-  blade: [INSPECT + 1, INSPECT + 2.5],
-  pull: [0, 0], // set by how many reps he does
-};
-type Act = keyof typeof ACTS;
-/** a pull-up: settle, up, hold at the top, down, hang */
-const REP = { up: 0.6, top: 0.22, down: 0.72, hang: 0.26 };
-const REP_T = REP.up + REP.top + REP.down + REP.hang;
-const PULL_SETTLE = 0.7;
-
-/* The exit, as the hero scrolls: a Superman take-off. He sinks into a deep
-   crouch with his fists low, then blasts straight up — right fist punched
-   overhead, left fist tight at his hip — and accelerates out of the top of
-   the frame, leaving a shockwave rolling out across the wet floor. Scroll-
-   driven: it plays at the visitor's speed and runs back on the way up. */
-const EXIT_FROM = 0.02;
-const EXIT_TO = 0.46;
-const CROUCH = 0.55;
-/** clearance in front of the statue's face for the take-off */
-const LAUNCH_CLEAR = 0.6;
+/* Leaving, as the page scrolls: an Iron Man take-off. He comes up off
+   whatever he is on, plants his feet, lifts his eyes; the jets under his boots
+   light, he rises off the floor slowly with his arms straight down at his
+   sides, then the thrust opens up and he is gone out of the top of the frame,
+   a shockwave rolling out across the wet floor. Scroll back to the top and he
+   comes down the same way and lands. Time-driven once it is triggered. */
+const LAUNCH_AT = 0.04; // hero progress that sends him
+const RETURN_AT = 0.015; // and brings him back
+const LIFT = { release: 0.55, ignite: 0.55, hover: 0.7, gone: 1.7 };
+const LAND_T = 2.2;
+const SETTLE_T = 0.5;
 
 const mix = THREE.MathUtils.lerp;
+const turnTo = (a: number, b: number, k: number) => {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * k;
+};
+
+type Mode = "on" | "off" | "walk" | "in" | "hop" | "stage";
+type Flight = "here" | "launch" | "gone" | "land";
 
 function OperatorInWorld({ state }: { state: OperatorState }) {
   const group = useRef<THREE.Group>(null);
   const wave = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
-  // a phone held upright: there is no room beside the statue, so he does not
-  // lean on its side there
+  // a phone held upright: there is no room beside the statue to lean there
   const tall = size.width < 768 && size.height > size.width;
   const busy = useRef(false);
   // His forge light, here from the first frame at zero brightness. His files
@@ -464,18 +483,22 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   }, [tall]);
   // on touch he looks around on his own, and at a finger while one is down
   const coarse = useMemo(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches, []);
-  // ?opexit=0.3 holds him mid-take-off; ?act=pull holds one thing (and a
-  // moment of it with ?actt=seconds) for a look; ?dbg=o puts the portal's
+  // ?act=pull holds one thing (and ?actt=seconds one moment of it) for a look;
+  // ?opfly=1.2 holds the take-off at that second; ?dbg=o puts the portal's
   // state on window so a capture can set the scroll
   const dbg = useMemo(() => {
-    if (typeof window === "undefined") return { exit: -1, act: null as Act | null, t: -1 };
+    if (typeof window === "undefined") return { act: null as Act | null, t: -1, fly: -1, speed: 1, dur: 0 };
     if (DBG.includes("o")) (window as unknown as { __portal: typeof portalState }).__portal = portalState;
     const u = new URLSearchParams(window.location.search);
     const a = u.get("act");
     return {
-      exit: u.has("opexit") ? Number(u.get("opexit")) : -1,
-      act: a && a in ACTS ? (a as Act) : null,
+      act: a && (ACTS as readonly string[]).includes(a) ? (a as Act) : null,
       t: u.has("actt") ? Number(u.get("actt")) : -1,
+      fly: u.has("opfly") ? Number(u.get("opfly")) : -1,
+      // ?actspeed=10 runs his clock faster, to watch the changes
+      speed: u.has("actspeed") ? Number(u.get("actspeed")) : 1,
+      // ?actdur=8 — each thing lasts this many seconds instead of a minute
+      dur: u.has("actdur") ? Number(u.get("actdur")) : 0,
     };
   }, []);
 
@@ -484,298 +507,427 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     const limbs: Limbs = { feet: [v(), v()], footW: [0, 0], hands: [v(), v()], handW: [0, 0], knee: [false, false], lean: 0, kneesUp: 0, kneesOut: 0, hang: 0 };
     return {
       stage: v(),
-      to: makePose(),
-      from: makePose(),
-      /** what he is doing, since when, and until when */
+      pose: makePose(),
+      standPose: makePose(),
       act: null as Act | null,
+      next: null as Act | null,
       actT: 0,
-      actDur: 0,
-      reps: 0,
-      key: null as PoseKey | null,
-      glyph: 0,
-      /** seconds into a hop, -1 when settled */
-      hop: -1,
+      actDur: 60,
+      mode: "on" as Mode,
+      /** seconds into the current mode */
+      t: 0,
+      /** how far into its pose he is, 0 standing .. 1 in it */
+      e: 0,
+      walkFrom: v(),
+      walkTo: v(),
+      walkYaw0: 0,
+      walkYaw1: 0,
+      hopFrom: v(),
+      hopYaw: 0,
+      flight: "here" as Flight,
+      ft: 0,
+      /** where he takes off from, and how high he is when a landing starts */
+      pad: v(),
+      padYaw: 0,
+      landFrom: 0,
+      e0: 0,
       limbs,
       root: v(),
       yaw: 0,
-      tilt: 0,
-      back: 0,
-      launch: v(),
       gaze: v(),
       tmp: v(),
       tmp2: v(),
     };
   }, []);
 
-  const pick = (not: Act | null): Act => {
-    const all = (Object.keys(ACTS) as Act[]).filter((a) => a !== not && !(tall && a === "lean"));
-    const a = all[Math.floor(Math.random() * all.length)];
-    P.act = a;
-    P.actT = 0;
-    if (a === "pull") {
-      P.reps = 3 + Math.floor(Math.random() * 3);
-      P.actDur = PULL_SETTLE + P.reps * REP_T + 0.5;
-    } else {
-      const [lo, hi] = ACTS[a];
-      P.actDur = lo + Math.random() * (hi - lo);
-    }
-    return a;
+  const pick = (not: Act | null) => {
+    const all = ACTS.filter((a) => a !== not && !(tall && a === "lean"));
+    return all[Math.floor(Math.random() * all.length)];
   };
 
   useFrame((_, rawDt) => {
-    const dt = Math.min(rawDt, 1 / 20);
+    const dt = Math.min(rawDt, 1 / 20) * dbg.speed;
     state.px = portalState.px;
     state.py = portalState.py;
     state.fine = !coarse;
     state.touchAt = portalState.touchAt;
     portalState.performing = busy.current;
-    // not group.visible: see OperatorState.hidden
     state.hidden = !(portalState.hero < 0.55 && portalState.warpAt === 0);
     const g = group.current;
     const build = state.build;
     if (!g) return;
     P.stage.set(...stand.position);
     if (!build) {
-      // his rig is not read yet
       g.position.copy(P.stage);
       return;
     }
-
-    const exit = dbg.exit >= 0 ? dbg.exit : smooth(EXIT_FROM, EXIT_TO, portalState.hero);
-    state.exit = exit;
-
-    /* ── what he is doing: taken in turns, each for a while ── */
-    if (P.act === null) {
-      if (dbg.act) {
-        P.act = dbg.act;
-        P.actDur = Infinity;
-        P.reps = 1e6;
-        P.actT = Math.max(0, dbg.t);
-      } else pick(null);
-    }
-    // the timer only runs while he is up and nobody is scrolling him away
-    const settled = P.hop < 0;
-    if (exit <= 0 && !state.hidden && !busy.current && !(dbg.act && dbg.t >= 0)) {
-      if (settled) P.actT += dt;
-      if (P.actT >= P.actDur) pick(P.act);
-    }
-    // a glyph changed under a lean or a hang (the menu is hovered): he gets off it
-    const glyphIndex = portalState.active;
-    if (glyphIndex !== P.glyph && (P.act === "lean" || P.act === "pull") && !dbg.act) pick(P.act);
-
-    /* ── the pose, and the hop between two of them ── */
-    const key: PoseKey = busy.current ? "stage" : (P.act as PoseKey);
     const L = P.limbs;
-    if (P.key === null) {
-      P.key = key;
-    } else if (key !== P.key) {
-      // leave from wherever he is right now (even mid-hop)
-      P.from.root.copy(P.root);
-      P.from.yaw = P.yaw;
-      P.from.tilt = P.tilt;
-      P.from.back = P.back;
-      for (let i = 0; i < 2; i++) {
-        P.from.feet[i] = L.footW[i] > 0.01 ? (P.from.feet[i] ?? new THREE.Vector3()).copy(L.feet[i]!) : null;
-        P.from.hands[i] = L.handW[i] > 0.01 && !L.knee[i] ? (P.from.hands[i] ?? new THREE.Vector3()).copy(L.hands[i]!) : null;
-        P.from.knee[i] = L.knee[i] && L.handW[i] > 0.01;
-      }
-      P.from.lean = L.lean;
-      P.from.kneesUp = L.kneesUp;
-      P.from.hang = L.hang;
-      P.key = key;
-      P.hop = 0;
+
+    /* ── what he is doing ── */
+    if (P.act === null) {
+      P.act = dbg.act ?? pick(null);
+      P.actDur = dbg.act ? Infinity : (dbg.dur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
+      P.actT = dbg.t >= 0 ? dbg.t : 0;
+      // he starts in it, not walking to it
+      P.mode = "on";
+      P.e = 1;
     }
-    P.glyph = glyphIndex;
-    // a pull-up: how far up the bar he is
+    const hold = dbg.act !== null && dbg.t >= 0;
+    const flying = P.flight !== "here";
+    // a hovered word changed the glyph under a lean or a hang: he gets off it
+    if (!flying && P.mode === "on" && (P.act === "lean" || P.act === "pull") && statue.morphing && !dbg.act) P.actT = P.actDur;
+
+    /* ── the tap: hop down to the floor in front and perform; walk back after ── */
+    if (!flying && busy.current && P.mode !== "hop" && P.mode !== "stage") {
+      P.hopFrom.copy(P.root);
+      P.hopYaw = P.yaw;
+      P.mode = "hop";
+      P.t = 0;
+    }
+
+    // his pose on the statue for what he is doing (a pull-up's lift included)
     let lift = 0;
-    if (key === "pull" && settled) {
-      const r = P.actT - PULL_SETTLE;
-      if (r > 0 && r < P.reps * REP_T) {
+    if (P.act === "pull" && P.mode === "on") {
+      const r = P.actT % (SET.reps * REP_T + SET.rest);
+      if (r < SET.reps * REP_T) {
         const k = r % REP_T;
-        lift =
-          k < REP.up ? ease(k / REP.up) : k < REP.up + REP.top ? 1 : k < REP.up + REP.top + REP.down ? 1 - ease((k - REP.up - REP.top) / REP.down) : 0;
+        lift = k < REP.up ? ease(k / REP.up) : k < REP.up + REP.top ? 1 : k < REP.up + REP.top + REP.down ? 1 - ease((k - REP.up - REP.top) / REP.down) : 0;
       }
     }
-    resolvePose(P.to, key, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, lift);
-    // the statue holds its shape while he leans on it or hangs from it
-    statue.hold = key === "lean" || key === "pull" || (P.hop >= 0 && P.from.hang > 0);
+    resolvePose(P.pose, P.act as PoseKey, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, lift);
+    const pose = P.pose;
 
-    // feet squarely under him, for the push-off and the landing
-    const under = (out: THREE.Vector3, root: THREE.Vector3, yaw: number, side: number) =>
-      out.set(root.x + Math.cos(yaw) * build.hipW * 1.15 * side, build.ankleY, root.z - Math.sin(yaw) * build.hipW * 1.15 * side);
-    const setLimbs = (pose: Pose, w: number) => {
-      for (let i = 0; i < 2; i++) {
-        const f = pose.feet[i];
-        L.footW[i] = f ? w : 0;
-        if (f) L.feet[i]!.copy(f);
-        const h = pose.hands[i];
-        L.knee[i] = pose.knee[i];
-        L.handW[i] = h || pose.knee[i] ? w : 0;
-        if (h) L.hands[i]!.copy(h);
-      }
-      L.lean = pose.lean * w;
-      L.kneesUp = pose.kneesUp;
-      L.kneesOut = 0;
-      L.hang = pose.hang * w;
-    };
-    // stood on the floor, a pose without planted feet still plants them to
-    // push off or land (a hang has nothing under it: he just lets go)
-    const brace = (pose: Pose, w: number) => {
-      if (pose.hang > 0) return;
-      for (let i = 0; i < 2; i++) {
-        if (pose.feet[i]) continue;
-        L.footW[i] = w;
-        under(L.feet[i]!, pose.root, pose.yaw, i === 0 ? 1 : -1);
-      }
-    };
-
+    if (!flying && !hold) P.t += dt;
     let dip = 0;
     let tuck = 0;
-    if (P.hop >= 0) {
-      P.hop += dt;
-      const t = P.hop;
-      if (t < HOP_PUSH) {
-        // push-off: he sinks into what he is holding, then lets go
-        const k = t / HOP_PUSH;
-        setLimbs(P.from, 1 - smooth(0.55, 1, k));
-        brace(P.from, Math.sin(k * Math.PI));
-        P.root.copy(P.from.root);
-        P.yaw = P.from.yaw;
-        P.tilt = P.from.tilt;
-        P.back = P.from.back;
-        dip = P.from.hang > 0 ? 0 : Math.sin(k * Math.PI) * 0.16;
-      } else if (t < HOP_PUSH + HOP_AIR) {
-        // the air: an arc from the old spot to the new, knees drawn up; up to
-        // a bar it is a jump to grab it
-        const k = (t - HOP_PUSH) / HOP_AIR;
-        const e = ease(k);
-        setLimbs(P.to, 0);
-        P.root.lerpVectors(P.from.root, P.to.root, e);
-        const up = P.to.hang > 0 ? 0.42 : 0.1;
-        P.root.y += Math.sin(k * Math.PI) * (up + Math.abs(P.to.root.y - P.from.root.y) * 0.3);
-        P.yaw = mix(P.from.yaw, P.to.yaw, e);
-        P.tilt = mix(P.from.tilt, P.to.tilt, e);
-        P.back = mix(P.from.back, P.to.back, e);
-        tuck = Math.sin(k * Math.PI) * 0.6;
-      } else {
-        // the landing: the new contacts take his weight and he settles into them
-        const k = Math.min(1, (t - HOP_PUSH - HOP_AIR) / HOP_LAND);
-        setLimbs(P.to, smooth(0, 0.6, k));
-        brace(P.to, Math.sin(k * Math.PI));
-        P.root.copy(P.to.root);
-        P.yaw = P.to.yaw;
-        P.tilt = P.to.tilt;
-        P.back = P.to.back;
-        // a hang catches his weight in the arms: a small drop, not a squat
-        dip = Math.sin(k * Math.PI) * (P.to.hang > 0 ? 0.06 : 0.12);
-        if (k >= 1) P.hop = -1;
+    // stood on the floor at `spot`, facing `yaw`, feet under him
+    const under = (out: THREE.Vector3, x: number, z: number, yaw: number, side: number) =>
+      out.set(x + Math.cos(yaw) * build.hipW * 1.15 * side, build.ankleY, z - Math.sin(yaw) * build.hipW * 1.15 * side);
+    /** the body `e` of the way from standing on the pose's spot into the pose */
+    const blend = (e: number, sx: number, sz: number, syaw: number) => {
+      P.root.set(mix(sx, pose.root.x, e), mix(stand.position[1], pose.root.y, e), mix(sz, pose.root.z, e));
+      P.yaw = turnTo(syaw, pose.yaw, e);
+      for (let i = 0; i < 2; i++) {
+        const side = i === 0 ? 1 : -1;
+        under(P.tmp2, sx, sz, syaw, side);
+        const f = pose.feet[i];
+        if (f) {
+          // a foot that has somewhere to go is lifted there, not slid
+          const moved = P.tmp2.distanceTo(f);
+          L.feet[i]!.lerpVectors(P.tmp2, f, e);
+          if (moved > 0.12) L.feet[i]!.y += Math.sin(Math.PI * e) * 0.1;
+          L.footW[i] = 1;
+        } else {
+          L.feet[i]!.copy(P.tmp2);
+          L.footW[i] = 1 - e;
+        }
+        const h = pose.hands[i];
+        L.knee[i] = pose.knee[i];
+        L.handW[i] = h || pose.knee[i] ? e : 0;
+        if (h) L.hands[i]!.copy(h);
       }
-    } else {
-      setLimbs(P.to, 1);
-      P.root.copy(P.to.root);
-      P.yaw = P.to.yaw;
-      P.tilt = P.to.tilt;
-      P.back = P.to.back;
+      L.lean = pose.lean * e;
+      L.kneesUp = pose.kneesUp;
+      L.kneesOut = 0;
+      L.hang = pose.hang * e;
+      g.rotation.set(-pose.back * e * Math.cos(P.yaw), 0, pose.tilt * e + pose.back * e * Math.sin(P.yaw), "ZXY");
+    };
+    /** standing free (no pose at all), at a spot */
+    const standAt = (x: number, z: number, yaw: number) => {
+      P.root.set(x, stand.position[1], z);
+      P.yaw = yaw;
+      for (let i = 0; i < 2; i++) {
+        under(L.feet[i]!, x, z, yaw, i === 0 ? 1 : -1);
+        L.footW[i] = 1;
+        L.handW[i] = 0;
+        L.knee[i] = false;
+      }
+      L.lean = 0;
+      L.hang = 0;
+      L.kneesUp = 0;
+      g.rotation.set(0, 0, 0);
+    };
+
+    if (!flying) {
+      switch (P.mode) {
+        case "on": {
+          P.e = 1;
+          blend(1, pose.spot.x, pose.spot.z, pose.spotYaw);
+          if (!hold) P.actT += dt;
+          if (P.actT >= P.actDur) {
+            P.next = pick(P.act);
+            P.mode = "off";
+            P.t = 0;
+          }
+          break;
+        }
+        case "off": {
+          // out of the pose, onto his feet
+          P.e = 1 - ease(Math.min(1, P.t / EASE_OUT));
+          blend(P.e, pose.spot.x, pose.spot.z, pose.spotYaw);
+          if (P.t >= EASE_OUT) {
+            P.walkFrom.copy(pose.spot);
+            P.walkYaw0 = pose.spotYaw;
+            P.act = P.next ?? pick(P.act);
+            P.actT = 0;
+            P.actDur = (dbg.dur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
+            resolvePose(P.pose, P.act as PoseKey, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, 0);
+            P.walkTo.copy(P.pose.spot);
+            P.walkYaw1 = P.pose.spotYaw;
+            P.mode = "walk";
+            P.t = 0;
+            standAt(P.walkFrom.x, P.walkFrom.z, P.walkYaw0);
+          }
+          break;
+        }
+        case "walk": {
+          const D = P.walkFrom.distanceTo(P.walkTo);
+          const T = D / WALK_SPEED + 1.2;
+          const k = Math.min(1, P.t / T);
+          // the path, eased in and out; he turns to it, then to where he stops
+          const s = D * ease(k);
+          const dx = P.walkTo.x - P.walkFrom.x;
+          const dz = P.walkTo.z - P.walkFrom.z;
+          const head = D > 0.01 ? Math.atan2(dx, dz) : P.walkYaw1;
+          const turnIn = smooth(0, 0.6, P.t);
+          const turnOut = smooth(T - 0.8, T, P.t);
+          const yaw = turnTo(turnTo(P.walkYaw0, head, D > 0.15 ? turnIn : 0), P.walkYaw1, turnOut);
+          const ux = D > 0.01 ? dx / D : 0;
+          const uz = D > 0.01 ? dz / D : 0;
+          const x = P.walkFrom.x + ux * s;
+          const z = P.walkFrom.z + uz * s;
+          standAt(x, z, yaw);
+          if (D > 0.15) {
+            // the gait: each foot planted, then carried a stride ahead of the
+            // body with a lift, the other always down — faded in and out over
+            // the first and last step so he starts and stops on both feet
+            const gait = smooth(0, 0.5, P.t) * (1 - smooth(T - 0.9, T - 0.2, P.t));
+            const rx = Math.cos(head);
+            const rz = -Math.sin(head);
+            for (let i = 0; i < 2; i++) {
+              const c = (s + i * STEP) / (2 * STEP);
+              const n = Math.floor(c);
+              const f = c - n;
+              let along = 2 * STEP * n - i * STEP + STEP * 0.5;
+              let up = 0;
+              if (f >= 0.5) {
+                const w = ease((f - 0.5) / 0.5);
+                along += 2 * STEP * w;
+                up = Math.sin(Math.PI * ((f - 0.5) / 0.5)) * 0.11;
+              }
+              const side = i === 0 ? 1 : -1;
+              P.tmp.set(P.walkFrom.x + ux * along + rx * build.hipW * 1.1 * side, build.ankleY + up, P.walkFrom.z + uz * along + rz * build.hipW * 1.1 * side);
+              L.feet[i]!.lerp(P.tmp, gait);
+            }
+            // a little bob with each step
+            P.root.y -= (0.02 + 0.02 * Math.cos((s / STEP) * Math.PI * 2)) * gait;
+          }
+          if (k >= 1) {
+            P.mode = "in";
+            P.t = 0;
+            P.e = 0;
+          }
+          break;
+        }
+        case "hop": {
+          // a tap: down to the stage in a quick hop, the forge already starting
+          const t = P.t;
+          const T = HOP_PUSH + HOP_AIR + HOP_LAND;
+          const k = smooth(HOP_PUSH, HOP_PUSH + HOP_AIR, t);
+          P.root.lerpVectors(P.hopFrom, P.stage, k);
+          P.root.y += Math.sin(Math.PI * k) * 0.3;
+          P.yaw = turnTo(P.hopYaw, stand.yaw, k);
+          for (let i = 0; i < 2; i++) {
+            L.footW[i] = t > HOP_PUSH + HOP_AIR ? Math.sin(Math.PI * Math.min(1, (t - HOP_PUSH - HOP_AIR) / HOP_LAND)) : 0;
+            under(L.feet[i]!, P.stage.x, P.stage.z, stand.yaw, i === 0 ? 1 : -1);
+            L.handW[i] = 0;
+          }
+          L.lean = 0;
+          L.hang = 0;
+          L.kneesUp = 0;
+          tuck = Math.sin(Math.PI * k) * 0.5;
+          g.rotation.set(0, 0, 0);
+          if (t >= T) {
+            P.mode = "stage";
+            P.t = 0;
+          }
+          break;
+        }
+        case "stage": {
+          // performing; nothing placed on him (the move owns his body)
+          P.root.copy(P.stage);
+          P.yaw = stand.yaw;
+          L.footW[0] = L.footW[1] = L.handW[0] = L.handW[1] = 0;
+          L.lean = 0;
+          L.hang = 0;
+          g.rotation.set(0, 0, 0);
+          if (!busy.current) {
+            // done: walk back to what he was doing
+            P.walkFrom.copy(P.stage).setY(0);
+            P.walkYaw0 = stand.yaw;
+            P.walkTo.copy(pose.spot);
+            P.walkYaw1 = pose.spotYaw;
+            P.mode = "walk";
+            P.t = 0;
+          }
+          break;
+        }
+        default: {
+          // "in": from standing on the spot into the pose
+          P.e = ease(Math.min(1, P.t / EASE_IN));
+          blend(P.e, pose.spot.x, pose.spot.z, pose.spotYaw);
+          // a pull-up bar is jumped to: a dip, then up to the grip
+          if (P.act === "pull") dip = Math.sin(Math.PI * Math.min(1, P.e * 2)) * 0.16 * (P.e < 0.5 ? 1 : 0);
+          if (P.t >= EASE_IN) {
+            P.mode = "on";
+            P.t = 0;
+          }
+        }
+      }
     }
 
-    // where he looks: his blade, the bar he is pulling up to, or the visitor
+    /* ── the Iron Man take-off, and the landing ── */
+    const hero = portalState.hero;
+    if (dbg.fly >= 0) {
+      if (P.flight === "here") {
+        P.flight = "launch";
+        P.pad.set(pose.spot.x, 0, pose.spot.z);
+        P.padYaw = pose.spotYaw;
+        P.e0 = P.e;
+      }
+      P.ft = dbg.fly;
+    } else if (P.flight === "here" && hero > LAUNCH_AT && !busy.current && portalState.warpAt === 0) {
+      P.flight = "launch";
+      P.ft = 0;
+      // he takes off from the floor where he stands to get off what he is on
+      const onFloor = P.mode === "walk" || P.mode === "stage" || P.mode === "hop";
+      P.pad.set(onFloor ? P.root.x : pose.spot.x, 0, onFloor ? P.root.z : pose.spot.z);
+      P.padYaw = onFloor ? P.yaw : pose.spotYaw;
+      P.e0 = onFloor ? 0 : P.e;
+    } else if ((P.flight === "launch" || P.flight === "gone") && hero < RETURN_AT) {
+      P.landFrom = P.flight === "gone" ? 7 : Math.max(0, P.root.y - stand.position[1]);
+      P.flight = "land";
+      P.ft = 0;
+    } else if (P.flight === "land" && hero > LAUNCH_AT) {
+      P.flight = "launch";
+      P.ft = LIFT.release + LIFT.ignite + LIFT.hover * 0.5;
+    }
+    let thrust = 0;
+    let waveK = 0;
     let gaze: THREE.Vector3 | null = null;
+    if (P.flight !== "here") {
+      if (dbg.fly < 0) P.ft += dt;
+      const t = P.ft;
+      const face = -0.12;
+      // arms straight down at his sides, a hand's width out, palms down
+      const arms = (w: number) => {
+        const fs = Math.sin(P.yaw);
+        const fc = Math.cos(P.yaw);
+        for (let i = 0; i < 2; i++) {
+          const side = i === 0 ? 1 : -1;
+          L.hands[i]!.set(
+            P.root.x + fc * side * (build.shoulderW + 0.1) - fs * 0.06,
+            P.root.y + build.shoulderY - build.armLen * 0.99,
+            P.root.z - fs * side * (build.shoulderW + 0.1) - fc * 0.06,
+          );
+          L.knee[i] = false;
+          L.handW[i] = Math.max(L.handW[i] * (1 - w), w);
+        }
+      };
+      if (P.flight === "launch" || P.flight === "gone") {
+        const r1 = LIFT.release;
+        const r2 = r1 + LIFT.ignite;
+        const r3 = r2 + LIFT.hover;
+        if (t < r1) {
+          // off what he is on and onto his feet at the pad
+          const k = ease(t / r1);
+          resolvePose(P.pose, P.act as PoseKey, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, 0);
+          blend(P.e0 * (1 - k), P.pad.x, P.pad.z, P.padYaw);
+          P.yaw = turnTo(P.yaw, face, k);
+        } else {
+          standAt(P.pad.x, P.pad.z, face);
+        }
+        const up = smooth(r1 * 0.5, r2, t); // his eyes go up first
+        gaze = P.gaze.set(P.root.x + Math.sin(face) * 0.6, P.root.y + 8, P.root.z + Math.cos(face) * 0.6);
+        if (up < 0.3) gaze = null;
+        arms(smooth(r1 * 0.6, r2, t));
+        // the jets catch, flutter, then open up
+        thrust = 0.3 * smooth(r1, r2, t) + 0.7 * smooth(r2 + 0.2, r3, t);
+        // he sinks onto his heels as they light, then leaves the floor
+        dip = Math.sin(Math.PI * Math.min(1, Math.max(0, (t - r1) / LIFT.ignite))) * 0.1;
+        const u = Math.max(0, t - r2);
+        const rise = 0.35 * u + 5.5 * Math.max(0, u - LIFT.hover * 0.6) ** 2;
+        P.root.y += rise;
+        for (let i = 0; i < 2; i++) L.footW[i] *= 1 - smooth(r2, r2 + 0.25, t);
+        L.lean = -0.1 * up;
+        waveK = t > r2 ? smooth(r2, r2 + 1.6, t) : 0;
+        if (t > r3 + LIFT.gone) P.flight = "gone";
+      } else {
+        // the landing: down from above, braking on the jets, knees taking it
+        standAt(P.pad.x, P.pad.z, face);
+        const k = Math.min(1, t / LAND_T);
+        const h = P.landFrom * Math.pow(1 - k, 2.2);
+        P.root.y += h;
+        thrust = k < 1 ? 0.55 + 0.35 * smooth(0.6, 0.95, k) : 0;
+        arms(1 - smooth(LAND_T, LAND_T + SETTLE_T, t));
+        for (let i = 0; i < 2; i++) L.footW[i] = smooth(0.85, 1, k);
+        gaze = k < 0.7 ? P.gaze.set(P.root.x, 0, P.root.z + 1.2) : null;
+        const s2 = Math.max(0, t - LAND_T);
+        dip = Math.sin(Math.PI * Math.min(1, s2 / SETTLE_T)) * 0.14;
+        waveK = k > 0.9 && k < 1 ? 0.25 : 0;
+        if (t >= LAND_T + SETTLE_T) {
+          // back to what he was doing: settle into it from the pad
+          P.flight = "here";
+          P.walkFrom.copy(P.pad);
+          P.walkYaw0 = face;
+          P.walkTo.copy(pose.spot);
+          P.walkYaw1 = pose.spotYaw;
+          P.mode = "walk";
+          P.t = 0;
+        }
+      }
+    }
+
+    // looking his blade over, now and then, once he is there
     let inspect = -1;
-    if (P.key === "blade" && P.hop < 0) {
-      inspect = P.actT;
-      if (inspect < INSPECT) {
-        gaze = P.gaze.set(
-          P.root.x + Math.sin(P.yaw) * 0.5,
-          P.root.y + build.shoulderY + 0.3,
-          P.root.z + Math.cos(P.yaw) * 0.5,
-        );
-      } else inspect = -1;
-    } else if (P.key === "pull" && P.hop < 0) {
+    if (P.act === "blade" && P.mode === "on" && !flying) {
+      const k = P.actT - BLADE_FIRST;
+      if (k >= 0) {
+        const c = k % BLADE_EVERY;
+        if (c < INSPECT) inspect = c;
+      }
+    }
+    // hanging from the bar he looks at it
+    if (!gaze && P.act === "pull" && P.mode === "on" && !flying) {
       gaze = P.gaze.copy(L.hands[0]!).add(L.hands[1]!).multiplyScalar(0.5);
       gaze.y += 0.25;
     }
+    // the statue holds its shape while he leans on it or hangs from it
+    statue.hold = !flying && (P.act === "lean" || P.act === "pull") && P.mode !== "walk" && P.mode !== "stage";
 
-    /* ── the exit: a Superman take-off, straight up and out of the top ── */
-    let x = P.root.x;
-    let y = P.root.y - dip;
-    let z = P.root.z;
-    let yaw = P.yaw;
-    let tilt = P.tilt;
-    let back = P.back;
-    let waveK = 0;
-    if (exit > 0) {
-      // he takes off from the floor, clear in front of the statue's face
-      const fx = Math.sin(statue.yaw);
-      const fz = Math.cos(statue.yaw);
-      const both = L.footW[0] > 0.5 && L.footW[1] > 0.5;
-      const lf = both ? P.tmp.addVectors(L.feet[0]!, L.feet[1]!).multiplyScalar(0.5) : P.tmp.copy(P.root);
-      const d = lf.x * fx + lf.z * fz;
-      const need = TUBE_D * STATUE_SCALE + LAUNCH_CLEAR;
-      if (d < need) lf.set(lf.x + fx * (need - d), 0, lf.z + fz * (need - d));
-      P.launch.set(lf.x, stand.position[1], lf.z);
-      const load = smooth(0, 0.14, exit); // down into the crouch, fists low
-      const blast = smooth(0.13, 0.2, exit); // the legs fire, the right fist goes up
-      const u = Math.max(0, exit - 0.15);
-      const rise = 2 * u + 14 * u * u;
-      const face = mix(yaw, -0.12, load);
-      const fs = Math.sin(face);
-      const fc = Math.cos(face);
-      // his left, in the world
-      const lx = fc;
-      const lz = -fs;
-      for (let i = 0; i < 2; i++) {
-        const side = i === 0 ? 1 : -1;
-        under(P.tmp2, P.launch, face, side);
-        if (L.footW[i] > 0.01) L.feet[i]!.lerp(P.tmp2, load);
-        else L.feet[i]!.copy(P.tmp2);
-        L.footW[i] = mix(L.footW[i], 1, load) * (1 - smooth(0.15, 0.19, exit));
-        L.knee[i] = false;
-      }
-      const cy = mix(y, P.launch.y, load) - CROUCH * load * (1 - blast) + rise;
-      // fists: low at his sides in the crouch; then the right one overhead and
-      // the left one tight at his hip
-      const hx = mix(x, P.launch.x, load);
-      const hz = mix(z, P.launch.z, load);
-      L.hands[0]!.set(hx + lx * 0.34 + fs * 0.05, cy + mix(-0.25, -0.1, blast), hz + lz * 0.34 + fc * 0.05);
-      L.hands[1]!.set(
-        // straight up over his right shoulder, the arm locked
-        hx - lx * mix(0.36, build.shoulderW * 0.9, blast) + fs * 0.06,
-        cy + mix(-0.25, build.shoulderY + build.armLen * 1.05, blast),
-        hz - lz * mix(0.36, build.shoulderW * 0.9, blast) + fc * 0.06,
-      );
-      L.handW[0] = Math.max(L.handW[0] * (1 - load), load * 0.85);
-      L.handW[1] = Math.max(L.handW[1] * (1 - load), load * 0.85, blast);
-      L.lean = mix(L.lean, 0.42, load) * (1 - blast) - 0.1 * blast;
-      L.kneesUp = mix(L.kneesUp, 0, load);
-      L.hang = mix(L.hang, 0, load) * (1 - blast) + 0.28 * blast;
-      tuck = tuck * (1 - load);
-      x = hx;
-      z = hz;
-      y = cy;
-      yaw = face;
-      tilt = tilt * (1 - load);
-      back = back * (1 - load);
-      // eyes up once he goes
-      gaze = blast > 0.3 ? P.gaze.set(x + fs * 0.4, y + 6, z + fc * 0.4) : gaze;
-      if (inspect >= 0) inspect = Math.max(inspect, INSPECT - 1.6 + load * 1.6);
-      waveK = exit > 0.14 ? smooth(0.14, 0.42, exit) : 0;
-    }
     state.tuck = tuck;
-    state.yaw = yaw;
+    state.yaw = P.yaw;
     state.limbs = L;
     state.gaze = gaze;
     state.inspect = busy.current ? -1 : inspect;
-    g.position.set(x, y, z);
-    // tipped back about his own shoulders' line, and leaned about the screen's axis
-    g.rotation.set(-back * Math.cos(yaw), 0, tilt + back * Math.sin(yaw), "ZXY");
+    state.thrust = thrust;
+    g.position.set(P.root.x, P.root.y - dip, P.root.z);
+    if (P.flight !== "here") g.rotation.set(0, 0, 0);
 
-    // the shockwave off the floor where he left it
+    // the shockwave off the floor where he left it, and the jets' glow on it
     const w = wave.current;
     if (w) {
       const m = w.material as THREE.MeshBasicMaterial;
-      m.opacity = waveK > 0 ? 0.5 * (1 - waveK) * smooth(0, 0.08, waveK) : 0;
-      w.position.set(P.launch.x, 0.02, P.launch.z);
+      m.opacity = waveK > 0 ? 0.45 * (1 - waveK) * smooth(0, 0.08, waveK) : 0;
+      w.position.set(P.pad.x, 0.02, P.pad.z);
       w.scale.setScalar(0.6 + waveK * 5.5);
+    }
+    const gl = glowRef.current;
+    if (gl) {
+      const height = Math.max(0, P.root.y - stand.position[1]);
+      (gl.material as THREE.MeshBasicMaterial).opacity = thrust * 0.5 * Math.max(0, 1 - height / 2.5);
+      gl.position.set(P.root.x, 0.015, P.root.z);
+      gl.scale.setScalar(1.1 + thrust * 0.8 + height * 0.3);
     }
   });
   return (
@@ -785,7 +937,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
         position={stand.position}
         onClick={(e) => {
           e.stopPropagation();
-          state.strike += 1;
+          // not in the air
+          if (P.flight === "here") state.strike += 1;
         }}
         onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
         onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
@@ -796,11 +949,18 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       {/* drawn from the start at zero opacity: nothing new to compile at take-off */}
       <mesh ref={wave} rotation-x={-Math.PI / 2} renderOrder={15} raycast={() => null}>
         <ringGeometry args={[0.42, 0.5, 64]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial color="#dff0ff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh ref={glowRef} rotation-x={-Math.PI / 2} renderOrder={14} raycast={() => null}>
+        <circleGeometry args={[0.5, 48]} />
+        <meshBasicMaterial map={jetGlow} color="#a9d4ff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
     </>
   );
 }
+
+/** a soft round falloff for the jets' light on the floor */
+const jetGlow = typeof document === "undefined" ? null : makeGlowTexture();
 
 function CameraRig() {
   const { camera, size } = useThree();
@@ -949,6 +1109,10 @@ export default function PortalScene({ onReady, onEnter, onTooSlow }: PortalScene
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}
       onCreated={({ gl, scene }) => {
         gl.setClearColor("#000000", 1);
+        // his swords are cut by clip planes: the blade runs out of the guard,
+        // the hilt is fabricated up a scan line. Without this three ignores
+        // those planes and the whole blade showed through his fist.
+        gl.localClippingEnabled = true;
         // ?dbg=g: the renderer on window, for the design-loop draw-call probe
         if (DBG.includes("g")) (window as unknown as { __gl: THREE.WebGLRenderer }).__gl = gl;
         // On the way out — the visitor has clicked a division and the warp is

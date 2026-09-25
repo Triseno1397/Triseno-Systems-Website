@@ -54,6 +54,8 @@ export interface OperatorState {
   inspect?: number;
   /** something in the world he looks at instead of the visitor */
   gaze?: THREE.Vector3 | null;
+  /** 0..1 — the jets under his feet (take-off and landing) */
+  thrust?: number;
   /** touch screens: performance.now() of the last touch — he looks at the
    *  finger (px/py) while it is down and for a moment after */
   touchAt?: number;
@@ -77,7 +79,81 @@ export interface Limbs {
 }
 
 /** how long looking his blade over takes, seconds */
-export const INSPECT = 6.6;
+export const INSPECT = 7;
+
+/* the blade inspection, seconds: the hilt is built in his fist as it comes up,
+   the blade runs out, he turns it in the light at arm's length, the blade runs
+   back in and the hilt dissolves before the arm comes down */
+const INS = { scan: [0.3, 0.85], out: [0.95, 1.35], turn: [1.5, 4.5], in: [4.7, 5.1], gone: [5.2, 5.8], down: [5.9, 6.9] } as const;
+
+/* ── the jets under his feet ───────────────────────────────────────────────
+   Two flames per boot, a white-hot core inside a wider pale-blue plume, drawn
+   additively with a flicker in the shader. In the scene from the start at
+   zero thrust (nothing to compile at take-off, and no light: a light would
+   change the light count and recompile every shader in the world). */
+function makeJets() {
+  const mk = (color: string, alpha: number) =>
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+      uniforms: { uColor: { value: new THREE.Color(color) }, uThrust: { value: 0 }, uTime: { value: 0 }, uAlpha: { value: alpha } },
+      vertexShader: /* glsl */ `
+        varying float vT;
+        varying vec3 vN;
+        varying vec3 vV;
+        void main() {
+          vT = -position.y; // 0 at the nozzle, 1 at the tip
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vN = normalize(normalMatrix * normal);
+          vV = normalize(-mv.xyz);
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        uniform float uThrust;
+        uniform float uTime;
+        uniform float uAlpha;
+        varying float vT;
+        varying vec3 vN;
+        varying vec3 vV;
+        void main() {
+          float t = clamp(vT, 0.0, 1.0);
+          // brightest face-on, soft at the silhouette, gone at the tip
+          float rim = pow(abs(dot(vN, vV)), 0.7);
+          float flick = 0.82 + 0.18 * sin(uTime * 57.0 + t * 23.0) * sin(uTime * 31.0 - t * 11.0);
+          // a hard bright throat at the nozzle, fading down the plume
+          float a = (pow(1.0 - t, 1.8) + 0.6 * exp(-t * 14.0)) * rim * flick * uThrust * uAlpha;
+          vec3 c = mix(vec3(1.0), uColor, smoothstep(0.0, 0.45, t));
+          gl_FragColor = vec4(c * a, a);
+        }
+      `,
+    });
+  const core = mk("#9fd2ff", 2.4);
+  const plume = mk("#2f7dff", 1.5);
+  // a cone with its base at the nozzle (y = 0) and its point down (y = -1)
+  const geo = new THREE.ConeGeometry(1, 1, 18, 1, true);
+  geo.rotateX(Math.PI);
+  geo.translate(0, -0.5, 0);
+  const group = new THREE.Group();
+  // the white-hot glow at each nozzle
+  const nozzle = new THREE.MeshBasicMaterial({ color: "#d8ecff", transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const ball = new THREE.SphereGeometry(1, 16, 12);
+  const boots = [0, 1].map(() => {
+    const g = new THREE.Group();
+    const c = new THREE.Mesh(geo, core);
+    const p = new THREE.Mesh(geo, plume);
+    const n = new THREE.Mesh(ball, nozzle);
+    c.renderOrder = p.renderOrder = n.renderOrder = 18;
+    c.frustumCulled = p.frustumCulled = n.frustumCulled = false;
+    g.add(p, c, n);
+    group.add(g);
+    return { g, c, p, n };
+  });
+  return { group, boots, core, plume, nozzle };
+}
 
 const DESK = "/models/robot-desk.glb";
 const MOB = "/models/robot-mob.glb";
@@ -195,7 +271,14 @@ const _dq = new THREE.Quaternion();
 const _pw = new THREE.Quaternion();
 const _bw = new THREE.Quaternion();
 const _id = new THREE.Quaternion();
-const _yAxis = new THREE.Vector3(0, 1, 0);
+const insQ = {
+  dir: new THREE.Vector3(),
+  x: new THREE.Vector3(),
+  z: new THREE.Vector3(),
+  m: new THREE.Matrix4(),
+  q: new THREE.Quaternion(),
+  mInv: new THREE.Quaternion(),
+};
 
 function aimBone(bone: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, pivot: THREE.Vector3, w: number) {
   _a.subVectors(from, pivot).normalize();
@@ -620,6 +703,8 @@ export default function Operator({
   }, [robot, spinG, jumpG]);
 
   const swords = useMemo(() => [makeSword(), makeSword()], []);
+  const jets = useMemo(() => makeJets(), []);
+  const bladeMid = useMemo(() => new THREE.Vector3(), []);
   const sparks = useMemo(() => makeSparks(), []);
   const orb = useMemo(() => {
     const m = new THREE.Mesh(
@@ -830,7 +915,8 @@ export default function Operator({
     swords.forEach((sw) => blank(sw.group));
     blank(sparks.pts);
     blank(orb.mesh);
-  }, [rig, swords, sparks, orb]);
+    blank(jets.group);
+  }, [rig, swords, sparks, orb, jets]);
 
   const { camera, gl, scene } = useThree();
   const [warmedEnv, setWarmedEnv] = useState(false);
@@ -1031,11 +1117,13 @@ export default function Operator({
       tx = Math.sin(s.t * 0.37) * 0.6 + Math.sin(s.t * 0.13) * 0.3;
       ty = Math.sin(s.t * 0.29 + 1.2) * 0.25;
     }
-    if (state.gaze) {
+    const ins = s.seq < 0 ? state.inspect ?? -1 : -1;
+    const look = state.gaze ?? (ins >= INS.out[0] && ins < INS.in[1] ? bladeMid : null);
+    if (look) {
       // a look at something in the world, turned into the same yaw and pitch
       // the pointer drives (the spine, neck and head share ~1.4x of the yaw
       // with the root, ~1.08x of the pitch)
-      tmp.pos2.copy(state.gaze);
+      tmp.pos2.copy(look);
       r.worldToLocal(tmp.pos2);
       tx = THREE.MathUtils.clamp(Math.atan2(tmp.pos2.x, tmp.pos2.z) / (1.05 * 1.4), -1, 1);
       ty = THREE.MathUtils.clamp(-Math.atan2(tmp.pos2.y - 0.4, Math.hypot(tmp.pos2.x, tmp.pos2.z)) / (0.6 * 1.08), -1, 1);
@@ -1043,19 +1131,24 @@ export default function Operator({
     s.follow = damp(s.follow, s.seq >= 0 ? 0 : 1, 4, dt);
     s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.05, 3.4, dt);
     s.pitch = damp(s.pitch, THREE.MathUtils.clamp(ty, -1, 1) * 0.6, 3.4, dt);
-    const y = s.yaw * s.follow;
-    const p = s.pitch * s.follow;
+    // While a move plays the mixer owns the bones, and it only rewrites a bone
+    // whose value changed since the last frame: anything turned on top of it
+    // would stack up frame after frame and leave him twisted when the move
+    // ended. So nothing procedural touches him while a move plays.
+    const free = s.playing ? 0 : 1;
+    const y = s.yaw * s.follow * free;
+    const p = s.pitch * s.follow * free;
     turn(rig.b.spine, y * 0.2, p * 0.1);
     turn(rig.b.chest, y * 0.26, p * 0.16);
     turn(rig.b.neck, y * 0.3, p * 0.32);
     turn(rig.b.head, y * 0.42, p * 0.5);
-    if (s.seq < 0) turn(rig.b.chest, 0, Math.sin(s.t * 1.3) * 0.012); // breathing
+    if (s.seq < 0 && free) turn(rig.b.chest, 0, Math.sin(s.t * 1.3) * 0.012); // breathing
     // ── the roll-out (OperatorInWorld drives the travel and the roll): he
     //    tucks — chin down, knees up, fists to the chest — as he goes ──
     const tuck = smooth(state.tuck ?? 0);
     const L = state.limbs;
-    if (L && L.lean) turn(rig.b.chest, 0, L.lean);
-    if (tuck > 0.001) {
+    if (L && L.lean && free) turn(rig.b.chest, 0, L.lean);
+    if (tuck > 0.001 && free) {
       turn(rig.b.chest, 0, tuck * 0.55);
       turn(rig.b.neck, 0, tuck * 0.35);
       turn(rig.b.head, 0, tuck * 0.3);
@@ -1070,7 +1163,7 @@ export default function Operator({
       }
     }
     // hanging from a bar (or in flight): knees bent back, one more than the other
-    const hang = L ? L.hang : 0;
+    const hang = L && free ? L.hang : 0;
     if (hang > 0.001) {
       if (rig.b.lUp) turn(rig.b.lUp, 0, -hang * 0.3);
       if (rig.b.lLeg) turn(rig.b.lLeg, 0, hang * 1.15);
@@ -1098,7 +1191,7 @@ export default function Operator({
     // ── feet on surfaces: two-bone IK down each leg, the foot kept level ──
     tmp.fwd.set(0, 0, 1).transformDirection(r.matrixWorld);
     tmp.side.set(1, 0, 0).transformDirection(r.matrixWorld);
-    if (L) {
+    if (L && free) {
       const legs = [
         [rig.b.lUp, rig.b.lLeg, rig.b.lFoot, 1],
         [rig.b.rUp, rig.b.rLeg, rig.b.rFoot, -1],
@@ -1156,7 +1249,6 @@ export default function Operator({
     // At rest the hands follow the pointer as well, a little and after the
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
-    const ins = s.seq < 0 ? state.inspect ?? -1 : -1;
     if (s.seq < 0 && (state.fine || touching) && tuck < 0.999 && ins < 0) {
       const placed = L ? Math.max(L.handW[0], L.handW[1], L.footW[0] * 0.6) : 0;
       const reach = 0.42 * s.follow * (1 - tuck) * (1 - placed);
@@ -1191,30 +1283,36 @@ export default function Operator({
         solveArm(arm, fore, handB, T, pole, w);
       }
     }
-    // ── looking his blade over: the right fist up before his face with the
-    //    blade standing in it, the wrist turning it in the light, the left
-    //    hand's fingers running up the flat from guard to point ──
+    // ── looking his blade over: the right fist held out at arm's length,
+    //    the blade standing up out of it well clear of his face, turned
+    //    slowly to catch the light and tipped across, then put away ──
     if (ins >= 0) {
-      const w = smooth(ins / 0.7) * (1 - smooth((ins - (INSPECT - 0.8)) / 0.7));
-      tmp.TR.copy(tmp.chest).addScaledVector(tmp.fwd, 0.36).addScaledVector(tmp.side, -0.1 + Math.sin(ins * 0.7) * 0.04);
-      tmp.TR.y += 0.1 + Math.sin(ins * 0.9) * 0.03;
+      const w = smooth(ins / 0.7) * (1 - smooth((ins - INS.down[0]) / (INS.down[1] - INS.down[0])));
+      // his right: -side. The fist out in front of his chest, a little to his right
+      tmp.TR.copy(tmp.chest).addScaledVector(tmp.fwd, 0.44).addScaledVector(tmp.side, -0.16);
+      tmp.TR.y += 0.02 + Math.sin(ins * 0.9) * 0.015;
       solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, w);
-      tmp.quat2.setFromAxisAngle(_yAxis, Math.sin(ins * 0.8) * 0.55 * w);
-      rig.b.rHand.quaternion.multiply(tmp.quat2);
+      // the blade's line: upright, leaning a touch away from him, tipped
+      // across in front of him while he turns it
+      const turnK = smooth((ins - INS.turn[0]) / 0.6) * (1 - smooth((ins - (INS.turn[1] - 0.6)) / 0.6));
+      // tipped out to his right and away, never across his face
+      const tip = -0.42 * turnK * Math.sin(((ins - INS.turn[0]) / (INS.turn[1] - INS.turn[0])) * Math.PI);
+      const roll = 1.1 * turnK * Math.sin((ins - INS.turn[0]) * 1.25);
+      insQ.dir.set(0, 1, 0).multiplyScalar(Math.cos(0.14)).addScaledVector(tmp.fwd, Math.sin(0.14));
+      insQ.dir.multiplyScalar(Math.cos(tip)).addScaledVector(tmp.side, Math.sin(tip)).addScaledVector(tmp.fwd, Math.abs(Math.sin(tip)) * 0.5).normalize();
+      // its broad face toward him, rolled about the blade's own line
+      insQ.z.copy(tmp.fwd).multiplyScalar(-1).projectOnPlane(insQ.dir).normalize();
+      insQ.z.applyAxisAngle(insQ.dir, roll);
+      insQ.x.crossVectors(insQ.dir, insQ.z).normalize();
+      insQ.m.makeBasis(insQ.x, insQ.dir, insQ.z);
+      insQ.q.setFromRotationMatrix(insQ.m); // the mount's world rotation we want
+      // the hand that gives the mount that rotation, in the hand's parent space
+      insQ.q.multiply(insQ.mInv.copy(mounts.r.quaternion).invert());
+      rig.b.rFore.getWorldQuaternion(_pw);
+      insQ.q.premultiply(_pw.invert());
+      const hw = w * smooth((ins - 0.2) / 0.5);
+      rig.b.rHand.quaternion.slerp(insQ.q, hw);
       rig.b.rHand.updateMatrixWorld(true);
-      const lw = smooth((ins - 1.4) / 0.35) * (1 - smooth((ins - 3.9) / 0.35)) * w;
-      if (lw > 0.001) {
-        // the blade's line, from the fist: root space, then the world
-        mounts.r.updateMatrixWorld(true);
-        tmp.inv.copy(r.matrixWorld).invert();
-        tmp.m.multiplyMatrices(tmp.inv, mounts.r.matrixWorld);
-        tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
-        const run = smooth((ins - 1.7) / 1.9);
-        tmp.TL.set(0, BLADE_BASE + (0.12 + 0.72 * run) * BLADE, 0).applyQuaternion(tmp.quat).add(tmp.pos);
-        r.localToWorld(tmp.TL);
-        tmp.TL.addScaledVector(tmp.side, 0.07).addScaledVector(tmp.fwd, -0.02);
-        solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, lw);
-      }
     }
     r.updateMatrixWorld(true);
     tmp.FL.copy(tmp.F);
@@ -1264,15 +1362,19 @@ export default function Operator({
       if (ins >= 0) {
         // looking it over: only the main blade, built in the fist, run out,
         // run back in, and the hilt dissolved again
-        sw.body.visible = i === 0 && ins > 0.25 && ins < INSPECT - 0.15;
+        sw.body.visible = i === 0 && ins > INS.scan[0] && ins < INS.gone[1];
         if (!sw.body.visible) return;
         mounts.r.updateMatrixWorld(true);
         tmp.m.multiplyMatrices(tmp.inv, mounts.r.matrixWorld);
         tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
         sw.group.position.copy(tmp.pos);
         sw.group.quaternion.copy(tmp.quat);
-        setScan(sw, ease((ins - 0.25) / 0.55) * (1 - ease((ins - (INSPECT - 0.75)) / 0.55)));
-        setBlade(sw, ease((ins - 0.95) / 0.4) * (1 - ease((ins - (INSPECT - 1.55)) / 0.4)), hue);
+        const span = (a: readonly [number, number]) => ease((ins - a[0]) / (a[1] - a[0]));
+        setScan(sw, span(INS.scan) * (1 - span(INS.gone)));
+        setBlade(sw, span(INS.out) * (1 - span(INS.in)), hue);
+        // where his eyes go next frame: halfway up the blade
+        bladeMid.set(0, BLADE_BASE + BLADE * 0.45, 0).applyQuaternion(tmp.quat).add(tmp.pos);
+        r.localToWorld(bladeMid);
         return;
       }
       const isTwin = i === 1;
@@ -1295,6 +1397,31 @@ export default function Operator({
       setBlade(sw, on * (1 - end), hue);
     });
     forge.intensity = lit;
+
+    // ── the jets: at each boot, pointing down his body, as long as the thrust ──
+    const thrust = state.thrust ?? 0;
+    jets.core.uniforms.uThrust.value = thrust;
+    jets.plume.uniforms.uThrust.value = thrust;
+    jets.core.uniforms.uTime.value = s.t;
+    jets.plume.uniforms.uTime.value = s.t;
+    jets.nozzle.opacity = Math.min(1, thrust * 1.6);
+    jets.group.visible = true;
+    if (DBG.includes("o")) (window as unknown as { __jets: unknown }).__jets = jets;
+    const feet = [rig.b.lFoot, rig.b.rFoot];
+    for (let i = 0; i < 2; i++) {
+      const j = jets.boots[i];
+      const f = feet[i];
+      if (!f) continue;
+      f.getWorldPosition(tmp.pos2);
+      r.worldToLocal(tmp.pos2);
+      // just under the heel, straight down his body
+      j.g.position.set(tmp.pos2.x, tmp.pos2.y - 0.012, tmp.pos2.z - 0.004);
+      const k = Math.max(0.001, thrust);
+      const flick = 1 + 0.08 * Math.sin(s.t * 43 + i * 2.1);
+      j.c.scale.set(0.02 + 0.01 * k, (0.1 + 0.26 * k) * flick, 0.02 + 0.01 * k);
+      j.p.scale.set(0.034 + 0.02 * k, (0.14 + 0.42 * k) * flick, 0.034 + 0.02 * k);
+      j.n.scale.setScalar((0.02 + 0.012 * k) * flick);
+    }
 
     if (trace) {
       const q = rig.b.chest.quaternion;
@@ -1352,6 +1479,7 @@ export default function Operator({
       <primitive object={swords[0].group} />
       <primitive object={swords[1].group} />
       <primitive object={sparks.pts} />
+      <primitive object={jets.group} />
       <primitive object={orb.mesh} />
       </group>
     </group>

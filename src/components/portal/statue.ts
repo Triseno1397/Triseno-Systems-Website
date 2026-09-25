@@ -33,6 +33,8 @@ export const statue = {
   /** true while he is on a part of it a morph would pull out from under him
    *  (leaning on its side, hanging from its top): the headline holds its glyph */
   hold: false,
+  /** true while it is changing from one glyph to another */
+  morphing: false,
 };
 
 /** Centre height that stands a glyph's bottom rail on the floor. */
@@ -102,10 +104,13 @@ export interface Pose {
   kneesUp: number;
   /** hanging: knees bent back, feet off the ground */
   hang: number;
+  /** where he stands on the floor to get into (and out of) it, and facing */
+  spot: THREE.Vector3;
+  spotYaw: number;
 }
 
 export function makePose(): Pose {
-  return { root: new THREE.Vector3(), yaw: 0, tilt: 0, back: 0, feet: [null, null], hands: [null, null], knee: [false, false], lean: 0, kneesUp: 0, hang: 0 };
+  return { root: new THREE.Vector3(), yaw: 0, tilt: 0, back: 0, feet: [null, null], hands: [null, null], knee: [false, false], lean: 0, kneesUp: 0, hang: 0, spot: new THREE.Vector3(), spotYaw: 0 };
 }
 
 /** Body measurements the poses are built from, world units at his stand scale
@@ -223,6 +228,8 @@ export function resolvePose(
       const chest = build.shoulderY - 0.36;
       set(out.hands, 1, body(_v, -0.2, chest, 0.24));
       set(out.hands, 0, body(_v, 0.19, chest - 0.06, 0.2));
+      out.spot.set(out.root.x + _f.x * 0.08, 0, out.root.z + _f.z * 0.08);
+      out.spotYaw = bodyYaw;
       break;
     }
     case "sit": {
@@ -240,6 +247,9 @@ export function resolvePose(
       out.knee[0] = out.knee[1] = true;
       out.lean = 0.3;
       out.kneesUp = 1;
+      // he stands up over his own feet
+      out.spot.set((out.feet[0]!.x + out.feet[1]!.x) / 2, 0, (out.feet[0]!.z + out.feet[1]!.z) / 2);
+      out.spotYaw = bodyYaw;
       break;
     }
     case "pull": {
@@ -263,12 +273,17 @@ export function resolvePose(
       set(out.hands, 1, at(_v, gx, wy, face * 0.55));
       out.hang = 1;
       out.lean = -0.08 + lift * 0.12;
+      // stood under the bar, facing it, before the jump to grab it
+      out.spot.set(out.root.x, 0, out.root.z);
+      out.spotYaw = bodyYaw;
       break;
     }
     case "blade":
     case "stage": {
       out.root.copy(stage);
       out.yaw = stageYaw;
+      out.spot.set(stage.x, 0, stage.z);
+      out.spotYaw = stageYaw;
       break;
     }
   }
