@@ -1,13 +1,15 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, MeshReflectorMaterial } from "@react-three/drei";
+import { Environment, Lightformer, MeshReflectorMaterial, PerformanceMonitor } from "@react-three/drei";
 import { Bloom, DepthOfField, EffectComposer, FXAA, SMAA, Vignette } from "@react-three/postprocessing";
-import type { DepthOfFieldEffect } from "postprocessing";
-import { TierContext, WHITE, env, DBG } from "./env";
+import type { DepthOfFieldEffect, EffectComposer as ComposerImpl } from "postprocessing";
+import { TierContext, WHITE, env, DBG, type Tier } from "./env";
+import { deviceClass, gpuClass, gpuName } from "@/lib/device";
 import type { FloorMaps } from "./textures";
+import { addFrameJob, frameInterval } from "../frameLoop";
 
 /* ─────────────────────────────────────────────────────────────────────────
    The place every Triseno world is made of, in pieces any world can mount:
@@ -78,22 +80,27 @@ const HAZE_LAYERS = [
 
 export function Haze({ texture }: { texture: THREE.Texture }) {
   const group = useRef<THREE.Group>(null);
+  // every haze layer is a screen-wide additive sheet: on the low tier the
+  // three far ones carry the look, and the fill-rate cost halves
+  const low = useContext(TierContext) === "low";
+  const list = low ? HAZE_LAYERS.slice(2) : HAZE_LAYERS;
   const layers = useMemo(
     () =>
-      HAZE_LAYERS.map((l) => {
+      list.map((l) => {
         const map = texture.clone();
         map.needsUpdate = true;
         map.repeat.set(l.w / 30, 1);
         return new THREE.MeshBasicMaterial({
           map,
           transparent: true,
-          opacity: l.o,
+          opacity: low ? l.o * 1.25 : l.o,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
           fog: false,
         });
       }),
-    [texture],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [texture, low],
   );
   useEffect(
     () => () =>
@@ -109,13 +116,13 @@ export function Haze({ texture }: { texture: THREE.Texture }) {
     const t = state.clock.elapsedTime;
     layers.forEach((m, i) => {
       // nearer layers slide faster as the camera moves: parallax without moving geometry
-      if (m.map) m.map.offset.x = t * HAZE_LAYERS[i].s + cam.z * (0.02 / (i + 1));
+      if (m.map) m.map.offset.x = t * list[i].s + cam.z * (0.02 / (i + 1));
       m.color.copy(env.light).multiplyScalar(0.3 * (1 - 0.35 * env.white)).addScalar(0.02 * (1 - env.white * 0.5));
     });
   });
   return (
     <group ref={group}>
-      {HAZE_LAYERS.map((l, i) => (
+      {list.map((l, i) => (
         <mesh key={i} position={[0, l.y, l.z]} material={layers[i]} renderOrder={2 + i}>
           <planeGeometry args={[l.w, l.h]} />
         </mesh>
@@ -212,9 +219,10 @@ function dustGeometry(count: number, spread: number, depth: number, seed: number
 export function Dust({ sprite, depth = 90 }: { sprite: THREE.Texture; depth?: number }) {
   const near = useRef<THREE.Points>(null);
   const far = useRef<THREE.Points>(null);
+  const low = useContext(TierContext) === "low";
   const [gNear, gFar] = useMemo(
-    () => [dustGeometry(260, 5, depth, 1337), dustGeometry(1500, 16, depth, 90211)],
-    [depth],
+    () => [dustGeometry(low ? 140 : 260, 5, depth, 1337), dustGeometry(low ? 600 : 1500, 16, depth, 90211)],
+    [depth, low],
   );
   const mNear = useRef<THREE.PointsMaterial>(null);
   const mFar = useRef<THREE.PointsMaterial>(null);
@@ -327,18 +335,273 @@ export function KeyLight() {
 
 /* ── studio lightformers: what the glass reflects ──────────────────────── */
 
-export function WorldEnvironment() {
+/* Shared boot state for the one world canvas on the page (scene/pieces):
+   its post chain, and whether the frame driver may advance it. */
+export const boot = {
+  /** the post chain, once Post has built it — its shaders are pre-linked too */
+  composer: null as ComposerImpl | null,
+  /** true once the shaders are linked and the world may draw */
+  resumed: false,
+  /** true while a warp tunnel covers the canvas: nothing is drawn underneath */
+  paused: false,
+  /** the shortest time between two drawn frames: 1/60, or 1/30 on a machine
+   *  that cannot hold 60 — a steady 30 reads smoother than a ragged 40 */
+  minInterval: 1 / 60,
+};
+
+/* ── quality governor: every world starts where this machine is smooth ──── */
+
+export interface Quality {
+  /** ceiling on the device pixel ratio */
+  maxDpr: number;
+  /** render this far under the device's pixels (the post chain scales it up) */
+  under: number;
+  tier: Tier;
+  /** drawn at a steady 30 instead of 60 */
+  cap30: boolean;
+}
+
+/** Where a world starts, from what the machine says about itself. */
+export function initialQuality(): Quality {
+  if (DBG.includes("H")) return { maxDpr: 1.5, under: 1, tier: "high", cap30: false };
+  const dc = deviceClass();
+  if (dc === "low") return { maxDpr: 1, under: 0.75, tier: "low", cap30: false };
+  if (dc === "mid") return { maxDpr: 1, under: 1, tier: "low", cap30: false };
+  return { maxDpr: 1.5, under: 1, tier: DBG.includes("l") ? "low" : "high", cap30: false };
+}
+
+/** A weak GPU (named on the real canvas) starts lower still. */
+export function gpuQuality(q: Quality, cls: ReturnType<typeof gpuClass>): Quality {
+  if (cls !== "weak") return q;
+  return { ...q, maxDpr: 1, under: Math.min(q.under, 0.875), tier: "low" };
+}
+
+/** One step down: sharpness first, then passes, then frame rate. null when
+ *  nothing is left to give. */
+export function stepDown(q: Quality): Quality | null {
+  const device = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  if (q.maxDpr > 1 && device > 1) return { ...q, maxDpr: 1 };
+  if (q.under > 0.8) return { ...q, under: +(q.under - 0.125).toFixed(3) };
+  if (q.tier === "high") return { ...q, tier: "low" };
+  if (!q.cap30) return { ...q, cap30: true };
+  if (q.under > 0.6) return { ...q, under: 0.625 };
+  return null;
+}
+
+export function qualityDpr(q: Quality): number {
+  if (DBG.includes("r")) return 0.5;
+  const device = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  return Math.min(device, q.maxDpr) * q.under;
+}
+
+/**
+ * Watches the frame rate once the world is up and walks the quality down a
+ * step at a time while it is short. At 60 it judges against ~52fps; once
+ * capped at 30 it judges against ~25. With nothing left, `onGiveUp` hands
+ * the page to its 2D world, which runs on anything.
+ * Reads the GPU's name on the real context the first time it renders.
+ */
+export function Governor({
+  quality,
+  setQuality,
+  armed,
+  onGiveUp,
+}: {
+  quality: Quality;
+  setQuality: (q: Quality) => void;
+  armed: boolean;
+  onGiveUp?: () => void;
+}) {
+  const gl = useThree((s) => s.gl);
+  const checked = useRef(false);
+  const qRef = useRef(quality);
+  useEffect(() => {
+    qRef.current = quality;
+    boot.minInterval = quality.cap30 ? 1 / 30 : 1 / 60;
+    document.documentElement.dataset.worldQuality = `${quality.tier}|${qualityDpr(quality).toFixed(2)}|${quality.cap30 ? 30 : 60}`;
+  }, [quality]);
+  useEffect(
+    () => () => {
+      boot.minInterval = 1 / 60;
+    },
+    [],
+  );
+  useEffect(() => {
+    if (checked.current) return;
+    checked.current = true;
+    if (DBG.includes("H")) return;
+    const name = gpuName(gl.getContext());
+    const cls = gpuClass(name);
+    document.documentElement.dataset.gpu = `${cls}|${name.slice(0, 80)}`;
+    // no GPU at all: the CPU is drawing WebGL, and nothing of this size is
+    // smooth there — the 2D world instead, before the loader even leaves
+    if (cls === "software") onGiveUp?.();
+    else if (cls === "weak") setQuality(gpuQuality(qRef.current, cls));
+  }, [gl, setQuality, onGiveUp]);
+
+  if (!armed || DBG.includes("H")) return null;
+  return (
+    <PerformanceMonitor
+      // a new monitor per frame-rate target: its history is of the old target
+      key={quality.cap30 ? "30" : "60"}
+      ms={200}
+      iterations={5}
+      threshold={0.75}
+      bounds={() => (quality.cap30 ? [24, 1000] : [52, 1000])}
+      flipflops={50}
+      onDecline={() => {
+        const next = stepDown(qRef.current);
+        if (next) setQuality(next);
+        else onGiveUp?.();
+      }}
+    />
+  );
+}
+
+type PMREMPrivate = {
+  _setSize(n: number): void;
+  _allocateTargets(): THREE.WebGLRenderTarget;
+  _ggxMaterial: THREE.ShaderMaterial | null;
+};
+
+/**
+ * Link a set of materials off the main thread (KHR_parallel_shader_compile,
+ * through three's compileAsync) with a render target bound — a program built
+ * for the canvas is not the program a draw into a render target needs, and
+ * nearly everything here draws into one. Resolves when they are linked; on a
+ * driver without the extension it links synchronously and resolves at once.
+ */
+export function linkAsync(gl: THREE.WebGLRenderer, camera: THREE.Camera, materials: THREE.Material[], target: boolean): Promise<void> {
+  const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+  const stage = new THREE.Group();
+  // a geometry WITH a position attribute: whether one exists is part of the
+  // program's cache key, and a program linked for a bare geometry is not the
+  // one a real mesh draws with (it was linked twice, the second time on the
+  // main thread — measured with design-loop/_keys.mjs)
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(9), 3));
+  for (const m of materials) stage.add(new THREE.Mesh(geo, m));
+  const prev = gl.getRenderTarget();
+  const tiny = target ? new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType }) : null;
+  if (tiny) gl.setRenderTarget(tiny);
+  const done = () => {
+    gl.setRenderTarget(prev);
+    tiny?.dispose();
+  };
+  if (!r.compileAsync) {
+    try {
+      gl.compile(stage, camera);
+    } finally {
+      done();
+    }
+    return Promise.resolve();
+  }
+  return r.compileAsync(stage, camera).then(done, done);
+}
+
+/**
+ * The environment map's GGX convolution shader is the single most expensive
+ * link in the world (0.8s on the main thread on a Windows/ANGLE driver,
+ * measured with design-loop/program-census.mjs), and three builds it
+ * synchronously the first time an environment is used. It is linked here in
+ * the background first — the same program, by cache key — and only then is
+ * the lightformer studio mounted, so its PMREM finds the program ready.
+ * `onReady` fires once scene.environment is in place.
+ */
+export function WorldEnvironment({ onReady }: { onReady?: () => void }) {
+  const { gl, camera } = useThree();
+  const [linked, setLinked] = useState(false);
+  const readyRef = useRef(onReady);
+  useEffect(() => {
+    readyRef.current = onReady;
+  });
+
+  useEffect(() => {
+    let alive = true;
+    let keep: THREE.ShaderMaterial | null = null;
+    const pm = new THREE.PMREMGenerator(gl);
+    const p = pm as unknown as PMREMPrivate;
+    let rt: THREE.WebGLRenderTarget | null = null;
+    try {
+      p._setSize(256);
+      rt = p._allocateTargets();
+      keep = p._ggxMaterial;
+    } catch {
+      keep = null;
+    }
+    // the material lives on (holding the linked program in the cache); the
+    // generator's render targets go at once
+    p._ggxMaterial = null;
+    pm.dispose();
+    rt?.dispose();
+    const go = () => {
+      if (alive) setLinked(true);
+    };
+    if (keep) linkAsync(gl, camera, [keep], true).then(go, go);
+    else go();
+    // never hold the world behind a driver that will not answer
+    const guard = window.setTimeout(go, 2500);
+    return () => {
+      alive = false;
+      window.clearTimeout(guard);
+      keep?.dispose();
+    };
+  }, [gl, camera]);
+
   return (
     <>
       <ambientLight intensity={0.05} />
-      <Environment resolution={256} frames={1}>
-        <Lightformer form="rect" intensity={5} position={[0, 6, 2]} rotation={[Math.PI / 2, 0, 0]} scale={[10, 1.2, 1]} />
-        <Lightformer form="rect" intensity={3} position={[-6, 2, 3]} rotation={[0, Math.PI / 2, 0]} scale={[8, 0.6, 1]} />
-        <Lightformer form="rect" intensity={3} position={[6, 2, 3]} rotation={[0, -Math.PI / 2, 0]} scale={[8, 0.6, 1]} />
-        <Lightformer form="ring" intensity={1.4} position={[0, 2, 8]} scale={3} />
-      </Environment>
+      {linked ? (
+        <>
+          <Environment resolution={256} frames={1}>
+            <Lightformer form="rect" intensity={5} position={[0, 6, 2]} rotation={[Math.PI / 2, 0, 0]} scale={[10, 1.2, 1]} />
+            <Lightformer form="rect" intensity={3} position={[-6, 2, 3]} rotation={[0, Math.PI / 2, 0]} scale={[8, 0.6, 1]} />
+            <Lightformer form="rect" intensity={3} position={[6, 2, 3]} rotation={[0, -Math.PI / 2, 0]} scale={[8, 0.6, 1]} />
+            <Lightformer form="ring" intensity={1.4} position={[0, 2, 8]} scale={3} />
+          </Environment>
+          <EnvArrived onReady={() => readyRef.current?.()} />
+        </>
+      ) : null}
     </>
   );
+}
+
+/* mounted beside the Environment, after it: its layout effect runs once the
+   Environment's own has set scene.environment */
+function EnvArrived({ onReady }: { onReady: () => void }) {
+  useLayoutEffect(() => {
+    onReady();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+/* ── frame driver: the world draws as the last writer of the page's frame ─
+   The canvas runs frameloop="never" and is advanced from the shared frame
+   loop (frameLoop.ts) once its shaders are linked: after Lenis has moved the
+   page and after every DOM write of the same tick, off the same clock — the
+   camera and the copy cards never disagree by a frame. On a high-refresh
+   display it draws at the nearest steady division of the refresh rate at or
+   above 60 (every frame at 60/90Hz, every second at 120/144Hz): one heavy
+   frame per display frame on a 144Hz panel is what turned a mid-range GPU
+   into a stutter. */
+export function FrameDriver() {
+  const advance = useThree((s) => s.advance);
+  const set = useThree((s) => s.set);
+  useEffect(() => {
+    set({ frameloop: "never" });
+    let last = -1;
+    return addFrameJob({
+      write: (time) => {
+        if (!boot.resumed || boot.paused) return;
+        const raf = frameInterval();
+        if (last >= 0 && time - last < boot.minInterval - raf * 0.5) return;
+        last = time;
+        advance(time, true);
+      },
+    });
+  }, [advance, set]);
+  return null;
 }
 
 /* ── post: depth of field that follows the focal object, bloom, vignette ── */
@@ -355,6 +618,15 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
   // buffer, so DOF would smear the whole backdrop
   const high = useContext(TierContext) === "high" && withDof;
   const dof = useRef<DepthOfFieldEffect>(null);
+  // the composer itself, for the boot sequence (its shaders are pre-linked)
+  const composer = useRef<ComposerImpl>(null);
+  useEffect(() => {
+    const c = composer.current;
+    boot.composer = c;
+    return () => {
+      if (boot.composer === c) boot.composer = null;
+    };
+  });
   const focus = useMemo(() => new THREE.Vector3(0, focusY, 0), [focusY]);
   useFrame((_, dt) => {
     focus.lerp(env.focus, 1 - Math.exp(-Math.min(dt, 1) * 3));
@@ -362,8 +634,19 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
   });
   // ?dbg switches for the design-loop fps series: b no bloom, s no AA at all,
   // v no vignette, 8 byte frame buffer, m 4x MSAA in place of the AA pass
+  const low = useContext(TierContext) === "low";
   const bloom = DBG.includes("b") ? null : (
-    <Bloom mipmapBlur intensity={0.5} luminanceThreshold={0.82} luminanceSmoothing={0.12} radius={0.72} levels={BLOOM_LEVELS} resolutionScale={BLOOM_SCALE} />
+    <Bloom
+      mipmapBlur
+      intensity={0.5}
+      luminanceThreshold={0.82}
+      luminanceSmoothing={0.12}
+      radius={0.72}
+      // the low tier: five mip levels at a third of the resolution — the glow
+      // is soft by nature and loses nothing a visitor can see
+      levels={low ? Math.min(5, BLOOM_LEVELS) : BLOOM_LEVELS}
+      resolutionScale={low ? Math.min(0.35, BLOOM_SCALE) : BLOOM_SCALE}
+    />
   );
   const vignette = DBG.includes("v") ? null : <Vignette eskil={false} offset={0.22} darkness={0.72} />;
   // FXAA, not SMAA: at 1080p on an integrated GPU SMAA's three passes were
@@ -373,7 +656,7 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
   const msaa = DBG.includes("m") ? 4 : 0;
   const fbType = DBG.includes("8") ? THREE.UnsignedByteType : undefined;
   return high ? (
-    <EffectComposer key="hi" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
+    <EffectComposer ref={composer} key="hi" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
       <DepthOfField
         ref={dof}
         target={[0, focusY, 0]}
@@ -386,7 +669,7 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
       {smaa}
     </EffectComposer>
   ) : (
-    <EffectComposer key="lo" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
+    <EffectComposer ref={composer} key="lo" multisampling={msaa} frameBufferType={fbType} enableNormalPass={false}>
       {bloom}
       {vignette}
       {smaa}
@@ -396,52 +679,101 @@ export function Post({ focusY = 1.95, dof: withDof = true }: { focusY?: number; 
 
 /* ── ready signal ──────────────────────────────────────────────────────── */
 
+/** every shader the post chain will draw with, reached through its passes */
+function postMaterials(composer: ComposerImpl): { target: THREE.Material[]; screen: THREE.Material[] } {
+  const target: THREE.Material[] = [];
+  const screen: THREE.Material[] = [];
+  type Pass = { fullscreenMaterial?: THREE.Material; effects?: unknown[]; renderToScreen?: boolean };
+  type Eff = {
+    luminancePass?: Pass;
+    mipmapBlurPass?: { downsamplingMaterial?: THREE.Material; upsamplingMaterial?: THREE.Material };
+    blurPass?: Pass;
+    cocPass?: Pass;
+    maskPass?: Pass;
+    bokehNearBasePass?: Pass;
+    bokehFarBasePass?: Pass;
+    bokehNearFillPass?: Pass;
+    bokehFarFillPass?: Pass;
+  };
+  const push = (into: THREE.Material[], m?: THREE.Material) => {
+    if (m && !target.includes(m) && !screen.includes(m)) into.push(m);
+  };
+  for (const pass of composer.passes as unknown as Pass[]) {
+    push(pass.renderToScreen ? screen : target, pass.fullscreenMaterial);
+    for (const e of (pass.effects ?? []) as Eff[]) {
+      push(target, e.luminancePass?.fullscreenMaterial);
+      push(target, e.mipmapBlurPass?.downsamplingMaterial);
+      push(target, e.mipmapBlurPass?.upsamplingMaterial);
+      for (const k of ["blurPass", "cocPass", "maskPass", "bokehNearBasePass", "bokehFarBasePass", "bokehNearFillPass", "bokehFarFillPass"] as const)
+        push(target, e[k]?.fullscreenMaterial);
+    }
+  }
+  return { target, screen };
+}
+
 /* The world's shaders are linked before its first frame, off the main thread
    where the driver allows it (KHR_parallel_shader_compile), with the render
    loop held until they are. Letting the first frames compile as they went was
    2.5s of the main thread on the portal alone — 27% of the entire startup —
    and the 1.5s freeze on the way into every division page. The loader and the
-   warp were already covering that time; now nothing is frozen underneath them. */
-export function ReadySignal({ onReady }: { onReady: () => void }) {
-  const { gl, scene, camera, set } = useThree();
+   warp were already covering that time; now nothing is frozen underneath them.
+   `envReady`: the environment map is in place (WorldEnvironment) — a material
+   linked without it is linked again the first time it is drawn with it. */
+export function ReadySignal({ onReady, envReady = true }: { onReady: () => void; envReady?: boolean }) {
+  const { gl, scene, camera } = useThree();
   const frames = useRef(0);
   const sent = useRef(false);
-  const resumed = useRef(false);
+  const started = useRef(false);
   useEffect(() => {
+    if (!envReady || started.current) return;
+    started.current = true;
     let alive = true;
-    set({ frameloop: "never" });
+    boot.resumed = false;
     const resume = () => {
-      if (!alive || resumed.current) return;
-      resumed.current = true;
-      set({ frameloop: "always" });
+      if (!alive || boot.resumed) return;
+      boot.resumed = true;
     };
-    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
     // never trap the visitor behind a driver that will not answer
-    const guard = window.setTimeout(resume, 4000);
-    // Compiled with a render target bound: a program built for the canvas is
+    const guard = window.setTimeout(resume, 4500);
+    // Linked with a render target bound: a program built for the canvas is
     // not the one a draw into the composer's buffer needs (no tone mapping,
     // a different output transform), so compiling for the canvas built every
     // shader twice — once here, once more, synchronously, on the first real
-    // frame. With KHR_parallel_shader_compile these links finish off the main
-    // thread while the loader animates. Measured with program-census.mjs.
-    if (r.compileAsync) {
-      const tiny = new THREE.WebGLRenderTarget(1, 1);
-      const prev = gl.getRenderTarget();
-      gl.setRenderTarget(tiny);
-      const done = () => {
-        gl.setRenderTarget(prev);
-        tiny.dispose();
-        resume();
-      };
-      r.compileAsync(scene, camera).then(done, done);
-    } else resume();
+    // frame. Measured with program-census.mjs.
+    const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+    const tiny = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+    const prev = gl.getRenderTarget();
+    gl.setRenderTarget(tiny);
+    const sceneDone = () => {
+      gl.setRenderTarget(prev);
+      tiny.dispose();
+    };
+    const post = () => {
+      // then the post chain's own shaders, the same way — they are not in the
+      // scene, and used to link on the first frame, on the main thread
+      const c = boot.composer;
+      if (!c || !alive) return Promise.resolve();
+      const { target, screen } = postMaterials(c);
+      return linkAsync(gl, camera, target, true).then(() => linkAsync(gl, camera, screen, false));
+    };
+    let chain: Promise<unknown>;
+    if (r.compileAsync) chain = r.compileAsync(scene, camera).then(sceneDone, sceneDone);
+    else {
+      try {
+        gl.compile(scene, camera);
+      } finally {
+        sceneDone();
+      }
+      chain = Promise.resolve();
+    }
+    chain.then(post, post).then(resume, resume);
     return () => {
       alive = false;
       window.clearTimeout(guard);
     };
-  }, [gl, scene, camera, set]);
+  }, [gl, scene, camera, envReady]);
   useFrame(() => {
-    if (sent.current || !resumed.current) return;
+    if (sent.current || !boot.resumed) return;
     frames.current += 1;
     if (frames.current >= 2) {
       sent.current = true;

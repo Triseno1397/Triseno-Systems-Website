@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { glyphPoints } from "@/lib/glyph-path";
+import { deviceClass } from "@/lib/device";
 import type { GlyphKind } from "@/lib/divisions";
 
 const KINDS: GlyphKind[] = ["circle", "square", "triangle"];
@@ -100,7 +101,7 @@ export default function BeamsCollision({
     // phones: 1.5x is indistinguishable for thin light lines and draws about
     // half the pixels of a 2-3x screen every frame
     const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, deviceClass() !== "high" ? 1 : coarse ? 1.5 : 2);
     let w = 0;
     let h = 0;
     let floorY = 0;

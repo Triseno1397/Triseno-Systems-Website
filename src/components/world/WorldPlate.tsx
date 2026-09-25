@@ -36,6 +36,12 @@ export interface WorldPlateProps {
    */
   stations?: StationStart[] | false;
   className?: string;
+  /**
+   * true while something opaque covers this plate (the portal's 3D canvas,
+   * once it is drawing): the plate is hidden by world.css then, and its
+   * per-frame pose updates and drifting layers stop costing anything.
+   */
+  paused?: boolean;
 }
 
 const WHITE = "#ffffff";
@@ -46,6 +52,7 @@ export default function WorldPlate({
   tint = 0.78,
   stations,
   className = "",
+  paused = false,
 }: WorldPlateProps) {
   const p = plateFor(world);
   const all = stationPlates(world);
@@ -80,7 +87,7 @@ export default function WorldPlate({
   useEffect(() => {
     const cam = camRef.current;
     const light = lightRef.current;
-    if (!cam) return;
+    if (!cam || paused) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let last = "";
     const lastLayer: string[] = [];
@@ -128,7 +135,7 @@ export default function WorldPlate({
       window.removeEventListener("pointermove", onMove);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world, plates.length]);
+  }, [world, plates.length, paused]);
 
   const style = {
     ["--plate-hue" as string]: shown,
@@ -146,6 +153,7 @@ export default function WorldPlate({
       aria-hidden="true"
       data-world-layer=""
       data-tinted={on ? "" : undefined}
+      data-paused={paused ? "" : undefined}
       className={`world-plate ${className}`}
       style={style}
     >

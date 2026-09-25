@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -10,6 +11,8 @@ import {
 import dynamic from "next/dynamic";
 import { DIVISIONS, type DivisionKey } from "@/lib/divisions";
 import WorldAtmosphere from "./WorldAtmosphere";
+import SceneGuard from "./SceneGuard";
+import { prefersLite } from "@/lib/device";
 import { plateForDivision } from "./plates";
 import GlassPanel from "./GlassPanel";
 import { onWorldProgress, setWorldProgress, worldState } from "./scene/worldState";
@@ -45,13 +48,10 @@ const SEED: Partial<Record<DivisionKey, number>> = {
   contact: 611,
 };
 
+/* the API existing is the check: a context that then fails to create is
+   caught by SceneGuard (see there for why no throwaway context) */
 function canRunWebGL(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
-    return false;
-  }
+  return !prefersLite();
 }
 
 export interface DivisionWorldProps {
@@ -88,13 +88,19 @@ export default function DivisionWorld({
   const d = DIVISIONS[division];
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
+  // set when this machine proved it cannot draw the 3D world smoothly
+  const tooSlow = useRef(false);
+  const toLite = useCallback(() => {
+    tooSlow.current = true;
+    setMode("lite");
+  }, []);
 
   /* full 3D, or the composited atmosphere (M5: mobile, reduced motion, no WebGL) */
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const small = window.matchMedia("(max-width: 767px)");
     const decide = () => {
-      const lite = reduced.matches || small.matches || !canRunWebGL();
+      const lite = reduced.matches || small.matches || !canRunWebGL() || tooSlow.current;
       worldState.still = reduced.matches;
       setMode(lite ? "lite" : "full");
     };
@@ -161,6 +167,7 @@ export default function DivisionWorld({
       <WorldAtmosphere hue={plateWorld ? "#ffffff" : d.hue} plate={plateWorld} />
       {mode === "full" ? (
         <div className="division-world__canvas" data-on={ready ? "" : undefined}>
+          <SceneGuard onFail={toLite}>
           <DivisionWorldScene
             hue={d.hue}
             glyph={d.glyph}
@@ -171,7 +178,9 @@ export default function DivisionWorld({
               setReady(true);
               onReady?.();
             }}
+            onTooSlow={toLite}
           />
+          </SceneGuard>
         </div>
       ) : null}
     </div>

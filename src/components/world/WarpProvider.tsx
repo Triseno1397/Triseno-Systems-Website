@@ -17,6 +17,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { divisionForHref, type Division } from "@/lib/divisions";
 import { glyphPoints } from "@/lib/glyph-path";
 import Glyph from "./Glyph";
+import { deviceClass } from "@/lib/device";
 
 /* ─────────────────────────────────────────────────────────────────────────
    M2 — travel between worlds, as one arc of ~2.5s:
@@ -131,7 +132,10 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const [hr, hg, hb] = hexToRgb(target.hue);
       const ctx = canvas.getContext("2d");
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      // the tunnel is streaks of light: at a pixel ratio of 1 and half the
+      // streaks it is the same picture on a machine that could not draw more
+      const weak = deviceClass() !== "high";
+      const dpr = Math.min(window.devicePixelRatio || 1, weak ? 1 : 1.5);
       let w = 0;
       let h = 0;
       const resize = () => {
@@ -143,7 +147,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       resize();
       window.addEventListener("resize", resize);
 
-      const stars: Star[] = Array.from({ length: STAR_COUNT }, () => ({
+      const stars: Star[] = Array.from({ length: weak ? STAR_COUNT / 2 : STAR_COUNT }, () => ({
         x: (Math.random() * 2 - 1) * 1.6,
         y: (Math.random() * 2 - 1) * 1.6,
         z: Math.random() * 0.95 + 0.05,

@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { plate as plateFor, type PlateWorld } from "../plates";
+import { scrollMetrics } from "../plateMotion";
 import { env } from "./env";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -166,9 +167,11 @@ export function PlateBackdrop({ world, pointer, pool = 0.16, grade = 0.82 }: Pla
     const step = Math.min(dt, 1);
     const fade = ready.v ? Math.min(1, anim.y + step / 0.9) : anim.y;
 
-    // scroll-driven push-in across the whole page
-    const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    const prog = Math.min(1, Math.max(0, window.scrollY / max));
+    // scroll-driven push-in across the whole page. The frame's scroll
+    // position comes from the frame loop's own measurement: asking the
+    // document for scrollY / scrollHeight here, after the frame's style
+    // writes, forced a style and layout pass on every rendered frame.
+    const prog = scrollMetrics().p;
     const zoom = anim.x + (1 + 0.12 * prog - anim.x) * (1 - Math.exp(-step * 4));
     anim.set(zoom, fade);
     (u.uA.value as THREE.Vector4).set(state.clock.elapsedTime, size.width / Math.max(1, size.height), fade, zoom);

@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useEffect, useMemo } from "react";
 import Operator, { type OperatorState } from "./Operator";
+import { deviceClass } from "@/lib/device";
 
 const damp = (c: number, t: number, l: number, dt: number) => THREE.MathUtils.lerp(c, t, 1 - Math.exp(-l * dt));
 
@@ -36,9 +37,11 @@ function Pacer({ busy, running }: { busy: { current: boolean }; running: boolean
     if (!running) return;
     let raf = 0;
     let last = 0;
+    // an older phone: 24 at rest, 40 during a move — steady beats fast
+    const low = deviceClass() === "low";
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop);
-      const step = busy.current ? 0 : 1000 / 32;
+      const step = busy.current ? (low ? 1000 / 40 : 0) : 1000 / (low ? 24 : 32);
       if (t - last >= step) {
         last = t;
         invalidate();

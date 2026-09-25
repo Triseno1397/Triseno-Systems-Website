@@ -12,6 +12,8 @@ import Loader from "@/components/world/Loader";
 import WorldPlate from "@/components/world/WorldPlate";
 import GlassPanel from "@/components/world/GlassPanel";
 import RobotStage from "./RobotStage";
+import SceneGuard from "@/components/world/SceneGuard";
+import { prefersLite } from "@/lib/device";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import {
@@ -28,6 +30,12 @@ gsap.registerPlugin(ScrollTrigger);
 
 // 3D is never in the server HTML or the first bundle: the LCP element is the headline.
 const PortalScene = dynamic(() => import("./PortalScene"), { ssr: false });
+// …but its chunk is asked for the moment this one runs, not after hydration:
+// on a desktop that had it arriving 2.4s in, with the loader waiting on it.
+if (typeof window !== "undefined" && !window.matchMedia("(max-width: 767px), (prefers-reduced-motion: reduce)").matches) {
+  void import("./PortalScene");
+}
+
 
 type Mode = "pending" | "full" | "lite";
 
@@ -56,15 +64,6 @@ const DOOR_COPY = [
     cta: "Enter AI Infrastructure",
   },
 ];
-
-function canRunWebGL(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
 
 /** Scroll progress at which the camera frames door `i` (used by poster capture). */
 function progressForDoor(i: number, ahead: number): number {
@@ -145,9 +144,13 @@ export default function PortalPage() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const small = window.matchMedia("(max-width: 767px)").matches;
-    const gl = canRunWebGL();
+    // the API existing is the check; a context that then fails to create is
+    // caught by SceneGuard and the page falls back to the lite world
+    const gl = typeof WebGL2RenderingContext !== "undefined" || typeof WebGLRenderingContext !== "undefined";
     setHasGL(gl);
-    const lite = reduced || small || !gl;
+    // an old phone or a machine that says it is short on memory/cores gets the
+    // 2D world outright (lib/device.ts)
+    const lite = reduced || small || !gl || prefersLite();
     setMode(lite ? "lite" : "full");
     if (lite) {
       const done = () => setReady(true);
@@ -338,6 +341,11 @@ export default function PortalPage() {
     [active, hue],
   );
   const getFloor = useCallback(() => portalState.gateFloorY, []);
+  const toLite = useCallback(() => {
+    setHasGL(false);
+    setMode("lite");
+    setReady(true);
+  }, []);
 
   const menuLink = (i: number) => {
     const item = MENU_ITEMS[i];
@@ -382,14 +390,23 @@ export default function PortalPage() {
     >
       {viaWarp || capture ? null : <Loader ready={ready} />}
 
+      {/* The plate, asked for at parse time. (His body is asked for by the
+          scene chunk, which is itself requested the moment this page's code
+          runs — and which body depends on the machine: lib/device.ts.) */}
+      <link rel="preload" as="image" href="/worlds/portal-desktop.webp" media="(min-width: 768px)" />
+      <link rel="preload" as="image" href="/worlds/portal-mobile.webp" media="(max-width: 767px)" />
+
       {/* The world: one fixed canvas behind every section. */}
       {mode === "full" ? (
         <div className="pointer-events-auto fixed inset-0 z-0" data-world-layer="" data-scene-ready={ready ? "" : undefined}>
           {/* the plate paints at once; the 3D world (which draws the same plate
-              as its own deep background) covers it when its first frame is up */}
-          <WorldPlate world="portal" />
+              as its own deep background) covers it when its first frame is up,
+              and the plate stops moving under it */}
+          <WorldPlate world="portal" paused={ready} />
           <div className="absolute inset-0">
-            <PortalScene onReady={() => setReady(true)} onEnter={travel} />
+            <SceneGuard onFail={toLite}>
+              <PortalScene onReady={() => setReady(true)} onEnter={travel} onTooSlow={toLite} />
+            </SceneGuard>
           </div>
         </div>
       ) : null}

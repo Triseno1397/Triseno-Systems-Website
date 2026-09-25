@@ -44,8 +44,11 @@ export class LoopGeometry extends THREE.BufferGeometry {
     this.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
   }
 
-  /** points: flat [x,y,...] of N samples, clockwise from the top. */
-  update(points: Float32Array) {
+  /** points: flat [x,y,...] of N samples, clockwise from the top.
+   *  `lit` = the geometry is drawn by a lit material and needs normals; the
+   *  emissive core and seam (MeshBasicMaterial) do not, and computing them
+   *  was most of a morph frame's cost. */
+  update(points: Float32Array, lit = true) {
     const { halfW, halfD, offN, offZ } = this.spec;
     const pos = this.pos;
     const cn = [1, 1, -1, -1];
@@ -87,7 +90,7 @@ export class LoopGeometry extends THREE.BufferGeometry {
       }
     }
     this.attributes.position.needsUpdate = true;
-    this.computeVertexNormals();
+    if (lit) this.computeVertexNormals();
     this.computeBoundingSphere();
   }
 }
@@ -117,8 +120,8 @@ export type LoopSet = ReturnType<typeof useLoopSet>;
 
 export function updateLoopSet(set: LoopSet, pts: Float32Array) {
   set.glass.update(pts);
-  set.core.update(pts);
-  set.seam.update(pts);
+  set.core.update(pts, false);
+  set.seam.update(pts, false);
 }
 
 /**

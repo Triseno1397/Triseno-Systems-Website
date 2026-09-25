@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { PerformanceMonitor } from "@react-three/drei";
 import { glyphPoints } from "@/lib/glyph-path";
 import type { GlyphKind } from "@/lib/divisions";
-import { DBG, TierContext, env, type Tier } from "./scene/env";
+import { TierContext, env, type Tier } from "./scene/env";
 import { GlassLoop, N, useLoopSet, useNear, updateLoopSet } from "./scene/loop";
 import {
   Dust,
+  FrameDriver,
+  Governor,
   Haze,
   Horizon,
   KeyLight,
@@ -18,6 +19,9 @@ import {
   ReadySignal,
   WetFloor,
   WorldEnvironment,
+  initialQuality,
+  qualityDpr,
+  type Quality,
 } from "./scene/pieces";
 import { disposeFloorMaps, makeFloorMaps, makeGlowTexture, makeHazeTexture } from "./scene/textures";
 import { worldState } from "./scene/worldState";
@@ -66,6 +70,8 @@ export interface DivisionWorldSceneProps {
   /** how strongly the division hue grades the plate (0 for a plate painted in its hue) */
   grade?: number;
   onReady: () => void;
+  /** this machine cannot draw the world smoothly: the page goes 2D */
+  onTooSlow?: () => void;
 }
 
 /* ── the world is lit in one hue, start to finish ──────────────────────── */
@@ -203,15 +209,19 @@ export default function DivisionWorldScene({
   onReady,
   plate: plateWorld,
   grade = 0,
+  onTooSlow,
 }: DivisionWorldSceneProps) {
   const horizon = plateWorld ? plate(plateWorld).horizon.desktop : undefined;
   const glow = useMemo(() => makeGlowTexture(), []);
   const haze = useMemo(() => makeHazeTexture(), []);
   const floor = useMemo(() => makeFloorMaps(), []);
-  const [maxDpr, setMaxDpr] = useState(1.5);
-  const pinHigh = DBG.includes("H");
-  const [tier, setTier] = useState<Tier>(DBG.includes("l") ? "low" : "high");
-  const dpr = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, maxDpr);
+  // starts where this machine is smooth, steps down from there (Governor)
+  const [quality, setQuality] = useState<Quality>(() => initialQuality());
+  const tier: Tier = quality.tier;
+  const dpr = qualityDpr(quality);
+  const [armed, setArmed] = useState(false);
+  // the environment map is in place: the shaders may be linked against it
+  const [envReady, setEnvReady] = useState(false);
 
   useEffect(
     () => () => {
@@ -225,6 +235,8 @@ export default function DivisionWorldScene({
   return (
     <Canvas
       flat // no tone mapping: the division hue must reach the screen as that hue
+      // drawn from the page's own frame loop (FrameDriver), never on its own clock
+      frameloop="never"
       dpr={dpr}
       gl={{ antialias: false, powerPreference: "high-performance", alpha: false, preserveDrawingBuffer: false }}
       camera={{ fov: 38, near: 0.1, far: 260, position: [0, CAM_Y, CAM_START_Z] }}
@@ -233,22 +245,10 @@ export default function DivisionWorldScene({
         scene.fog = new THREE.Fog("#0a0a0a", 8, 72);
       }}
     >
-      {pinHigh ? null : (
-        <PerformanceMonitor
-          ms={200}
-          iterations={6}
-          threshold={0.8}
-          bounds={() => [24, 50]}
-          flipflops={2}
-          onDecline={() => {
-            setMaxDpr(1);
-            setTier("low");
-          }}
-          onFallback={() => setTier("low")}
-        />
-      )}
+      <Governor quality={quality} setQuality={setQuality} armed={armed} onGiveUp={onTooSlow} />
       <TierContext.Provider value={tier}>
-        <WorldEnvironment />
+        <FrameDriver />
+        <WorldEnvironment onReady={() => setEnvReady(true)} />
         <EnvDirector hue={hue} />
         <CameraRig horizon={horizon} />
         <KeyLight />
@@ -267,7 +267,14 @@ export default function DivisionWorldScene({
         <Dust sprite={glow} depth={120} />
         {plateWorld ? null : <WetFloor maps={floor} z={-52} />}
         <Post focusY={2.1} dof={!plateWorld} />
-        <ReadySignal onReady={onReady} />
+        <ReadySignal
+          envReady={envReady}
+          onReady={() => {
+            onReady?.();
+            // judge frames only once the compile and the arrival are behind us
+            window.setTimeout(() => setArmed(true), 1500);
+          }}
+        />
       </TierContext.Provider>
     </Canvas>
   );

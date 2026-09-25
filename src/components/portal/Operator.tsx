@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DBG } from "@/components/world/scene/env";
+import { deviceClass } from "@/lib/device";
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE OPERATOR — Triseno's rigged robot (21st: splite, rebuilt).
@@ -37,24 +38,32 @@ export interface OperatorState {
    *  light inside a hidden group stops being counted — which changes how many
    *  lights three builds into every shader, and the whole world recompiles. */
   hidden?: boolean;
+  /** 0..1 — how far into his roll-out of the frame he is (the scene drives
+   *  the travel and the roll; he tucks himself to match) */
+  exit?: number;
 }
 
 const DESK = "/models/robot-desk.glb";
 const MOB = "/models/robot-mob.glb";
 const SPIN = "/models/robot-anim-spin.glb";
 const JUMP = "/models/robot-anim-jump.glb";
-const SWORD = "/models/robot-sword.glb";
 
-// Four useGLTF calls in one component suspend one after another: the clips
-// and the sword were not even requested until the body had loaded and parsed,
+/* Which body he wears: the 125k-triangle desktop cut on a strong machine,
+   the 50k one (half the download, less than half the skinning work) on
+   phones and on any machine that is not high-end (lib/device.ts). */
+function lightBody(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 767px), (pointer: coarse)").matches || deviceClass() !== "high";
+}
+
+// Three useGLTF calls in one component suspend one after another: the clips
+// were not even requested until the body had loaded and parsed,
 // 3.5s in. Asked for here, together, they are all in flight from the moment
 // this chunk lands.
 if (typeof window !== "undefined") {
-  const small = window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
-  useGLTF.preload(small ? MOB : DESK);
+  useGLTF.preload(lightBody() ? MOB : DESK);
   useGLTF.preload(SPIN);
   useGLTF.preload(JUMP);
-  useGLTF.preload(SWORD);
 }
 
 /* choreography, seconds from the click */
@@ -63,10 +72,12 @@ const FORGE_END = 1.45; // the scan has built the hilt
 const DRAW_END = 1.8; // the right hand has drawn it
 const BLEND = 0.35; // hand-off from the forge pose into the move
 
+/* the tuck of the roll-out, radians at full tuck: thigh up, knee bent */
+const TUCK_THIGH = 1.1;
+const TUCK_KNEE = 1.5;
+
 /* sizes in scene units (the robot stands 1 unit tall) */
-const HILT = 0.15;
-const GRIP = 0.2; // where the fist closes, above the hilt's centre (just under the guard)
-const BLADE = 0.56;
+const BLADE = 0.5;
 
 const damp = (c: number, t: number, l: number, dt: number) => THREE.MathUtils.lerp(c, t, 1 - Math.exp(-l * dt));
 const ease = (x: number) => {
@@ -78,193 +89,62 @@ const smooth = (x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** eigenvectors of a symmetric 3x3, largest first (cyclic Jacobi) */
-function principalAxes(cov: number[][]) {
-  const a = cov.map((r) => r.slice());
-  const v = [
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-  ];
-  for (let sweep = 0; sweep < 24; sweep++) {
-    let off = 0;
-    for (let p = 0; p < 3; p++) for (let q = p + 1; q < 3; q++) off += a[p][q] * a[p][q];
-    if (off < 1e-20) break;
-    for (let p = 0; p < 3; p++)
-      for (let q = p + 1; q < 3; q++) {
-        if (Math.abs(a[p][q]) < 1e-18) continue;
-        const theta = (a[q][q] - a[p][p]) / (2 * a[p][q]);
-        const t = (theta >= 0 ? 1 : -1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
-        const c = 1 / Math.sqrt(t * t + 1);
-        const s = t * c;
-        for (let k = 0; k < 3; k++) {
-          const kp = a[k][p];
-          const kq = a[k][q];
-          a[k][p] = c * kp - s * kq;
-          a[k][q] = s * kp + c * kq;
-        }
-        for (let k = 0; k < 3; k++) {
-          const pk = a[p][k];
-          const qk = a[q][k];
-          a[p][k] = c * pk - s * qk;
-          a[q][k] = s * pk + c * qk;
-        }
-        for (let k = 0; k < 3; k++) {
-          const kp = v[k][p];
-          const kq = v[k][q];
-          v[k][p] = c * kp - s * kq;
-          v[k][q] = s * kp + c * kq;
-        }
-      }
-  }
-  return [0, 1, 2]
-    .sort((i, j) => a[j][j] - a[i][i])
-    .map((i) => new THREE.Vector3(v[0][i], v[1][i], v[2][i]).normalize());
-}
-
-type Fist = {
-  /** the middle of the channel through the fist */
-  hold: THREE.Vector3;
-  /** the channel's axis: the shaft runs along it */
+/* ── where a sword sits in the fist ──────────────────────────────────────
+   Each fist is read once, in the bind pose, from the vertices skinned to its
+   hand bone: where its mass is centred and how far it reaches along the
+   bone's own axes. The fingers run along the bone's Y; the shaft lies across
+   them, along whichever of the other two axes the fist is widest, through
+   the centre of that mass. On top of that a fixed, hand-tuned seating
+   (SOCKET) — the same numbers on every device, so what was checked in the
+   hand cam (design-loop/grip-shot.mjs) is what every visitor sees. */
+type HandFrame = {
+  /** centre of the fist's mass, hand-bone space */
+  centre: THREE.Vector3;
+  /** half-extents of the hand along the bone's own x, y, z */
+  ext: THREE.Vector3;
+  /** unit axis, hand-bone space, that the shaft runs along */
   axis: THREE.Vector3;
-  /** across the shaft, for the blade's flats */
-  flat: THREE.Vector3;
-  /** how much room the channel has, in bone units */
-  room: number;
 };
 
-const WEDGES = 8; // octants: classified by sign and slope, no atan2 per point
+/** seating per hand: position in fractions of the fist's half-extents along
+ *  the bone's own axes; rotation in degrees about the mount's own axes
+ *  (x = tilt toward/away from the fingers, y = roll of the blade's flat,
+ *  z = lean across the fist). ?gsr= ?gsl= ?grr= ?grl= override for tuning. */
+const SOCKET = {
+  r: { pos: [0, 0, 0] as [number, number, number], rot: [0, 0, 0] as [number, number, number] },
+  l: { pos: [0, 0, 0] as [number, number, number], rot: [0, 0, 0] as [number, number, number] },
+};
+const DEG = Math.PI / 180;
 
-/** The fattest circle that fits in a fist's cross-section. A circle only counts
- *  if the hand rings it — hand in every direction around it — otherwise the
- *  widest gap found is the open side of the curl, out in front of the fingers,
- *  and not a channel at all. Among circles of much the same size it takes the
- *  one nearest the middle of the hand, so the two fists settle alike instead of
- *  each landing on its own local best. */
-function widestGap(flat: number[][], reach: number, cx: number, cy: number) {
-  const xs = flat.map((q) => q[0]);
-  const ys = flat.map((q) => q[1]);
-  let box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-  let best = { r: -1, x: 0, y: 0 };
-  const seen = new Array<boolean>(WEDGES);
-  const room = (x: number, y: number) => {
-    seen.fill(false);
-    let near = Infinity;
-    let ringed = 0;
-    for (const q of flat) {
-      const dx = q[0] - x;
-      const dy = q[1] - y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < near) near = d;
-      if (d > reach) continue;
-      const w = (dy >= 0 ? 4 : 0) | (dx >= 0 ? 2 : 0) | (Math.abs(dy) > Math.abs(dx) ? 1 : 0);
-      if (!seen[w]) {
-        seen[w] = true;
-        ringed++;
-      }
-    }
-    return ringed === WEDGES ? near : -1;
-  };
-  const cell: number[] = [];
-  for (let pass = 0; pass < 3; pass++) {
-    const N = pass === 0 ? 20 : 8;
-    const stepX = (box[2] - box[0]) / N;
-    const stepY = (box[3] - box[1]) / N;
-    cell.length = 0;
-    let top = -1;
-    for (let i = 0; i <= N; i++)
-      for (let j = 0; j <= N; j++) {
-        const x = box[0] + stepX * i;
-        const y = box[1] + stepY * j;
-        const r = room(x, y);
-        if (r < 0) continue;
-        cell.push(x, y, r);
-        if (r > top) top = r;
-      }
-    if (top < 0) break;
-    best = { r: -1, x: 0, y: 0 };
-    let nearest = Infinity;
-    for (let k = 0; k < cell.length; k += 3) {
-      if (cell[k + 2] < top * 0.9) continue;
-      const d = (cell[k] - cx) * (cell[k] - cx) + (cell[k + 1] - cy) * (cell[k + 1] - cy);
-      if (d < nearest) {
-        nearest = d;
-        best = { r: cell[k + 2], x: cell[k], y: cell[k + 1] };
-      }
-    }
-    box = [best.x - stepX, best.y - stepY, best.x + stepX, best.y + stepY];
-  }
-  return best;
-}
-
-/* ── where a sword actually sits in the fist ──────────────────────────────
-   Nothing here is guessed at. The hands are closed in the model itself (see
-   design-loop/art-src/robot/_gt/curl-fingers.mjs), which leaves a channel
-   through each fist. This finds it: every vertex skinned to the hand is read
-   in the bind pose, and for each of the hand's own principal axes the widest
-   circle that fits inside its outline is measured. The roomiest of the three
-   is the channel a hilt can lie in, and its centre is where the sword goes. */
-function measureFist(skinned: THREE.SkinnedMesh, boneIndex: number): Fist[] | null {
+function handFrame(skinned: THREE.SkinnedMesh, boneIndex: number): HandFrame | null {
   const geo = skinned.geometry;
   const pos = geo.attributes.position;
   const si = geo.attributes.skinIndex;
   const sw = geo.attributes.skinWeight;
   if (!pos || !si || !sw || boneIndex < 0) return null;
-  // bind-pose vertex → hand-bone space, whatever pose happens to be playing
+  // bind-pose vertex -> hand-bone space, whatever pose happens to be playing
   const toBone = skinned.skeleton.boneInverses[boneIndex].clone().multiply(skinned.bindMatrix);
   const v = new THREE.Vector3();
-  const pts: THREE.Vector3[] = [];
   const centre = new THREE.Vector3();
+  const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+  const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+  let n = 0;
   for (let i = 0; i < pos.count; i++) {
     let w = 0;
     for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === boneIndex) w += sw.getComponent(i, k);
     if (w < 0.6) continue; // the hand proper, not the wrist blend
     v.fromBufferAttribute(pos, i).applyMatrix4(toBone);
-    pts.push(v.clone());
     centre.add(v);
+    min.min(v);
+    max.max(v);
+    n++;
   }
-  if (pts.length < 64) return null;
-  centre.multiplyScalar(1 / pts.length);
-  const cov = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  for (const q of pts) {
-    const d = [q.x - centre.x, q.y - centre.y, q.z - centre.z];
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cov[i][j] += d[i] * d[j];
-  }
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cov[i][j] /= pts.length;
-  const axes = principalAxes(cov);
-  // a few hundred points describe the outline as well as thousands do, and
-  // this runs on the visitor's device
-  const step = Math.max(1, Math.ceil(pts.length / 400));
-  const sample = pts.filter((_, i) => i % step === 0);
-
-  // how far out to look for hand around a candidate channel: a fist is about a
-  // third of the hand's length across
-  let reach = 0;
-  for (const q of sample) reach = Math.max(reach, q.distanceTo(centre));
-
-  const found: Fist[] = [];
-  const e1 = new THREE.Vector3();
-  const e2 = new THREE.Vector3();
-  for (const axis of axes) {
-    e1.copy(axes[0] === axis ? axes[1] : axes[0]).projectOnPlane(axis).normalize();
-    e2.crossVectors(axis, e1).normalize();
-    const flat = sample.map((q) => [q.dot(e1), q.dot(e2)]);
-    const gap = widestGap(flat, reach * 0.9, centre.dot(e1), centre.dot(e2));
-    const mid = sample.reduce((t, q) => t + q.dot(axis), 0) / sample.length;
-    found.push({
-      room: gap.r,
-      hold: new THREE.Vector3().addScaledVector(e1, gap.x).addScaledVector(e2, gap.y).addScaledVector(axis, mid),
-      axis: axis.clone(),
-      flat: e1.clone(),
-    });
-  }
-  return found;
+  if (n < 64) return null;
+  centre.multiplyScalar(1 / n);
+  const ext = max.clone().sub(min).multiplyScalar(0.5);
+  const axis = ext.x >= ext.z ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+  return { centre, ext, axis };
 }
-
 
 /* ── two-bone arm IK, world space ─────────────────────────────────────── */
 const _a = new THREE.Vector3();
@@ -312,22 +192,146 @@ function solveArm(upper: THREE.Bone, fore: THREE.Bone, hand: THREE.Bone, T: THRE
   aimBone(fore, _H, T, _E, w);
 }
 
-/* ── one sword: generated hilt + coded energy blade ─────────────────────── */
+/* ── one sword: machined here, in his own finish ───────────────────────────
+   No glow and no generated prop: a robotic sword built from lathe and loft
+   geometry in the same three finishes as his armour — mirror-polished edges
+   and trim, satin flats, gunmetal grip and fuller — so it reads as a part of
+   him. The origin is the centre of the fist, +Y runs up the blade and the
+   blade's flat lies along X (the fingers' direction, set by the mount). */
 interface SwordRig {
   group: THREE.Group;
+  /** the forge scan: cuts the hilt off above the line being fabricated */
   plane: THREE.Plane;
-  /** hilt + blade + ring: what is hidden between moves. The group itself, and
-   *  the light it carries, stay in the scene — see the note in makeSword. */
+  /** the guard's mouth: the blade is only drawn above it, so it can slide out */
+  bladePlane: THREE.Plane;
+  /** hilt + blade + ring: what is hidden between moves. The group itself
+   *  stays in the scene — see the note in makeSword. */
   body: THREE.Group;
   ring: THREE.Mesh;
   blade: THREE.Group;
-  core: THREE.MeshBasicMaterial;
-  glow: THREE.MeshBasicMaterial;
-  halo: THREE.MeshBasicMaterial;
   ringMat: THREE.MeshBasicMaterial;
 }
 
-function makeSword(src: THREE.Object3D): SwordRig {
+const GRIP_LO = -0.05; // pommel end of the grip, below the fist's centre
+const GRIP_HI = 0.028; // top of the grip, under the guard
+const GUARD_H = 0.016;
+const BLADE_BASE = GRIP_HI + GUARD_H; // where the blade leaves the guard
+const BLADE_W = 0.046;
+const BLADE_T = 0.0075;
+const POMMEL_LO = GRIP_LO - 0.018;
+
+/** one flat-shaded, uv-less geometry per finish, so a sword is six draws */
+function finish(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const flat = parts.map((g) => {
+    const n = g.index ? g.toNonIndexed() : g;
+    n.deleteAttribute("uv");
+    n.deleteAttribute("normal");
+    n.computeVertexNormals();
+    return n;
+  });
+  const out = mergeGeometries(flat, false)!;
+  out.computeBoundingSphere();
+  return out;
+}
+function at<T extends THREE.BufferGeometry>(g: T, x: number, y: number, z: number, rz = 0): T {
+  if (rz) g.rotateZ(rz);
+  g.translate(x, y, z);
+  return g;
+}
+
+/** The blade, lofted: a hexagonal section with a ground edge bevel, satin
+ *  flats and a fuller down the middle that runs out before the point, tapering
+ *  to an off-centre chisel tip. Returned as [polished, satin, dark] faces. */
+function bladeParts(): [THREE.BufferGeometry, THREE.BufferGeometry, THREE.BufferGeometry] {
+  const TIP = 0.8; // the point begins here
+  const stations: number[] = [];
+  for (let i = 0; i <= 14; i++) stations.push((i / 14) * TIP);
+  for (let i = 1; i <= 8; i++) stations.push(TIP + (i / 8) * (1 - TIP));
+  // across the blade, right edge to left: [position -1..1, height 0..0.5
+  // (-1 = the fuller's floor), finish of the strip to the next point]
+  const prof = [
+    [1, 0, 0],
+    [0.62, 0.5, 1],
+    [0.3, 0.5, 2],
+    [0.2, -1, 2],
+    [-0.2, -1, 2],
+    [-0.3, 0.5, 1],
+    [-0.62, 0.5, 0],
+    [-1, 0, -1],
+  ] as const;
+  const section = (s: number) => {
+    const w0 = BLADE_W * (1 - 0.14 * Math.min(s, TIP));
+    const u = s <= TIP ? 0 : (s - TIP) / (1 - TIP);
+    const xr = w0 / 2 - w0 * 0.22 * u * u;
+    const xl = -w0 / 2 + w0 * 0.78 * u;
+    const mid = (xr + xl) / 2;
+    const half = (xr - xl) / 2;
+    const t = BLADE_T * (1 - 0.35 * Math.min(s, TIP)) * (1 - u);
+    // the fuller: sunk just past the root, run out by two thirds
+    const sink = 0.3 * smooth(s / 0.06) * (1 - smooth((s - 0.42) / 0.26));
+    return prof.map(([f, h]) => [mid + f * half, (h < 0 ? 0.5 - sink : h) * t] as [number, number]);
+  };
+  const out: number[][] = [[], [], []];
+  const quad = (m: number, a: number[], b: number[], c: number[], d: number[]) => out[m].push(...a, ...b, ...c, ...a, ...c, ...d);
+  for (let i = 0; i < stations.length - 1; i++) {
+    const y0 = stations[i] * BLADE;
+    const y1 = stations[i + 1] * BLADE;
+    const s0 = section(stations[i]);
+    const s1 = section(stations[i + 1]);
+    for (let j = 0; j < prof.length - 1; j++) {
+      const m = prof[j][2];
+      for (const side of [1, -1]) {
+        const a = [s0[j][0], y0, s0[j][1] * side];
+        const b = [s0[j + 1][0], y0, s0[j + 1][1] * side];
+        const c = [s1[j + 1][0], y1, s1[j + 1][1] * side];
+        const d = [s1[j][0], y1, s1[j][1] * side];
+        if (side > 0) quad(m, a, d, c, b);
+        else quad(m, a, b, c, d);
+      }
+    }
+  }
+  return out.map((v) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(v, 3));
+    g.computeVertexNormals();
+    g.computeBoundingSphere();
+    return g;
+  }) as [THREE.BufferGeometry, THREE.BufferGeometry, THREE.BufferGeometry];
+}
+
+/** The hilt: an octagonal gunmetal grip ringed with satin bands, a machined
+ *  pommel, and a swept crossguard with a polished mouth plate. */
+function hiltParts(): [THREE.BufferGeometry, THREE.BufferGeometry, THREE.BufferGeometry] {
+  const len = GRIP_HI - GRIP_LO;
+  const polish = [
+    at(new THREE.CylinderGeometry(0.0115, 0.0135, 0.01, 8), 0, GRIP_LO - 0.005, 0),
+    at(new THREE.CylinderGeometry(0.006, 0.0115, 0.008, 8), 0, GRIP_LO - 0.014, 0),
+    at(new THREE.BoxGeometry(BLADE_W * 1.2, 0.0025, BLADE_T * 2.2), 0, BLADE_BASE - 0.00125, 0),
+  ];
+  const satin: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 5; i++) satin.push(at(new THREE.CylinderGeometry(0.0101, 0.0101, 0.0035, 8), 0, GRIP_LO + len * (0.12 + i * 0.19), 0));
+  // the crossguard: a swept plate across the blade's flat, bevelled
+  const g = new THREE.Shape();
+  g.moveTo(-0.022, 0);
+  g.lineTo(0.022, 0);
+  g.lineTo(0.036, 0.009);
+  g.lineTo(0.03, GUARD_H - 0.0025);
+  g.lineTo(-0.03, GUARD_H - 0.0025);
+  g.lineTo(-0.036, 0.009);
+  g.closePath();
+  const guard = new THREE.ExtrudeGeometry(g, { depth: 0.013, bevelEnabled: true, bevelThickness: 0.0018, bevelSize: 0.0014, bevelSegments: 1, curveSegments: 1 });
+  satin.push(at(guard, 0, GRIP_HI, -0.0065));
+  const dark = [
+    at(new THREE.CylinderGeometry(0.0088, 0.0088, len, 8), 0, GRIP_LO + len / 2, 0),
+    // the guard's core block, and a piston head either side of it
+    at(new THREE.BoxGeometry(0.03, GUARD_H * 0.8, 0.02), 0, GRIP_HI + GUARD_H * 0.4, 0),
+    at(new THREE.CylinderGeometry(0.0035, 0.0035, 0.024, 8), 0.029, GRIP_HI + 0.009, 0, Math.PI / 2),
+    at(new THREE.CylinderGeometry(0.0035, 0.0035, 0.024, 8), -0.029, GRIP_HI + 0.009, 0, Math.PI / 2),
+  ];
+  return [finish(polish), finish(satin), finish(dark)];
+}
+
+function makeSword(): SwordRig {
   // The group stays visible for good and the body inside it is what appears and
   // disappears. three only counts the lights it can reach when it decides how
   // many to build into every shader, so a light inside a hidden group counts
@@ -339,55 +343,31 @@ function makeSword(src: THREE.Object3D): SwordRig {
   body.visible = false;
   group.add(body);
   const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
-  const hilt = src.clone(true);
-  const box = new THREE.Box3().setFromObject(hilt);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const s = HILT / size.y;
-  hilt.scale.setScalar(s);
-  // centre the hilt, then drop it so the fist (GRIP) sits at the group origin
-  hilt.position.set(-center.x * s, -center.y * s - GRIP * HILT, -center.z * s);
-  hilt.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (m.isMesh) {
-      const mat = (m.material as THREE.MeshStandardMaterial).clone();
-      mat.metalness = 1;
-      mat.roughness = 0.28;
-      mat.envMapIntensity = 1.3;
-      mat.clippingPlanes = [plane];
-      m.material = mat;
-    }
-  });
-  body.add(hilt);
+  const bladePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  // his three finishes: mirror chrome, a satin grade, and gunmetal
+  const kit = (clip: THREE.Plane) => [
+    new THREE.MeshStandardMaterial({ color: "#f4f6f9", metalness: 1, roughness: 0.1, envMapIntensity: 2, clippingPlanes: [clip], side: THREE.DoubleSide }),
+    new THREE.MeshStandardMaterial({ color: "#c3c8cf", metalness: 0.92, roughness: 0.28, envMapIntensity: 1.8, clippingPlanes: [clip], side: THREE.DoubleSide }),
+    new THREE.MeshStandardMaterial({ color: "#2b2e34", metalness: 0.9, roughness: 0.4, envMapIntensity: 1.1, clippingPlanes: [clip], side: THREE.DoubleSide }),
+  ];
+  const hiltMats = kit(plane);
+  hiltParts().forEach((geo, i) => body.add(new THREE.Mesh(geo, hiltMats[i])));
 
-  // blade runs out of the emitter at the top of the hilt
-  const base = (0.5 - GRIP) * HILT;
+  // the blade slides up out of the guard: drawn only above its mouth
   const blade = new THREE.Group();
-  blade.position.y = base;
-  const core = new THREE.MeshBasicMaterial({ toneMapped: false });
-  const glow = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
-  const halo = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false });
-  const bar = (w: number, d: number, mat: THREE.Material, len = BLADE) => {
-    const g = new THREE.BoxGeometry(w, len, d);
-    g.translate(0, len / 2, 0);
-    return new THREE.Mesh(g, mat);
-  };
-  blade.add(bar(0.007, 0.003, core), bar(0.02, 0.01, glow, BLADE * 1.02), bar(0.055, 0.03, halo, BLADE * 1.06));
-  // a tapered tip
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.05, 4), glow);
-  tip.position.y = BLADE + 0.022;
-  blade.add(tip);
-  blade.scale.set(1, 0.001, 1);
+  const bladeMats = kit(bladePlane);
+  bladeParts().forEach((geo, i) => blade.add(new THREE.Mesh(geo, bladeMats[i])));
+  blade.position.y = BLADE_BASE - BLADE;
   blade.visible = false;
   body.add(blade);
 
   // the fabrication ring that travels up the hilt with the scan
   const ringMat = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0025, 6, 32), ringMat);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0018, 6, 32), ringMat);
   ring.rotation.x = Math.PI / 2;
   ring.visible = false;
   body.add(ring);
-  return { group, body, plane, ring, blade, core, glow, halo, ringMat };
+  return { group, body, plane, bladePlane, ring, blade, ringMat };
 }
 
 const _up = new THREE.Vector3();
@@ -396,8 +376,7 @@ const _p = new THREE.Vector3();
 function setScan(sw: SwordRig, k: number) {
   sw.group.updateMatrixWorld(true);
   _up.set(0, 1, 0).transformDirection(sw.group.matrixWorld);
-  const bottom = -(0.5 + GRIP) * HILT;
-  const y = THREE.MathUtils.lerp(bottom - 0.005, (0.5 - GRIP) * HILT + 0.01, k);
+  const y = THREE.MathUtils.lerp(POMMEL_LO - 0.003, BLADE_BASE + 0.004, k);
   _p.set(0, y, 0).applyMatrix4(sw.group.matrixWorld);
   sw.plane.setFromNormalAndCoplanarPoint(_up.negate(), _p);
   sw.ring.position.set(0, y, 0);
@@ -405,73 +384,15 @@ function setScan(sw: SwordRig, k: number) {
 }
 
 const WHITE = new THREE.Color("#ffffff");
+/** Deploy (0..1) the blade: it runs up out of the guard and locks. */
 function setBlade(sw: SwordRig, k: number, hue: THREE.Color) {
   sw.blade.visible = k > 0.002;
-  sw.blade.scale.set(1, Math.max(0.001, k), 1);
-  sw.core.color.copy(hue).lerp(WHITE, 0.6).multiplyScalar(1.7);
-  sw.glow.color.copy(hue).multiplyScalar(1.4);
-  sw.halo.color.copy(hue);
+  sw.blade.position.y = BLADE_BASE - BLADE * (1 - k);
+  // the group's world matrix is fresh from setScan this frame
+  _up.set(0, 1, 0).transformDirection(sw.group.matrixWorld);
+  _p.set(0, BLADE_BASE, 0).applyMatrix4(sw.group.matrixWorld);
+  sw.bladePlane.setFromNormalAndCoplanarPoint(_up, _p);
   sw.ringMat.color.copy(hue).multiplyScalar(1.6);
-}
-
-/* ── blade trails: a short ribbon of the blade's last positions ─────────── */
-const TRAIL = 10; // ten frames of ribbon: a streak, not a fan
-function makeTrail() {
-  const geo = new THREE.BufferGeometry();
-  const pos = new Float32Array(TRAIL * 2 * 3);
-  const col = new Float32Array(TRAIL * 2 * 3);
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  const idx: number[] = [];
-  for (let i = 0; i < TRAIL - 1; i++) {
-    const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
-    idx.push(a, b, c, b, d, c);
-  }
-  geo.setIndex(idx);
-  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  mesh.visible = false;
-  return { mesh, pos, col, geo, samples: [] as Array<[THREE.Vector3, THREE.Vector3]> };
-}
-type Trail = ReturnType<typeof makeTrail>;
-const _base = new THREE.Vector3();
-const _tipv = new THREE.Vector3();
-function stepTrail(tr: Trail, sw: SwordRig, root: THREE.Object3D, k: number, hue: THREE.Color) {
-  if (k < 0.2) {
-    tr.samples.length = 0;
-    tr.mesh.visible = false;
-    return;
-  }
-  // blade base and tip, in the root's space
-  _base.set(0, 0.02, 0);
-  _tipv.set(0, BLADE * k, 0);
-  sw.blade.localToWorld(_base);
-  sw.blade.localToWorld(_tipv);
-  root.worldToLocal(_base);
-  root.worldToLocal(_tipv);
-  tr.samples.unshift([_base.clone(), _tipv.clone()]);
-  if (tr.samples.length > TRAIL) tr.samples.length = TRAIL;
-  const n = tr.samples.length;
-  for (let i = 0; i < TRAIL; i++) {
-    const smp = tr.samples[Math.min(i, n - 1)];
-    const fade = Math.pow(1 - i / (TRAIL - 1), 1.8);
-    for (let j = 0; j < 2; j++) {
-      const v = smp[j];
-      const o = (i * 2 + j) * 3;
-      tr.pos[o] = v.x;
-      tr.pos[o + 1] = v.y;
-      tr.pos[o + 2] = v.z;
-      // brighter toward the tip, gone at the tail
-      const w = fade * (j === 1 ? 1 : 0.25);
-      tr.col[o] = hue.r * w;
-      tr.col[o + 1] = hue.g * w;
-      tr.col[o + 2] = hue.b * w;
-    }
-  }
-  tr.geo.attributes.position.needsUpdate = true;
-  tr.geo.attributes.color.needsUpdate = true;
-  tr.mesh.visible = n > 2;
 }
 
 /* ── light gathering into the palms ─────────────────────────────────────── */
@@ -508,11 +429,9 @@ export default function Operator({
    *  scene before he is, so his arrival never changes the light count */
   light?: THREE.PointLight;
 }) {
-  const small = typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
-  const robot = useGLTF(small ? MOB : DESK, false, true);
+  const robot = useGLTF(lightBody() ? MOB : DESK, false, true);
   const spinG = useGLTF(SPIN, false, true);
   const jumpG = useGLTF(JUMP, false, true);
-  const swordG = useGLTF(SWORD, false, true);
   const root = useRef<THREE.Group>(null);
   const shown = useRef<THREE.Group>(null);
 
@@ -527,10 +446,17 @@ export default function Operator({
     const mat = skinned.material as THREE.MeshStandardMaterial;
     // ?dbg=F for the design-loop fps series: his shell drawn front faces only
     if (DBG.includes("F")) mat.side = THREE.FrontSide;
-    // the rig bakes base colour only: chrome comes from real reflections
-    mat.metalness = 0.82;
-    mat.roughness = 0.3;
-    mat.envMapIntensity = 1.25;
+    // the rig bakes base colour only: chrome comes from real reflections.
+    // The export also wires that colour in as a full-strength emissive, which
+    // lit him flat from inside — every panel the same brightness whatever the
+    // light did, the reflections washed out. A trace of it stays, so the
+    // white armour still reads in the dark corners of the world.
+    mat.emissiveIntensity = 0.34;
+    mat.metalness = 0.78;
+    mat.roughness = 0.26;
+    mat.envMapIntensity = 1.6;
+    if (mat.map) mat.map.anisotropy = 8;
+    if (mat.emissiveMap) mat.emissiveMap.anisotropy = 8;
     // the shoulder plates are re-bound to the collarbone in the model file
     // itself (design-loop/art-src/robot/_gt/bake-shoulders.mjs) — no per-load
     // pass over every vertex on the visitor's device
@@ -547,6 +473,11 @@ export default function Operator({
       rArm: bone("RightArm"),
       rFore: bone("RightForeArm"),
       rHand: bone("RightHand"),
+      // legs: only for the tuck of the roll-out; a rig without them stays straight
+      lUp: skinned.skeleton.bones.find((b) => b.name === "LeftUpLeg"),
+      lLeg: skinned.skeleton.bones.find((b) => b.name === "LeftLeg"),
+      rUp: skinned.skeleton.bones.find((b) => b.name === "RightUpLeg"),
+      rLeg: skinned.skeleton.bones.find((b) => b.name === "RightLeg"),
     };
     const rest = new Map<THREE.Bone, THREE.Quaternion>();
     skinned.skeleton.bones.forEach((bn) => rest.set(bn, bn.quaternion.clone()));
@@ -622,8 +553,7 @@ export default function Operator({
     return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y };
   }, [robot, spinG, jumpG]);
 
-  const swords = useMemo(() => [makeSword(swordG.scene), makeSword(swordG.scene)], [swordG]);
-  const trails = useMemo(() => [makeTrail(), makeTrail()], []);
+  const swords = useMemo(() => [makeSword(), makeSword()], []);
   const sparks = useMemo(() => makeSparks(), []);
   const orb = useMemo(() => {
     const m = new THREE.Mesh(
@@ -640,7 +570,7 @@ export default function Operator({
   const own = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
   const forge = light ?? own;
 
-  // grip frames in each fist, measured off the model (see measureFist)
+  // grip frames in each fist, read off the model (see handFrame) and seated (SOCKET)
   const mounts = useMemo(() => ({ r: new THREE.Object3D(), l: new THREE.Object3D() }), []);
   useEffect(() => {
     rig.b.rHand.add(mounts.r);
@@ -650,9 +580,6 @@ export default function Operator({
     top.updateMatrixWorld(true);
     const s = rig.b.rHand.getWorldScale(new THREE.Vector3()).x || 1;
     const u = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    // seating nudges while tuning: along the channel, and around it
-    const along = Number(u?.get("galong") ?? 0);
-    const roll = (Number(u?.get("groll") ?? 0) * Math.PI) / 180;
     const bones = rig.skinned.skeleton.bones;
     const basis = new THREE.Matrix4();
     const x = new THREE.Vector3();
@@ -663,58 +590,98 @@ export default function Operator({
       [mounts.l, rig.b.lHand, -1],
     ] as const;
     const t0 = performance.now();
-    const found = hands.map(([, hand]) => measureFist(rig.skinned, bones.indexOf(hand)));
+    const frames = hands.map(([, hand]) => handFrame(rig.skinned, bones.indexOf(hand)));
     if (u?.has("gdbg")) console.log("[grip] measured both hands in", (performance.now() - t0).toFixed(1), "ms");
-    // the hands are mirrors of each other, so they take the same channel: the
-    // one with the most room across the pair, never one each
-    let pick = 0;
-    if (found[0] && found[1]) {
-      let bestRoom = -Infinity;
-      for (let i = 0; i < found[0].length; i++) {
-        const room = Math.min(found[0][i].room, found[1][i].room);
-        if (room > bestRoom) {
-          bestRoom = room;
-          pick = i;
-        }
-      }
-    }
+    const nums = (k: string) => (u?.get(k) ?? "").split(",").map(Number).filter((v) => !Number.isNaN(v));
+    const tilt = new THREE.Quaternion();
     for (const [h, [m, hand, sign]] of hands.entries()) {
       m.scale.setScalar(1 / s);
-      const fist = found[h]?.[pick];
-      if (!fist || fist.room <= 0) {
+      const fr = frames[h];
+      if (!fr) {
         // no skin data to read: a plain fixed seating, so he still holds something
         m.position.set(0, 0.065 / s, 0);
         m.rotation.set(0, 0, (sign * Math.PI) / 2);
         continue;
       }
-      // +Y of the mount is the blade, up the channel. Both ends of the channel
+      const side = sign > 0 ? "r" : "l";
+      const seat = { pos: [...SOCKET[side].pos], rot: [...SOCKET[side].rot] };
+      nums("gs" + side).forEach((v, i) => (seat.pos[i] = v));
+      nums("gr" + side).forEach((v, i) => (seat.rot[i] = v));
+      // +Y of the mount is the blade, along the shaft. Both ends of the shaft
       // are the same line, so the blade takes the one that leaves the fist
       // upward in the rest stance — which mirrors onto the other hand by itself.
-      const y = fist.axis.clone();
-      probe.copy(fist.hold).add(y);
-      hand.localToWorld(probe).sub(hand.localToWorld(fist.hold.clone()));
+      const y = fr.axis.clone();
+      probe.copy(fr.centre).add(y);
+      hand.localToWorld(probe).sub(hand.localToWorld(fr.centre.clone()));
       if (probe.y < 0) y.negate();
       if (u?.has("gflip")) y.negate();
-      x.copy(fist.flat).projectOnPlane(y).normalize();
-      if (roll) x.applyAxisAngle(y, sign * roll).normalize();
+      // the blade's flat lies along the fingers
+      x.set(0, 1, 0).projectOnPlane(y).normalize();
+      if (x.lengthSq() < 0.5) x.set(1, 0, 0).projectOnPlane(y).normalize();
       z.crossVectors(x, y).normalize();
       basis.makeBasis(x, y, z);
       m.quaternion.setFromRotationMatrix(basis);
-      m.position.copy(fist.hold).addScaledVector(y, along * fist.room);
+      tilt.setFromEuler(new THREE.Euler(seat.rot[0] * DEG, seat.rot[1] * DEG, seat.rot[2] * DEG));
+      m.quaternion.multiply(tilt);
+      m.position.set(
+        fr.centre.x + seat.pos[0] * fr.ext.x,
+        fr.centre.y + seat.pos[1] * fr.ext.y,
+        fr.centre.z + seat.pos[2] * fr.ext.z,
+      );
       if (u?.has("gdbg")) {
-        console.log("[grip]", sign > 0 ? "right" : "left", {
-          hold: fist.hold.toArray().map((n) => +n.toFixed(3)),
-          axis: y.toArray().map((n) => +n.toFixed(3)),
-          room: +fist.room.toFixed(3),
-        });
+        const dir = (a: THREE.Vector3) => a.clone().transformDirection(hand.matrixWorld).toArray().map((n) => +n.toFixed(2));
+        console.log("[grip]", side, JSON.stringify({
+          centre: fr.centre.toArray().map((n) => +n.toFixed(2)),
+          ext: fr.ext.toArray().map((n) => +n.toFixed(2)),
+          shaft: fr.axis.toArray(),
+          up: +probe.y.toFixed(2),
+          worldX: dir(new THREE.Vector3(1, 0, 0)),
+          worldY: dir(new THREE.Vector3(0, 1, 0)),
+          worldZ: dir(new THREE.Vector3(0, 0, 1)),
+          seat,
+        }));
         const ball = new THREE.Mesh(
-          new THREE.SphereGeometry(fist.room, 10, 8),
+          new THREE.SphereGeometry(Math.min(fr.ext.x, fr.ext.z) * 0.35, 10, 8),
           new THREE.MeshBasicMaterial({ color: sign > 0 ? "#ff4466" : "#44aaff", wireframe: true, depthTest: false }),
         );
         ball.renderOrder = 999;
-        ball.position.copy(fist.hold);
+        ball.position.copy(m.position);
         hand.add(ball);
       }
+    }
+    // Which end of the fist's channel the blade leaves by. Both ends are the
+    // same line, and in the rest stance (arms hanging) that line is level, so
+    // "whichever points up at rest" was a coin toss — one hand came out
+    // pommel-up. It is decided in the pose the sword is made in instead: the
+    // fists meeting at the chest for the forge (the same targets the frame
+    // loop solves for), where the blade must rise out of the grip.
+    const r = root.current;
+    if (r && !u?.has("gflip")) {
+      const saved = rig.skinned.skeleton.bones.map((bn) => bn.quaternion.clone());
+      rig.rest.forEach((qr, bn) => bn.quaternion.copy(qr));
+      r.updateMatrixWorld(true);
+      const chest = rig.b.chest.getWorldPosition(new THREE.Vector3());
+      const fwd = new THREE.Vector3(0, 0, 1).transformDirection(r.matrixWorld);
+      const side = new THREE.Vector3(1, 0, 0).transformDirection(r.matrixWorld);
+      const F = chest.clone().addScaledVector(fwd, 0.2);
+      F.y += 0.05;
+      const TR = F.clone().addScaledVector(side, -0.035);
+      const TL = F.clone().addScaledVector(side, 0.035);
+      const PR = rig.b.rArm.getWorldPosition(new THREE.Vector3()).addScaledVector(side, -0.3).addScaledVector(fwd, -0.1);
+      PR.y -= 0.35;
+      const PL = rig.b.lArm.getWorldPosition(new THREE.Vector3()).addScaledVector(side, 0.3).addScaledVector(fwd, -0.1);
+      PL.y -= 0.35;
+      solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, TR, PR, 1);
+      solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, TL, PL, 1);
+      const flip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+      for (const m of [mounts.r, mounts.l]) {
+        m.updateMatrixWorld(true);
+        const up = new THREE.Vector3(0, 1, 0).transformDirection(m.matrixWorld);
+        if (up.y < 0) m.quaternion.multiply(flip);
+        if (u?.has("gdbg")) console.log("[grip] forge-pose blade y", up.y.toFixed(2), up.y < 0 ? "flipped" : "kept");
+      }
+      rig.skinned.skeleton.bones.forEach((bn, i) => bn.quaternion.copy(saved[i]));
+      r.updateMatrixWorld(true);
     }
     if (u?.has("axes")) {
       // tuning aid: the raw hand-bone axes (red X, green Y, blue Z)
@@ -795,13 +762,15 @@ export default function Operator({
     const blank = (o: THREE.Object3D) => o.traverse((c) => ((c as THREE.Mesh).raycast = none));
     blank(rig.scene);
     swords.forEach((sw) => blank(sw.group));
-    trails.forEach((t) => blank(t.mesh));
     blank(sparks.pts);
     blank(orb.mesh);
-  }, [rig, swords, trails, sparks, orb]);
+  }, [rig, swords, sparks, orb]);
 
   const { camera, gl, scene } = useThree();
   const [warmedEnv, setWarmedEnv] = useState(false);
+  // he is not drawn until his own shaders are linked: a first draw that links
+  // them itself would hold the main thread for every one of them
+  const linked = useRef(false);
   // Compile every shader and upload the textures in the background as soon as
   // the robot exists, so the first visible frame doesn't stall the GPU.
   //
@@ -812,11 +781,17 @@ export default function Operator({
   // 762ms, right where the move was supposed to start. Their brightness is
   // animated instead, and nothing recompiles.
   useEffect(() => {
-    // three only builds programs for what it can see, so everything he brings
-    // out mid-move is shown for the compile and hidden again: the blades, the
-    // fabrication ring, the trail ribbons, the sparks and the forge orb. Left
-    // hidden, each one linked its shader at the moment it first appeared —
-    // which is the moment of the click.
+    // Not before the environment map is in place: a shader linked without it
+    // is linked again, in full, the first time it is drawn with it — with his
+    // body now arriving before the world's own boot, that was every lit
+    // shader in the world built twice. Until then the world's own boot
+    // (ReadySignal) links him along with everything else.
+    if (!scene.environment) return;
+    const rootObj = root.current;
+    if (!rootObj) return;
+    // everything he brings out mid-move is shown for the compile and the
+    // texture upload, then hidden again: the blades, the fabrication ring,
+    // the sparks and the forge orb.
     const hidden: THREE.Object3D[] = [];
     const show = (o: THREE.Object3D | null | undefined) => {
       if (!o || o.visible) return;
@@ -828,7 +803,6 @@ export default function Operator({
       show(sw.blade);
       show(sw.ring);
     });
-    trails.forEach((t) => show(t.mesh));
     [sparks.pts, orb.mesh].forEach((o) => show(o));
     const done = () => hidden.forEach((o) => (o.visible = false));
     // A real draw, into a 1x1 target nobody sees: it links exactly the programs
@@ -840,7 +814,7 @@ export default function Operator({
     // buffer needs), and only then does the draw run — by then it has nothing
     // left to do but upload his textures. Linking inside the draw held the
     // main thread ~600ms while the loader was trying to animate.
-    const tiny = new THREE.WebGLRenderTarget(1, 1);
+    const tiny = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
     const prev = gl.getRenderTarget();
     let alive = true;
     const draw = () => {
@@ -852,12 +826,14 @@ export default function Operator({
         gl.setRenderTarget(prev);
         tiny.dispose();
         done();
+        linked.current = true;
       }
     };
     const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
     if (r.compileAsync) {
+      // only his own objects, against the world's lights and environment
       gl.setRenderTarget(tiny);
-      r.compileAsync(scene, camera).then(
+      r.compileAsync(rootObj, camera, scene).then(
         () => {
           gl.setRenderTarget(prev);
           draw();
@@ -875,7 +851,7 @@ export default function Operator({
         done();
       }
     };
-  }, [gl, scene, camera, swords, orb, trails, sparks, warmedEnv]);
+  }, [gl, scene, camera, swords, orb, sparks, warmedEnv]);
 
   // The world's environment map arrives after he does, and a material compiled
   // without it is compiled again the first time it is drawn with it — for the
@@ -901,7 +877,7 @@ export default function Operator({
     const s = sim.current;
     const r = root.current;
     if (!r) return;
-    if (shown.current) shown.current.visible = !state.hidden;
+    if (shown.current) shown.current.visible = !state.hidden && linked.current;
     s.arrive = damp(s.arrive, 1, 5, dt);
     r.scale.setScalar((stand?.scale ?? 1) * (0.001 + 0.999 * ease(s.arrive)));
     if (dbg) {
@@ -996,6 +972,23 @@ export default function Operator({
     turn(rig.b.neck, y * 0.3, p * 0.32);
     turn(rig.b.head, y * 0.42, p * 0.5);
     if (s.seq < 0) turn(rig.b.chest, 0, Math.sin(s.t * 1.3) * 0.012); // breathing
+    // ── the roll-out (OperatorInWorld drives the travel and the roll): he
+    //    tucks — chin down, knees up, fists to the chest — as he goes ──
+    const tuck = smooth((state.exit ?? 0) * 1.7);
+    if (tuck > 0.001) {
+      turn(rig.b.chest, 0, tuck * 0.55);
+      turn(rig.b.neck, 0, tuck * 0.35);
+      turn(rig.b.head, 0, tuck * 0.3);
+      if (!s.playing) rig.b.hips.position.y = rig.restHips.y - Math.abs(rig.restHips.y) * 0.16 * tuck;
+      const legs = [
+        [rig.b.lUp, rig.b.lLeg],
+        [rig.b.rUp, rig.b.rLeg],
+      ] as const;
+      for (const [up, low] of legs) {
+        if (up) turn(up, 0, -tuck * TUCK_THIGH);
+        if (low) turn(low, 0, tuck * TUCK_KNEE);
+      }
+    }
     r.rotation.y = (stand?.yaw ?? 0) + y * 0.22;
     r.updateMatrixWorld(true);
 
@@ -1026,13 +1019,15 @@ export default function Operator({
     rig.b.lArm.getWorldPosition(tmp.PL);
     tmp.PL.addScaledVector(tmp.side, 0.3).addScaledVector(tmp.fwd, -0.1);
     tmp.PL.y -= 0.35;
-    solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, s.ik);
-    solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, s.ik);
+    // the tuck brings both fists to the chest the same way the forge does
+    const grab = Math.max(s.ik, tuck);
+    solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, grab);
+    solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, grab);
     // At rest the hands follow the pointer as well, a little and after the
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
-    if (s.seq < 0 && state.fine) {
-      const reach = 0.42 * s.follow;
+    if (s.seq < 0 && state.fine && tuck < 0.999) {
+      const reach = 0.42 * s.follow * (1 - tuck);
       const lift = 0.05 - s.pitch * 0.14;
       rig.b.rHand.getWorldPosition(tmp.TR).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
       tmp.TR.y += lift;
@@ -1075,9 +1070,10 @@ export default function Operator({
     orb.mat.opacity = orbK;
     orb.mat.color.copy(hue).lerp(WHITE, 0.5).multiplyScalar(1.5);
 
-    // the one light: with the orb while it is burning, then on the blade
+    // the one light: with the orb while it is burning (the blades are steel
+    // and carry none)
     forge.color.copy(hue);
-    let lit = orbK * 4;
+    const lit = orbK * 4;
     // his own light sits under his root; a lent one lives in the host's space
     if (orbK > 0.001) forge.position.copy(light ? tmp.F : tmp.FL);
 
@@ -1100,20 +1096,9 @@ export default function Operator({
       sw.group.position.copy(tmp.pos);
       sw.group.quaternion.copy(tmp.quat);
       setScan(sw, scan * (1 - end));
-      // blade: ignites as the draw completes, retracts before the end
-      const on = isTwin ? ease((t - FORGE_END - 0.3) / 0.3) : ease((t - (FORGE_END + 0.15)) / 0.32);
+      // blade: runs out of the guard as the draw completes, back in before the end
+      const on = isTwin ? ease((t - FORGE_END - 0.3) / 0.28) : ease((t - (FORGE_END + 0.15)) / 0.28);
       setBlade(sw, on * (1 - end), hue);
-      // the brighter of the two blades carries the light
-      const bladeLit = 5 * on * (1 - end);
-      if (bladeLit > lit) {
-        lit = bladeLit;
-        forge.position.copy(tmp.pos).addScaledVector(tmp.F.set(0, 1, 0).applyQuaternion(tmp.quat), BLADE * 0.45);
-        if (light) r.localToWorld(forge.position);
-      }
-      if (!dbg) stepTrail(trails[i], sw, r, on * (1 - end), hue);
-    });
-    swords.forEach((sw, i) => {
-      if (!sw.body.visible) stepTrail(trails[i], sw, r, 0, hue);
     });
     forge.intensity = lit;
 
@@ -1129,7 +1114,7 @@ export default function Operator({
         +(turn * 1000).toFixed(2),
         +(moved * 1000).toFixed(2),
         swords[0].body.visible ? 1 : 0,
-        trails[0].mesh.visible ? 1 : 0,
+        swords[0].blade.visible ? 1 : 0,
         +mv.action.getEffectiveWeight().toFixed(3),
         +rawDt.toFixed(4),
         +mv.action.time.toFixed(3),
@@ -1172,8 +1157,6 @@ export default function Operator({
       </group>
       <primitive object={swords[0].group} />
       <primitive object={swords[1].group} />
-      <primitive object={trails[0].mesh} />
-      <primitive object={trails[1].mesh} />
       <primitive object={sparks.pts} />
       <primitive object={orb.mesh} />
       </group>

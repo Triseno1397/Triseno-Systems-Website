@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { PerformanceMonitor } from "@react-three/drei";
 import { glyphPoints } from "@/lib/glyph-path";
 import type { GlyphKind } from "@/lib/divisions";
 import {
@@ -25,11 +24,17 @@ import {
 } from "@/components/world/scene/loop";
 import {
   Dust,
+  FrameDriver,
+  Governor,
   Haze,
   KeyLight,
   Post,
   ReadySignal,
   WorldEnvironment,
+  boot,
+  initialQuality,
+  qualityDpr,
+  type Quality,
 } from "@/components/world/scene/pieces";
 import { makeGlowTexture, makeHazeTexture } from "@/components/world/scene/textures";
 import { WARP_EVENT } from "@/components/world/WarpProvider";
@@ -387,6 +392,14 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
 /* The Operator stands in the portal's own hall, inside this scene: one WebGL
    context, the world's own light and reflections on his chrome. He is only up
    while the hero is (the camera leaves him behind on the way to the doors). */
+/* How far into the hero scroll he leaves, and how far he has gone by the
+   time the camera reaches the ring: he tucks, barrel-rolls off to the right
+   and is out of frame before the fly-through. */
+const EXIT_FROM = 0.03;
+const EXIT_TO = 0.5;
+// he stands ~60% of the way to the right edge; this much travel clears it
+const EXIT_DX = 3.4;
+
 function OperatorInWorld({ state }: { state: OperatorState }) {
   const group = useRef<THREE.Group>(null);
   const busy = useRef(false);
@@ -406,16 +419,37 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       yaw: n("opyaw", -0.35),
     };
   }, []);
+  // ?opexit=0.5 — hold him mid-roll for a look
+  const holdExit = useMemo(() => {
+    if (typeof window === "undefined") return -1;
+    const v = new URLSearchParams(window.location.search).get("opexit");
+    return v === null ? -1 : Number(v);
+  }, []);
   useFrame(() => {
     state.px = portalState.px;
     state.py = portalState.py;
     portalState.performing = busy.current;
+    // the roll-out: 0 standing, 1 gone. Ease-in on the travel so he gathers
+    // himself first, then whips away; the roll turns with the distance he
+    // covers, like a wheel, so it never reads as a spin in place.
+    const exit = holdExit >= 0 ? holdExit : smooth(EXIT_FROM, EXIT_TO, portalState.hero);
+    state.exit = exit;
+    const g = group.current;
+    if (g) {
+      const travel = exit * exit * (3 - exit) * 0.5; // ease-in, lands at 1
+      // a hop into the roll, then he drops as he goes
+      g.position.set(stand.position[0] + travel * EXIT_DX, stand.position[1] + Math.sin(exit * Math.PI) * 0.5 - exit * 0.45, stand.position[2] + exit * 0.4);
+      // one and a quarter turns across the exit, turning with the travel
+      g.rotation.z = -travel * Math.PI * 2.5;
+      g.rotation.x = exit * 0.25;
+    }
     // not group.visible: see OperatorState.hidden
     state.hidden = !(portalState.hero < 0.55 && portalState.warpAt === 0);
   });
   return (
     <group
       ref={group}
+      position={stand.position}
       onClick={(e) => {
         e.stopPropagation();
         state.strike += 1;
@@ -424,7 +458,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
     >
       <primitive object={forge} />
-      <Operator state={state} busy={busy} stand={stand} light={forge} />
+      <Operator state={state} busy={busy} stand={{ position: [0, 0, 0], scale: stand.scale, yaw: stand.yaw }} light={forge} />
     </group>
   );
 }
@@ -504,26 +538,20 @@ function CameraRig() {
 interface PortalSceneProps {
   onReady: () => void;
   onEnter: (route: string) => void;
+  /** this machine cannot draw the world smoothly: the page goes 2D */
+  onTooSlow?: () => void;
 }
 
-export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
+export default function PortalScene({ onReady, onEnter, onTooSlow }: PortalSceneProps) {
   const glow = useMemo(() => makeGlowTexture(), []);
   const haze = useMemo(() => makeHazeTexture(), []);
-  // never render above the device's own pixel ratio; cap at 1.5 and fall to 1 if frames drop
-  const [maxDpr, setMaxDpr] = useState(1.5);
-  // then, still short of the frame rate, render a little under the device's
-  // pixels (0.875, then 0.75 — the post chain resolves it back up, and at
-  // those scales the softening is well under what the drop to the low tier
-  // costs the look); only after that does the tier fall
-  const [under, setUnder] = useState(1);
+  // Quality starts where this machine is smooth (lib/device.ts) and only
+  // ever steps down from there: resolution, then passes, then 30fps, then
+  // the 2D world (Governor, scene/pieces.tsx). "?dbg=H" pins the top.
+  const [quality, setQuality] = useState<Quality>(() => initialQuality());
   const [armed, setArmed] = useState(false);
-  // "H" pins the high tier so headless/software-GPU captures show what a real
-  // GPU renders; without it PerformanceMonitor degrades to "low" within a second.
-  const pinHigh = DBG.includes("H");
-  const [tier, setTier] = useState<Tier>(DBG.includes("l") ? "low" : "high");
-  const dpr = DBG.includes("r")
-    ? 0.5
-    : Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, maxDpr) * under;
+  const tier: Tier = quality.tier;
+  const dpr = qualityDpr(quality);
   useEffect(
     () => () => {
       glow.dispose();
@@ -541,27 +569,30 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
     document.documentElement.dataset.portalTier = tier;
     document.documentElement.dataset.portalDpr = String(dpr);
   }, [tier, dpr]);
-  const [paused, setPaused] = useState(false);
   const operatorState = useMemo<OperatorState>(() => ({ px: 0, py: 0, fine: true, strike: 0 }), []);
+  // the environment map is in place: the shaders may be linked against it
+  const [envReady, setEnvReady] = useState(false);
   useEffect(() => {
     let t = 0;
     const onWarp = () => {
       window.clearTimeout(t);
       // the tunnel cover is ~full within 360ms; every frame after that goes to
       // the tunnel and the destination
-      t = window.setTimeout(() => setPaused(true), 380);
+      t = window.setTimeout(() => (boot.paused = true), 380);
     };
     window.addEventListener(WARP_EVENT, onWarp);
     return () => {
       window.removeEventListener(WARP_EVENT, onWarp);
       window.clearTimeout(t);
+      boot.paused = false;
     };
   }, []);
 
   return (
     <Canvas
       flat // no tone mapping: a division hue must reach the screen as that hue
-      frameloop={paused ? "never" : "always"}
+      // drawn from the page's own frame loop (FrameDriver), never on its own clock
+      frameloop="never"
       dpr={dpr}
       gl={{ antialias: false, powerPreference: "high-performance", alpha: false, preserveDrawingBuffer: false }}
       camera={{ fov: 36, near: 0.1, far: 260, position: [0, CAM_Y, 7.6] }}
@@ -589,28 +620,10 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         scene.fog = new THREE.Fog("#0a0a0a", 16, 120);
       }}
     >
-      {pinHigh || !armed ? null : (
-        <PerformanceMonitor
-          ms={150}
-          iterations={4}
-          threshold={0.8}
-          // smoothness first: below ~45fps step down — resolution first (the
-          // look is unchanged, only sharpness), then the heavy effects
-          // no upper bound to climb back over: a climb-and-fall pair counts
-          // as a flip-flop, and enough of those hands the scene straight to
-          // the low tier without ever trying the resolution steps
-          bounds={() => [55, 1000]}
-          flipflops={50}
-          onDecline={() => {
-            if (maxDpr > 1 && (typeof window === "undefined" ? 1 : window.devicePixelRatio) > 1) setMaxDpr(1);
-            else if (under > 0.8) setUnder(+(under - 0.125).toFixed(3));
-            else setTier("low");
-          }}
-          onFallback={() => setTier("low")}
-        />
-      )}
+      <Governor quality={quality} setQuality={setQuality} armed={armed} onGiveUp={onTooSlow} />
       <TierContext.Provider value={tier}>
-        <WorldEnvironment />
+        <FrameDriver />
+        <WorldEnvironment onReady={() => setEnvReady(true)} />
 
         <EnvDirector />
         <CameraRig />
@@ -632,6 +645,7 @@ export default function PortalScene({ onReady, onEnter }: PortalSceneProps) {
         {DBG.includes("d") ? null : <Dust sprite={glow} />}
         {DBG.includes("p") ? null : <Post focusY={RING_Y} dof={false} />}
         <ReadySignal
+          envReady={envReady}
           onReady={() => {
             onReady?.();
             // the monitor only judges frames once the loader has left and the

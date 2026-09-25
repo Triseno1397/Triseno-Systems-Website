@@ -146,6 +146,10 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
    on an integrated GPU (design-loop/tier-probe.mjs). Hidden, it costs nothing
    and is back the moment the canvas is gone. */
 [data-scene-ready] > .world-plate { visibility: hidden; }
+/* and, hidden, its drifting layers do not animate either */
+.world-plate[data-paused] .world-plate__shaft,
+.world-plate[data-paused] .world-plate__haze,
+.world-plate[data-paused] .world-plate__dust { animation-play-state: paused; }
 
 /* neutral pool behind the rail: centred on it, fully faded inside its own box */
 .chrome-scrim {
