@@ -373,7 +373,9 @@ export function initialQuality(): Quality {
     return { maxDpr: 2, under: 1, tier: "low", cap30: false };
   if (dc === "low") return { maxDpr: 1, under: 0.75, tier: "low", cap30: false };
   if (dc === "mid") return { maxDpr: 1, under: 1, tier: "low", cap30: false };
-  return { maxDpr: 1.5, under: 1, tier: DBG.includes("l") ? "low" : "high", cap30: false };
+  // a strong machine draws at the screen's own density up to 2x, so a 4K or
+  // Retina display gets every pixel; the Governor sheds it first if frames drop
+  return { maxDpr: 2, under: 1, tier: DBG.includes("l") ? "low" : "high", cap30: false };
 }
 
 /** A weak GPU (named on the real canvas) starts lower still. */

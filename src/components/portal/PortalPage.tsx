@@ -25,6 +25,7 @@ import {
   doorSide,
   portalState,
 } from "./portalState";
+import { statue } from "./statue";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -253,7 +254,8 @@ export default function PortalPage() {
       // and not while he is mid-move: the object morphing behind a spin read
       // as the whole scene glitching
       // nor once the page moves: the Operator is on his way off the statue
-      if (interacting.current || document.hidden || portalState.hero > 0.01 || portalState.warpAt || portalState.performing) return;
+      // nor while he leans on the statue or hangs from it
+      if (interacting.current || document.hidden || portalState.hero > 0.01 || portalState.warpAt || portalState.performing || statue.hold) return;
       show((portalState.active + 1) % 3, false);
     }, 3600);
     return () => window.clearInterval(id);

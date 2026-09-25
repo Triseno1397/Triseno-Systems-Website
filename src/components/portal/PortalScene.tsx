@@ -38,8 +38,8 @@ import {
 } from "@/components/world/scene/pieces";
 import { makeGlowTexture, makeHazeTexture } from "@/components/world/scene/textures";
 import { WARP_EVENT } from "@/components/world/WarpProvider";
-import Operator, { type Limbs, type OperatorState } from "./Operator";
-import { STATUE_SCALE, groundY, makePose, poseFor, resolvePose, statue, type Pose, type PoseKey } from "./statue";
+import Operator, { INSPECT, type Limbs, type OperatorState } from "./Operator";
+import { STATUE_SCALE, TUBE_D, groundY, makePose, resolvePose, statue, type Pose, type PoseKey } from "./statue";
 import Mechanisms from "./Mechanisms";
 import { plate } from "@/components/world/plates";
 import { PlateBackdrop } from "@/components/world/scene/plate";
@@ -135,7 +135,6 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     /** the glyph asked for, and how long it has waited: the statue holds its
      *  shape until he has pushed off it */
     want: 0,
-    wait: 0,
     y: groundY(glyphPoints(MENU_ITEMS[0].glyph, N)),
   });
 
@@ -151,14 +150,10 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     const m = morph.current;
     const step = Math.min(dt, 1); // wall-clock time, even at a frame a second
 
-    if (portalState.active !== m.want) {
-      m.want = portalState.active;
-      m.wait = 0;
-    }
-    m.wait += step;
-    // while he is on it, the shape changes once he is in the air
-    const onIt = portalState.hero < 0.55 && !portalState.warpAt && !portalState.capture;
-    if (m.want !== m.index && (!onIt || m.wait >= HOP_PUSH)) {
+    if (portalState.active !== m.want) m.want = portalState.active;
+    // a hovered word changes it at once; the resting rotation waits (PortalPage)
+    // while he leans on it or hangs from it
+    if (m.want !== m.index) {
       m.index = m.want;
       m.from.set(m.cur);
       m.to = glyphPoints(MENU_ITEMS[m.index].glyph as GlyphKind, N);
@@ -181,6 +176,7 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     const warp = portalState.warpAt ? smooth(0, 700, performance.now() - portalState.warpAt) : 0;
     statue.y = m.y;
     statue.yaw = REST_YAW * away * (1 - warp);
+    statue.points = m.cur;
     if (group.current) {
       group.current.position.y = m.y;
       group.current.rotation.y = statue.yaw;
@@ -404,36 +400,49 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
    context, the world's own light and reflections on his chrome. He is only up
    while the hero is (the camera leaves him behind on the way to the doors).
 
-   He is ON the statue: each glyph has its pose (statue.ts) — seated in the
-   ring, leaning on the frame, a boot planted on the triangle's slope. When
-   the glyph changes he pushes off, the statue re-forms under him while he is
-   in the air, and he lands in the next pose. Asked for a sword move, he hops
-   down to the floor in front of it to perform. */
+   He keeps himself busy on the statue (statue.ts), one thing at a time, for a
+   while each, picked at random: leaning on its side with his arms folded,
+   sitting inside it, looking his blade over in front of it, doing pull-ups off
+   its top. Between them he pushes off, crosses in the air and lands in the
+   next. Tapped, he hops down to the floor in front of it to perform. */
 
-/** seconds of the hop: the push-off (the statue waits for it), the air, the landing */
+/** seconds of a hop between two things: the push-off, the air, the landing */
 const HOP_PUSH = 0.2;
 const HOP_AIR = 0.62;
 const HOP_LAND = 0.24;
 
-/* The exit, as the hero scrolls: a ninja front flip off to the right. He
-   drops into a crouch and turns side-on, swings his arms back, explodes up
-   off both feet, tucks into one full forward somersault at the top of the
-   arc, opens out of it and is gone past the right edge. Scroll-driven, so it
-   plays at the visitor's speed and runs backward on the way back up. */
+/** the things he does, and for how long (seconds, picked in the range) */
+const ACTS: Record<"lean" | "sit" | "blade" | "pull", [number, number]> = {
+  lean: [7, 11],
+  sit: [8, 12],
+  blade: [INSPECT + 1, INSPECT + 2.5],
+  pull: [0, 0], // set by how many reps he does
+};
+type Act = keyof typeof ACTS;
+/** a pull-up: settle, up, hold at the top, down, hang */
+const REP = { up: 0.6, top: 0.22, down: 0.72, hang: 0.26 };
+const REP_T = REP.up + REP.top + REP.down + REP.hang;
+const PULL_SETTLE = 0.7;
+
+/* The exit, as the hero scrolls: a Superman take-off. He sinks into a deep
+   crouch with his fists low, then blasts straight up — right fist punched
+   overhead, left fist tight at his hip — and accelerates out of the top of
+   the frame, leaving a shockwave rolling out across the wet floor. Scroll-
+   driven: it plays at the visitor's speed and runs back on the way up. */
 const EXIT_FROM = 0.02;
 const EXIT_TO = 0.46;
-const EXIT_DX = 4.6; // clears the right edge from anywhere on the statue
-const EXIT_RISE = 0.75; // height of the arc's top above the launch
-const EXIT_FACE = 1.3; // side-on, facing the way he goes, a hair toward the visitor
-const CROUCH = 0.5;
+const CROUCH = 0.55;
+/** clearance in front of the statue's face for the take-off */
+const LAUNCH_CLEAR = 0.6;
 
 const mix = THREE.MathUtils.lerp;
 
 function OperatorInWorld({ state }: { state: OperatorState }) {
   const group = useRef<THREE.Group>(null);
+  const wave = useRef<THREE.Mesh>(null);
   const { size } = useThree();
-  // a phone held upright: he sits in the statue, centred between the
-  // headline and the menu (the desktop has him to the right of the copy)
+  // a phone held upright: there is no room beside the statue, so he does not
+  // lean on its side there
   const tall = size.width < 768 && size.height > size.width;
   const busy = useRef(false);
   // His forge light, here from the first frame at zero brightness. His files
@@ -442,7 +451,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   // again (~2s on the main thread, the transmission glass alone 1.1s), right
   // as the loader left. Measured with design-loop/program-census.mjs.
   const forge = useMemo(() => new THREE.PointLight("#ffffff", 0, 1.5, 1.6), []);
-  // the stage: the floor in front of the statue where he performs his moves
+  // the stage: the floor in front of the statue, for the blade and his moves
   const stand = useMemo(() => {
     const u = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
     const n = (k: string, d: number) => Number(u?.get(k) ?? d);
@@ -455,29 +464,33 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   }, [tall]);
   // on touch he looks around on his own, and at a finger while one is down
   const coarse = useMemo(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches, []);
-  // ?opexit=0.5 — hold him mid-flip for a look
-  const holdExit = useMemo(() => {
-    if (typeof window === "undefined") return -1;
-    const v = new URLSearchParams(window.location.search).get("opexit");
-    return v === null ? -1 : Number(v);
-  }, []);
-
-  const holdTuck = useMemo(() => {
-    if (typeof window === "undefined") return -1;
-    // ?dbg=o: the portal's state on window, so a capture can set the scroll
+  // ?opexit=0.3 holds him mid-take-off; ?act=pull holds one thing (and a
+  // moment of it with ?actt=seconds) for a look; ?dbg=o puts the portal's
+  // state on window so a capture can set the scroll
+  const dbg = useMemo(() => {
+    if (typeof window === "undefined") return { exit: -1, act: null as Act | null, t: -1 };
     if (DBG.includes("o")) (window as unknown as { __portal: typeof portalState }).__portal = portalState;
-    const v = new URLSearchParams(window.location.search).get("optuck");
-    return v === null ? -1 : Number(v);
+    const u = new URLSearchParams(window.location.search);
+    const a = u.get("act");
+    return {
+      exit: u.has("opexit") ? Number(u.get("opexit")) : -1,
+      act: a && a in ACTS ? (a as Act) : null,
+      t: u.has("actt") ? Number(u.get("actt")) : -1,
+    };
   }, []);
 
   const P = useMemo(() => {
     const v = () => new THREE.Vector3();
-    const limbs: Limbs = { feet: [v(), v()], footW: [0, 0], hands: [v(), v()], handW: [0, 0], knee: [false, false], lean: 0, kneesUp: 0, kneesOut: 0 };
+    const limbs: Limbs = { feet: [v(), v()], footW: [0, 0], hands: [v(), v()], handW: [0, 0], knee: [false, false], lean: 0, kneesUp: 0, kneesOut: 0, hang: 0 };
     return {
       stage: v(),
-      /** where he is going, and where he has come from */
       to: makePose(),
       from: makePose(),
+      /** what he is doing, since when, and until when */
+      act: null as Act | null,
+      actT: 0,
+      actDur: 0,
+      reps: 0,
       key: null as PoseKey | null,
       glyph: 0,
       /** seconds into a hop, -1 when settled */
@@ -486,11 +499,28 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       root: v(),
       yaw: 0,
       tilt: 0,
+      back: 0,
       launch: v(),
+      gaze: v(),
       tmp: v(),
       tmp2: v(),
     };
   }, []);
+
+  const pick = (not: Act | null): Act => {
+    const all = (Object.keys(ACTS) as Act[]).filter((a) => a !== not && !(tall && a === "lean"));
+    const a = all[Math.floor(Math.random() * all.length)];
+    P.act = a;
+    P.actT = 0;
+    if (a === "pull") {
+      P.reps = 3 + Math.floor(Math.random() * 3);
+      P.actDur = PULL_SETTLE + P.reps * REP_T + 0.5;
+    } else {
+      const [lo, hi] = ACTS[a];
+      P.actDur = lo + Math.random() * (hi - lo);
+    }
+    return a;
+  };
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 1 / 20);
@@ -511,19 +541,39 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       return;
     }
 
-    /* ── which pose, and the hop between two of them ── */
+    const exit = dbg.exit >= 0 ? dbg.exit : smooth(EXIT_FROM, EXIT_TO, portalState.hero);
+    state.exit = exit;
+
+    /* ── what he is doing: taken in turns, each for a while ── */
+    if (P.act === null) {
+      if (dbg.act) {
+        P.act = dbg.act;
+        P.actDur = Infinity;
+        P.reps = 1e6;
+        P.actT = Math.max(0, dbg.t);
+      } else pick(null);
+    }
+    // the timer only runs while he is up and nobody is scrolling him away
+    const settled = P.hop < 0;
+    if (exit <= 0 && !state.hidden && !busy.current && !(dbg.act && dbg.t >= 0)) {
+      if (settled) P.actT += dt;
+      if (P.actT >= P.actDur) pick(P.act);
+    }
+    // a glyph changed under a lean or a hang (the menu is hovered): he gets off it
     const glyphIndex = portalState.active;
-    const glyph = MENU_ITEMS[glyphIndex].glyph as GlyphKind;
-    const key: PoseKey = busy.current ? "stage" : poseFor(glyph);
+    if (glyphIndex !== P.glyph && (P.act === "lean" || P.act === "pull") && !dbg.act) pick(P.act);
+
+    /* ── the pose, and the hop between two of them ── */
+    const key: PoseKey = busy.current ? "stage" : (P.act as PoseKey);
     const L = P.limbs;
     if (P.key === null) {
       P.key = key;
-      P.glyph = glyphIndex;
-    } else if (key !== P.key || glyphIndex !== P.glyph) {
+    } else if (key !== P.key) {
       // leave from wherever he is right now (even mid-hop)
       P.from.root.copy(P.root);
       P.from.yaw = P.yaw;
       P.from.tilt = P.tilt;
+      P.from.back = P.back;
       for (let i = 0; i < 2; i++) {
         P.from.feet[i] = L.footW[i] > 0.01 ? (P.from.feet[i] ?? new THREE.Vector3()).copy(L.feet[i]!) : null;
         P.from.hands[i] = L.handW[i] > 0.01 && !L.knee[i] ? (P.from.hands[i] ?? new THREE.Vector3()).copy(L.hands[i]!) : null;
@@ -531,12 +581,24 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       }
       P.from.lean = L.lean;
       P.from.kneesUp = L.kneesUp;
-      P.from.kneesOut = L.kneesOut;
+      P.from.hang = L.hang;
       P.key = key;
-      P.glyph = glyphIndex;
       P.hop = 0;
     }
-    resolvePose(P.to, P.key, glyph, build, P.stage, stand.yaw, REST_YAW);
+    P.glyph = glyphIndex;
+    // a pull-up: how far up the bar he is
+    let lift = 0;
+    if (key === "pull" && settled) {
+      const r = P.actT - PULL_SETTLE;
+      if (r > 0 && r < P.reps * REP_T) {
+        const k = r % REP_T;
+        lift =
+          k < REP.up ? ease(k / REP.up) : k < REP.up + REP.top ? 1 : k < REP.up + REP.top + REP.down ? 1 - ease((k - REP.up - REP.top) / REP.down) : 0;
+      }
+    }
+    resolvePose(P.to, key, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, lift);
+    // the statue holds its shape while he leans on it or hangs from it
+    statue.hold = key === "lean" || key === "pull" || (P.hop >= 0 && P.from.hang > 0);
 
     // feet squarely under him, for the push-off and the landing
     const under = (out: THREE.Vector3, root: THREE.Vector3, yaw: number, side: number) =>
@@ -553,10 +615,13 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       }
       L.lean = pose.lean * w;
       L.kneesUp = pose.kneesUp;
-      L.kneesOut = pose.kneesOut;
+      L.kneesOut = 0;
+      L.hang = pose.hang * w;
     };
-    // a pose without planted feet still plants them for a push-off or a landing
+    // stood on the floor, a pose without planted feet still plants them to
+    // push off or land (a hang has nothing under it: he just lets go)
     const brace = (pose: Pose, w: number) => {
+      if (pose.hang > 0) return;
       for (let i = 0; i < 2; i++) {
         if (pose.feet[i]) continue;
         L.footW[i] = w;
@@ -577,18 +642,21 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
         P.root.copy(P.from.root);
         P.yaw = P.from.yaw;
         P.tilt = P.from.tilt;
-        dip = Math.sin(k * Math.PI) * 0.16;
+        P.back = P.from.back;
+        dip = P.from.hang > 0 ? 0 : Math.sin(k * Math.PI) * 0.16;
       } else if (t < HOP_PUSH + HOP_AIR) {
-        // the air: an arc from the old spot to the new, knees drawn up a little
+        // the air: an arc from the old spot to the new, knees drawn up; up to
+        // a bar it is a jump to grab it
         const k = (t - HOP_PUSH) / HOP_AIR;
         const e = ease(k);
         setLimbs(P.to, 0);
         P.root.lerpVectors(P.from.root, P.to.root, e);
-        // low and compact: he stays inside the shape re-forming around him
-        P.root.y += Math.sin(k * Math.PI) * (0.18 + Math.abs(P.to.root.y - P.from.root.y) * 0.3) - Math.sin(k * Math.PI) * 0.22;
+        const up = P.to.hang > 0 ? 0.42 : 0.1;
+        P.root.y += Math.sin(k * Math.PI) * (up + Math.abs(P.to.root.y - P.from.root.y) * 0.3);
         P.yaw = mix(P.from.yaw, P.to.yaw, e);
         P.tilt = mix(P.from.tilt, P.to.tilt, e);
-        tuck = Math.sin(k * Math.PI) * 0.75;
+        P.back = mix(P.from.back, P.to.back, e);
+        tuck = Math.sin(k * Math.PI) * 0.6;
       } else {
         // the landing: the new contacts take his weight and he settles into them
         const k = Math.min(1, (t - HOP_PUSH - HOP_AIR) / HOP_LAND);
@@ -597,7 +665,9 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
         P.root.copy(P.to.root);
         P.yaw = P.to.yaw;
         P.tilt = P.to.tilt;
-        dip = Math.sin(k * Math.PI) * 0.12;
+        P.back = P.to.back;
+        // a hang catches his weight in the arms: a small drop, not a squat
+        dip = Math.sin(k * Math.PI) * (P.to.hang > 0 ? 0.06 : 0.12);
         if (k >= 1) P.hop = -1;
       }
     } else {
@@ -605,99 +675,130 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       P.root.copy(P.to.root);
       P.yaw = P.to.yaw;
       P.tilt = P.to.tilt;
+      P.back = P.to.back;
     }
 
-    /* ── the exit: a ninja front flip off to the right ── */
-    const exit = holdExit >= 0 ? holdExit : smooth(EXIT_FROM, EXIT_TO, portalState.hero);
-    state.exit = exit;
+    // where he looks: his blade, the bar he is pulling up to, or the visitor
+    let gaze: THREE.Vector3 | null = null;
+    let inspect = -1;
+    if (P.key === "blade" && P.hop < 0) {
+      inspect = P.actT;
+      if (inspect < INSPECT) {
+        gaze = P.gaze.set(
+          P.root.x + Math.sin(P.yaw) * 0.5,
+          P.root.y + build.shoulderY + 0.3,
+          P.root.z + Math.cos(P.yaw) * 0.5,
+        );
+      } else inspect = -1;
+    } else if (P.key === "pull" && P.hop < 0) {
+      gaze = P.gaze.copy(L.hands[0]!).add(L.hands[1]!).multiplyScalar(0.5);
+      gaze.y += 0.25;
+    }
+
+    /* ── the exit: a Superman take-off, straight up and out of the top ── */
     let x = P.root.x;
     let y = P.root.y - dip;
     let z = P.root.z;
     let yaw = P.yaw;
     let tilt = P.tilt;
-    let flip = 0;
+    let back = P.back;
+    let waveK = 0;
     if (exit > 0) {
-      // he springs from where his feet are: from a seat, the floor in front of
-      // it; from inside the frame, the rail he stands on
+      // he takes off from the floor, clear in front of the statue's face
+      const fx = Math.sin(statue.yaw);
+      const fz = Math.cos(statue.yaw);
       const both = L.footW[0] > 0.5 && L.footW[1] > 0.5;
-      const lf = both ? P.tmp.addVectors(L.feet[0]!, L.feet[1]!).multiplyScalar(0.5) : P.tmp.set(P.root.x, build.ankleY, P.root.z);
-      const floor = lf.y - build.ankleY;
-      P.launch.set(lf.x, floor + stand.position[1], lf.z);
-      const load = smooth(0, 0.12, exit); // down into the crouch, turning side-on, arms back
-      const spring = smooth(0.1, 0.2, exit); // legs drive, arms whip up
-      const face = mix(yaw, EXIT_FACE, load);
+      const lf = both ? P.tmp.addVectors(L.feet[0]!, L.feet[1]!).multiplyScalar(0.5) : P.tmp.copy(P.root);
+      const d = lf.x * fx + lf.z * fz;
+      const need = TUBE_D * STATUE_SCALE + LAUNCH_CLEAR;
+      if (d < need) lf.set(lf.x + fx * (need - d), 0, lf.z + fz * (need - d));
+      P.launch.set(lf.x, stand.position[1], lf.z);
+      const load = smooth(0, 0.14, exit); // down into the crouch, fists low
+      const blast = smooth(0.13, 0.2, exit); // the legs fire, the right fist goes up
+      const u = Math.max(0, exit - 0.15);
+      const rise = 2 * u + 14 * u * u;
+      const face = mix(yaw, -0.12, load);
       const fs = Math.sin(face);
       const fc = Math.cos(face);
+      // his left, in the world
+      const lx = fc;
+      const lz = -fs;
       for (let i = 0; i < 2; i++) {
         const side = i === 0 ? 1 : -1;
-        // feet: off the statue and planted under the launch, then off the ground
         under(P.tmp2, P.launch, face, side);
-        P.tmp2.y += floor;
         if (L.footW[i] > 0.01) L.feet[i]!.lerp(P.tmp2, load);
         else L.feet[i]!.copy(P.tmp2);
-        L.footW[i] = mix(L.footW[i], 1, load) * (1 - smooth(0.15, 0.2, exit));
-        // arms: back behind the hips in the crouch, whipped up overhead on the
-        // spring, then thrown forward into the dive once he opens out
-        const up = spring * (1 - smooth(0.19, 0.25, exit));
-        const dive = smooth(0.5, 0.62, exit);
-        const hx = P.launch.x;
-        const hz = P.launch.z;
-        const hand = L.hands[i]!;
-        if (dive > 0) {
-          // in his own frame, carried with him: reach the way he flies
-          hand.set(x + fs * 0.95 + fc * side * 0.22, 0, z + fc * 0.95 - fs * side * 0.22);
-        } else if (up > 0.01) {
-          hand.set(hx + fs * 0.25 + fc * side * 0.24, P.launch.y + build.shoulderY + 0.75, hz + fc * 0.25 - fs * side * 0.24);
-        } else {
-          hand.set(hx - fs * 0.55 + fc * side * 0.3, P.launch.y - CROUCH * load - 0.2, hz - fc * 0.55 - fs * side * 0.3);
-        }
+        L.footW[i] = mix(L.footW[i], 1, load) * (1 - smooth(0.15, 0.19, exit));
         L.knee[i] = false;
-        const back = load * (1 - spring);
-        L.handW[i] = Math.max(L.handW[i] * (1 - load), back * 0.9, up * 0.9);
       }
-      L.lean = mix(L.lean, 0.5, load) * (1 - spring);
+      const cy = mix(y, P.launch.y, load) - CROUCH * load * (1 - blast) + rise;
+      // fists: low at his sides in the crouch; then the right one overhead and
+      // the left one tight at his hip
+      const hx = mix(x, P.launch.x, load);
+      const hz = mix(z, P.launch.z, load);
+      L.hands[0]!.set(hx + lx * 0.34 + fs * 0.05, cy + mix(-0.25, -0.1, blast), hz + lz * 0.34 + fc * 0.05);
+      L.hands[1]!.set(
+        // straight up over his right shoulder, the arm locked
+        hx - lx * mix(0.36, build.shoulderW * 0.9, blast) + fs * 0.06,
+        cy + mix(-0.25, build.shoulderY + build.armLen * 1.05, blast),
+        hz - lz * mix(0.36, build.shoulderW * 0.9, blast) + fc * 0.06,
+      );
+      L.handW[0] = Math.max(L.handW[0] * (1 - load), load * 0.85);
+      L.handW[1] = Math.max(L.handW[1] * (1 - load), load * 0.85, blast);
+      L.lean = mix(L.lean, 0.42, load) * (1 - blast) - 0.1 * blast;
       L.kneesUp = mix(L.kneesUp, 0, load);
-      L.kneesOut = mix(L.kneesOut, 0.3, load);
-      // the somersault: one full turn, tucked tight through the top of the
-      // arc and finished on screen, then open for the dive out
-      tuck = Math.max(tuck * (1 - load), smooth(0.19, 0.26, exit) * (1 - smooth(0.45, 0.55, exit)));
-      flip = -Math.PI * 2 * smooth(0.19, 0.54, exit);
-      // the flight: forward first, clear of the statue, then away to the right
-      const f = (exit - 0.16) / 0.6;
-      const arc = f > 0 ? EXIT_RISE * 4 * f * (1 - f) : 0;
-      x = mix(x, P.launch.x, load) + 0.8 * smooth(0.16, 0.56, exit) + EXIT_DX * Math.pow(smooth(0.5, 1, exit), 1.3);
-      z = mix(z, P.launch.z, load) + 1.35 * smooth(0.14, 0.46, exit);
-      y = mix(y, P.launch.y, load) - CROUCH * load * (1 - spring) + Math.max(arc, -1.4);
+      L.hang = mix(L.hang, 0, load) * (1 - blast) + 0.28 * blast;
+      tuck = tuck * (1 - load);
+      x = hx;
+      z = hz;
+      y = cy;
       yaw = face;
-      tilt = tilt * (1 - load) - 0.35 * smooth(0.5, 0.7, exit); // nose down into the dive
-      if (smooth(0.5, 0.62, exit) > 0) for (let i = 0; i < 2; i++) L.hands[i]!.y = y + build.shoulderY + 0.25;
-    }
-    // ?optuck=1 — hold the somersault's tuck, stood still, for a look
-    if (holdTuck >= 0) {
-      tuck = holdTuck;
-      L.footW[0] = L.footW[1] = L.handW[0] = L.handW[1] = 0;
-      L.lean = 0;
+      tilt = tilt * (1 - load);
+      back = back * (1 - load);
+      // eyes up once he goes
+      gaze = blast > 0.3 ? P.gaze.set(x + fs * 0.4, y + 6, z + fc * 0.4) : gaze;
+      if (inspect >= 0) inspect = Math.max(inspect, INSPECT - 1.6 + load * 1.6);
+      waveK = exit > 0.14 ? smooth(0.14, 0.42, exit) : 0;
     }
     state.tuck = tuck;
     state.yaw = yaw;
     state.limbs = L;
+    state.gaze = gaze;
+    state.inspect = busy.current ? -1 : inspect;
     g.position.set(x, y, z);
-    g.rotation.set(0, 0, flip + tilt);
+    // tipped back about his own shoulders' line, and leaned about the screen's axis
+    g.rotation.set(-back * Math.cos(yaw), 0, tilt + back * Math.sin(yaw), "ZXY");
+
+    // the shockwave off the floor where he left it
+    const w = wave.current;
+    if (w) {
+      const m = w.material as THREE.MeshBasicMaterial;
+      m.opacity = waveK > 0 ? 0.5 * (1 - waveK) * smooth(0, 0.08, waveK) : 0;
+      w.position.set(P.launch.x, 0.02, P.launch.z);
+      w.scale.setScalar(0.6 + waveK * 5.5);
+    }
   });
   return (
-    <group
-      ref={group}
-      position={stand.position}
-      onClick={(e) => {
-        e.stopPropagation();
-        state.strike += 1;
-      }}
-      onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
-      onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
-    >
-      <primitive object={forge} />
-      <Operator state={state} busy={busy} stand={{ position: [0, 0, 0], scale: stand.scale, yaw: stand.yaw }} light={forge} />
-    </group>
+    <>
+      <group
+        ref={group}
+        position={stand.position}
+        onClick={(e) => {
+          e.stopPropagation();
+          state.strike += 1;
+        }}
+        onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
+        onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}
+      >
+        <primitive object={forge} />
+        <Operator state={state} busy={busy} stand={{ position: [0, 0, 0], scale: stand.scale, yaw: stand.yaw }} light={forge} />
+      </group>
+      {/* drawn from the start at zero opacity: nothing new to compile at take-off */}
+      <mesh ref={wave} rotation-x={-Math.PI / 2} renderOrder={15} raycast={() => null}>
+        <ringGeometry args={[0.42, 0.5, 64]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </>
   );
 }
 

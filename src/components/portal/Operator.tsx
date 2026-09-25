@@ -49,6 +49,11 @@ export interface OperatorState {
   limbs?: Limbs;
   /** his measurements at his stand scale, written by him once his rig is read */
   build?: Build;
+  /** seconds into looking his blade over (draw, turn it in the light, run a
+   *  hand along it, put it away); -1 or unset when he is not */
+  inspect?: number;
+  /** something in the world he looks at instead of the visitor */
+  gaze?: THREE.Vector3 | null;
   /** touch screens: performance.now() of the last touch — he looks at the
    *  finger (px/py) while it is down and for a moment after */
   touchAt?: number;
@@ -67,7 +72,12 @@ export interface Limbs {
   kneesUp: number;
   /** knees out to the sides, for a wide stance */
   kneesOut: number;
+  /** 0..1 hanging (or flying): knees bent back, feet off the ground */
+  hang: number;
 }
+
+/** how long looking his blade over takes, seconds */
+export const INSPECT = 6.6;
 
 const DESK = "/models/robot-desk.glb";
 const MOB = "/models/robot-mob.glb";
@@ -185,6 +195,7 @@ const _dq = new THREE.Quaternion();
 const _pw = new THREE.Quaternion();
 const _bw = new THREE.Quaternion();
 const _id = new THREE.Quaternion();
+const _yAxis = new THREE.Vector3(0, 1, 0);
 
 function aimBone(bone: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, pivot: THREE.Vector3, w: number) {
   _a.subVectors(from, pivot).normalize();
@@ -481,8 +492,10 @@ export default function Operator({
     mat.metalness = 0.78;
     mat.roughness = 0.26;
     mat.envMapIntensity = 1.6;
-    if (mat.map) mat.map.anisotropy = 8;
-    if (mat.emissiveMap) mat.emissiveMap.anisotropy = 8;
+    // the sharpest filtering the GPU has (three clamps to its maximum): his
+    // panel lines stay crisp where the armour turns away from the camera
+    if (mat.map) mat.map.anisotropy = 16;
+    if (mat.emissiveMap) mat.emissiveMap.anisotropy = 16;
     // the shoulder plates are re-bound to the collarbone in the model file
     // itself (design-loop/art-src/robot/_gt/bake-shoulders.mjs) — no per-load
     // pass over every vertex on the visitor's device
@@ -594,6 +607,8 @@ export default function Operator({
       ankleY: (at(b.lFoot).y + at(b.rFoot).y) / 2 + 0.5,
       shoulderY: (at(b.lArm).y + at(b.rArm).y) / 2,
       legLen: lHip.distanceTo(at(b.lFoot)),
+      shoulderW: Math.abs(at(b.lArm).x - at(b.rArm).x) / 2,
+      armLen: at(b.lArm).distanceTo(at(b.lHand)),
     };
     return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y, unit };
   }, [robot, spinG, jumpG]);
@@ -1010,6 +1025,15 @@ export default function Operator({
       tx = Math.sin(s.t * 0.37) * 0.6 + Math.sin(s.t * 0.13) * 0.3;
       ty = Math.sin(s.t * 0.29 + 1.2) * 0.25;
     }
+    if (state.gaze) {
+      // a look at something in the world, turned into the same yaw and pitch
+      // the pointer drives (the spine, neck and head share ~1.4x of the yaw
+      // with the root, ~1.08x of the pitch)
+      tmp.pos2.copy(state.gaze);
+      r.worldToLocal(tmp.pos2);
+      tx = THREE.MathUtils.clamp(Math.atan2(tmp.pos2.x, tmp.pos2.z) / (1.05 * 1.4), -1, 1);
+      ty = THREE.MathUtils.clamp(-Math.atan2(tmp.pos2.y - 0.4, Math.hypot(tmp.pos2.x, tmp.pos2.z)) / (0.6 * 1.08), -1, 1);
+    }
     s.follow = damp(s.follow, s.seq >= 0 ? 0 : 1, 4, dt);
     s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.05, 3.4, dt);
     s.pitch = damp(s.pitch, THREE.MathUtils.clamp(ty, -1, 1) * 0.6, 3.4, dt);
@@ -1039,13 +1063,30 @@ export default function Operator({
         if (low) turn(low, 0, tuck * TUCK_KNEE);
       }
     }
+    // hanging from a bar (or in flight): knees bent back, one more than the other
+    const hang = L ? L.hang : 0;
+    if (hang > 0.001) {
+      if (rig.b.lUp) turn(rig.b.lUp, 0, -hang * 0.3);
+      if (rig.b.lLeg) turn(rig.b.lLeg, 0, hang * 1.15);
+      if (rig.b.rUp) turn(rig.b.rUp, 0, -hang * 0.18);
+      if (rig.b.rLeg) turn(rig.b.rLeg, 0, hang * 1.5);
+    }
     // planted, he turns from the waist up rather than swivelling on his seat
     const planted = L ? Math.max(L.footW[0], L.footW[1]) : 0;
     r.rotation.y = (state.yaw ?? stand?.yaw ?? 0) + y * 0.22 * (1 - 0.8 * planted);
     r.updateMatrixWorld(true);
     if (!state.build) {
       const k = stand?.scale ?? 1;
-      state.build = { hipY: rig.unit.hipY * k, hipW: rig.unit.hipW * k, ankleY: rig.unit.ankleY * k, shoulderY: rig.unit.shoulderY * k, legLen: rig.unit.legLen * k };
+      const u = rig.unit;
+      state.build = {
+        hipY: u.hipY * k,
+        hipW: u.hipW * k,
+        ankleY: u.ankleY * k,
+        shoulderY: u.shoulderY * k,
+        shoulderW: u.shoulderW * k,
+        armLen: u.armLen * k,
+        legLen: u.legLen * k,
+      };
     }
 
     // ── feet on surfaces: two-bone IK down each leg, the foot kept level ──
@@ -1109,7 +1150,8 @@ export default function Operator({
     // At rest the hands follow the pointer as well, a little and after the
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
-    if (s.seq < 0 && (state.fine || touching) && tuck < 0.999) {
+    const ins = s.seq < 0 ? state.inspect ?? -1 : -1;
+    if (s.seq < 0 && (state.fine || touching) && tuck < 0.999 && ins < 0) {
       const placed = L ? Math.max(L.handW[0], L.handW[1], L.footW[0] * 0.6) : 0;
       const reach = 0.42 * s.follow * (1 - tuck) * (1 - placed);
       const lift = 0.05 - s.pitch * 0.14;
@@ -1141,6 +1183,31 @@ export default function Operator({
         arm.getWorldPosition(pole).addScaledVector(tmp.side, sd * 0.4).addScaledVector(tmp.fwd, -0.15);
         pole.y -= 0.3;
         solveArm(arm, fore, handB, T, pole, w);
+      }
+    }
+    // ── looking his blade over: the right fist up before his face with the
+    //    blade standing in it, the wrist turning it in the light, the left
+    //    hand's fingers running up the flat from guard to point ──
+    if (ins >= 0) {
+      const w = smooth(ins / 0.7) * (1 - smooth((ins - (INSPECT - 0.8)) / 0.7));
+      tmp.TR.copy(tmp.chest).addScaledVector(tmp.fwd, 0.36).addScaledVector(tmp.side, -0.1 + Math.sin(ins * 0.7) * 0.04);
+      tmp.TR.y += 0.1 + Math.sin(ins * 0.9) * 0.03;
+      solveArm(rig.b.rArm, rig.b.rFore, rig.b.rHand, tmp.TR, tmp.PR, w);
+      tmp.quat2.setFromAxisAngle(_yAxis, Math.sin(ins * 0.8) * 0.55 * w);
+      rig.b.rHand.quaternion.multiply(tmp.quat2);
+      rig.b.rHand.updateMatrixWorld(true);
+      const lw = smooth((ins - 1.4) / 0.35) * (1 - smooth((ins - 3.9) / 0.35)) * w;
+      if (lw > 0.001) {
+        // the blade's line, from the fist: root space, then the world
+        mounts.r.updateMatrixWorld(true);
+        tmp.inv.copy(r.matrixWorld).invert();
+        tmp.m.multiplyMatrices(tmp.inv, mounts.r.matrixWorld);
+        tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
+        const run = smooth((ins - 1.7) / 1.9);
+        tmp.TL.set(0, BLADE_BASE + (0.12 + 0.72 * run) * BLADE, 0).applyQuaternion(tmp.quat).add(tmp.pos);
+        r.localToWorld(tmp.TL);
+        tmp.TL.addScaledVector(tmp.side, 0.07).addScaledVector(tmp.fwd, -0.02);
+        solveArm(rig.b.lArm, rig.b.lFore, rig.b.lHand, tmp.TL, tmp.PL, lw);
       }
     }
     r.updateMatrixWorld(true);
@@ -1188,6 +1255,20 @@ export default function Operator({
     const end = t > moveEnd - 0.75 ? ease((t - (moveEnd - 0.75)) / 0.6) : 0;
     tmp.inv.copy(r.matrixWorld).invert();
     swords.forEach((sw, i) => {
+      if (ins >= 0) {
+        // looking it over: only the main blade, built in the fist, run out,
+        // run back in, and the hilt dissolved again
+        sw.body.visible = i === 0 && ins > 0.25 && ins < INSPECT - 0.15;
+        if (!sw.body.visible) return;
+        mounts.r.updateMatrixWorld(true);
+        tmp.m.multiplyMatrices(tmp.inv, mounts.r.matrixWorld);
+        tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
+        sw.group.position.copy(tmp.pos);
+        sw.group.quaternion.copy(tmp.quat);
+        setScan(sw, ease((ins - 0.25) / 0.55) * (1 - ease((ins - (INSPECT - 0.75)) / 0.55)));
+        setBlade(sw, ease((ins - 0.95) / 0.4) * (1 - ease((ins - (INSPECT - 1.55)) / 0.4)), hue);
+        return;
+      }
       const isTwin = i === 1;
       const start = isTwin ? FORGE_END : GATHER * 0.7;
       sw.body.visible = t >= start && (!isTwin || twin);
