@@ -209,6 +209,11 @@
 /* ═══ 1 · HERO — shutter text over a real site ═══ */
 .web-hero { display: flex; flex-direction: column; justify-content: center; }
 .web-hero__grid { display: grid; gap: 26px; max-width: 1400px; width: 100%; margin: 0 auto; }
+/* the grid fades and lifts as the hero leaves (ShutterHero): its own layer,
+   so each scrubbed frame is a compositor opacity change, not a repaint */
+@media (prefers-reduced-motion: no-preference) {
+  .web-hero__grid { will-change: transform, opacity; }
+}
 .web-hero__copy { min-width: 0; }
 .web-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 26px; margin-top: 26px; }
 .web-hero__object { min-width: 0; display: flex; flex-direction: column; }
@@ -1179,7 +1184,11 @@
   width: var(--cw-cw); aspect-ratio: 16 / 10; padding: 0;
   margin: calc(var(--cw-cw) * -0.3125) 0 0 calc(var(--cw-cw) * -0.5);
   border: 0; background: none; cursor: pointer; will-change: transform, opacity;
+  /* a card's style or layout never reaches past its own box */
+  contain: layout style;
 }
+/* while the page scrolls, cards sliding under a resting pointer do not hover */
+.cw[data-scrolling] .cw__card { pointer-events: none; }
 /* Desktop: the wheel reaches left into the open floor between the headline
    and the browser (clear of the type), so it can be this big without
    touching the progress rail on the right. */
@@ -1210,8 +1219,10 @@
 /* a sheen that follows the pointer across the glass */
 .cw__face::after {
   content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 58%);
-  mix-blend-mode: screen; opacity: 0; transition: opacity 320ms var(--ease-expo);
+  /* plain alpha, not mix-blend-mode: a blend mode makes the whole wheel an
+     isolated group the compositor has to blend every frame */
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 58%);
+  opacity: 0; transition: opacity 320ms var(--ease-expo);
 }
 /* the outer glow lives on the card, outside the face's clip */
 .cw__card::after {
@@ -1227,9 +1238,13 @@
 .cw__card:focus-visible .cw__face::before { opacity: 1; }
 
 /* the arrival (ConceptWheel sets data-converge, then data-burst) */
-.cw__flash, .cw__wave, .cw__converge { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 1; }
+/* Each is its own layer from the start (will-change), so the first frame of
+   its animation is not also the frame that builds it. Their glow is a small
+   blur: these layers are rastered at the animation's LARGEST scale, where a
+   34px blur became a ~140px one, re-rastered as the ring appeared. */
+.cw__flash, .cw__wave, .cw__converge { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 1; will-change: transform, opacity; }
 .cw__flash {
-  width: 150%; aspect-ratio: 16 / 11; translate: -50% -50%;
+  width: 120%; aspect-ratio: 16 / 11; translate: -50% -50%;
   background: radial-gradient(closest-side, color-mix(in srgb, var(--hue) 85%, #ffffff 5%), color-mix(in srgb, var(--hue) 30%, transparent) 45%, transparent 100%);
   opacity: 0;
 }
@@ -1237,7 +1252,7 @@
 .cw__wave, .cw__converge {
   width: calc(100% - var(--cw-px) * 2); aspect-ratio: 16 / 10.6; translate: -50% -50%; z-index: 5;
   border: 2px solid color-mix(in srgb, var(--hue) 65%, #ffffff);
-  box-shadow: 0 0 34px 5px color-mix(in srgb, var(--hue) 85%, transparent), inset 0 0 28px color-mix(in srgb, var(--hue) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hue) 30%, transparent), 0 0 12px 2px color-mix(in srgb, var(--hue) 80%, transparent);
   opacity: 0;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1249,7 +1264,7 @@
 }
 /* collapses from beyond the screen's edges onto the browser, accelerating */
 @keyframes cw-converge { 0% { opacity: 0; transform: scale(4.2); } 20% { opacity: 0.95; } 92% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.96); } }
-@keyframes cw-flash { 0% { opacity: 0; transform: scale(0.7); } 12% { opacity: 1; } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes cw-flash { 0% { opacity: 0; transform: scale(0.8); } 12% { opacity: 1; } 100% { opacity: 0; transform: scale(2.2); } }
 @keyframes cw-wave { 0% { opacity: 0; transform: scale(1); } 7% { opacity: 1; } 100% { opacity: 0; transform: scale(3.3); } }
 @media (prefers-reduced-motion: reduce) {
   .cw__face { transform: none !important; transition: none; }

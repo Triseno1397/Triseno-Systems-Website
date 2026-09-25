@@ -23,7 +23,10 @@ gsap.registerPlugin(ScrollTrigger);
      · hover / tap — the browser loads that site (`onPick`), and the orbit
        holds still while you look;
      · scroll — as the hero leaves, the orbit bends into a wide arc across
-       the lower frame and sweeps, fading with the hero.
+       the lower frame and sweeps, fading with the hero. The bend FOLLOWS the
+       scroll on a spring rather than being bolted to it, so a wheel notch
+       glides the cards instead of throwing them, and scrolling back up
+       reverses the same glide.
 
    Rebuilt rather than pasted: the original hijacked the mouse wheel with its
    own virtual scroll and re-rendered React on every spring tick. Here the
@@ -81,6 +84,9 @@ const easeOutBack = (t: number) => {
 
 export default function ConceptWheel({ templates, sectionRef, onPick, children }: Props) {
   const root = useRef<HTMLDivElement>(null);
+  // true while the page is scrolling: cards sliding under a resting pointer
+  // must not hover, lift or load themselves into the browser
+  const scrolling = useRef(false);
   const cards = useRef<Array<HTMLButtonElement | null>>([]);
   const pickRef = useRef(onPick);
   useEffect(() => {
@@ -99,6 +105,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     const st = {
       intro: reduced ? 1 : 0, // 0 hidden behind the browser · 1 all in orbit
       p: 0, // scroll
+      pv: 0, // the scroll the wheel shows: follows p on a spring
       spin: 0, // orbit angle
       speed: reduced ? 0 : 1, // eases to 0 while a card is held
       hold: false,
@@ -119,7 +126,10 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       visible: true,
       last: -1,
       z: [] as number[],
-      blur: [] as boolean[],
+      // what each card was last given: a style is written only when it changes
+      tf: [] as string[],
+      op: [] as string[],
+      vis: [] as boolean[],
     };
 
     const measure = () => {
@@ -157,8 +167,10 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       const k = st.intro;
       // on a phone the wheel is below the fold and scrolls past quickly: it
       // keeps its orbit rather than bending into an arc as it arrives
-      const morph = mobile ? 0 : smooth(st.p / 0.5);
-      const sweep = smooth((st.p - 0.3) / 0.7);
+      // (over most of the hero's scroll, not the first half of it: the
+      // cards travel far, and a short range made each notch throw them)
+      const morph = mobile ? 0 : smooth(st.pv / 0.75);
+      const sweep = smooth((st.pv - 0.3) / 0.7);
       // the orbit: a flattened ring round the browser, a little wider than it
       // (inside the column: its right edge is the progress rail's lane)
       // (desktop: the cards' outer edges stop short of the progress rail)
@@ -212,7 +224,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           x = Math.cos(a + lag) * rx * reach;
           y = vy(a + lag) * reach;
           r = orbit.r + (1 - out) * (i % 2 ? 190 : -190);
-          s = lerp(2.4, orbit.s, out);
+          s = lerp(2.2, orbit.s, out);
           o = orbit.o * smooth(e / 0.1);
           flip = (1 - out) * 72; // edge-on -> face
         } else {
@@ -234,19 +246,27 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           s = lerp(s, mobile ? 1.1 : 1.05, morph);
           o = lerp(o, edge, morph);
         }
-        card.style.transform =
+        // Transform and opacity only, and only when they change: no filter
+        // (a blur per card per frame cost a render surface each, every frame,
+        // and was the entrance's p95 on a fast GPU), no layout property.
+        const tf =
           `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)` +
           (flip > 0.05 ? ` perspective(700px) rotateY(${flip.toFixed(1)}deg)` : "") +
           ` rotate(${r.toFixed(2)}deg) scale(${s.toFixed(3)})`;
-        card.style.opacity = o.toFixed(3);
-        // motion blur while it flies, sharp as it lands (desktop only: a
-        // filter per card per frame is not worth it on a phone GPU)
-        const blur = e < 1 && !mobile ? (1 - out) * 14 : 0;
-        if (blur > 0.2 || st.blur[i]) {
-          st.blur[i] = blur > 0.2;
-          card.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "";
+        if (st.tf[i] !== tf) {
+          st.tf[i] = tf;
+          card.style.transform = tf;
         }
-        card.style.visibility = o < 0.01 ? "hidden" : "visible";
+        const op = o.toFixed(3);
+        if (st.op[i] !== op) {
+          st.op[i] = op;
+          card.style.opacity = op;
+        }
+        const vis = o >= 0.01;
+        if (st.vis[i] !== vis) {
+          st.vis[i] = vis;
+          card.style.visibility = vis ? "visible" : "hidden";
+        }
         // far side of the orbit passes behind the browser (it sits at z 2);
         // in flight a card comes in over everything
         const z = morph > 0.5 ? 3 : e < 0.9 ? 4 : depth < 0 ? 1 : 3;
@@ -274,10 +294,24 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     const late = [window.setTimeout(remeasure, 900), window.setTimeout(remeasure, 2200)];
     window.addEventListener("resize", remeasure, { passive: true });
 
-    const io = new IntersectionObserver(([e]) => (st.visible = e.isIntersecting), { rootMargin: "10% 0px" });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        st.visible = e.isIntersecting;
+        // back on screen after a while away: no stale frame gap, and the
+        // spring starts where the page is, not where it was left
+        if (st.visible) {
+          st.last = -1;
+          st.pv = st.p;
+        }
+      },
+      { rootMargin: "10% 0px" },
+    );
     io.observe(section);
 
     let tl: gsap.core.Timeline | null = null;
+    let cancelled = false;
+    let idleId = 0;
+    const mountedAt = performance.now();
     // ?cwt=0..1 — the entrance frozen at one instant, for a look (the rings'
     // CSS animation is held at the matching moment)
     const hold = new URLSearchParams(window.location.search).get("cwt");
@@ -299,16 +333,34 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       st.spin = 0;
       place();
     } else if (!reduced) {
-      // after the headline's shutter has opened (~0.7s)
-      tl = gsap.timeline({ delay: 0.5, onUpdate: place, onComplete: () => setLanded(true) });
-      // a ring collapses from the screen's edges onto the browser...
-      tl.call(() => el.setAttribute("data-converge", ""), undefined, 0);
-      // ...the deck is thrown in...
-      tl.to(st, { intro: 1, duration: T_THROW, ease: "none" }, T_CONVERGE);
-      // ...and it goes off as the last cards land
-      tl.call(() => el.setAttribute("data-burst", ""), undefined, T_BURST);
+      const start = () => {
+        if (cancelled) return;
+        // after the headline's shutter has opened (~0.5s from mount)
+        const delay = Math.max(0, 0.5 - (performance.now() - mountedAt) / 1000);
+        tl = gsap.timeline({ delay, onUpdate: place, onComplete: () => setLanded(true) });
+        // a ring collapses from the screen's edges onto the browser...
+        tl.call(() => el.setAttribute("data-converge", ""), undefined, 0);
+        // ...the deck is thrown in...
+        tl.to(st, { intro: 1, duration: T_THROW, ease: "none" }, T_CONVERGE);
+        // ...and it goes off as the last cards land
+        tl.call(() => el.setAttribute("data-burst", ""), undefined, T_BURST);
+      };
+      // The entrance waits for a quiet page: every card image decoded (so no
+      // card's first frame on screen is a decode), then an idle moment, so
+      // the rest of the page's hydration and first layout do not run inside
+      // the animation's frames. Capped, so a slow network never holds it.
+      const imgs = Array.from(el.querySelectorAll<HTMLImageElement>(".cw__card img"));
+      const decoded = Promise.allSettled(imgs.map((im) => im.decode()));
+      const cap = new Promise((res) => window.setTimeout(res, 1600));
+      Promise.race([decoded, cap]).then(() => {
+        if (cancelled) return;
+        const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+        if (w.requestIdleCallback) idleId = w.requestIdleCallback(start, { timeout: 500 });
+        else start();
+      });
     }
 
+    let scrollIdle = 0;
     const trig = reduced
       ? null
       : ScrollTrigger.create({
@@ -317,6 +369,17 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           end: "bottom 55%",
           onUpdate: (self) => {
             st.p = self.progress;
+            // while the page moves, the cards ignore the pointer (CSS
+            // [data-scrolling]); they answer it again a moment after it stops
+            if (!scrolling.current) {
+              scrolling.current = true;
+              el.setAttribute("data-scrolling", "");
+            }
+            window.clearTimeout(scrollIdle);
+            scrollIdle = window.setTimeout(() => {
+              scrolling.current = false;
+              el.removeAttribute("data-scrolling");
+            }, 180);
           },
           onRefresh: () => measure(),
         });
@@ -328,6 +391,10 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         const dt = st.last < 0 ? 0 : Math.min(0.1, time - st.last);
         st.last = time;
         st.speed += ((st.hold ? 0 : 1) - st.speed) * (1 - Math.exp(-dt * 4));
+        // the bend follows the scroll on a spring (frame-rate independent:
+        // the same glide at 60, 120 or 144Hz)
+        const gap = st.p - st.pv;
+        st.pv = Math.abs(gap) < 1e-4 ? st.p : st.pv + gap * (1 - Math.exp(-dt * 8));
         if (!reduced && st.intro >= 1 && hold === null) st.spin += DRIFT * st.speed * dt;
         place();
       },
@@ -339,6 +406,9 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     el.addEventListener("pointerleave", holdOff);
 
     return () => {
+      cancelled = true;
+      (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idleId);
+      window.clearTimeout(scrollIdle);
       late.forEach((t) => window.clearTimeout(t));
       window.removeEventListener("resize", remeasure);
       ro.disconnect();
@@ -404,7 +474,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           style={{ opacity: 0 }}
           aria-label={`Show the ${t.name} concept site`}
           onPointerEnter={(e) => {
-            if (e.pointerType !== "touch") pickRef.current(i);
+            if (e.pointerType !== "touch" && !scrolling.current) pickRef.current(i);
           }}
           onPointerMove={tilt}
           onPointerLeave={untilt}
