@@ -1169,13 +1169,69 @@
 .cw__card {
   position: absolute; left: 50%; top: 50%; z-index: 3;
   width: 104px; aspect-ratio: 16 / 10; margin: -32.5px 0 0 -52px; padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.72); background: #0b0b0d; cursor: pointer;
-  overflow: hidden; will-change: transform, opacity;
-  box-shadow: 0 10px 26px -12px color-mix(in srgb, var(--hue) 70%, transparent);
-  transition: border-color 300ms var(--ease-expo);
+  border: 0; background: none; cursor: pointer; will-change: transform, opacity;
 }
-.cw__card img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-.cw__card:hover, .cw__card:focus-visible { border-color: var(--hue); outline: none; }
+/* under the pointer a card comes forward of everything, the browser included */
+.cw__card:hover, .cw__card:focus-visible { z-index: 5 !important; outline: none; }
+/* the card itself: it leans toward the pointer, lifts, and catches the light */
+.cw__face {
+  position: absolute; inset: 0; display: block; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72); background: #0b0b0d;
+  box-shadow: 0 10px 26px -12px color-mix(in srgb, var(--hue) 70%, transparent);
+  transform: perspective(420px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, var(--lift, 0px), 0) scale(var(--hs, 1));
+  transition: transform 420ms var(--ease-expo), border-color 300ms var(--ease-expo);
+}
+.cw__face img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
+/* the violet bloom round a hovered card (opacity only) */
+.cw__face::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--hue), inset 0 0 18px color-mix(in srgb, var(--hue) 55%, transparent);
+  opacity: 0; transition: opacity 320ms var(--ease-expo);
+}
+/* a sheen that follows the pointer across the glass */
+.cw__face::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 58%);
+  mix-blend-mode: screen; opacity: 0; transition: opacity 320ms var(--ease-expo);
+}
+/* the outer glow lives on the card, outside the face's clip */
+.cw__card::after {
+  content: ""; position: absolute; inset: -8px; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--hue) 60%, transparent), transparent 100%);
+  opacity: 0; transition: opacity 320ms var(--ease-expo); z-index: -1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cw__card:hover .cw__face { --hs: 1.2; --lift: -6px; border-color: var(--hue); }
+  .cw__card:hover .cw__face::before, .cw__card:hover .cw__face::after, .cw__card:hover::after { opacity: 1; }
+}
+.cw__card:focus-visible .cw__face { --hs: 1.2; border-color: var(--hue); }
+.cw__card:focus-visible .cw__face::before { opacity: 1; }
+
+/* the burst (ConceptWheel sets data-burst as the first card leaves) */
+.cw__flash, .cw__wave { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 1; }
+.cw__flash {
+  width: 115%; aspect-ratio: 16 / 11; translate: -50% -50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--hue) 80%, transparent), transparent 100%);
+  opacity: 0;
+}
+/* the ring leaves from the browser's own outline (it is the browser's width,
+   78% of the wheel) and runs out over everything */
+.cw__wave {
+  width: 78%; aspect-ratio: 16 / 10.6; translate: -50% -50%; z-index: 4;
+  border: 2px solid color-mix(in srgb, var(--hue) 70%, #ffffff);
+  box-shadow: 0 0 26px 3px color-mix(in srgb, var(--hue) 85%, transparent), inset 0 0 22px color-mix(in srgb, var(--hue) 60%, transparent);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cw[data-burst] .cw__flash { animation: cw-flash 1100ms var(--ease-expo) both; }
+  .cw[data-burst] .cw__wave { animation: cw-wave 1500ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .cw[data-burst] .cw__wave--2 { animation-delay: 220ms; animation-duration: 1800ms; }
+}
+@keyframes cw-flash { 0% { opacity: 0; transform: scale(0.8); } 14% { opacity: 1; } 100% { opacity: 0; transform: scale(1.9); } }
+@keyframes cw-wave { 0% { opacity: 0; transform: scale(1); } 8% { opacity: 1; } 100% { opacity: 0; transform: scale(2.1); } }
+@media (prefers-reduced-motion: reduce) {
+  .cw__face { transform: none !important; transition: none; }
+}
 /* the pick, laid over the live concept site in the browser */
 .web-hero__pick {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0;
@@ -1186,6 +1242,7 @@
   /* a narrower browser, so the orbit passes round it rather than over it */
   .cw { padding: 52px 17%; }
   .cw__card { width: 66px; margin: -20.5px 0 0 -33px; }
+  .cw__wave { width: 66%; }
 }
 
 /* ── Carbon Forge: the moving concept site (CarbonForgeSite.tsx) ── */

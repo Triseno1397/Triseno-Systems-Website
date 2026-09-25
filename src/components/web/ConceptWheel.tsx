@@ -13,8 +13,10 @@ gsap.registerPlugin(ScrollTrigger);
    rebuilt for this page).
 
    Ten of this division's concept sites orbit the hero's browser:
-     · arrival — the cards come in scattered, snap into one line, then close
-       into an orbit round the browser (time-based, once);
+     · arrival — the deck bursts out from behind the browser: card by card,
+       clockwise, each one spirals out, flips in from edge-on and overshoots
+       into its place in the orbit, while a shockwave rings out from the
+       browser (time-based, once);
      · rest — the orbit drifts. Cards on the far side pass BEHIND the browser
        (smaller, dimmer); cards on the near side pass in front of it;
      · hover / tap — the browser loads that site (`onPick`), and the orbit
@@ -60,6 +62,15 @@ const smooth = (v: number) => {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 const DRIFT = 0.07; // radians a second: one lap in ~90s
+/** how much of the arrival is spent dealing: the last card leaves at this point */
+const DEAL = 0.55;
+/** how far (radians) a card swings round on its way out */
+const SPIRAL = 1.5;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeOutBack = (t: number) => {
+  const c = 1.9;
+  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
+};
 
 export default function ConceptWheel({ templates, sectionRef, onPick, children }: Props) {
   const root = useRef<HTMLDivElement>(null);
@@ -79,7 +90,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const st = {
-      intro: reduced ? 2 : 0, // 0 scatter · 1 line · 2 orbit
+      intro: reduced ? 1 : 0, // 0 hidden behind the browser · 1 all in orbit
       p: 0, // scroll
       spin: 0, // orbit angle
       speed: reduced ? 0 : 1, // eases to 0 while a card is held
@@ -95,15 +106,8 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       visible: true,
       last: -1,
       z: [] as number[],
+      blur: [] as boolean[],
     };
-
-    // deterministic scatter: the arrival is the same on every visit
-    let seed = 91;
-    const rnd = () => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    const scatter = Array.from({ length: n }, () => ({ x: rnd() - 0.5, y: rnd() - 0.5, r: (rnd() - 0.5) * 120 }));
 
     const measure = () => {
       const r = el.getBoundingClientRect();
@@ -154,23 +158,28 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           s: 0.84 + 0.26 * (depth * 0.5 + 0.5),
           o: 0.55 + 0.45 * (depth * 0.5 + 0.5),
         };
-        const sc = scatter[i];
-        const line = { x: (i - (n - 1) / 2) * Math.min(mobile ? 34 : 64, (st.sw * 0.9) / n), y: 0 };
+        // the burst: card i leaves on its own beat, clockwise from the top
+        const e = clamp01((k - (i / n) * DEAL) / (1 - DEAL));
+        const out = easeOutCubic(e);
         let x: number, y: number, r: number, s: number, o: number;
-        if (k <= 1) {
-          const t = smooth(k);
-          x = lerp(sc.x * st.sw, line.x, t);
-          y = lerp(sc.y * st.sh, line.y, t);
-          r = lerp(sc.r, 0, t);
-          s = lerp(0.6, 0.8, t);
-          o = t;
+        let flip = 0;
+        if (e < 1) {
+          // spirals out from the centre: the angle trails behind and the
+          // radius overshoots, so it swings round into its slot and settles
+          const reach = easeOutBack(e);
+          const lag = (1 - out) * SPIRAL;
+          x = Math.cos(a - lag) * rx * reach;
+          y = Math.sin(a - lag) * ry * reach;
+          r = orbit.r - (1 - out) * 50;
+          s = lerp(0.3, orbit.s, out);
+          o = orbit.o * smooth(e / 0.22);
+          flip = (1 - out) * 88; // edge-on -> face
         } else {
-          const t = smooth(k - 1);
-          x = lerp(line.x, orbit.x, t);
-          y = lerp(line.y, orbit.y, t);
-          r = lerp(0, orbit.r, t);
-          s = lerp(0.8, orbit.s, t);
-          o = lerp(1, orbit.o, t);
+          x = orbit.x;
+          y = orbit.y;
+          r = orbit.r;
+          s = orbit.s;
+          o = orbit.o;
         }
         if (morph > 0) {
           const deg = -90 - spread / 2 + i * step + shift;
@@ -184,11 +193,22 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           s = lerp(s, mobile ? 1.1 : 1.35, morph);
           o = lerp(o, edge, morph);
         }
-        card.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${r.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+        card.style.transform =
+          `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)` +
+          (flip > 0.05 ? ` perspective(700px) rotateY(${flip.toFixed(1)}deg)` : "") +
+          ` rotate(${r.toFixed(2)}deg) scale(${s.toFixed(3)})`;
         card.style.opacity = o.toFixed(3);
+        // motion blur while it flies, sharp as it lands (desktop only: a
+        // filter per card per frame is not worth it on a phone GPU)
+        const blur = e < 1 && !mobile ? (1 - out) * 5 : 0;
+        if (blur > 0.2 || st.blur[i]) {
+          st.blur[i] = blur > 0.2;
+          card.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "";
+        }
         card.style.visibility = o < 0.01 ? "hidden" : "visible";
         // far side of the orbit passes behind the browser (it sits at z 2)
-        const z = morph > 0.5 || k < 2 ? 3 : depth < 0 ? 1 : 3;
+        // mid-burst a card is still coming out from behind the browser
+        const z = morph > 0.5 ? 3 : e < 0.45 || depth < 0 ? 1 : 3;
         if (st.z[i] !== z) {
           st.z[i] = z;
           card.style.zIndex = String(z);
@@ -209,10 +229,24 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     io.observe(section);
 
     let tl: gsap.core.Timeline | null = null;
-    if (!reduced) {
+    // ?cwt=0..1 — the entrance frozen at one instant, for a look (the rings'
+    // CSS animation is held at the matching moment)
+    const hold = new URLSearchParams(window.location.search).get("cwt");
+    if (hold !== null && !reduced) {
+      st.intro = Math.min(1, Math.max(0, Number(hold)));
+      el.setAttribute("data-burst", "");
+      el.querySelectorAll<HTMLElement>(".cw__flash, .cw__wave").forEach((w) => {
+        w.style.animationPlayState = "paused";
+        w.style.animationDelay = `${(-st.intro * 2.1).toFixed(2)}s`;
+      });
+      st.spin = 0;
+      place();
+    } else if (!reduced) {
       // after the headline's shutter has opened (~0.7s)
-      tl = gsap.timeline({ delay: 0.55, onUpdate: place, onComplete: () => setLanded(true) });
-      tl.to(st, { intro: 1, duration: 1.1, ease: "power3.out" }).to(st, { intro: 2, duration: 1.4, ease: "power3.inOut" }, "+=0.25");
+      tl = gsap.timeline({ delay: 0.6, onUpdate: place, onComplete: () => setLanded(true) });
+      // the shockwave and the browser's flash go off as the first card leaves
+      tl.call(() => el.setAttribute("data-burst", ""));
+      tl.to(st, { intro: 1, duration: 2.1, ease: "none" });
     }
 
     const trig = reduced
@@ -234,7 +268,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         const dt = st.last < 0 ? 0 : Math.min(0.1, time - st.last);
         st.last = time;
         st.speed += ((st.hold ? 0 : 1) - st.speed) * (1 - Math.exp(-dt * 4));
-        if (!reduced && st.intro >= 2) st.spin += DRIFT * st.speed * dt;
+        if (!reduced && st.intro >= 1 && hold === null) st.spin += DRIFT * st.speed * dt;
         place();
       },
     });
@@ -255,6 +289,27 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     };
   }, [n, sectionRef]);
 
+  // Hover: the card leans toward the pointer and a sheen follows it. The
+  // pointer position comes from the event itself (offsetX/Y are in the
+  // card's own untransformed box), so nothing measures the layout.
+  const tilt = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === "touch") return;
+    const face = e.currentTarget.firstElementChild as HTMLElement | null;
+    const w = e.currentTarget.offsetWidth || 1;
+    const h = e.currentTarget.offsetHeight || 1;
+    const nx = Math.min(1, Math.max(0, e.nativeEvent.offsetX / w));
+    const ny = Math.min(1, Math.max(0, e.nativeEvent.offsetY / h));
+    face?.style.setProperty("--ry", `${((nx - 0.5) * 22).toFixed(1)}deg`);
+    face?.style.setProperty("--rx", `${((0.5 - ny) * 18).toFixed(1)}deg`);
+    face?.style.setProperty("--mx", `${(nx * 100).toFixed(0)}%`);
+    face?.style.setProperty("--my", `${(ny * 100).toFixed(0)}%`);
+  };
+  const untilt = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const face = e.currentTarget.firstElementChild as HTMLElement | null;
+    face?.style.setProperty("--ry", "0deg");
+    face?.style.setProperty("--rx", "0deg");
+  };
+
   // the full previews arrive in idle time, so a hover swaps at once
   useEffect(() => {
     const load = () => templates.forEach((t) => (new Image().src = t.full));
@@ -269,6 +324,10 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
 
   return (
     <div ref={root} className="cw" onPointerLeave={() => pickRef.current(null)}>
+      {/* the burst: a flash behind the browser and two rings running out */}
+      <span aria-hidden="true" className="cw__flash" />
+      <span aria-hidden="true" className="cw__wave" />
+      <span aria-hidden="true" className="cw__wave cw__wave--2" />
       <div className="cw__centre">{children}</div>
       {templates.map((t, i) => (
         <button
@@ -283,17 +342,21 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
           onPointerEnter={(e) => {
             if (e.pointerType !== "touch") pickRef.current(i);
           }}
+          onPointerMove={tilt}
+          onPointerLeave={untilt}
           onFocus={() => pickRef.current(i)}
           onClick={() => pickRef.current(i)}
         >
-          {t.live ? (
-            <span className="cw__live">
-              <CarbonForgeSite play={landed} />
-            </span>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.card} alt="" decoding="async" draggable={false} />
-          )}
+          <span className="cw__face">
+            {t.live ? (
+              <span className="cw__live">
+                <CarbonForgeSite play={landed} />
+              </span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={t.card} alt="" decoding="async" draggable={false} />
+            )}
+          </span>
         </button>
       ))}
     </div>
