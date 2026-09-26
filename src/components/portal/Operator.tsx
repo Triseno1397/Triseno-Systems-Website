@@ -79,9 +79,9 @@ export interface Limbs {
   hang: number;
 }
 
-/** the chest reactor's outer radius, in his root units (he is 1 tall): set
- *  over the emblem painted on him, which it covers */
-const EMBLEM_SIZE = 0.058;
+/** the chest orb's radius, in his root units (he is 1 tall): the size of the
+ *  round medallion painted on him, which it covers */
+const EMBLEM_SIZE = 0.046;
 
 /** how long looking his blade over takes, seconds */
 export const INSPECT = 7;
@@ -1501,7 +1501,8 @@ export default function Operator({
     // or the plate itself would cut across the light)
     emblem.group.translateZ(0.011 + embTune.dz);
     emblem.group.translateX(embTune.dx);
-    emblem.group.translateY(embTune.dy);
+    // centred on the mark sculpted into the plate, a little above the seat
+    emblem.group.translateY(0.024 + embTune.dy);
     emblem.group.scale.setScalar(embTune.size);
     // the reactor pulses, slow and steady, like something alive in him
     const breathe = 0.78 + 0.2 * Math.sin(s.t * 2.1) * Math.sin(s.t * 0.7 + 1);
