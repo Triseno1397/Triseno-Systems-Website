@@ -79,9 +79,9 @@ export interface Limbs {
   hang: number;
 }
 
-/** the chest emblem across, in his root units (he is 1 tall): about half
- *  as big again as the one painted on him, which it covers */
-const EMBLEM_SIZE = 0.15;
+/** the chest reactor's outer radius, in his root units (he is 1 tall): set
+ *  over the emblem painted on him, which it covers */
+const EMBLEM_SIZE = 0.058;
 
 /** how long looking his blade over takes, seconds */
 export const INSPECT = 7;
@@ -1495,12 +1495,16 @@ export default function Operator({
     tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
     emblem.group.position.copy(tmp.pos);
     emblem.group.quaternion.copy(tmp.quat);
-    // the seat is the plate's front on the midline; push it just proud of it
-    emblem.group.translateZ(0.012 + embTune.dz);
+    // the seat is the plate's front on the midline: the bezel sits on it and
+    // the recess sinks into him
+    // (the plate is curved: the core is held just in front of its surface,
+    // or the plate itself would cut across the light)
+    emblem.group.translateZ(0.011 + embTune.dz);
     emblem.group.translateX(embTune.dx);
     emblem.group.translateY(embTune.dy);
     emblem.group.scale.setScalar(embTune.size);
-    const breathe = 0.72 + 0.14 * Math.sin(s.t * 1.7);
+    // the reactor pulses, slow and steady, like something alive in him
+    const breathe = 0.78 + 0.2 * Math.sin(s.t * 2.1) * Math.sin(s.t * 0.7 + 1);
     emblem.update(s.t, breathe + orbK * 0.9 + (state.thrust ?? 0) * 0.8);
 
     // ── the jets: at each boot, pointing down his body, as long as the thrust ──
