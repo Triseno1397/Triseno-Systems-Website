@@ -2,17 +2,17 @@ import * as THREE from "three";
 import { makeGlowTexture } from "@/components/world/scene/textures";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   THE ORB in the Operator's chest: the Triseno mark, machined in chrome,
-   standing in a lens of blue light set into his chest plate — the size of
-   the round medallion painted on him. The light pulses on its own, flickers
-   faintly and surges when he draws power (the forge, the jets); a band of
-   light sweeps across the mark every few seconds and every edge of it is lit
-   ice-blue.
+   THE REACTOR in the Operator's chest: the Triseno mark as the glowing heart
+   of him, set into his chest plate the way an arc reactor is. The face is a
+   rendered reactor (a chrome bezel, ten coils of blue plasma, a lit core) on
+   a disc, seated into the plate by a slim chrome rim; its light pulses on its
+   own, flickers faintly, and surges when he draws power (the forge, the
+   jets). The mark burns white-hot in the core, drawn in code from the logo's
+   own proportions (public/icons/icon-512.png) so it stays exact.
 
-   The mark is built from the logo's own proportions (public/icons/
-   icon-512.png) in its pixel space. The orb's radius is 1; a few thousand
-   triangles and no light (a light would change the light count and
-   recompile every shader in the world).
+   The reactor's radius is 1; a few hundred triangles, one texture, and no
+   light (a light would change the light count and recompile every shader in
+   the world).
    ───────────────────────────────────────────────────────────────────────── */
 
 const CX = 318;
@@ -82,8 +82,11 @@ export interface Emblem {
   dispose(): void;
 }
 
-/** the orb's radius is 1; the mark's width inside it */
-const MARK = 0.78;
+/** the rendered face of the reactor (design-loop/art-src/reactor: a GPT
+ *  Image 2.5 render, cut to a circle with alpha outside it) */
+const FACE = "/models/reactor-face.webp";
+/** the reactor's radius is 1; the mark fits the core at its centre */
+const MARK = 0.46;
 
 export function makeEmblem(): Emblem {
   const disposables: { dispose(): void }[] = [];
@@ -93,118 +96,94 @@ export function makeEmblem(): Emblem {
   };
   const group = new THREE.Group();
 
-  // the orb: a lens of blue light set into the plate — deep blue at the rim,
-  // cyan inward, a slow ripple running out through it, a bright ring at the
-  // edge where it meets the bezel
-  const uPower = { value: 0.8 };
-  const uTime = { value: 0 };
-  const lens = keep(
+  // the face: the render, on a disc, its lit parts pulsing. The render is
+  // sampled by how blue a pixel is, so the plasma and the coils breathe and
+  // surge while the chrome bezel between them stays still.
+  const tex = keep(new THREE.TextureLoader().load(FACE));
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const face = keep(
     new THREE.ShaderMaterial({
       toneMapped: false,
-      uniforms: { uPower, uTime },
+      transparent: true,
+      uniforms: { uMap: { value: tex }, uPower: { value: 1 }, uTime: { value: 0 } },
       vertexShader: /* glsl */ `
-        varying vec2 vP;
+        varying vec2 vUv;
         void main() {
-          vP = position.xy;
+          vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: /* glsl */ `
+        uniform sampler2D uMap;
         uniform float uPower;
         uniform float uTime;
-        varying vec2 vP;
+        varying vec2 vUv;
         void main() {
-          float r = length(vP);
-          float ripple = 0.5 + 0.5 * sin(r * 16.0 - uTime * 2.8);
-          vec3 rim = vec3(0.1, 0.36, 1.0);
-          vec3 mid = vec3(0.4, 0.8, 1.0);
-          vec3 c = mix(mid, rim, smoothstep(0.15, 1.0, r));
-          c *= (0.7 + 0.3 * ripple * (1.0 - r)) * (0.38 + 0.5 * uPower);
-          c += vec3(0.55, 0.85, 1.0) * smoothstep(0.84, 0.97, r) * (1.0 - smoothstep(0.97, 1.0, r)) * uPower;
-          gl_FragColor = vec4(c, 1.0);
+          vec4 t = texture2D(uMap, vUv);
+          // how much of this pixel is light rather than metal
+          float lit = clamp((t.b - t.r) * 1.6 + (t.b - 0.55), 0.0, 1.0);
+          float r = length(vUv - 0.5) * 2.0;
+          // a slow ripple running out from the core through the light
+          float ripple = 0.5 + 0.5 * sin(r * 14.0 - uTime * 2.6);
+          float gain = mix(1.0, 0.55 + 0.75 * uPower + 0.12 * ripple, lit);
+          gl_FragColor = vec4(t.rgb * gain, t.a);
         }
       `,
     }),
   );
-  const orb = new THREE.Mesh(keep(new THREE.CircleGeometry(1, 56)), lens);
-  orb.position.z = -0.03;
+  const disc = new THREE.Mesh(keep(new THREE.CircleGeometry(1, 64)), face);
 
-  // the bezel: a slim chrome ring standing proud of the plate round the lens,
-  // its inner edge turning down to the lens — what seats it into him
-  const bezelGeo = keep(
+  // a slim chrome rim standing proud of the plate around the face, its inner
+  // edge turning down to meet the render's own bezel: what seats it into him
+  const rimGeo = keep(
     new THREE.LatheGeometry(
-      [new THREE.Vector2(0.96, -0.03), new THREE.Vector2(1.0, 0.05), new THREE.Vector2(1.1, 0.06), new THREE.Vector2(1.16, 0.0), new THREE.Vector2(1.17, -0.12)],
-      56,
+      [new THREE.Vector2(0.96, -0.02), new THREE.Vector2(0.99, 0.04), new THREE.Vector2(1.05, 0.045), new THREE.Vector2(1.08, 0.0), new THREE.Vector2(1.09, -0.1)],
+      64,
     ),
   );
-  bezelGeo.rotateX(Math.PI / 2);
-  const bezel = new THREE.Mesh(bezelGeo, keep(new THREE.MeshStandardMaterial({ color: "#dfe4ec", metalness: 1, roughness: 0.14, envMapIntensity: 2.4, side: THREE.DoubleSide })));
+  rimGeo.rotateX(Math.PI / 2);
+  const rim = new THREE.Mesh(rimGeo, keep(new THREE.MeshStandardMaterial({ color: "#dfe4ec", metalness: 1, roughness: 0.14, envMapIntensity: 2.4, side: THREE.DoubleSide })));
 
-  // the mark: machined chrome standing in the light, a band of light sweeping
-  // across its face every few seconds, every edge lit ice-blue
-  const geo = keep(
-    new THREE.ExtrudeGeometry(markShapes(), {
-      depth: 0.06,
-      bevelEnabled: true,
-      bevelThickness: 0.014,
-      bevelSize: 0.01,
-      bevelSegments: 2,
-      curveSegments: 20,
-    }),
+  // the mark: white-hot in the core
+  const markGeo = keep(new THREE.ShapeGeometry(markShapes(), 16));
+  markGeo.scale(MARK, MARK, 1);
+  const markMat = keep(new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }));
+  const mark = new THREE.Mesh(markGeo, markMat);
+  mark.position.z = 0.012;
+  // and its own bloom, so it burns rather than sits
+  const glowTex = keep(makeGlowTexture());
+  const markGlowMat = keep(
+    new THREE.MeshBasicMaterial({ map: glowTex, color: "#dff1ff", transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
   );
-  geo.scale(MARK, MARK, 1);
-  geo.translate(0, 0, -0.03); // its back in the lens, its face just proud of the bezel
-  geo.computeVertexNormals();
-  const uSweep = { value: -9 };
-  const face = keep(
-    new THREE.MeshStandardMaterial({ color: "#eef2f7", metalness: 1, roughness: 0.2, envMapIntensity: 1.4, emissive: "#ffffff", emissiveIntensity: 1 }),
-  );
-  face.onBeforeCompile = (sh) => {
-    sh.uniforms.uPower = uPower;
-    sh.uniforms.uSweep = uSweep;
-    sh.vertexShader = "varying vec2 vEP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvEP = position.xy;");
-    sh.fragmentShader =
-      "uniform float uPower;\nuniform float uSweep;\nvarying vec2 vEP;\n" +
-      sh.fragmentShader.replace(
-        "#include <emissivemap_fragment>",
-        `#include <emissivemap_fragment>
-        float band = smoothstep(0.07, 0.0, abs(vEP.x * 0.8 + vEP.y * 0.6 - uSweep));
-        totalEmissiveRadiance = vec3(0.94, 0.97, 1.0) * (0.55 + 0.45 * uPower) + vec3(1.0, 1.04, 1.1) * band * 1.6;`,
-      );
-  };
-  face.customProgramCacheKey = () => "triseno-emblem-face";
-  const edge = keep(new THREE.MeshBasicMaterial({ color: "#dff0ff", toneMapped: false }));
-  const edgeBase = new THREE.Color("#dff0ff");
-  // ExtrudeGeometry: group 0 = the caps (face and back), group 1 = the sides
-  const mark = new THREE.Mesh(geo, [face, edge]);
+  const markGlow = new THREE.Mesh(keep(new THREE.PlaneGeometry(1.5, 1.5)), markGlowMat);
+  markGlow.position.z = 0.008;
+  markGlow.renderOrder = 16;
 
   // the glow it throws onto his plate and into the air in front of it
-  const glowTex = keep(makeGlowTexture());
   const haloMat = keep(
     new THREE.MeshBasicMaterial({ map: glowTex, color: "#6fb8ff", transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
   );
-  // (behind the mark, so its light never tints the chrome)
-  const halo = new THREE.Mesh(keep(new THREE.PlaneGeometry(3.6, 3.6)), haloMat);
-  halo.position.z = -0.02;
-  halo.renderOrder = 15;
+  const halo = new THREE.Mesh(keep(new THREE.PlaneGeometry(3.4, 3.4)), haloMat);
+  halo.position.z = 0.03;
+  halo.renderOrder = 17;
 
-  group.add(orb, bezel, mark, halo);
+  group.add(disc, rim, markGlow, mark, halo);
   const none = () => {};
   group.traverse((o) => ((o as THREE.Mesh).raycast = none));
 
+  const markBase = new THREE.Color("#ffffff");
   return {
     group,
     update(t, power) {
       // a faint electrical flicker on top of the pulse
       const flick = 1 + 0.035 * Math.sin(t * 41) * Math.sin(t * 17.3);
       const p = power * flick;
-      uPower.value = p;
-      uTime.value = t;
-      // a sweep across the mark every 4.5s, crossing in 0.8s
-      const c = t % 4.5;
-      uSweep.value = c < 0.8 ? -0.75 + (c / 0.8) * 1.5 : -9;
-      edge.color.copy(edgeBase).multiplyScalar(0.6 + 0.8 * p);
-      haloMat.opacity = 0.2 + 0.32 * p;
+      face.uniforms.uPower.value = p;
+      face.uniforms.uTime.value = t;
+      markMat.color.copy(markBase).multiplyScalar(1.2 + 0.8 * p);
+      markGlowMat.opacity = 0.3 + 0.4 * p;
+      haloMat.opacity = 0.22 + 0.34 * p;
     },
     dispose() {
       disposables.forEach((d) => d.dispose());
