@@ -401,8 +401,8 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
    context, the world's own light and reflections on his chrome. He is only up
    while the hero is (the camera leaves him behind on the way to the doors).
 
-   He keeps himself busy on the statue (statue.ts), one thing for about a
-   minute, picked at random: leaning back on its rail with his arms folded,
+   He keeps himself busy on the statue (statue.ts), one thing for ten
+   seconds, picked at random: leaning back on its rail with his arms folded,
    sitting inside it, looking his blade over in front of it, doing sets of
    pull-ups off its top. Between two of them nothing jumps: he eases out of
    the one, stands, walks over on his own two feet, and settles into the next.
@@ -414,7 +414,7 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
 /** the things he does, and for how long (seconds, picked in the range) */
 const ACTS = ["lean", "sit", "blade", "pull"] as const;
 type Act = (typeof ACTS)[number];
-const ACT_TIME: [number, number] = [55, 70];
+const ACT_TIME: [number, number] = [10, 10];
 /** easing out of a pose to stand, and into the next from standing, seconds */
 const EASE_OUT = 1.6;
 const EASE_IN = 1.9;
@@ -427,7 +427,7 @@ const REP = { up: 0.7, top: 0.25, down: 0.85, hang: 0.3 };
 const REP_T = REP.up + REP.top + REP.down + REP.hang;
 const SET = { reps: 5, before: 0.9, after: 1.1 };
 const PULL_TIME = SET.before + SET.reps * REP_T + SET.after;
-/** how long a thing lasts: about a minute, except the one set of pull-ups */
+/** how long a thing lasts: ten seconds, except the one set of pull-ups */
 const durFor = (a: Act, dbgDur: number) => (a === "pull" ? PULL_TIME : dbgDur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
 /** the blade: first look soon after he arrives, then again every so often */
 const BLADE_FIRST = 2.5;
@@ -501,7 +501,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       fly: u.has("opfly") ? Number(u.get("opfly")) : -1,
       // ?actspeed=10 runs his clock faster, to watch the changes
       speed: u.has("actspeed") ? Number(u.get("actspeed")) : 1,
-      // ?actdur=8 — each thing lasts this many seconds instead of a minute
+      // ?actdur=30 — each thing lasts this many seconds instead of ten
       dur: u.has("actdur") ? Number(u.get("actdur")) : 0,
     };
   }, []);

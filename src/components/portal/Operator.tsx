@@ -517,7 +517,6 @@ function setScan(sw: SwordRig, k: number) {
   sw.plane.setFromNormalAndCoplanarPoint(_up.negate(), _p);
 }
 
-const WHITE = new THREE.Color("#ffffff");
 /** Deploy (0..1) the blade: it runs up out of the guard and locks. */
 function setBlade(sw: SwordRig, k: number) {
   sw.blade.visible = k > 0.002;
@@ -526,23 +525,6 @@ function setBlade(sw: SwordRig, k: number) {
   _up.set(0, 1, 0).transformDirection(sw.group.matrixWorld);
   _p.set(0, BLADE_BASE, 0).applyMatrix4(sw.group.matrixWorld);
   sw.bladePlane.setFromNormalAndCoplanarPoint(_up, _p);
-}
-
-/* ── light gathering into the palms ─────────────────────────────────────── */
-const SPARKS = 110;
-function makeSparks() {
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
-  const mat = new THREE.PointsMaterial({ size: 0.009, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-  const pts = new THREE.Points(geo, mat);
-  pts.frustumCulled = false;
-  const seed = Array.from({ length: SPARKS }, () => ({
-    dir: new THREE.Vector3().randomDirection(),
-    r: 0.18 + Math.random() * 0.3,
-    spin: (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 5),
-    lag: Math.random() * 0.35,
-  }));
-  return { pts, mat, seed };
 }
 
 type Move = "spin" | "jump";
@@ -766,15 +748,6 @@ export default function Operator({
   }, []);
   const bladeMid = useMemo(() => new THREE.Vector3(), []);
   const fistAt = useMemo(() => new THREE.Vector3(), []);
-  const sparks = useMemo(() => makeSparks(), []);
-  const orb = useMemo(() => {
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.035, 20, 16),
-      new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    return { mesh: m, mat: m.material as THREE.MeshBasicMaterial };
-  }, []);
-
   /** The only light he carries: between the palms while the blade is forged,
    *  then on the blade itself. Always in the scene, at zero brightness when
    *  there is nothing to light — switching a light on and off changes how many
@@ -974,10 +947,8 @@ export default function Operator({
     const blank = (o: THREE.Object3D) => o.traverse((c) => ((c as THREE.Mesh).raycast = none));
     blank(rig.scene);
     swords.forEach((sw) => blank(sw.group));
-    blank(sparks.pts);
-    blank(orb.mesh);
     blank(jets.group);
-  }, [rig, swords, sparks, orb, jets]);
+  }, [rig, swords, jets]);
 
   const { camera, gl, scene } = useThree();
   const [warmedEnv, setWarmedEnv] = useState(false);
@@ -1003,7 +974,7 @@ export default function Operator({
     const rootObj = root.current;
     if (!rootObj) return;
     // everything he brings out mid-move is shown for the compile and the
-    // texture upload, then hidden again: the blades, the jets,
+    // texture upload, then hidden again: the blades and the jets.
     // the sparks and the forge orb.
     const hidden: THREE.Object3D[] = [];
     const show = (o: THREE.Object3D | null | undefined) => {
@@ -1015,7 +986,7 @@ export default function Operator({
       show(sw.body);
       show(sw.blade);
     });
-    [sparks.pts, orb.mesh, jets.group].forEach((o) => show(o));
+    show(jets.group);
     const done = () => hidden.forEach((o) => (o.visible = false));
     // A real draw, into a 1x1 target nobody sees: it links exactly the programs
     // a real draw needs and uploads every texture on the way. compileAsync
@@ -1063,7 +1034,7 @@ export default function Operator({
         done();
       }
     };
-  }, [gl, scene, camera, swords, orb, sparks, jets, warmedEnv]);
+  }, [gl, scene, camera, swords, jets, warmedEnv]);
 
   // The world's environment map arrives after he does, and a material compiled
   // without it is compiled again the first time it is drawn with it — for the
@@ -1404,42 +1375,11 @@ export default function Operator({
     tmp.FL.copy(tmp.F);
     r.worldToLocal(tmp.FL);
 
-    // ── light spiralling into the palms ──
-    const gatherK = t < 0 ? 0 : THREE.MathUtils.clamp(t / FORGE_END, 0, 1);
-    const sparkVis = t >= 0 && t < FORGE_END + 0.2 ? Math.min(1, t / 0.2) * (1 - THREE.MathUtils.clamp((t - FORGE_END) / 0.2, 0, 1)) : 0;
-    sparks.mat.opacity = 0.95 * sparkVis;
-    sparks.mat.color.copy(hue).lerp(WHITE, 0.35);
-    sparks.pts.visible = sparkVis > 0;
-    if (sparkVis > 0) {
-      const arr = sparks.pts.geometry.attributes.position.array as Float32Array;
-      sparks.seed.forEach((sd, i) => {
-        const k = THREE.MathUtils.clamp((gatherK - sd.lag) / (1 - sd.lag), 0, 1);
-        const rad = sd.r * Math.pow(1 - k, 1.6);
-        const ang = sd.spin * k;
-        const c = Math.cos(ang);
-        const sn = Math.sin(ang);
-        arr[i * 3] = tmp.FL.x + (sd.dir.x * c - sd.dir.z * sn) * rad;
-        arr[i * 3 + 1] = tmp.FL.y + sd.dir.y * rad;
-        arr[i * 3 + 2] = tmp.FL.z + (sd.dir.x * sn + sd.dir.z * c) * rad;
-      });
-      sparks.pts.geometry.attributes.position.needsUpdate = true;
-    }
-    // the orb between the palms swells, then is spent into the hilt
-    const orbK = t >= 0 && t < FORGE_END + 0.25 ? ease(t / GATHER) * (1 - THREE.MathUtils.clamp((t - FORGE_END + 0.2) / 0.45, 0, 1)) : 0;
-    // never hidden: the forge orb carries a light, and hiding it would change
-    // how many lights three builds into every shader (see makeSword). At rest
-    // its opacity is zero, so there is nothing to see either way.
-    orb.mesh.position.copy(tmp.FL);
-    orb.mesh.scale.setScalar(0.4 + orbK * (0.8 + 0.15 * Math.sin(s.t * 30)));
-    orb.mat.opacity = orbK;
-    orb.mat.color.copy(hue).lerp(WHITE, 0.5).multiplyScalar(1.5);
-
-    // the one light: with the orb while it is burning (the blades are steel
-    // and carry none)
-    forge.color.copy(hue);
-    const lit = orbK * 4;
-    // his own light sits under his root; a lent one lives in the host's space
-    if (orbK > 0.001) forge.position.copy(light ? tmp.F : tmp.FL);
+    // how far into the forge he is: the reactor surges with it
+    const forgeK = t >= 0 && t < FORGE_END + 0.25 ? ease(t / GATHER) * (1 - THREE.MathUtils.clamp((t - FORGE_END + 0.2) / 0.45, 0, 1)) : 0;
+    // his light stays in the scene (the light count must never change) but
+    // nothing burns in his hands any more, so it is never lit
+    const lit = 0;
 
     // ── swords: forged upright at the meeting point, then carried by the fists ──
     const end = t > moveEnd - 0.75 ? ease((t - (moveEnd - 0.75)) / 0.6) : 0;
@@ -1506,7 +1446,7 @@ export default function Operator({
     emblem.group.scale.setScalar(embTune.size);
     // the reactor pulses, slow and steady, like something alive in him
     const breathe = 0.78 + 0.2 * Math.sin(s.t * 2.1) * Math.sin(s.t * 0.7 + 1);
-    emblem.update(s.t, breathe + orbK * 0.9 + (state.thrust ?? 0) * 0.8);
+    emblem.update(s.t, breathe + forgeK * 0.9 + (state.thrust ?? 0) * 0.8);
 
     // ── the jets: at each boot, pointing down his body, as long as the thrust ──
     const thrust = state.thrust ?? 0;
@@ -1590,10 +1530,8 @@ export default function Operator({
       </group>
       <primitive object={swords[0].group} />
       <primitive object={swords[1].group} />
-      <primitive object={sparks.pts} />
       <primitive object={jets.group} />
       <primitive object={emblem.group} />
-      <primitive object={orb.mesh} />
       </group>
     </group>
   );
