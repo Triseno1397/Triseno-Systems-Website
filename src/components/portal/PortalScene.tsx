@@ -421,10 +421,14 @@ const EASE_IN = 1.9;
 /** walking: pace (world units a second) and one step's length */
 const WALK_SPEED = 0.62;
 const STEP = 0.4;
-/** a pull-up rep: up, hold at the top, down, hang; sets with a rest between */
+/** a pull-up rep: up, hold at the top, down, hang. He does one set of five —
+ *  a beat hanging first and a beat after — and moves on. */
 const REP = { up: 0.7, top: 0.25, down: 0.85, hang: 0.3 };
 const REP_T = REP.up + REP.top + REP.down + REP.hang;
-const SET = { reps: 5, rest: 4.5 };
+const SET = { reps: 5, before: 0.9, after: 1.1 };
+const PULL_TIME = SET.before + SET.reps * REP_T + SET.after;
+/** how long a thing lasts: about a minute, except the one set of pull-ups */
+const durFor = (a: Act, dbgDur: number) => (a === "pull" ? PULL_TIME : dbgDur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
 /** the blade: first look soon after he arrives, then again every so often */
 const BLADE_FIRST = 2.5;
 const BLADE_EVERY = 19;
@@ -566,7 +570,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     /* ── what he is doing ── */
     if (P.act === null) {
       P.act = dbg.act ?? pick(null);
-      P.actDur = dbg.act ? Infinity : (dbg.dur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
+      // (a held thing lasts for good, except the pull-ups: always one set)
+      P.actDur = dbg.act && dbg.act !== "pull" ? Infinity : durFor(P.act, dbg.dur);
       P.actT = dbg.t >= 0 ? dbg.t : 0;
       // he starts in it, not walking to it
       P.mode = "on";
@@ -588,8 +593,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     // his pose on the statue for what he is doing (a pull-up's lift included)
     let lift = 0;
     if (P.act === "pull" && P.mode === "on") {
-      const r = P.actT % (SET.reps * REP_T + SET.rest);
-      if (r < SET.reps * REP_T) {
+      const r = P.actT - SET.before;
+      if (r >= 0 && r < SET.reps * REP_T) {
         const k = r % REP_T;
         lift = k < REP.up ? ease(k / REP.up) : k < REP.up + REP.top ? 1 : k < REP.up + REP.top + REP.down ? 1 - ease((k - REP.up - REP.top) / REP.down) : 0;
       }
@@ -670,7 +675,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
             P.walkYaw0 = pose.spotYaw;
             P.act = P.next ?? pick(P.act);
             P.actT = 0;
-            P.actDur = (dbg.dur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
+            P.actDur = durFor(P.act, dbg.dur);
             resolvePose(P.pose, P.act as PoseKey, statue.points, statue.y, statue.yaw, build, P.stage, stand.yaw, 0);
             P.walkTo.copy(P.pose.spot);
             P.walkYaw1 = P.pose.spotYaw;
