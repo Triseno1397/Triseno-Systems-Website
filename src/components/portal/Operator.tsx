@@ -8,6 +8,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { DBG } from "@/components/world/scene/env";
 import { deviceClass } from "@/lib/device";
 import type { Build } from "./statue";
+import { makeEmblem } from "./emblem";
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE OPERATOR — Triseno's rigged robot (21st: splite, rebuilt).
@@ -77,6 +78,10 @@ export interface Limbs {
   /** 0..1 hanging (or flying): knees bent back, feet off the ground */
   hang: number;
 }
+
+/** the chest emblem across, in his root units (he is 1 tall): about half
+ *  as big again as the one painted on him, which it covers */
+const EMBLEM_SIZE = 0.15;
 
 /** how long looking his blade over takes, seconds */
 export const INSPECT = 7;
@@ -599,6 +604,9 @@ export default function Operator({
     const bone = (n: string) => skinned.skeleton.bones.find((b) => b.name === n)!;
     const b = {
       hips: bone("Hips"),
+      // the upper chest: the bone the shoulders and neck hang from, and the
+      // chest plate the emblem is mounted on
+      upper: bone("Spine"),
       spine: bone("Spine01"),
       chest: bone("Spine02"),
       neck: bone("neck"),
@@ -707,11 +715,55 @@ export default function Operator({
       shoulderW: Math.abs(at(b.lArm).x - at(b.rArm).x) / 2,
       armLen: at(b.lArm).distanceTo(at(b.lHand)),
     };
-    return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y, unit };
+    // The emblem's seat: the front of the chest plate on his midline, at the
+    // height of the emblem painted into his texture — the frontmost surface
+    // there, read off his vertices in the bind pose. Kept as an offset in
+    // that bone's own space, so the emblem rides every turn of his torso.
+    const emblemAt = (() => {
+      const geo = skinned.geometry;
+      const pos = geo.attributes.position;
+      const v = new THREE.Vector3();
+      const u = new THREE.Vector3();
+      // a vertex in the skin's bind space, into the bones' (scene) space: via
+      // the upper chest bone's inverse and its bind-pose transform — the same
+      // road handFrame takes, since the mesh node's own transform carries the
+      // quantization, not the skeleton's space
+      const bi = skinned.skeleton.bones.indexOf(b.upper);
+      const toScene = b.upper.matrixWorld.clone().multiply(skinned.skeleton.boneInverses[bi]).multiply(skinned.bindMatrix);
+      // his midline: halfway between the shoulders
+      const mid = b.lArm.getWorldPosition(new THREE.Vector3()).add(b.rArm.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+      const yLo = unit.shoulderY - 0.2;
+      const yHi = unit.shoulderY - 0.04;
+      let best = -Infinity;
+      let bestY = (yLo + yHi) / 2;
+      for (let i = 0; i < pos.count; i += 1) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(toScene);
+        // (the model is not centred on x: measure from its own middle)
+        u.set((v.x - mid.x) / height, (v.y - box.min.y) / height - 0.5, v.z / height);
+        if (Math.abs(u.x) > 0.04 || u.y < yLo || u.y > yHi) continue;
+        if (u.z > best) {
+          best = u.z;
+          bestY = u.y;
+        }
+      }
+      // back to model space, then into the bone's own frame
+      if (typeof window !== "undefined" && window.location.search.includes("gdbg")) console.log("[emblem] seat", bestY.toFixed(3), best.toFixed(3), "mid x", (mid.x / height).toFixed(3), "verts", pos.count);
+      const p = new THREE.Vector3(mid.x, (bestY + 0.5) * height + box.min.y, best * height);
+      const m = new THREE.Matrix4().makeTranslation(p.x, p.y, p.z);
+      return { local: b.upper.matrixWorld.clone().invert().multiply(m), unit: new THREE.Vector3(0, bestY, best) };
+    })();
+    return { scene, skinned, b, rest, restHips, mixer, moves, height, minY: box.min.y, unit, emblemAt };
   }, [robot, spinG, jumpG]);
 
   const swords = useMemo(() => [makeSword(), makeSword()], []);
   const jets = useMemo(() => makeJets(), []);
+  const emblem = useMemo(() => makeEmblem(), []);
+  useEffect(() => () => emblem.dispose(), [emblem]);
+  // ?emb=dx,dy,dz,size nudges the emblem's seat (root units) for tuning
+  const embTune = useMemo(() => {
+    const d = typeof window === "undefined" ? [] : (new URLSearchParams(window.location.search).get("emb") ?? "").split(",").map(Number);
+    return { dx: d[0] || 0, dy: d[1] || 0, dz: d[2] || 0, size: d[3] || EMBLEM_SIZE };
+  }, []);
   const bladeMid = useMemo(() => new THREE.Vector3(), []);
   const fistAt = useMemo(() => new THREE.Vector3(), []);
   const sparks = useMemo(() => makeSparks(), []);
@@ -1436,6 +1488,21 @@ export default function Operator({
     });
     forge.intensity = lit;
 
+    // ── the emblem: seated on his chest plate, following the torso; it
+    //    breathes, and surges with the forge and the jets ──
+    tmp.m.multiplyMatrices(rig.b.upper.matrixWorld, rig.emblemAt.local);
+    tmp.m.premultiply(tmp.inv.copy(r.matrixWorld).invert());
+    tmp.m.decompose(tmp.pos, tmp.quat, tmp.scl);
+    emblem.group.position.copy(tmp.pos);
+    emblem.group.quaternion.copy(tmp.quat);
+    // the seat is the plate's front on the midline; push it just proud of it
+    emblem.group.translateZ(0.012 + embTune.dz);
+    emblem.group.translateX(embTune.dx);
+    emblem.group.translateY(embTune.dy);
+    emblem.group.scale.setScalar(embTune.size);
+    const breathe = 0.72 + 0.14 * Math.sin(s.t * 1.7);
+    emblem.update(s.t, breathe + orbK * 0.9 + (state.thrust ?? 0) * 0.8);
+
     // ── the jets: at each boot, pointing down his body, as long as the thrust ──
     const thrust = state.thrust ?? 0;
     jets.core.uniforms.uThrust.value = thrust;
@@ -1520,6 +1587,7 @@ export default function Operator({
       <primitive object={swords[1].group} />
       <primitive object={sparks.pts} />
       <primitive object={jets.group} />
+      <primitive object={emblem.group} />
       <primitive object={orb.mesh} />
       </group>
     </group>
