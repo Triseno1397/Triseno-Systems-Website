@@ -374,11 +374,11 @@
 /* the card: a canvas (infiniteCard.ts); sideways drags are its own, the page
    still scrolls through it */
 .web-card { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.web-card__canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.7s ease; }
+.web-card__canvas { position: absolute; z-index: 2; pointer-events: none; opacity: 0; transition: opacity 0.7s ease; }
 .web-card__canvas[data-on] { opacity: 1; }
 .web-card[data-still] { background: #0b1512 url("/images/card/canyon-1600.webp") 62% 50% / cover no-repeat; }
 .web-card__hint {
-  position: absolute; left: 50%; bottom: 14px; z-index: 2; transform: translateX(-50%);
+  position: absolute; left: 50%; bottom: 22px; z-index: 3; transform: translateX(-50%);
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; white-space: nowrap; pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.55);
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: #ffffff;
@@ -386,7 +386,7 @@
 }
 .web-card__hint i { display: block; width: 4px; height: 4px; background: var(--hue); }
 .web-card__hint-touch { display: none; }
-.web-card[data-used] .web-card__hint, .web-card[data-still] .web-card__hint { opacity: 0; }
+.web-demo[data-used] .web-card__hint { opacity: 0; }
 @media (pointer: coarse) {
   .web-card__hint-fine { display: none; }
   .web-card__hint-touch { display: inline; }
@@ -420,7 +420,7 @@
      room between the lanes */
   .web-demo__device { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); }
   .web-demo__mirror { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); height: 22px; }
-  .web-card__hint { bottom: 8px; padding: 5px 9px; gap: 8px; letter-spacing: 0.1em; }
+  .web-card__hint { bottom: 16px; padding: 5px 9px; gap: 8px; letter-spacing: 0.1em; }
   /* and a shorter run, so the sticky stage does not outlast a device this size
      by a screen of empty hall */
   .web-demo { height: 190svh; }

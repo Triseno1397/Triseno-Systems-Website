@@ -22,7 +22,7 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 
 ## `/web-design-division` Web — violet
 1. Hero: **hero shutter text** (21st) — headline slices open like a shutter.
-2. The page is the demo: **container scroll animation** (21st) stands the frame up (the section's one scroll moment); upright it is a **large 3D card** — a concept site that contains itself, in a landscape with depth, the camera pushing in for good. Pointer tilts it, holding it dives. Nothing in the card is scroll-driven.
+2. The page is the demo: **container scroll animation** (21st) stands the frame up (the section's one scroll moment); upright it is a **large 3D card** — one window onto a canyon with real depth (three layered plates), flown into for good, the nearest ferns standing out of the frame. Pointer leans it, holding it dives. Nothing in the card is scroll-driven.
 3. Before / after: **compare reveal** (21st) — drag slider, a dated template vs the rebuilt fictional concept site.
 4. What you get: **sticky stacking cards** — deliverables stack and scale back as the next arrives.
 5. Range: **cursor-follow image trail / hover-swap gallery** of industry concepts (labelled concepts).
