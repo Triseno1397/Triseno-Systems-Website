@@ -20,7 +20,8 @@ const PERIOD = 22;
 const CLEAR = 0.09;
 /** Immersion: the pointer held still on the card this long, and the card
  *  comes forward, growing to fill most of the screen while the camera eases
- *  into a slow push; the pointer moving at all sends it back. */
+ *  into a slow push. Once it has begun, the pointer is free inside the card
+ *  (it looks around the scene as ever); only leaving the card ends it. */
 const IMMERSE_AFTER = 2.5;
 /** how far (px) the pointer may drift and still count as still */
 const IMMERSE_SLOP = 3;
@@ -202,6 +203,13 @@ export default function DemoFrame() {
       rest: 0,
       // immersion 0..1, and the device's own box (untransformed by it)
       imm: 0,
+      // immersion has begun and holds until the pointer leaves the card
+      on: false,
+      // the card's box as it stands on screen (bar and bezel, grown with it)
+      bl: 0,
+      bt: 0,
+      bw: 0,
+      bh: 0,
       dl: 0,
       dt: 0,
       dw: 0,
@@ -341,6 +349,13 @@ export default function DemoFrame() {
         s.vh = r.height;
         // the device is not enlarged by immersion (the tilt layer inside it
         // is): its box is where the card stands at rest
+        // the card as it stands on screen, however far it has grown: the
+        // line that ends an immersion is always its visible edge
+        const b = tiltEl.getBoundingClientRect();
+        s.bl = b.left;
+        s.bt = b.top;
+        s.bw = b.width;
+        s.bh = b.height;
         const d = device.getBoundingClientRect();
         s.dl = d.left;
         s.dt = d.top;
@@ -404,10 +419,21 @@ export default function DemoFrame() {
         s.tx += (gx - s.tx) * k;
         s.ty += (gy - s.ty) * k;
         // Held still on the card long enough, it comes forward and the camera
-        // eases into a slow push; the pointer moving at all sends it back.
-        const still = onCard && uprightRef.current && !s.held ? Math.min(1, (time - s.at) / IMMERSE_AFTER) : 0;
-        const immerse = still >= 1;
-        s.rest = still;
+        // eases into a slow push. From then on the pointer may move freely
+        // inside the card; leaving it (its edge as it stands, grown or not)
+        // is what ends it.
+        const inBox = s.known && s.measured && s.px > s.bl && s.px < s.bl + s.bw && s.py > s.bt && s.py < s.bt + s.bh;
+        const still = !s.on && onCard && uprightRef.current && !s.held ? Math.min(1, (time - s.at) / IMMERSE_AFTER) : 0;
+        if (!s.on && still >= 1) s.on = true;
+        else if (s.on && (!inBox || !uprightRef.current)) {
+          s.on = false;
+          // a fresh start: the pointer must be still again to come back in
+          s.ax = s.px;
+          s.ay = s.py;
+          s.at = time;
+        }
+        const immerse = s.on;
+        s.rest = s.on ? 1 : still;
         if (immerse) root.setAttribute("data-used", "");
         // In at a steady, slow pace (the growth and the push are the same
         // eased curve of it, so the box grows exactly as fast as the camera
@@ -445,7 +471,8 @@ export default function DemoFrame() {
         const cx = (window.innerWidth / 2 - (s.dl + s.dw / 2)) * e;
         const cy = (fd.top + room / 2 - (s.dt + s.dh / 2)) * e;
         const sc = 1 + (S - 1) * e;
-        const lean = 1 - 0.6 * e;
+        // grown, it still leans with the pointer, a little less
+        const lean = 1 - 0.4 * e;
         if (drop !== "notilt")
           tiltEl.style.transform =
             (e > 0.0005 ? `translate3d(${cx.toFixed(1)}px, ${cy.toFixed(1)}px, 0) scale(${sc.toFixed(4)}) ` : "") +
