@@ -18,14 +18,23 @@ const BAR = 32;
 const PERIOD = 22;
 /** where a flight is once it has come out of the light: where it waits to begin */
 const CLEAR = 0.09;
-/** how much faster it travels while the pointer rests on the card, and
- *  while the card is held */
-const REST = 3;
-const DIVE = 5;
-/** seconds the pointer has to be still on the card before it flies in */
-const REST_AFTER = 0.5;
-/** how far (px) the pointer may drift and still count as resting */
-const REST_SLOP = 9;
+/** Immersion: the pointer held still on the card this long, and the card
+ *  comes forward, growing to fill most of the screen while the camera eases
+ *  into a slow push; the pointer moving at all sends it back. */
+const IMMERSE_AFTER = 2.5;
+/** how far (px) the pointer may drift and still count as still */
+const IMMERSE_SLOP = 3;
+/** how much of the screen's width the card may fill when immersed; its
+ *  height is what lies between the page's top and bottom fades (globals.css
+ *  --fade-top / --fade-bottom), so the address bar never goes under one */
+const IMMERSE_FILL_W = 0.94;
+const fades = () => {
+  const vh = window.innerHeight;
+  return { top: Math.min(128, Math.max(112, vh * 0.14)) * 0.8, bottom: Math.min(144, Math.max(124, vh * 0.16)) * 0.6 };
+};
+/** how much faster the flight runs when immersed, and while the card is held */
+const IMMERSE_SPEED = 1.9;
+const DIVE = 3;
 /** the card's own lean toward the pointer, degrees */
 const LEAN_Y = 8;
 const LEAN_X = 5.5;
@@ -38,7 +47,8 @@ const LEAN_X = 5.5;
  * scroll moment, unchanged) and a 3D card effect (it leans toward the
  * pointer). Tailored: the card is one window onto a canyon with real depth,
  * flown into for good, with the nearest ferns and rocks standing out of the
- * frame (depthCard.ts). Moving across it looks around; holding it dives.
+ * frame (depthCard.ts). Moving across it looks around; holding the pointer
+ * still on it brings it forward, filling the screen, into a slow push-in.
  *
  * Nothing the card does is driven by scroll. It runs from the page's shared
  * frame loop, only while it is on screen.
@@ -51,7 +61,6 @@ export default function DemoFrame() {
   const tiltRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const restRef = useRef<HTMLSpanElement>(null);
   const uprightRef = useRef(false);
   const cardRef = useRef<DepthCard | null>(null);
   // over the scene switch: resting there is choosing, not flying
@@ -138,8 +147,8 @@ export default function DemoFrame() {
     const tiltEl = tiltRef.current;
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
-    const ring = restRef.current;
-    if (!root || !rig || !tiltEl || !viewport || !canvas || !ring) return;
+    const device = deviceRef.current;
+    if (!root || !rig || !tiltEl || !viewport || !canvas || !device) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cls = deviceClass();
@@ -188,7 +197,14 @@ export default function DemoFrame() {
       held: false,
       over: false,
       rest: 0,
-      warp: 0,
+      // immersion 0..1, and the device's own box (untransformed by it)
+      imm: 0,
+      dl: 0,
+      dt: 0,
+      dw: 0,
+      dh: 0,
+      // the backing store's extra density while the card is enlarged
+      boost: 1,
       last: -1,
       still: true, // a frame is owed (after a resize, or once for reduced motion)
       odd: false,
@@ -204,7 +220,9 @@ export default function DemoFrame() {
     // Drawn at the screen's full density: the picture is the point of the
     // section. The governor's share steps it down only if frames run long.
     let govern = 1;
-    const dpr = () => Math.min(window.devicePixelRatio || 1, 2) * govern * resScale;
+    // integrated graphics: the enlarged card is drawn a little softer
+    let weak = false;
+    const dpr = () => Math.min(Math.min(window.devicePixelRatio || 1, 2) * s.boost, 2.5) * govern * resScale;
     const size = () => {
       if (!card || s.w < 2 || s.h < 2) return;
       // the canvas is larger than the window: it overhangs the bezel
@@ -239,7 +257,7 @@ export default function DemoFrame() {
         viewport.setAttribute("data-still", "");
         return;
       }
-      const weak = gpuClass(card.gpu) !== "ok";
+      weak = gpuClass(card.gpu) !== "ok";
       card.quality(u.has("cardq") ? Number(u.get("cardq")) : weak || cls === "low" ? 0.65 : 1);
       size();
       card.ready.then(
@@ -318,6 +336,13 @@ export default function DemoFrame() {
         s.vt = r.top;
         s.vw = r.width;
         s.vh = r.height;
+        // the device is not enlarged by immersion (the tilt layer inside it
+        // is): its box is where the card stands at rest
+        const d = device.getBoundingClientRect();
+        s.dl = d.left;
+        s.dt = d.top;
+        s.dw = d.width;
+        s.dh = d.height;
         s.measured = true;
       },
       write(time) {
@@ -342,7 +367,7 @@ export default function DemoFrame() {
           }
         }
         if (reduce) {
-          if (s.still) card.draw(0, 0, CLEAR, 0, false, 0);
+          if (s.still) card.draw(0, 0, CLEAR, 0, false);
           s.still = false;
           return;
         }
@@ -350,7 +375,7 @@ export default function DemoFrame() {
           s.moved = false;
           s.lastMove = time;
           // a resting pointer may drift a few pixels and still be resting
-          if (Math.hypot(s.px - s.ax, s.py - s.ay) > REST_SLOP) {
+          if (Math.hypot(s.px - s.ax, s.py - s.ay) > IMMERSE_SLOP) {
             s.ax = s.px;
             s.ay = s.py;
             s.at = time;
@@ -375,26 +400,46 @@ export default function DemoFrame() {
         const k = 1 - Math.exp(-dt * (idle ? 1.4 : 5));
         s.tx += (gx - s.tx) * k;
         s.ty += (gy - s.ty) * k;
-        // The pointer resting still on the card flies it in; holding, faster.
-        // A ring round the pointer fills while it waits, so the visitor sees
-        // the card answering before the flight begins.
-        const still = onCard && uprightRef.current ? Math.min(1, (time - s.at) / REST_AFTER) : 0;
-        const resting = still >= 1;
+        // Held still on the card long enough, it comes forward and the camera
+        // eases into a slow push; the pointer moving at all sends it back.
+        const still = onCard && uprightRef.current && !s.held ? Math.min(1, (time - s.at) / IMMERSE_AFTER) : 0;
+        const immerse = still >= 1;
         s.rest = still;
-        if (resting) root.setAttribute("data-used", "");
-        const target = s.held && onCard ? DIVE : resting ? REST : 1;
-        s.speed += (target - s.speed) * (1 - Math.exp(-dt * (target > s.speed ? 1.8 : 2.6)));
-        // the look of the fly-in follows the speed
-        s.warp = Math.min(1, Math.max(0, (s.speed - 1) / (REST - 1)));
-        if (onCard) {
-          ring.style.transform = `translate3d(${s.px.toFixed(1)}px, ${s.py.toFixed(1)}px, 0)`;
-          ring.style.setProperty("--p", (s.held ? 1 : still).toFixed(3));
+        if (immerse) root.setAttribute("data-used", "");
+        // in over a second and a half, out a little quicker
+        const ik = 1 - Math.exp(-dt * (immerse ? 2.2 : 3.4));
+        s.imm += ((immerse ? 1 : 0) - s.imm) * ik;
+        if (Math.abs(s.imm - (immerse ? 1 : 0)) < 0.0005) s.imm = immerse ? 1 : 0;
+        root.toggleAttribute("data-immersed", s.imm > 0.02);
+        const target = s.held && onCard ? DIVE : 1 + (IMMERSE_SPEED - 1) * s.imm;
+        s.speed += (target - s.speed) * (1 - Math.exp(-dt * (target > s.speed ? 1.2 : 2.6)));
+        // enlarged, the canvas is drawn denser so it stays sharp (once, as it
+        // starts; back to normal once it is home)
+        const fd = fades();
+        const room = window.innerHeight - fd.top - fd.bottom;
+        const fill = s.dw > 0 ? Math.min((window.innerWidth * IMMERSE_FILL_W) / s.dw, room / s.dh) : 1;
+        const S = Math.max(1, fill);
+        if (immerse && s.boost === 1 && S > 1.05) {
+          s.boost = weak ? Math.min(S, 1.12) : S;
+          size();
+        } else if (!immerse && s.imm === 0 && s.boost !== 1) {
+          s.boost = 1;
+          size();
         }
-        const ringOn = onCard ? (s.held || resting ? "fly" : still > 0.08 ? "wait" : "") : "";
-        if (ring.dataset.state !== ringOn) ring.dataset.state = ringOn;
         if (uprightRef.current || holdFrac >= 0) s.frac = (s.frac + (dt * s.speed) / PERIOD) % 1;
         s.upright = uprightRef.current;
-        if (drop !== "notilt") tiltEl.style.transform = `rotateY(${(s.tx * LEAN_Y).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X).toFixed(3)}deg)`;
+        // the card's place: at rest where the page put it; immersed, centred
+        // on the screen and grown to fill it (a transform on the tilt layer
+        // only: nothing on the page moves for it)
+        const e = s.imm * s.imm * (3 - 2 * s.imm);
+        const cx = (window.innerWidth / 2 - (s.dl + s.dw / 2)) * e;
+        const cy = (fd.top + room / 2 - (s.dt + s.dh / 2)) * e;
+        const sc = 1 + (S - 1) * e;
+        const lean = 1 - 0.6 * e;
+        if (drop !== "notilt")
+          tiltEl.style.transform =
+            (e > 0.0005 ? `translate3d(${cx.toFixed(1)}px, ${cy.toFixed(1)}px, 0) scale(${sc.toFixed(4)}) ` : "") +
+            `rotateY(${(s.tx * LEAN_Y * lean).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X * lean).toFixed(3)}deg)`;
         // On a display faster than 60 the scene is drawn every other frame:
         // the lean above still moves every frame (it is only a transform), and
         // the flight is slow enough that 60 new pictures a second is smooth.
@@ -407,12 +452,13 @@ export default function DemoFrame() {
             speed: +s.speed.toFixed(2),
             held: s.held,
             rest: +s.rest.toFixed(2),
+            imm: +s.imm.toFixed(3),
             onCard,
             upright: uprightRef.current,
             govern,
             scene: card.scene(),
           };
-        if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low", s.warp);
+        if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low");
       },
     });
 
@@ -452,8 +498,8 @@ export default function DemoFrame() {
           <h2 className="web-h2">The page is the demo</h2>
           <p className="web-body">
             Keep scrolling and the frame stands up. Then it is yours: a window
-            you can lean into. Move across it to look around, rest on it to fly
-            in, and change the world it looks onto.
+            you can lean into. Move across it to look around, hold still to
+            step in, and change the world it looks onto.
           </p>
         </header>
 
@@ -490,7 +536,7 @@ export default function DemoFrame() {
                 <span className="web-card__hint-fine">Move to look around</span>
                 <span className="web-card__hint-touch">Drag to look</span>
                 <i />
-                <span className="web-card__hint-fine">Rest to fly in</span>
+                <span className="web-card__hint-fine">Hold still to step in</span>
                 <span className="web-card__hint-touch">Hold to fly in</span>
               </span>
             </div>
@@ -533,8 +579,6 @@ export default function DemoFrame() {
             ))}
           </div>
         </div>
-        {/* the pointer's ring: fills while it rests, then it flies */}
-        <span ref={restRef} aria-hidden="true" className="web-card__rest" />
       </div>
     </section>
   );

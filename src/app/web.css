@@ -445,26 +445,11 @@
 .card-world[data-on] .card-world__name { color: #ffffff; }
 @keyframes web-scene-spin { to { transform: rotate(360deg); } }
 
-/* the pointer's ring: fills while the pointer rests on the card, then the
-   card flies; it rides the pointer and never takes it */
-.web-card__rest {
-  --p: 0;
-  position: fixed; left: 0; top: 0; z-index: 30; width: 46px; height: 46px; margin: -23px 0 0 -23px;
-  border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.25s ease;
-  background: conic-gradient(#ffffff calc(var(--p) * 360deg), rgba(255, 255, 255, 0.18) 0);
-  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-}
-.web-card__rest[data-state="wait"] { opacity: 0.9; }
-.web-card__rest[data-state="fly"] {
-  opacity: 1;
-  background: conic-gradient(var(--hue), #ffffff, var(--hue));
-  animation: web-rest-fly 0.9s linear infinite;
-}
-@keyframes web-rest-fly { to { rotate: 360deg; } }
-@media (pointer: coarse) {
-  .web-card__rest { display: none; }
-}
+/* immersed: the card has come forward to fill the screen; the switch and
+   the hint step out of its way */
+.web-demo[data-card][data-upright][data-immersed] .card-worlds { opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0s linear 0.4s; }
+.web-demo[data-immersed] .web-demo__mirror { opacity: 0 !important; transition: opacity 0.4s ease; }
+.web-demo__tilt { transform-origin: 50% 50%; }
 @media (pointer: coarse) {
   .web-card__hint-fine { display: none; }
   .web-card__hint-touch { display: inline; }

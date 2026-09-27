@@ -137,9 +137,8 @@ export interface DepthCard {
   /** 1 = every plane of distance is marched; less, fewer (weaker graphics) */
   quality(q: number): void;
   resize(view: CardView): void;
-  /** tilt -1..1, flight 0..1 (one run), seconds, falling water on or off,
-   *  warp 0..1 (the fly-in: a narrower lens and light streaming past) */
-  draw(tiltX: number, tiltY: number, flight: number, time: number, flow: boolean, warp: number): void;
+  /** tilt -1..1, flight 0..1 (one run), seconds, falling water on or off */
+  draw(tiltX: number, tiltY: number, flight: number, time: number, flow: boolean): void;
   dispose(): void;
 }
 
@@ -178,7 +177,6 @@ uniform float uGlassD;
 uniform float uMargin;
 uniform float uWipe;   // the front of a change of world (as nearness); < -0.5: none
 uniform float uGlassW; // how much of this scene's type is on the glass
-uniform float uWarp;
 
 const float ZN = 1.0;
 const float ZF = 14.0;
@@ -285,8 +283,7 @@ void main() {
   // it gathers speed: most of a run is spent near the start, among the ferns
   d = uTravel * pow(uFlight, 1.25);
   o = uTilt * vec2(uLean, uLean * 0.62);
-  // the fly-in narrows the lens a little: the view leans in toward the valley
-  pg = (p - uV - o * disp(uGlassD)) * (1.0 - 0.07 * uWarp);
+  pg = p - uV - o * disp(uGlassD);
 
   float dStart = min(1.0 / ZN, 1.0 / (d + 0.05));
   vec3 col = vec3(0.0);
@@ -359,21 +356,6 @@ void main() {
       }
     }
     col += vec3(1.0, 0.97, 0.88) * m * 0.5 * inside * alpha;
-
-    // the fly-in: light streaming past, out from where the flight heads
-    if (uWarp > 0.01) {
-      vec2 rv = vW - (uV - uCrop.xy) / uCrop.zw;
-      rv.x *= uRes.x / uRes.y;
-      float lane = atan(rv.y, rv.x) / 6.2832 * 110.0;
-      float id = floor(lane);
-      float h1 = hash(vec2(id, 1.7));
-      float rr = length(rv);
-      float ph = fract(rr * 1.4 - uTime * (1.1 + h1 * 1.3) + h1 * 9.0);
-      float thin = 1.0 - smoothstep(0.0, 0.18, abs(fract(lane) - 0.5));
-      float dash = smoothstep(0.0, 0.08, ph) * (1.0 - smoothstep(0.08, 0.34, ph));
-      float s = thin * dash * step(0.62, h1) * smoothstep(0.1, 0.55, rr);
-      col += vec3(1.0, 0.98, 0.93) * s * 0.42 * uWarp * alpha * inside;
-    }
 
     // into the light at the end of the run, and out of it at the start
     // a bright mist rather than a blank: the valley stays faintly there
@@ -555,7 +537,6 @@ export function createDepthCard(
     margin: U("uMargin"),
     wipe: U("uWipe"),
     glassW: U("uGlassW"),
-    warp: U("uWarp"),
   };
   ["uLand", "uMid", "uFar", "uA", "uB", "uGlass"].forEach((n, i) => gl.uniform1i(U(n), i));
 
@@ -655,7 +636,7 @@ export function createDepthCard(
 
   const ready = load(0);
 
-  const pass = (k: number, tx: number, ty: number, flight: number, time: number, flow: boolean, warp: number, wipe: number, glassW: number) => {
+  const pass = (k: number, tx: number, ty: number, flight: number, time: number, flow: boolean, wipe: number, glassW: number) => {
     const t = tuning;
     const set = sets[k];
     const sc = SCENES[k];
@@ -681,7 +662,6 @@ export function createDepthCard(
     gl.uniform1f(loc.lean, t.lean);
     gl.uniform1f(loc.glassD, t.glass);
     gl.uniform1f(loc.margin, MARGIN);
-    gl.uniform1f(loc.warp, warp);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
 
@@ -713,7 +693,7 @@ export function createDepthCard(
       view = v;
       layout();
     },
-    draw(tx, ty, flight, time, flow, warp) {
+    draw(tx, ty, flight, time, flow) {
       if (!alive || !view || gl.isContextLost() || !sets[cur].loaded) return;
       gl.useProgram(prog);
       gl.bindVertexArray(vao);
@@ -721,7 +701,7 @@ export function createDepthCard(
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       if (next < 0) {
-        pass(cur, tx, ty, flight, time, flow, warp, -1, 1);
+        pass(cur, tx, ty, flight, time, flow, -1, 1);
         return;
       }
       if (wipeAt < 0) wipeAt = time;
@@ -729,10 +709,10 @@ export function createDepthCard(
       const e = k * k * (3 - 2 * k);
       const g = Math.min(1, Math.max(0, (k - 0.3) / 0.45));
       // the old world, its type going; the new one over it, from the horizon in
-      pass(cur, tx, ty, flight, time, flow, warp, -1, 1 - g);
+      pass(cur, tx, ty, flight, time, flow, -1, 1 - g);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      pass(next, tx, ty, flight, time, flow, warp, -0.06 + 1.2 * e, g);
+      pass(next, tx, ty, flight, time, flow, -0.06 + 1.2 * e, g);
       gl.disable(gl.BLEND);
       if (k >= 1) {
         cur = next;
