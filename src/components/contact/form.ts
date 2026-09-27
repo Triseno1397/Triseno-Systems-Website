@@ -1,6 +1,6 @@
 // The inquiry form — the short version: which division, a name, an email, and
 // (optionally) a line about the project. Everything else we need we ask in the
-// reply. The form posts to /api/contact, which emails tristen@trisenosystems.com.
+// reply. The form emails tristen@trisenosystems.com through FormSubmit.
 
 export type ContactDivision = "creative" | "web" | "ai";
 
@@ -60,7 +60,7 @@ export type Errors = Partial<Record<FieldId, string>>;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/** Everything wrong with the form right now. Shared by the page and /api/contact. */
+/** Everything wrong with the form right now. */
 export function validate(v: FormValues): Errors {
   const e: Errors = {};
   if (!v.division) e.division = "Pick the division this is for.";

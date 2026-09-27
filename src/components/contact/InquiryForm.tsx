@@ -19,6 +19,11 @@ import {
   type FormValues,
 } from "./form";
 
+// FormSubmit takes the post straight from the visitor's browser (it sits behind
+// Cloudflare, which blocks server-to-server posts from Vercel). No key needed;
+// the inbox confirms once via the first email FormSubmit sends.
+const ENDPOINT = `https://formsubmit.co/ajax/${EMAIL}`;
+
 type Status = "idle" | "sending" | "sent" | "error";
 
 const isDivision = (v: string | null): v is ContactDivision => v === "creative" || v === "web" || v === "ai";
@@ -26,8 +31,8 @@ const isDivision = (v: string | null): v is ContactDivision => v === "creative" 
 /**
  * /contact — the inquiry form, cut to what we need to reply: which division,
  * a name, an email, and an optional line about the project. Everything else
- * (budget, timeline, phone) we ask in the reply. It posts to /api/contact,
- * which emails the inquiry to tristen@trisenosystems.com.
+ * (budget, timeline, phone) we ask in the reply. It emails the inquiry to
+ * tristen@trisenosystems.com through FormSubmit.
  *
  * Choosing a division still takes the whole scene into that division's light
  * (the plate grade, the floor spill, the glass that frosts it); the UI itself
@@ -84,14 +89,29 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
     }
     setErrors({});
     setStatus("sending");
+    // honeypot: a bot ticked it — act sent, send nothing
+    if (botRef.current?.checked) {
+      setStatus("sent");
+      return;
+    }
+    const label = DIVISION_OPTIONS.find((d) => d.key === values.division)?.payloadLabel ?? "";
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, botcheck: botRef.current?.checked ? "on" : "" }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          _subject: `New ${label} inquiry — ${values.name.trim()}`,
+          _replyto: values.email.trim(),
+          _template: "table",
+          _captcha: "false",
+          Division: label,
+          Name: values.name.trim(),
+          Email: values.email.trim(),
+          Message: values.message.trim() || "(none)",
+        }),
       });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.ok) setStatus("sent");
+      if (res.ok && String(data?.success) !== "false") setStatus("sent");
       else {
         setStatus("error");
         setSendError(`Something went wrong — please email us directly at`);
