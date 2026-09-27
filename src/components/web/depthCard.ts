@@ -51,7 +51,7 @@ export interface CardTuning {
   glass: number;
 }
 
-export const TUNING: CardTuning = { vx: 0.575, vy: 0.4, travel: 1.05, lean: 0.1, glass: 0.74 };
+export const TUNING: CardTuning = { vx: 0.575, vy: 0.4, travel: 0.92, lean: 0.1, glass: 0.74 };
 
 export interface CardFonts {
   sans: string;
@@ -266,8 +266,9 @@ void main() {
     col += vec3(1.0, 0.97, 0.88) * m * 0.5 * inside;
 
     // into the light at the end of the run, and out of it at the start
-    float white = smoothstep(0.84, 1.0, uFlight) + (1.0 - smoothstep(0.0, 0.07, uFlight));
-    col = mix(col, HAZE * alpha, clamp(white, 0.0, 1.0) * inside);
+    // a bright mist rather than a blank: the valley stays faintly there
+    float white = smoothstep(0.8, 1.0, uFlight) + (1.0 - smoothstep(0.0, 0.09, uFlight));
+    col = mix(col, HAZE * alpha, clamp(white, 0.0, 1.0) * 0.82 * inside);
 
     // the site's type, on the glass and a little off it
     vec4 g = textureLod(uGlass, vW + 0.5 - uTilt * vec2(0.010, 0.007), log2(max(1.0, uTpp.w))) * inside;

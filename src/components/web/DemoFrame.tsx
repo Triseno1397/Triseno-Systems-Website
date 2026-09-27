@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import GlassPanel from "@/components/world/GlassPanel";
-import { addFrameJob } from "@/components/world/frameLoop";
+import { addFrameJob, frameInterval } from "@/components/world/frameLoop";
 import { deviceClass, gpuClass } from "@/lib/device";
 import { MARGIN, TUNING, createDepthCard, type CardTuning, type DepthCard } from "./depthCard";
 
@@ -136,6 +136,7 @@ export default function DemoFrame() {
     let alive = true;
     let started = false;
     let inView = false;
+    const gov = { t0: 0, n: 0, slow: 0 };
     const s = {
       w: 0,
       h: 0,
@@ -154,7 +155,9 @@ export default function DemoFrame() {
       speed: 1,
       held: false,
       last: -1,
-      still: true, // reduced motion: one frame is owed
+      still: true, // a frame is owed (after a resize, or once for reduced motion)
+      odd: false,
+      upright: false,
     };
 
     // ?cardr=0.5 scales the canvas, ?cardx=nodraw|notilt drops one cost: for measuring
@@ -164,7 +167,9 @@ export default function DemoFrame() {
     // at three quarters of the size and let the browser scale it: it is a
     // photograph in motion, and the frame time matters more than the pixels.
     let weak = false;
-    const dpr = () => Math.min(window.devicePixelRatio || 1, cls === "high" ? 2 : cls === "mid" ? 1.5 : 1) * (weak ? 0.75 : 1) * resScale;
+    // the governor's share: it steps the canvas down while frames run long
+    let govern = 1;
+    const dpr = () => Math.min(window.devicePixelRatio || 1, cls === "high" ? 2 : cls === "mid" ? 1.5 : 1) * (weak ? 0.75 : 1) * govern * resScale;
     const size = () => {
       if (!card || s.w < 2 || s.h < 2) return;
       // the canvas is larger than the window: it overhangs the bezel
@@ -265,9 +270,26 @@ export default function DemoFrame() {
         s.measured = true;
       },
       write(time) {
-        const dt = s.last < 0 ? 0 : Math.min(0.05, time - s.last);
+        const raw = s.last < 0 ? 0 : time - s.last;
+        const dt = Math.min(0.05, raw);
         s.last = time;
         if (!card || !inView || document.hidden) return;
+        // The governor: the frame budget on a display of any rate, and how
+        // often it was blown over the last two seconds. Past a quarter, the
+        // canvas steps down a notch (never below 60% of its size); it never
+        // steps back up, so it cannot oscillate.
+        if (!reduce && raw > 0 && raw < 0.25 && s.upright) {
+          gov.n++;
+          if (raw > Math.max(frameInterval(), 1 / 60) * 1.45) gov.slow++;
+          if (time - gov.t0 > 2) {
+            if (gov.n > 30 && gov.slow / gov.n > 0.25 && govern > 0.6) {
+              govern = Math.max(0.6, govern - 0.15);
+              size();
+            }
+            gov.t0 = time;
+            gov.n = gov.slow = 0;
+          }
+        }
         if (reduce) {
           if (s.still) card.draw(0, 0, CLEAR, 0, false);
           s.still = false;
@@ -297,7 +319,14 @@ export default function DemoFrame() {
         s.ty += (gy - s.ty) * k;
         s.speed += ((s.held ? DIVE : 1) - s.speed) * (1 - Math.exp(-dt * 2.6));
         if (uprightRef.current || holdFrac >= 0) s.frac = (s.frac + (dt * s.speed) / PERIOD) % 1;
+        s.upright = uprightRef.current;
         if (drop !== "notilt") tiltEl.style.transform = `rotateY(${(s.tx * LEAN_Y).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X).toFixed(3)}deg)`;
+        // On a display faster than 60 the scene is drawn every other frame:
+        // the lean above still moves every frame (it is only a transform), and
+        // the flight is slow enough that 60 new pictures a second is smooth.
+        s.odd = !s.odd;
+        if (frameInterval() < 1 / 85 && s.odd && !s.still) return;
+        s.still = false;
         if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low");
       },
     });
