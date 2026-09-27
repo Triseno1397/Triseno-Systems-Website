@@ -191,8 +191,41 @@ h_far = fblur(d_far, 14)
 save('canyon-a.png', h_near, wm, blur(near, 1.2))
 print('surfaces: near', np.percentile(h_near, [1, 50, 99]).round(2), 'mid', np.percentile(h_mid, [1, 50, 99]).round(2), 'far', np.percentile(h_far, [1, 50, 99]).round(2))
 save('canyon-b.png', h_mid, h_far, blur(mid, 1.4))
-Image.fromarray((pm * 255).astype(np.uint8)).save(OUT + 'canyon-mid.webp', quality=82, method=6)
-Image.fromarray((pf * 255).astype(np.uint8)).save(OUT + 'canyon-far.webp', quality=82, method=6)
+
+
+def match(plate, ref, where, r=48):
+    """The plates were painted separately and come out a shade off the
+    photograph: where they meet, a seam. Lift each plate by the photograph's
+    own local colour, measured where the two show the same thing and carried
+    smoothly into what the plate painted in."""
+    m = where.astype(np.float32)
+    out = plate.copy()
+    for ch in range(3):
+        num = fblur(ref[..., ch] * m, r)
+        den = fblur(plate[..., ch] * m, r)
+        cov = fblur(m, r)
+        gain = np.where(cov > 0.02, (num + 1e-3) / (den + 1e-3), np.nan)
+        have = np.isfinite(gain)
+        g = np.where(have, gain, 0.0)
+        hv = have.astype(np.float32)
+        for rr in (32, 64, 128, 256, 512):
+            nn = fblur(g * hv, rr)
+            dd = fblur(hv, rr)
+            fill = (hv < 0.5) & (dd > 0.02)
+            g = np.where(fill, nn / np.maximum(dd, 1e-4), g)
+            hv = np.where(fill, 1.0, hv)
+        g = np.where(hv > 0.5, g, 1.0)
+        out[..., ch] = plate[..., ch] * np.clip(fblur(g, 8), 0.7, 1.4)
+    return np.clip(out, 0, 1)
+
+
+pm_fit = match(pm, rgb, unchanged)
+pf_fit = match(pf, pm_fit, unchanged_f)
+for name, a, b, w in (('mid', pm, pm_fit, unchanged), ('far', pf, pf_fit, unchanged_f)):
+    ref = rgb if name == 'mid' else pm_fit
+    print(name, 'mean error where unchanged: before', round(float(np.abs(a - ref)[w].mean()), 4), 'after', round(float(np.abs(b - ref)[w].mean()), 4))
+Image.fromarray((pm_fit * 255).astype(np.uint8)).save(OUT + 'canyon-mid.webp', quality=86, method=6)
+Image.fromarray((pf_fit * 255).astype(np.uint8)).save(OUT + 'canyon-far.webp', quality=86, method=6)
 if os.path.exists(OUT + 'canyon-depth.png'):
     os.remove(OUT + 'canyon-depth.png')
 for f in sorted(os.listdir(OUT)):

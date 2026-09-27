@@ -15,11 +15,15 @@ gsap.registerPlugin(ScrollTrigger);
 const PAD = 9;
 const BAR = 32;
 /** seconds for one flight into the canyon */
-const PERIOD = 26;
+const PERIOD = 22;
 /** where a flight is once it has come out of the light: where it waits to begin */
 const CLEAR = 0.09;
-/** how much faster it travels while the card is held */
-const DIVE = 7;
+/** how much faster it travels while the pointer rests on the card, and
+ *  while the card is held */
+const REST = 3;
+const DIVE = 5;
+/** seconds the pointer has to be still on the card before it flies in */
+const REST_AFTER = 0.45;
 /** the card's own lean toward the pointer, degrees */
 const LEAN_Y = 8;
 const LEAN_X = 5.5;
@@ -137,6 +141,8 @@ export default function DemoFrame() {
     let started = false;
     let inView = false;
     const gov = { t0: 0, n: 0, slow: 0 };
+    // ?cardd: the card's state on window, for the design-loop tools
+    const dbgCard = u.has("cardd");
     const s = {
       w: 0,
       h: 0,
@@ -154,6 +160,8 @@ export default function DemoFrame() {
       frac: CLEAR,
       speed: 1,
       held: false,
+      over: false,
+      rest: 0,
       last: -1,
       still: true, // a frame is owed (after a resize, or once for reduced motion)
       odd: false,
@@ -166,10 +174,10 @@ export default function DemoFrame() {
     // Sharp where the machine can afford it. Integrated graphics draw the card
     // at three quarters of the size and let the browser scale it: it is a
     // photograph in motion, and the frame time matters more than the pixels.
-    let weak = false;
-    // the governor's share: it steps the canvas down while frames run long
+    // Drawn at the screen's full density: the picture is the point of the
+    // section. The governor's share steps it down only if frames run long.
     let govern = 1;
-    const dpr = () => Math.min(window.devicePixelRatio || 1, cls === "high" ? 2 : cls === "mid" ? 1.5 : 1) * (weak ? 0.75 : 1) * govern * resScale;
+    const dpr = () => Math.min(window.devicePixelRatio || 1, 2) * govern * resScale;
     const size = () => {
       if (!card || s.w < 2 || s.h < 2) return;
       // the canvas is larger than the window: it overhangs the bezel
@@ -203,7 +211,7 @@ export default function DemoFrame() {
         viewport.setAttribute("data-still", "");
         return;
       }
-      weak = gpuClass(card.gpu) !== "ok";
+      const weak = gpuClass(card.gpu) !== "ok";
       card.quality(u.has("cardq") ? Number(u.get("cardq")) : weak || cls === "low" ? 0.65 : 1);
       size();
       card.ready.then(
@@ -249,6 +257,11 @@ export default function DemoFrame() {
       root.setAttribute("data-used", "");
     };
     const onUp = () => (s.held = false);
+    const onOver = () => (s.over = true);
+    const onOut = () => {
+      s.over = false;
+      s.held = false;
+    };
     const hot = () => document.documentElement.setAttribute("data-cursor-hot", "");
     const cold = () => document.documentElement.removeAttribute("data-cursor-hot");
     if (!reduce) {
@@ -258,6 +271,8 @@ export default function DemoFrame() {
       window.addEventListener("pointercancel", onUp);
       viewport.addEventListener("pointerenter", hot);
       viewport.addEventListener("pointerleave", cold);
+      viewport.addEventListener("pointerenter", onOver);
+      viewport.addEventListener("pointerleave", onOut);
     }
 
     const stop = addFrameJob({
@@ -282,8 +297,8 @@ export default function DemoFrame() {
           gov.n++;
           if (raw > Math.max(frameInterval(), 1 / 60) * 1.45) gov.slow++;
           if (time - gov.t0 > 2) {
-            if (gov.n > 30 && gov.slow / gov.n > 0.25 && govern > 0.6) {
-              govern = Math.max(0.6, govern - 0.15);
+            if (gov.n > 30 && gov.slow / gov.n > 0.25 && govern > 0.8) {
+              govern = Math.max(0.8, govern - 0.1);
               size();
             }
             gov.t0 = time;
@@ -317,7 +332,12 @@ export default function DemoFrame() {
         const k = 1 - Math.exp(-dt * (idle ? 1.4 : 5));
         s.tx += (gx - s.tx) * k;
         s.ty += (gy - s.ty) * k;
-        s.speed += ((s.held ? DIVE : 1) - s.speed) * (1 - Math.exp(-dt * 2.6));
+        // the pointer resting still on the card flies it in; holding, faster
+        const resting = s.over && !reduce && time - s.lastMove > REST_AFTER;
+        s.rest = resting ? 1 : 0;
+        if (resting) root.setAttribute("data-used", "");
+        const target = s.held ? DIVE : resting ? REST : 1;
+        s.speed += (target - s.speed) * (1 - Math.exp(-dt * (target > s.speed ? 1.8 : 2.6)));
         if (uprightRef.current || holdFrac >= 0) s.frac = (s.frac + (dt * s.speed) / PERIOD) % 1;
         s.upright = uprightRef.current;
         if (drop !== "notilt") tiltEl.style.transform = `rotateY(${(s.tx * LEAN_Y).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X).toFixed(3)}deg)`;
@@ -327,6 +347,7 @@ export default function DemoFrame() {
         s.odd = !s.odd;
         if (frameInterval() < 1 / 85 && s.odd && !s.still) return;
         s.still = false;
+        if (dbgCard) (window as unknown as { __card: unknown }).__card = { frac: +s.frac.toFixed(4), speed: +s.speed.toFixed(2), held: s.held, rest: s.rest, upright: uprightRef.current, govern };
         if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low");
       },
     });
@@ -344,6 +365,8 @@ export default function DemoFrame() {
       window.removeEventListener("pointercancel", onUp);
       viewport.removeEventListener("pointerenter", hot);
       viewport.removeEventListener("pointerleave", cold);
+      viewport.removeEventListener("pointerenter", onOver);
+      viewport.removeEventListener("pointerleave", onOut);
       cold();
       card?.dispose();
     };
@@ -400,7 +423,8 @@ export default function DemoFrame() {
                 <span className="web-card__hint-fine">Move to look around</span>
                 <span className="web-card__hint-touch">Drag to look</span>
                 <i />
-                Hold to dive
+                <span className="web-card__hint-fine">Hold still to fly in</span>
+                <span className="web-card__hint-touch">Hold to fly in</span>
               </span>
             </div>
           </div>

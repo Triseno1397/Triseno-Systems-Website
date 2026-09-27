@@ -29,7 +29,7 @@
    no layout.
    ───────────────────────────────────────────────────────────────────────── */
 
-export const LAND = { large: "/images/card/canyon-2560.webp", small: "/images/card/canyon-1600.webp" };
+export const LAND = { full: "/images/card/canyon-4096.webp", large: "/images/card/canyon-2560.webp", small: "/images/card/canyon-1600.webp" };
 const FILES = ["/images/card/canyon-mid.webp", "/images/card/canyon-far.webp", "/images/card/canyon-a.png", "/images/card/canyon-b.png"];
 /** the photograph's own shape */
 const IMG_ASPECT = 4096 / 2294;
@@ -170,15 +170,19 @@ float march(int L, float d0, float d1, float steps, out vec2 qh) {
 // what is behind the ferns is the mid plate; behind the cliffs, the far plate
 vec3 picture(int L, vec2 q, float z) {
   float mag = (z - d) / z;
-  float lodL = log2(max(1.0, uTpp.x * mag));
+  // a little under the ideal mip: crisp rather than soft (the photograph is
+  // 4K and the anisotropic filter keeps it from shimmering)
+  float lodL = max(0.0, log2(max(1.0, uTpp.x * mag)) - 0.5);
   vec3 c = textureLod(uLand, q, lodL).rgb;
   if (L > 0) {
     float lodP = log2(max(1.0, uTpp.y * mag));
-    // the mattes, widened: nothing of what was in front is left on the edge
-    float near = smoothstep(0.03, 0.22, textureLod(uA, q, 3.2).b);
+    // the mattes, a little wider than the layer they cut: nothing of what was
+    // in front is left on its edge, and no wider (past the edge the plates
+    // show what they painted in, not the view, and it drew a seam)
+    float near = smoothstep(0.08, 0.34, textureLod(uA, q, 1.6).b);
     if (near > 0.003) c = mix(c, textureLod(uMid, q, lodP).rgb, near);
     if (L > 1) {
-      float mid = smoothstep(0.03, 0.22, textureLod(uB, q, 3.2).b);
+      float mid = smoothstep(0.1, 0.36, textureLod(uB, q, 1.6).b);
       if (mid > 0.003) c = mix(c, textureLod(uFar, q, lodP).rgb, mid);
     }
   }
@@ -195,7 +199,12 @@ vec3 picture(int L, vec2 q, float z) {
   }
   // the air between the camera and the far walls, thicker as it flies
   float far = smoothstep(2.0, 11.0, z - d);
-  return mix(c, HAZE, far * (0.1 + 0.45 * smoothstep(0.3, 1.0, uFlight)));
+  c = mix(c, HAZE, far * (0.06 + 0.45 * smoothstep(0.3, 1.0, uFlight)));
+  // a finishing grade: a touch more contrast and colour, the look of a
+  // graded photograph rather than a flat one
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  c = mix(vec3(l), c, 1.1);
+  return clamp((c - 0.5) * 1.07 + 0.5, 0.0, 1.0);
 }
 
 void main() {
@@ -206,7 +215,7 @@ void main() {
   // the camera: forward along the flight, sideways with the lean. The glass
   // is the plane that does not move when it leans.
   // it gathers speed: most of a run is spent near the start, among the ferns
-  d = uTravel * pow(uFlight, 1.7);
+  d = uTravel * pow(uFlight, 1.25);
   o = uTilt * vec2(uLean, uLean * 0.62);
   pg = p - uV - o * disp(uGlassD);
 
@@ -244,7 +253,9 @@ void main() {
     // nothing met: the far haze
     if (T > 0.02) {
       vec2 qf = clamp(ray(ZF), 0.0, 1.0);
-      col += T * inside * mix(textureLod(uFar, qf, 0.0).rgb, HAZE, 0.4);
+      // shaded exactly as a hit on the far layer would be: a different
+      // shade here drew a hard diagonal where the sky runs past the far map
+      col += T * inside * picture(2, qf, ZF);
       alpha += T * inside;
     }
 
@@ -469,7 +480,7 @@ export function createDepthCard(
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    if (aniso && i === 0) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 4);
+    if (aniso && i === 0) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
     size[i] = w;
   };
 
@@ -506,7 +517,10 @@ export function createDepthCard(
   };
 
   const ready = (async () => {
-    const all = await Promise.all([large ? LAND.large : LAND.small, ...FILES].map(bitmap));
+    // the 4K photograph wherever the window is drawn wider than the 2560 one
+    // could fill without magnifying it
+    const dense = typeof window !== "undefined" && window.innerWidth * (window.devicePixelRatio || 1) >= 1800;
+    const all = await Promise.all([large ? (dense ? LAND.full : LAND.large) : LAND.small, ...FILES].map(bitmap));
     if (!alive) return;
     all.forEach((im, i) => {
       upload(i, im, im.width, false);
