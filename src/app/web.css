@@ -340,14 +340,19 @@
   .hs-facts { padding-top: calc(var(--u) * 1.2); }
 }
 
-/* ═══ 2 · THE PAGE IS THE DEMO — container scroll ═══ */
-.web-demo { position: relative; z-index: 10; height: 260svh; }
+/* ═══ 2 · THE PAGE IS THE DEMO — the frame stands up, then it is a 3D card ═══ */
+.web-demo { position: relative; z-index: 10; height: 220svh; }
 .web-demo__stage {
   position: sticky; top: 0; height: 100svh; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
 }
-.web-demo__head { width: 100%; max-width: 1400px; display: grid; gap: 12px; margin-bottom: 20px; }
+/* the heading has the stage while the frame lies on the floor, and gives it up
+   as the frame stands (DemoFrame's timeline): upright, the card is the stage */
+.web-demo__head {
+  position: absolute; z-index: 3; top: var(--lane-top); left: var(--gutter); right: var(--gutter);
+  max-width: 1400px; margin-inline: auto; display: grid; gap: 12px; will-change: transform, opacity;
+}
 .web-demo__head .web-eyebrow { margin-bottom: 4px; }
 .web-demo__rig {
   position: relative; flex: 0 1 auto; min-height: 0; width: 100%;
@@ -358,12 +363,34 @@
   /* the object is its GlassPanel bezel (.web-bezel); the device only carries the tilt */
   position: relative; width: 100%;
   transform-origin: 50% 100%; will-change: transform; backface-visibility: hidden;
+  /* the card leans inside the standing frame, in the same 3D space */
+  transform-style: preserve-3d;
 }
+.web-demo__tilt { transform-style: preserve-3d; will-change: transform; }
 .web-demo__viewport {
-  position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; container-type: inline-size;
-  background: #f1e9dc;
+  position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden;
+  background: #0b1512;
 }
-.web-demo__page { will-change: transform; }
+/* the card: a canvas (infiniteCard.ts); sideways drags are its own, the page
+   still scrolls through it */
+.web-card { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.web-card__canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.7s ease; }
+.web-card__canvas[data-on] { opacity: 1; }
+.web-card[data-still] { background: #0b1512 url("/images/card/canyon-1600.webp") 62% 50% / cover no-repeat; }
+.web-card__hint {
+  position: absolute; left: 50%; bottom: 14px; z-index: 2; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; white-space: nowrap; pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.55);
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: #ffffff;
+  transition: opacity 0.6s ease;
+}
+.web-card__hint i { display: block; width: 4px; height: 4px; background: var(--hue); }
+.web-card__hint-touch { display: none; }
+.web-card[data-used] .web-card__hint, .web-card[data-still] .web-card__hint { opacity: 0; }
+@media (pointer: coarse) {
+  .web-card__hint-fine { display: none; }
+  .web-card__hint-touch { display: inline; }
+}
 .web-demo__shine {
   position: absolute; inset: 0; pointer-events: none; opacity: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--hue) 55%, transparent) 0%, transparent 60%);
@@ -377,22 +404,26 @@
   filter: blur(3px); opacity: 0.55;
 }
 @media (min-width: 768px) {
-  .web-demo { height: 340svh; }
+  .web-demo { height: 250svh; }
   .web-demo__head { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: end; column-gap: 5vw; }
   .web-demo__head .web-eyebrow { grid-column: 1 / -1; }
   /* device + mirror + heading rest inside the lanes (division-world.md #6) */
-  .web-demo__device { width: min(1180px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
-  .web-demo__mirror { width: min(1180px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 250px) * 1.72)); }
-  .web-demo__viewport { aspect-ratio: 16 / 9.3; }
+  /* large: as tall as the lanes allow once the bar, the bezel and the mirror
+     have their room (the viewport is 16:9) */
+  .web-demo__device { width: min(1440px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.7778)); }
+  .web-demo__mirror { width: min(1440px, 100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.7778)); height: 22px; margin-top: 6px; }
+  .web-demo__viewport { aspect-ratio: 16 / 9; }
 }
 @media (max-width: 767px) {
   .web-demo__head .web-body { display: none; }
-  /* the device fills the phone: with the head above it, most of the screen
-     (it measured 146px tall before — a letterbox of the concept site) */
-  .web-demo__viewport { aspect-ratio: auto; height: clamp(320px, calc(100svh - var(--lane-top) - var(--lane-bottom) - 150px), 640px); }
+  /* on a phone the card is as wide as the screen, and never taller than the
+     room between the lanes */
+  .web-demo__device { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); }
+  .web-demo__mirror { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); height: 22px; }
+  .web-card__hint { bottom: 8px; padding: 5px 9px; gap: 8px; letter-spacing: 0.1em; }
   /* and a shorter run, so the sticky stage does not outlast a device this size
      by a screen of empty hall */
-  .web-demo { height: 220svh; }
+  .web-demo { height: 190svh; }
 }
 
 /* concept site inside the frame — "Hotel Quillon" (fictional) */
@@ -1156,7 +1187,8 @@
   .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }
   .web-demo__stage { position: relative; height: auto; min-height: 100svh; }
-  .web-demo__viewport { overflow-y: auto; overscroll-behavior: contain; }
+  .web-demo__head { position: relative; top: auto; left: auto; right: auto; width: 100%; margin-bottom: 20px; }
+  .web-card__hint { display: none; }
   .web-compare__region, .web-compare__note, .web-compare__note::after, .web-compare__grip,
   .web-compare__layer--after, .web-compare__switch button,
   .web-range__row, .web-range__word, .web-range__card, .web-subaction, .web-subaction__rule {
