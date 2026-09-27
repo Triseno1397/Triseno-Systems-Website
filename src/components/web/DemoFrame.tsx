@@ -34,6 +34,9 @@ const fades = () => {
 };
 /** how much faster the flight runs when immersed, and while the card is held */
 const IMMERSE_SPEED = 1.9;
+/** seconds the card takes to come all the way forward: slow, in step with
+ *  the push, both driven by the one value */
+const IMMERSE_GROW = 8;
 const DIVE = 3;
 /** the card's own lean toward the pointer, degrees */
 const LEAN_Y = 8;
@@ -406,13 +409,21 @@ export default function DemoFrame() {
         const immerse = still >= 1;
         s.rest = still;
         if (immerse) root.setAttribute("data-used", "");
-        // in over a second and a half, out a little quicker
-        const ik = 1 - Math.exp(-dt * (immerse ? 2.2 : 3.4));
-        s.imm += ((immerse ? 1 : 0) - s.imm) * ik;
-        if (Math.abs(s.imm - (immerse ? 1 : 0)) < 0.0005) s.imm = immerse ? 1 : 0;
+        // In at a steady, slow pace (the growth and the push are the same
+        // eased curve of it, so the box grows exactly as fast as the camera
+        // gathers speed); out briskly, the moment the pointer moves.
+        if (immerse) s.imm = Math.min(1, s.imm + dt / IMMERSE_GROW);
+        else {
+          s.imm += (0 - s.imm) * (1 - Math.exp(-dt * 3.4));
+          if (s.imm < 0.0005) s.imm = 0;
+        }
+        const e = s.imm * s.imm * (3 - 2 * s.imm);
         root.toggleAttribute("data-immersed", s.imm > 0.02);
-        const target = s.held && onCard ? DIVE : 1 + (IMMERSE_SPEED - 1) * s.imm;
-        s.speed += (target - s.speed) * (1 - Math.exp(-dt * (target > s.speed ? 1.2 : 2.6)));
+        // immersed, the speed IS the curve (no lag behind it); a press still
+        // eases in and out on its own
+        if (s.held && onCard) s.speed += (DIVE - s.speed) * (1 - Math.exp(-dt * 1.2));
+        else if (s.imm > 0) s.speed = 1 + (IMMERSE_SPEED - 1) * e;
+        else s.speed += (1 - s.speed) * (1 - Math.exp(-dt * 2.6));
         // enlarged, the canvas is drawn denser so it stays sharp (once, as it
         // starts; back to normal once it is home)
         const fd = fades();
@@ -431,7 +442,6 @@ export default function DemoFrame() {
         // the card's place: at rest where the page put it; immersed, centred
         // on the screen and grown to fill it (a transform on the tilt layer
         // only: nothing on the page moves for it)
-        const e = s.imm * s.imm * (3 - 2 * s.imm);
         const cx = (window.innerWidth / 2 - (s.dl + s.dw / 2)) * e;
         const cy = (fd.top + room / 2 - (s.dt + s.dh / 2)) * e;
         const sc = 1 + (S - 1) * e;
