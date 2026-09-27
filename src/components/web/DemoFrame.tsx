@@ -26,19 +26,15 @@ const CLEAR = 0.09;
 const IMMERSE_AFTER = 2.5;
 /** how far (px) the pointer may drift and still count as still */
 const IMMERSE_SLOP = 3;
-/** how much of the screen's width the card may fill when immersed; its
- *  height is what lies between the page's top and bottom fades (globals.css
- *  --fade-top / --fade-bottom), so the address bar never goes under one */
-const IMMERSE_FILL_W = 0.94;
+/** the card's height when immersed is what lies between the page's top and
+ *  bottom fades (globals.css --fade-top / --fade-bottom), so the address bar
+ *  never goes under one; how much of the width it may take, how fast it comes
+ *  forward and how fast the flight runs are each world's own (SCENES.step) */
 const fades = () => {
   const vh = window.innerHeight;
   return { top: Math.min(128, Math.max(112, vh * 0.14)) * 0.8, bottom: Math.min(144, Math.max(124, vh * 0.16)) * 0.6 };
 };
-/** how much faster the flight runs when immersed, and while the card is held */
-const IMMERSE_SPEED = 1.9;
-/** seconds the card takes to come all the way forward: slow, in step with
- *  the push, both driven by the one value */
-const IMMERSE_GROW = 8;
+/** how much faster the flight runs while the card is held */
 const DIVE = 3;
 /** the card's own lean toward the pointer, degrees */
 const LEAN_Y = 8;
@@ -301,8 +297,15 @@ export default function DemoFrame() {
             setScene(open);
             card?.show(open);
           }
-          // the other worlds arrive in idle time, so a switch is immediate
-          window.setTimeout(() => SCENES.forEach((_, i) => card?.preload(i)), 2500);
+          // The other worlds (a 4K photograph each: a long upload to the
+          // GPU) arrive when the visitor reaches for the switch, or after a
+          // long quiet spell — never on a timer that could land in a warp.
+          const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+          preloadT = window.setTimeout(() => {
+            const go = () => !document.documentElement.hasAttribute("data-warping") && SCENES.forEach((_, i) => card?.preload(i));
+            if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 4000 });
+            else go();
+          }, 9000);
         },
         () => viewport.setAttribute("data-still", ""),
       );
@@ -320,8 +323,24 @@ export default function DemoFrame() {
     });
     ro.observe(viewport);
 
-    // its files load as the section comes near; it only draws while on screen
-    const near = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && start(), { rootMargin: "150% 0px" });
+    // Its files load as the section comes near, and never in the middle of
+    // a warp: arriving on this page, the card (and its 4K photograph, a long
+    // upload to the GPU) waits until the tunnel has gone and the page is
+    // idle. It only draws while on screen.
+    let startWait = 0;
+    let preloadT = 0;
+    const startWhenQuiet = () => {
+      window.clearTimeout(startWait);
+      if (started || !alive) return;
+      if (document.documentElement.hasAttribute("data-warping")) {
+        startWait = window.setTimeout(startWhenQuiet, 250);
+        return;
+      }
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(() => start(), { timeout: 1200 });
+      else start();
+    };
+    const near = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && startWhenQuiet(), { rootMargin: "100% 0px" });
     near.observe(root);
     const seen = new IntersectionObserver((e) => {
       inView = e[e.length - 1].isIntersecting;
@@ -457,7 +476,10 @@ export default function DemoFrame() {
         // In at a steady, slow pace (the growth and the push are the same
         // eased curve of it, so the box grows exactly as fast as the camera
         // gathers speed); out briskly, the moment the pointer moves.
-        if (immerse) s.imm = Math.min(1, s.imm + dt / IMMERSE_GROW);
+        // each world steps in its own way (depthCard SCENES: the grove faster
+        // and further than the canyon)
+        const step = SCENES[card.scene()].step;
+        if (immerse) s.imm = Math.min(1, s.imm + dt / step.grow);
         else {
           s.imm += (0 - s.imm) * (1 - Math.exp(-dt * 3.4));
           if (s.imm < 0.0005) s.imm = 0;
@@ -467,13 +489,13 @@ export default function DemoFrame() {
         // immersed, the speed IS the curve (no lag behind it); a press still
         // eases in and out on its own
         if (s.held && onCard) s.speed += (DIVE - s.speed) * (1 - Math.exp(-dt * 1.2));
-        else if (s.imm > 0) s.speed = 1 + (IMMERSE_SPEED - 1) * e;
+        else if (s.imm > 0) s.speed = 1 + (step.speed - 1) * e;
         else s.speed += (1 - s.speed) * (1 - Math.exp(-dt * 2.6));
         // enlarged, the canvas is drawn denser so it stays sharp (once, as it
         // starts; back to normal once it is home)
         const fd = fades();
         const room = window.innerHeight - fd.top - fd.bottom;
-        const fill = s.dw > 0 ? Math.min((window.innerWidth * IMMERSE_FILL_W) / s.dw, room / s.dh) : 1;
+        const fill = s.dw > 0 ? Math.min((window.innerWidth * step.fill) / s.dw, room / s.dh) : 1;
         const S = Math.max(1, fill);
         if (immerse && s.boost === 1 && S > 1.05) {
           s.boost = weak ? Math.min(S, 1.12) : S;
@@ -525,6 +547,8 @@ export default function DemoFrame() {
       near.disconnect();
       seen.disconnect();
       window.clearTimeout(resizeT);
+      window.clearTimeout(startWait);
+      window.clearTimeout(preloadT);
       window.removeEventListener("pointermove", onMove);
       viewport.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
@@ -605,7 +629,11 @@ export default function DemoFrame() {
             role="radiogroup"
             aria-label="The world in the window"
             data-changing={changing ? "" : undefined}
-            onPointerEnter={() => (overSwitch.current = true)}
+            onPointerEnter={() => {
+              overSwitch.current = true;
+              // reaching for the switch: the other worlds load now
+              SCENES.forEach((_, i) => cardRef.current?.preload(i));
+            }}
             onPointerLeave={() => (overSwitch.current = false)}
           >
             {SCENES.map((sc, i) => (

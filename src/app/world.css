@@ -290,19 +290,26 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
 .ghost-btn:focus-visible .ghost-btn__fill { clip-path: inset(0 0 0 0); }
 
 /* ── warp title card ── */
-.warp-title { will-change: transform, opacity; }
+/* the card drifts toward the viewer for as long as the tunnel pushes, and
+   leaves with it: both on the compositor, never from script */
+.warp-title { will-change: transform, opacity; transform: scale(0.94); transition: opacity 560ms cubic-bezier(0.65, 0, 0.35, 1); }
+.warp-title[data-show] { animation: warp-title-push 2.6s linear forwards; }
+.warp-title[data-out] { opacity: 0; }
+@keyframes warp-title-push { from { transform: scale(0.94); } to { transform: scale(1.04); } }
 .warp-title__glyph { opacity: 0; transform: scale(0.5) rotate(-90deg); transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo); }
 .warp-title__name { display: block; font-size: clamp(30px, 6.4vw, 104px); line-height: 1.05; letter-spacing: 0.08em; }
+/* each letter resolves by opacity and transform only: a blur per letter was
+   a filter pass per letter per frame, in the middle of the hop */
 .warp-title__char {
-  display: inline-block; opacity: 0; filter: blur(14px);
-  transform: translate3d(0, 0.35em, 0) scale(1.25);
-  transition: opacity 800ms var(--ease-expo), transform 1000ms var(--ease-expo), filter 900ms var(--ease-expo);
+  display: inline-block; opacity: 0;
+  transform: translate3d(0, 0.35em, 0) scale(1.35);
+  transition: opacity 800ms var(--ease-expo), transform 1000ms var(--ease-expo);
   transition-delay: calc(var(--i) * 34ms);
 }
 .warp-title__space { display: inline-block; width: 0.4em; }
 .warp-title__label { font-size: var(--fs-label); letter-spacing: 0.3em; opacity: 0; transition: opacity 900ms var(--ease-expo) 300ms; }
 .warp-title[data-show] .warp-title__glyph { opacity: 1; transform: scale(1) rotate(0deg); }
-.warp-title[data-show] .warp-title__char { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
+.warp-title[data-show] .warp-title__char { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 .warp-title[data-show] .warp-title__label { opacity: 1; }
 
 /* ── portal ── */

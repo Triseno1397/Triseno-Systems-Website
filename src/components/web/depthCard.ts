@@ -46,6 +46,10 @@ export interface CardScene {
   vy: number;
   /** where an upright (phone) window looks, across the photograph */
   tallX: number;
+  /** the step-in: seconds to come all the way forward, the flight's speed at
+   *  full step-in, how much further the camera travels (x the tuning), and how
+   *  much of the screen's width the card may fill */
+  step: { grow: number; speed: number; travel: number; fill: number };
   /** its waterfalls fall */
   water: boolean;
   /** the concept site's type */
@@ -63,6 +67,7 @@ export const SCENES: CardScene[] = [
     vx: 0.575,
     vy: 0.4,
     tallX: 0.6,
+    step: { grow: 8, speed: 1.9, travel: 1, fill: 0.94 },
     water: true,
     brand: "ORRIN FALLS",
     line1: "Go where",
@@ -76,6 +81,8 @@ export const SCENES: CardScene[] = [
     vx: 0.515,
     vy: 0.5,
     tallX: 0.5,
+    // the grove steps in faster and further: the path runs a long way in
+    step: { grow: 4.5, speed: 3, travel: 1.35, fill: 0.98 },
     water: false,
     brand: "HOLLOWAY GROVE",
     line1: "Sleep beneath",
@@ -658,7 +665,7 @@ export function createDepthCard(
     gl.uniform1f(loc.flight, flight);
     gl.uniform1f(loc.time, time % 1000);
     gl.uniform1f(loc.q, quality);
-    gl.uniform1f(loc.travel, t.travel);
+    gl.uniform1f(loc.travel, t.travel * sc.step.travel);
     gl.uniform1f(loc.lean, t.lean);
     gl.uniform1f(loc.glassD, t.glass);
     gl.uniform1f(loc.margin, MARGIN);
@@ -725,8 +732,17 @@ export function createDepthCard(
       gl.deleteBuffer(buf);
       gl.deleteVertexArray(vao);
       gl.deleteProgram(prog);
-      // hand the GPU memory back now rather than at garbage collection
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      // Hand the GPU memory back, but not now: unmounting is the middle of a
+      // warp, and losing a context blocks the thread for a long moment. It
+      // goes once the tunnel has gone and the next page is idle.
+      const lose = gl.getExtension("WEBGL_lose_context");
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      const later = () => {
+        if (document.documentElement.hasAttribute("data-warping")) window.setTimeout(later, 400);
+        else if (w.requestIdleCallback) w.requestIdleCallback(() => lose?.loseContext(), { timeout: 5000 });
+        else lose?.loseContext();
+      };
+      window.setTimeout(later, 400);
     },
   };
 }

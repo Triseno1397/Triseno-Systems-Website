@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Unbounded } from "next/font/google";
+import { Anton, Geist, Geist_Mono, Instrument_Serif, Unbounded } from "next/font/google";
 import WorldShell from "@/components/world/WorldShell";
 import { ORGANIZATION_JSON_LD, PAGES, SITE, jsonLdHtml } from "@/lib/seo";
 import "./globals.css";
@@ -21,6 +21,29 @@ const unbounded = Unbounded({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   display: "swap",
+});
+
+// Typographic voices for the fictional concept sites shown INSIDE device and
+// preview frames on /web-design-division (depicted content; page UI stays
+// Unbounded + Geist). Declared here, for every page, though only that page
+// uses them: a stylesheet arriving with new @font-face rules re-styles the
+// whole document, and arriving by warp that landed mid-tunnel (~190ms). Here
+// the rules are in from the first load; a face still downloads only where it
+// is drawn.
+const conceptSerif = Instrument_Serif({
+  variable: "--font-concept-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  display: "swap",
+  preload: false,
+});
+const conceptCondensed = Anton({
+  variable: "--font-concept-cond",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -76,7 +99,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${unbounded.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${unbounded.variable} ${conceptSerif.variable} ${conceptCondensed.variable}`}
     >
       {/* Root layout owns <html>, fonts, <body>, metadata and the WorldShell
           (warp transition everywhere; chrome/cursor/smooth scroll on revamped
