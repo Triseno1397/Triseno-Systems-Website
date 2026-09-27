@@ -1,20 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleNotch, PhoneCall } from "@phosphor-icons/react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowRight, CircleNotch } from "@phosphor-icons/react";
 import Glyph from "@/components/world/Glyph";
 import GlassPanel from "@/components/world/GlassPanel";
 import GhostButton from "@/components/ui/GhostButton";
 import { WarpLink } from "@/components/world/WarpProvider";
 import { DIVISIONS } from "@/lib/divisions";
 import {
-  CALL_WINDOWS,
   DIVISION_OPTIONS,
   EMAIL,
   EMPTY,
   FIELD_ORDER,
-  TIMELINES,
-  normaliseSite,
   validate,
   type ContactDivision,
   type Errors,
@@ -22,32 +19,20 @@ import {
   type FormValues,
 } from "./form";
 
-// Same delivery as before: Web3Forms straight to the studio inbox. The key is
-// set in Vercel as NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY (inlined at build time).
-const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY ?? "";
-const ENDPOINT = "https://api.web3forms.com/submit";
-
 type Status = "idle" | "sending" | "sent" | "error";
 
-const pad = (n: number) => String(n).padStart(2, "0");
 const isDivision = (v: string | null): v is ContactDivision => v === "creative" || v === "web" || v === "ai";
 
 /**
- * /contact — the inquiry form: ONE page, everything on screen, tick what
- * applies. It replaced a one-question-at-a-time flow, which read well and
- * asked too much of someone who just wants to send a note: nine screens, no
- * way to see what was coming, no way to say two things at once.
- *
- * The shape of it does the explaining. Four numbered blocks — what you need,
- * when, who you are, how to reach you — with the project types as checkboxes
- * (more than one is usually true) and a plain "I'd rather you call me" option
- * that makes the phone number the thing we reply to.
+ * /contact — the inquiry form, cut to what we need to reply: which division,
+ * a name, an email, and an optional line about the project. Everything else
+ * (budget, timeline, phone) we ask in the reply. It posts to /api/contact,
+ * which emails the inquiry to tristen@trisenosystems.com.
  *
  * Choosing a division still takes the whole scene into that division's light
  * (the plate grade, the floor spill, the glass that frosts it); the UI itself
- * stays white (design-system §2). Validation happens once, on send, and only
- * on what we genuinely need; focus moves to the first field that needs a
- * second look. The payload is identical to the old form's.
+ * stays white (design-system §2). Validation happens once, on send; focus
+ * moves to the first field that needs a second look.
  */
 export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDivision | "") => void }) {
   const [values, setValues] = useState<FormValues>(EMPTY);
@@ -59,10 +44,9 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
   const botRef = useRef<HTMLInputElement>(null);
 
   const option = DIVISION_OPTIONS.find((d) => d.key === values.division) ?? null;
-  const shownTypes = useMemo(() => option?.projectTypes ?? [], [option]);
 
   // ?division=creative|web|ai preselects (the division CTAs and the chrome
-  // contact icon pass it), so arriving from a division page starts a block in
+  // contact icon pass it), so arriving from a division page skips a click
   useLayoutEffect(() => {
     const q = new URLSearchParams(window.location.search).get("division");
     if (isDivision(q)) setValues((v) => ({ ...v, division: q }));
@@ -81,17 +65,9 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
     setErrors((e) => (key in e ? { ...e, [key]: undefined } : e));
   }, []);
 
-  // the division decides which project types exist, so changing it clears them
   const pickDivision = useCallback((key: ContactDivision) => {
-    setValues((v) => (v.division === key ? v : { ...v, division: key, project_types: [] }));
+    setValues((v) => ({ ...v, division: key }));
     setErrors((e) => ({ ...e, division: undefined }));
-  }, []);
-
-  const toggleType = useCallback((t: string) => {
-    setValues((v) => ({
-      ...v,
-      project_types: v.project_types.includes(t) ? v.project_types.filter((x) => x !== t) : [...v.project_types, t],
-    }));
   }, []);
 
   const submit = useCallback(async () => {
@@ -107,50 +83,22 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
       return;
     }
     setErrors({});
-    const div = DIVISION_OPTIONS.find((d) => d.key === values.division);
-    if (!div) return;
-    if (!WEB3FORMS_ACCESS_KEY) {
-      setStatus("error");
-      setSendError(`The form isn't connected yet — please email us directly at ${EMAIL}.`);
-      return;
-    }
     setStatus("sending");
-    const entries: Record<string, string> = {
-      name: values.name.trim(),
-      email: values.email.trim(),
-      phone: values.phone.trim(),
-      preferred_contact: values.wants_call ? "Phone call" : "Email",
-      company: values.company.trim(),
-      project_type: values.project_types.join(", "),
-      ...(values.division === "web" ? { current_site: normaliseSite(values.current_site) } : {}),
-      timeline: values.timeline,
-      ...(values.wants_call ? { best_time: values.best_time } : {}),
-      message: values.message.trim(),
-    };
-    // honeypot: bots tick it, people never see it (sent only when ticked, as before)
-    if (botRef.current?.checked) entries.botcheck = "on";
-    const payload = {
-      access_key: WEB3FORMS_ACCESS_KEY,
-      subject: `New ${div.payloadLabel} inquiry — Triseno`,
-      from_name: "Triseno website",
-      division: div.payloadLabel,
-      ...entries,
-    };
     try {
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, botcheck: botRef.current?.checked ? "on" : "" }),
       });
-      const data = await res.json();
-      if (data.success) setStatus("sent");
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) setStatus("sent");
       else {
         setStatus("error");
-        setSendError(`Something went wrong — please email us directly at ${EMAIL}.`);
+        setSendError(`Something went wrong — please email us directly at`);
       }
     } catch {
       setStatus("error");
-      setSendError(`Couldn't send right now — please email us directly at ${EMAIL}.`);
+      setSendError(`Couldn't send right now — please email us directly at`);
     }
   }, [status, values]);
 
@@ -169,8 +117,7 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
           </h2>
           <p className="cf-body">
             Thanks, {values.name.trim().split(" ")[0] || "and welcome"}. The {option?.name ?? "right"} team reads every
-            inquiry and replies within one business day
-            {values.wants_call ? `. We'll call the number you left, ${values.best_time.toLowerCase()}.` : ", usually sooner."}
+            inquiry and replies within one business day, usually sooner.
           </p>
           <div className="cf-done__actions">
             {option ? <GhostButton href={DIVISIONS[option.key].route}>{`Back to ${option.name}`}</GhostButton> : null}
@@ -199,12 +146,8 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
         {/* Honeypot — bots fill this, humans never see it. */}
         <input ref={botRef} type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
-        {/* ── 01 what ── */}
         <fieldset className="cf-block">
           <legend className="cf-head">
-            <span className="cf-num" aria-hidden="true">
-              {pad(1)}
-            </span>
             <span className="cf-legend font-display">What can we help with?</span>
           </legend>
           <div className="cf-divisions" role="group" aria-describedby={errors.division ? "cf-e-division" : undefined}>
@@ -232,118 +175,16 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
           </div>
           <FieldError id="cf-e-division" message={errors.division} />
 
-          <div className="cf-sub">
-            <span className="cf-label" id="cf-types-label">
-              {option ? option.needLabel : "What do you need?"}
-              <em>Tick all that apply</em>
-            </span>
-            {option ? (
-              <div className="cf-checks" role="group" aria-labelledby="cf-types-label">
-                {shownTypes.map((t) => {
-                  const on = values.project_types.includes(t);
-                  return (
-                    <label key={t} className="cf-check" data-on={on ? "" : undefined}>
-                      <input type="checkbox" checked={on} onChange={() => toggleType(t)} />
-                      <span className="cf-box" aria-hidden="true">
-                        <Check size={12} weight="bold" />
-                      </span>
-                      <span>{t}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="cf-waiting">Pick a division above and the options appear here.</p>
-            )}
-          </div>
-        </fieldset>
-
-        {/* ── 02 when ── */}
-        <fieldset className="cf-block">
-          <legend className="cf-head">
-            <span className="cf-num" aria-hidden="true">
-              {pad(2)}
-            </span>
-            <span className="cf-legend font-display">When do you need it?</span>
-          </legend>
-          <div className="cf-chips">
-            {TIMELINES.map((t) => (
-              <label key={t} className="cf-chip" data-on={values.timeline === t ? "" : undefined}>
-                <input type="radio" name="cf-timeline" value={t} checked={values.timeline === t} onChange={() => set("timeline", t)} />
-                <span>{t}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        {/* ── 03 you ── */}
-        <fieldset className="cf-block">
-          <legend className="cf-head">
-            <span className="cf-num" aria-hidden="true">
-              {pad(3)}
-            </span>
-            <span className="cf-legend font-display">Who are we replying to?</span>
-          </legend>
           <div className="cf-grid">
             <Field id="cf-name" field="name" label="Name" value={values.name} onChange={(v) => set("name", v)}
               autoComplete="name" placeholder="Your name" error={errors.name} required />
             <Field id="cf-email" field="email" type="email" inputMode="email" label="Email" value={values.email}
               onChange={(v) => set("email", v)} autoComplete="email" placeholder="you@company.com" error={errors.email} required />
-            <Field id="cf-company" label="Company" hint="Optional" value={values.company} onChange={(v) => set("company", v)}
-              autoComplete="organization" placeholder="Company or brand" />
-            <Field id="cf-phone" field="phone" type="tel" inputMode="tel" label="Phone" hint={values.wants_call ? undefined : "Optional"}
-              value={values.phone} onChange={(v) => set("phone", v)} autoComplete="tel" placeholder="(555) 000-0000"
-              error={errors.phone} required={values.wants_call} />
-            {values.division === "web" ? (
-              <Field id="cf-site" field="current_site" inputMode="url" label="Current site" hint="Optional" wide
-                value={values.current_site} onChange={(v) => set("current_site", v)} autoComplete="url"
-                placeholder="yoursite.com" error={errors.current_site} />
-            ) : null}
           </div>
-        </fieldset>
-
-        {/* ── 04 how ── */}
-        <fieldset className="cf-block">
-          <legend className="cf-head">
-            <span className="cf-num" aria-hidden="true">
-              {pad(4)}
-            </span>
-            <span className="cf-legend font-display">How should we reach you?</span>
-          </legend>
-
-          <label className="cf-call" data-on={values.wants_call ? "" : undefined}>
-            <input type="checkbox" checked={values.wants_call} onChange={(e) => set("wants_call", e.target.checked)} />
-            <span className="cf-box" aria-hidden="true">
-              <Check size={12} weight="bold" />
-            </span>
-            <span className="cf-call__text">
-              <b>
-                <PhoneCall size={15} weight="light" aria-hidden="true" />
-                I&apos;d rather you call me
-              </b>
-              <span>We&apos;ll ring the number above instead of emailing.</span>
-            </span>
-          </label>
-
-          {values.wants_call ? (
-            <div className="cf-sub cf-when">
-              <span className="cf-label" id="cf-when-label">
-                Best time to call
-              </span>
-              <div className="cf-chips" role="group" aria-labelledby="cf-when-label">
-                {CALL_WINDOWS.map((w) => (
-                  <label key={w} className="cf-chip" data-on={values.best_time === w ? "" : undefined}>
-                    <input type="radio" name="cf-when" value={w} checked={values.best_time === w} onChange={() => set("best_time", w)} />
-                    <span>{w}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="cf-sub">
             <label htmlFor="cf-message" className="cf-label">
-              {option?.messageLabel ?? "Anything else we should know?"}
+              What do you need?
               <em>Optional</em>
             </label>
             <textarea

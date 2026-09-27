@@ -20,7 +20,7 @@ import { SITE } from "@/lib/seo";
  * form's own accents light in it. The UI stays white (design-system §2).
  * Before the choice, and on a fresh visit, the world is colourless.
  *
- *   01 inquiry (one page, tick what applies)
+ *   01 inquiry (division, name, email, optional message)
  *   02 direct line (email, Instagram) + the hidden portal seal
  */
 export default function ContactPage() {
@@ -51,8 +51,7 @@ export default function ContactPage() {
             <span>talk</span>
           </h1>
           <p className="contact-body contact-hero__sub">
-            Tick what applies — it takes about a minute. Prefer a phone call? Say so and we&apos;ll ring you instead.
-            We reply within one business day.
+            Three fields, thirty seconds. Tell us who you are and what you need — we reply within one business day.
           </p>
         </div>
         <InquiryForm onDivision={onDivision} />
