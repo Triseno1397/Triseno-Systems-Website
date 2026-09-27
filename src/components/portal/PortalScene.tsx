@@ -195,7 +195,7 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
       <group ref={group} position={[0, RING_Y, 0]} scale={RING_SCALE}>
         <GlassLoop set={loops} coreMat={coreMat} near={near} />
         {/* what each division is, machined inside its own shape */}
-        <Mechanisms hues={MENU_ITEMS.slice(0, 3).map((m) => m.hue)} />
+        <Mechanisms order={MECH_ORDER} hues={MECH_HUES} />
       </group>
       <mesh ref={halo} position={[0, RING_Y, -0.8]} material={haloMat} renderOrder={20}>
         <planeGeometry args={[7, 7]} />
@@ -203,6 +203,9 @@ function SignatureObject({ glow }: { glow: THREE.Texture }) {
     </>
   );
 }
+
+const MECH_ORDER = MENU_ITEMS.slice(0, 3).map((m) => m.key);
+const MECH_HUES = MENU_ITEMS.slice(0, 3).map((m) => m.hue);
 
 /* ── doors ─────────────────────────────────────────────────────────────── */
 

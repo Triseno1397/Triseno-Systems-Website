@@ -18,18 +18,18 @@ export const DIVISION_OPTIONS: {
   messagePlaceholder: string;
 }[] = [
   {
-    key: "creative",
-    name: "Creative",
-    line: "Ad creative for paid social.",
-    payloadLabel: "Content Studio",
-    messagePlaceholder: "What you're selling and where the ads need to run...",
-  },
-  {
     key: "web",
     name: "Web Design",
     line: "Custom, conversion-built websites.",
     payloadLabel: "Web Design Division",
     messagePlaceholder: "New site or redesign? Your current site, if you have one...",
+  },
+  {
+    key: "creative",
+    name: "Creative",
+    line: "Ad creative for paid social.",
+    payloadLabel: "Content Studio",
+    messagePlaceholder: "What you're selling and where the ads need to run...",
   },
   {
     key: "ai",

@@ -24,8 +24,11 @@ import { portalState } from "./portalState";
 
 const BLADES = 6;
 const EASE = (x: number) => 1 - Math.pow(1 - THREE.MathUtils.clamp(x, 0, 1), 3);
+/** which division each mechanism group below belongs to (the groups' JSX order) */
+const SLOTS = ["creative", "web", "ai"];
 
-export default function Mechanisms({ hues }: { hues: string[] }) {
+/** `order` and `hues` follow the menu order, which portalState.active indexes. */
+export default function Mechanisms({ order, hues }: { order: string[]; hues: string[] }) {
   const groups = [useRef<THREE.Group>(null), useRef<THREE.Group>(null), useRef<THREE.Group>(null)];
   const blades = useRef<THREE.Group[]>([]);
   const bars = useRef<THREE.Mesh[]>([]);
@@ -84,7 +87,7 @@ export default function Mechanisms({ hues }: { hues: string[] }) {
     const t = state.clock.elapsedTime;
     const on = portalState.hot && portalState.hero < 0.5;
     for (let i = 0; i < 3; i++) {
-      const target = on && portalState.active === i ? 1 : 0;
+      const target = on && order[portalState.active] === SLOTS[i] ? 1 : 0;
       const w = THREE.MathUtils.lerp(weights.current[i], target, 1 - Math.exp(-step * (target ? 5 : 7)));
       weights.current[i] = w;
       const g = groups[i].current;

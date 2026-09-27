@@ -38,7 +38,7 @@ export const portalState = {
 
 export const MENU_ITEMS: Division[] = MENU_ORDER.map((k) => DIVISIONS[k]);
 
-export const DOOR_ITEMS: Division[] = [DIVISIONS.creative, DIVISIONS.web, DIVISIONS.ai];
+export const DOOR_ITEMS: Division[] = [DIVISIONS.web, DIVISIONS.creative, DIVISIONS.ai];
 
 /* ── Camera dolly maths, shared by the scene (camera) and the DOM (cards) ── */
 

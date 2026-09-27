@@ -69,18 +69,18 @@ const WHITE = "#ffffff";
 // CONTACT get their own neutral line so headline, glyph, counter and object
 // always say the same thing.
 const LINE_ONE = ["WE BUILD", "WE BUILD", "WE BUILD", "SEE", "OPEN A"];
-const LINE_TWO = ["AD CREATIVE", "WEBSITES", "AI SYSTEMS", "THE WORK", "CHANNEL"];
+const LINE_TWO = ["WEBSITES", "AD CREATIVE", "AI SYSTEMS", "THE WORK", "CHANNEL"];
 
 const DOOR_COPY = [
-  {
-    title: "Ad creative for paid social",
-    body: "Triseno Studio makes product video built for the feed: UGC, product demos, direct response, ASMR and brand films, cut for Instagram, TikTok and YouTube.",
-    cta: "Enter Creative",
-  },
   {
     title: "The page is the demo",
     body: "Custom, conversion-built websites. Every section of this site runs a different motion system, so what you are scrolling right now is the sample.",
     cta: "Enter Web Design",
+  },
+  {
+    title: "Ad creative for paid social",
+    body: "Triseno Studio makes product video built for the feed: UGC, product demos, direct response, ASMR and brand films, cut for Instagram, TikTok and YouTube.",
+    cta: "Enter Creative",
   },
   {
     title: "The intelligence layer",
@@ -509,7 +509,7 @@ export default function PortalPage() {
           <div className="pointer-events-none">
             <h1 className="portal-headline font-display font-bold uppercase">
               <span className="sr-only">
-                We build ad creative, websites and AI systems. Three divisions: Creative, Web Design, AI
+                We build websites, ad creative and AI systems. Three divisions: Web Design, Creative, AI
                 Infrastructure.
               </span>
               <span aria-hidden="true" className="block">
@@ -520,7 +520,7 @@ export default function PortalPage() {
               </span>
             </h1>
             <p className="portal-sub mt-6 max-w-[46ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
-              Three divisions. Ad creative · Websites · AI infrastructure.
+              Three divisions. Websites · Ad creative · AI infrastructure.
             </p>
           </div>
 
@@ -632,7 +632,7 @@ export default function PortalPage() {
           <p className="chrome-label mb-7 font-mono text-white">Next — Contact</p>
           <h2 className="gate-title font-display font-bold uppercase">Tell us what you need built</h2>
           <p className="mt-7 max-w-[44ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
-            One conversation to work out which division fits: ad creative, a website, or AI infrastructure. You
+            One conversation to work out which division fits: a website, ad creative, or AI infrastructure. You
             talk to the person who builds it.
           </p>
           <GhostButton href="/contact" className="mt-10">

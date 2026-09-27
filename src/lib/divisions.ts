@@ -40,7 +40,7 @@ export const DIVISIONS: Record<DivisionKey, Division> = {
 };
 
 /** Menu order used by the portal menu and the overlay menu. */
-export const MENU_ORDER: DivisionKey[] = ["creative", "web", "ai", "work", "contact"];
+export const MENU_ORDER: DivisionKey[] = ["web", "creative", "ai", "work", "contact"];
 
 // Upper-case in the DOM (not only via CSS) so the words read the same to
 // assistive tech, copy/paste and automated capture as they do on screen.
