@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import GlassPanel from "@/components/world/GlassPanel";
 import { addFrameJob, frameInterval } from "@/components/world/frameLoop";
 import { deviceClass, gpuClass } from "@/lib/device";
-import { MARGIN, TUNING, createDepthCard, type CardTuning, type DepthCard } from "./depthCard";
+import { MARGIN, SCENES, TUNING, createDepthCard, type CardTuning, type DepthCard } from "./depthCard";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,7 +23,9 @@ const CLEAR = 0.09;
 const REST = 3;
 const DIVE = 5;
 /** seconds the pointer has to be still on the card before it flies in */
-const REST_AFTER = 0.45;
+const REST_AFTER = 0.5;
+/** how far (px) the pointer may drift and still count as resting */
+const REST_SLOP = 9;
 /** the card's own lean toward the pointer, degrees */
 const LEAN_Y = 8;
 const LEAN_X = 5.5;
@@ -49,7 +51,20 @@ export default function DemoFrame() {
   const tiltRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const restRef = useRef<HTMLSpanElement>(null);
   const uprightRef = useRef(false);
+  const cardRef = useRef<DepthCard | null>(null);
+  // over the scene switch: resting there is choosing, not flying
+  const overSwitch = useRef(false);
+  const [scene, setScene] = useState(0);
+  const [changing, setChanging] = useState(false);
+  const pickScene = (i: number) => {
+    const card = cardRef.current;
+    if (!card || i === card.scene()) return;
+    setScene(i);
+    setChanging(true);
+    card.show(i).then(() => window.setTimeout(() => setChanging(false), 1900));
+  };
 
   useGSAP(
     () => {
@@ -71,6 +86,8 @@ export default function DemoFrame() {
             // the flight waits for the frame to stand (a gate, not a drive)
             onUpdate: (self) => {
               if (self.progress > 0.42) uprightRef.current = true;
+              // the switch shows once the frame stands
+              root.toggleAttribute("data-upright", self.progress > 0.4);
             },
           },
         });
@@ -121,16 +138,17 @@ export default function DemoFrame() {
     const tiltEl = tiltRef.current;
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
-    if (!root || !rig || !tiltEl || !viewport || !canvas) return;
+    const ring = restRef.current;
+    if (!root || !rig || !tiltEl || !viewport || !canvas || !ring) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cls = deviceClass();
     const u = new URLSearchParams(window.location.search);
-    // ?card=vx,vy,travel,lean,glass tunes it; ?cardf=0.5 holds the flight
-    // at a point; ?cardt=0.6,-0.3 holds a tilt
+    // ?card=travel,lean,glass tunes it; ?cardf=0.5 holds the flight at a
+    // point; ?cardt=0.6,-0.3 holds a tilt; ?cards=1 opens on another scene
     const tune: CardTuning = { ...TUNING };
     (u.get("card") ?? "").split(",").forEach((v, i) => {
-      const key = (["vx", "vy", "travel", "lean", "glass"] as const)[i];
+      const key = (["travel", "lean", "glass"] as const)[i];
       if (key && v !== "" && !Number.isNaN(Number(v))) tune[key] = Number(v);
     });
     const holdFrac = u.has("cardf") ? Number(u.get("cardf")) : -1;
@@ -146,14 +164,22 @@ export default function DemoFrame() {
     const s = {
       w: 0,
       h: 0,
-      px: 0,
-      py: 0,
+      // the pointer, anywhere on the page (the card can arrive under a
+      // pointer that never moved: the page scrolled it there)
+      px: -1e4,
+      py: -1e4,
+      known: false,
       moved: false,
       lastMove: -1e9,
-      // the rig's box, measured in the read phase: the card is centred in it
-      rx: 0,
-      ry: 0,
-      rw: 0,
+      // where the pointer came to rest, and when
+      ax: 0,
+      ay: 0,
+      at: 0,
+      // the window's box on screen, measured every frame in the read phase
+      vl: 0,
+      vt: 0,
+      vw: 0,
+      vh: 0,
       measured: false,
       tx: 0,
       ty: 0,
@@ -162,6 +188,7 @@ export default function DemoFrame() {
       held: false,
       over: false,
       rest: 0,
+      warp: 0,
       last: -1,
       still: true, // a frame is owed (after a resize, or once for reduced motion)
       odd: false,
@@ -206,6 +233,7 @@ export default function DemoFrame() {
       if (!alive) return;
       const large = !window.matchMedia("(max-width: 767px)").matches && cls !== "low";
       card = createDepthCard(canvas, fonts, large, tune);
+      cardRef.current = card;
       if (!card) {
         // no WebGL2: the landscape, still
         viewport.setAttribute("data-still", "");
@@ -219,6 +247,14 @@ export default function DemoFrame() {
           if (!alive) return;
           s.still = true;
           canvas.setAttribute("data-on", "");
+          root.setAttribute("data-card", "");
+          const open = Number(u.get("cards") ?? 0);
+          if (open > 0 && open < SCENES.length) {
+            setScene(open);
+            card?.show(open);
+          }
+          // the other worlds arrive in idle time, so a switch is immediate
+          window.setTimeout(() => SCENES.forEach((_, i) => card?.preload(i)), 2500);
         },
         () => viewport.setAttribute("data-still", ""),
       );
@@ -246,42 +282,42 @@ export default function DemoFrame() {
     seen.observe(root);
 
     const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
       s.px = e.clientX;
       s.py = e.clientY;
+      s.known = true;
       s.moved = true;
     };
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       s.held = true;
-      onMove(e);
+      s.px = e.clientX;
+      s.py = e.clientY;
+      s.known = true;
       root.setAttribute("data-used", "");
     };
     const onUp = () => (s.held = false);
-    const onOver = () => (s.over = true);
-    const onOut = () => {
-      s.over = false;
-      s.held = false;
-    };
     const hot = () => document.documentElement.setAttribute("data-cursor-hot", "");
     const cold = () => document.documentElement.removeAttribute("data-cursor-hot");
     if (!reduce) {
-      root.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointermove", onMove, { passive: true });
       viewport.addEventListener("pointerdown", onDown);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
       viewport.addEventListener("pointerenter", hot);
       viewport.addEventListener("pointerleave", cold);
-      viewport.addEventListener("pointerenter", onOver);
-      viewport.addEventListener("pointerleave", onOut);
     }
 
     const stop = addFrameJob({
       read() {
-        if (reduce || !inView || s.measured || !s.moved) return;
-        const r = rig.getBoundingClientRect();
-        s.rx = r.left;
-        s.ry = r.top;
-        s.rw = r.width;
+        // one measurement a frame while the card is on screen: the page may
+        // have scrolled it under a pointer that never moved
+        if (reduce || !inView) return;
+        const r = viewport.getBoundingClientRect();
+        s.vl = r.left;
+        s.vt = r.top;
+        s.vw = r.width;
+        s.vh = r.height;
         s.measured = true;
       },
       write(time) {
@@ -306,16 +342,24 @@ export default function DemoFrame() {
           }
         }
         if (reduce) {
-          if (s.still) card.draw(0, 0, CLEAR, 0, false);
+          if (s.still) card.draw(0, 0, CLEAR, 0, false, 0);
           s.still = false;
           return;
         }
         if (s.moved) {
           s.moved = false;
           s.lastMove = time;
+          // a resting pointer may drift a few pixels and still be resting
+          if (Math.hypot(s.px - s.ax, s.py - s.ay) > REST_SLOP) {
+            s.ax = s.px;
+            s.ay = s.py;
+            s.at = time;
+          }
         }
+        const onCard =
+          s.known && s.measured && !overSwitch.current && s.px > s.vl && s.px < s.vl + s.vw && s.py > s.vt && s.py < s.vt + s.vh;
         // where the pointer is on the card; left alone, it sways on its own
-        const idle = time - s.lastMove > 2.4 || !s.measured;
+        const idle = !onCard && (time - s.lastMove > 2.4 || !s.measured);
         let gx: number;
         let gy: number;
         if (holdTilt) {
@@ -325,19 +369,29 @@ export default function DemoFrame() {
           gx = Math.sin(time * 0.31) * 0.36;
           gy = Math.sin(time * 0.23 + 1) * 0.24;
         } else {
-          const cardH = s.h + BAR + PAD * 2;
-          gx = Math.max(-1, Math.min(1, (s.px - (s.rx + s.rw / 2)) / (s.w * 0.5 + 1)));
-          gy = Math.max(-1, Math.min(1, (s.py - (s.ry + cardH / 2)) / (cardH * 0.5 + 1)));
+          gx = Math.max(-1, Math.min(1, (s.px - (s.vl + s.vw / 2)) / (s.vw * 0.5 + 1)));
+          gy = Math.max(-1, Math.min(1, (s.py - (s.vt + s.vh / 2)) / (s.vh * 0.5 + 1)));
         }
         const k = 1 - Math.exp(-dt * (idle ? 1.4 : 5));
         s.tx += (gx - s.tx) * k;
         s.ty += (gy - s.ty) * k;
-        // the pointer resting still on the card flies it in; holding, faster
-        const resting = s.over && !reduce && time - s.lastMove > REST_AFTER;
-        s.rest = resting ? 1 : 0;
+        // The pointer resting still on the card flies it in; holding, faster.
+        // A ring round the pointer fills while it waits, so the visitor sees
+        // the card answering before the flight begins.
+        const still = onCard && uprightRef.current ? Math.min(1, (time - s.at) / REST_AFTER) : 0;
+        const resting = still >= 1;
+        s.rest = still;
         if (resting) root.setAttribute("data-used", "");
-        const target = s.held ? DIVE : resting ? REST : 1;
+        const target = s.held && onCard ? DIVE : resting ? REST : 1;
         s.speed += (target - s.speed) * (1 - Math.exp(-dt * (target > s.speed ? 1.8 : 2.6)));
+        // the look of the fly-in follows the speed
+        s.warp = Math.min(1, Math.max(0, (s.speed - 1) / (REST - 1)));
+        if (onCard) {
+          ring.style.transform = `translate3d(${s.px.toFixed(1)}px, ${s.py.toFixed(1)}px, 0)`;
+          ring.style.setProperty("--p", (s.held ? 1 : still).toFixed(3));
+        }
+        const ringOn = onCard ? (s.held || resting ? "fly" : still > 0.08 ? "wait" : "") : "";
+        if (ring.dataset.state !== ringOn) ring.dataset.state = ringOn;
         if (uprightRef.current || holdFrac >= 0) s.frac = (s.frac + (dt * s.speed) / PERIOD) % 1;
         s.upright = uprightRef.current;
         if (drop !== "notilt") tiltEl.style.transform = `rotateY(${(s.tx * LEAN_Y).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X).toFixed(3)}deg)`;
@@ -347,8 +401,18 @@ export default function DemoFrame() {
         s.odd = !s.odd;
         if (frameInterval() < 1 / 85 && s.odd && !s.still) return;
         s.still = false;
-        if (dbgCard) (window as unknown as { __card: unknown }).__card = { frac: +s.frac.toFixed(4), speed: +s.speed.toFixed(2), held: s.held, rest: s.rest, upright: uprightRef.current, govern };
-        if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low");
+        if (dbgCard)
+          (window as unknown as { __card: unknown }).__card = {
+            frac: +s.frac.toFixed(4),
+            speed: +s.speed.toFixed(2),
+            held: s.held,
+            rest: +s.rest.toFixed(2),
+            onCard,
+            upright: uprightRef.current,
+            govern,
+            scene: card.scene(),
+          };
+        if (drop !== "nodraw") card.draw(s.tx, s.ty, holdFrac >= 0 ? holdFrac : s.frac, time, cls !== "low", s.warp);
       },
     });
 
@@ -359,16 +423,15 @@ export default function DemoFrame() {
       near.disconnect();
       seen.disconnect();
       window.clearTimeout(resizeT);
-      root.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointermove", onMove);
       viewport.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
       viewport.removeEventListener("pointerenter", hot);
       viewport.removeEventListener("pointerleave", cold);
-      viewport.removeEventListener("pointerenter", onOver);
-      viewport.removeEventListener("pointerleave", onOut);
       cold();
       card?.dispose();
+      cardRef.current = null;
     };
   }, []);
 
@@ -389,8 +452,8 @@ export default function DemoFrame() {
           <h2 className="web-h2">The page is the demo</h2>
           <p className="web-body">
             Keep scrolling and the frame stands up. Then it is yours: a window
-            you can lean into. Move across it to look around, hold it to fly
-            on in.
+            you can lean into. Move across it to look around, rest on it to fly
+            in, and change the world it looks onto.
           </p>
         </header>
 
@@ -404,14 +467,18 @@ export default function DemoFrame() {
                     <i />
                     <i />
                   </span>
-                  <span className="web-browser__url">orrinfalls.example</span>
+                  <span className="web-browser__url">{SCENES[scene].url}</span>
                   <span className="web-browser__tag">Concept</span>
                 </div>
                 <div
                   ref={viewportRef}
                   className="web-demo__viewport web-card"
                   role="img"
-                  aria-label="Concept site for a fictional canyon lodge, Orrin Falls: a bright canyon with two waterfalls, seen as through a window, the camera travelling into it."
+                  aria-label={
+                    scene === 0
+                      ? "Concept site for a fictional canyon lodge, Orrin Falls: a bright canyon with two waterfalls, seen as through a window, the camera travelling into it."
+                      : "Concept site for a fictional forest lodge, Holloway Grove: a path through giant redwoods in shafts of sunlight, seen as through a window, the camera travelling into it."
+                  }
                 >
                   <span aria-hidden="true" className="web-demo__shine" />
                 </div>
@@ -423,13 +490,51 @@ export default function DemoFrame() {
                 <span className="web-card__hint-fine">Move to look around</span>
                 <span className="web-card__hint-touch">Drag to look</span>
                 <i />
-                <span className="web-card__hint-fine">Hold still to fly in</span>
+                <span className="web-card__hint-fine">Rest to fly in</span>
                 <span className="web-card__hint-touch">Hold to fly in</span>
               </span>
             </div>
           </div>
           <span aria-hidden="true" className="web-demo__mirror" />
+          {/* the world in the window: two lenses, each looking onto one. Outside
+              the card's 3D layer: inside it they could not be hit-tested. */}
+          <div
+            className="card-worlds"
+            role="radiogroup"
+            aria-label="The world in the window"
+            data-changing={changing ? "" : undefined}
+            onPointerEnter={() => (overSwitch.current = true)}
+            onPointerLeave={() => (overSwitch.current = false)}
+          >
+            {SCENES.map((sc, i) => (
+              <button
+                key={sc.key}
+                type="button"
+                role="radio"
+                aria-checked={scene === i}
+                className="card-world"
+                data-on={scene === i ? "" : undefined}
+                onClick={() => pickScene(i)}
+                onPointerMove={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty("--lx", `${(((e.clientX - r.left) / r.width - 0.5) * -10).toFixed(1)}%`);
+                  e.currentTarget.style.setProperty("--ly", `${(((e.clientY - r.top) / r.height - 0.5) * -10).toFixed(1)}%`);
+                }}
+                onPointerLeave={(e) => {
+                  e.currentTarget.style.setProperty("--lx", "0%");
+                  e.currentTarget.style.setProperty("--ly", "0%");
+                }}
+              >
+                <span className="card-world__lens" aria-hidden="true">
+                  <span className="card-world__view" style={{ backgroundImage: `url(/images/card/${sc.key}-lens.webp)` }} />
+                </span>
+                <span className="card-world__name">{sc.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
+        {/* the pointer's ring: fills while it rests, then it flies */}
+        <span ref={restRef} aria-hidden="true" className="web-card__rest" />
       </div>
     </section>
   );

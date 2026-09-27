@@ -378,7 +378,7 @@
 .web-card__canvas[data-on] { opacity: 1; }
 .web-card[data-still] { background: #0b1512 url("/images/card/canyon-1600.webp") 62% 50% / cover no-repeat; }
 .web-card__hint {
-  position: absolute; left: 50%; bottom: 22px; z-index: 3; transform: translateX(-50%);
+  position: absolute; left: 50%; bottom: 58px; z-index: 3; transform: translateX(-50%);
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; white-space: nowrap; pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.55);
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: #ffffff;
@@ -387,6 +387,84 @@
 .web-card__hint i { display: block; width: 4px; height: 4px; background: var(--hue); }
 .web-card__hint-touch { display: none; }
 .web-demo[data-used] .web-card__hint { opacity: 0; }
+
+/* ── the world in the window: two lenses straddling the frame's lower edge,
+   each looking onto its world. The chosen one is ringed in the division's
+   light; a change of world sweeps a ring round it as the new place arrives. */
+.card-worlds {
+  /* in the rig, centred on the frame's lower edge (the mirror is 28px below it) */
+  position: absolute; left: 50%; bottom: -32px; z-index: 4; transform: translateX(-50%);
+  display: flex; gap: 14px; padding: 6px 8px; opacity: 0; visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+}
+.web-demo[data-card][data-upright] .card-worlds { opacity: 1; visibility: visible; transition: opacity 0.6s ease; }
+.card-world {
+  --lx: 0%; --ly: 0%;
+  position: relative; display: grid; justify-items: center; gap: 7px; padding: 0; border: 0; background: none;
+  color: #ffffff; cursor: pointer;
+}
+.card-world__lens {
+  position: relative; display: block; width: 58px; height: 58px; border-radius: 50%; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.55); background: #0b1512;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.8), inset 0 0 0 3px rgba(0, 0, 0, 0.55);
+  transition: transform 0.45s var(--ease-expo), border-color 0.3s ease;
+}
+.card-world__view {
+  position: absolute; inset: -12%; background-size: cover; background-position: 50% 50%;
+  transform: translate(var(--lx), var(--ly)) scale(1); transition: transform 0.5s var(--ease-expo), filter 0.3s ease;
+  filter: saturate(0.75) brightness(0.8);
+}
+/* a lens is glass: a highlight across its top */
+.card-world__lens::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(120% 70% at 30% 10%, rgba(255, 255, 255, 0.35), transparent 45%);
+}
+/* the ring round the chosen one, and the sweep of a change */
+.card-world__lens::before {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: conic-gradient(from 0deg, var(--hue), color-mix(in srgb, var(--hue) 20%, transparent) 70%, var(--hue));
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  transition: opacity 0.3s ease;
+}
+.card-world[data-on] .card-world__lens { border-color: #ffffff; overflow: visible; }
+.card-world[data-on] .card-world__lens::before { opacity: 1; animation: web-scene-spin 7s linear infinite; }
+.card-worlds[data-changing] .card-world[data-on] .card-world__lens::before { animation-duration: 0.9s; }
+.card-world[data-on] .card-world__view { filter: none; }
+.card-world__view { border-radius: 50%; }
+.card-world[data-on] .card-world__view { inset: -12%; clip-path: circle(38.5% at 50% 50%); }
+.card-world:hover .card-world__lens, .card-world:focus-visible .card-world__lens { transform: translateY(-3px) scale(1.08); }
+.card-world:hover .card-world__view { transform: translate(var(--lx), var(--ly)) scale(1.12); filter: none; }
+.card-world:focus-visible { outline: none; }
+.card-world:focus-visible .card-world__lens { border-color: var(--hue); }
+.card-world__name {
+  padding: 3px 7px; background: rgba(0, 0, 0, 0.6);
+  font-family: var(--font-geist-mono), monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72); transition: color 0.3s ease;
+}
+.card-world[data-on] .card-world__name { color: #ffffff; }
+@keyframes web-scene-spin { to { transform: rotate(360deg); } }
+
+/* the pointer's ring: fills while the pointer rests on the card, then the
+   card flies; it rides the pointer and never takes it */
+.web-card__rest {
+  --p: 0;
+  position: fixed; left: 0; top: 0; z-index: 30; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+  border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.25s ease;
+  background: conic-gradient(#ffffff calc(var(--p) * 360deg), rgba(255, 255, 255, 0.18) 0);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+}
+.web-card__rest[data-state="wait"] { opacity: 0.9; }
+.web-card__rest[data-state="fly"] {
+  opacity: 1;
+  background: conic-gradient(var(--hue), #ffffff, var(--hue));
+  animation: web-rest-fly 0.9s linear infinite;
+}
+@keyframes web-rest-fly { to { rotate: 360deg; } }
+@media (pointer: coarse) {
+  .web-card__rest { display: none; }
+}
 @media (pointer: coarse) {
   .web-card__hint-fine { display: none; }
   .web-card__hint-touch { display: inline; }
@@ -420,7 +498,10 @@
      room between the lanes */
   .web-demo__device { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); }
   .web-demo__mirror { width: min(100%, calc((100svh - var(--lane-top) - var(--lane-bottom) - 84px) * 1.3333)); height: 22px; }
-  .web-card__hint { bottom: 16px; padding: 5px 9px; gap: 8px; letter-spacing: 0.1em; }
+  /* on a phone the headline fills the card's foot: the hint sits up top */
+  .web-card__hint { bottom: auto; top: calc(32px + 13%); padding: 5px 9px; gap: 8px; letter-spacing: 0.1em; }
+  .card-worlds { bottom: -25px; gap: 10px; }
+  .card-world__lens { width: 48px; height: 48px; }
   /* and a shorter run, so the sticky stage does not outlast a device this size
      by a screen of empty hall */
   .web-demo { height: 190svh; }
@@ -1189,6 +1270,7 @@
   .web-demo__stage { position: relative; height: auto; min-height: 100svh; }
   .web-demo__head { position: relative; top: auto; left: auto; right: auto; width: 100%; margin-bottom: 20px; }
   .web-card__hint { display: none; }
+  .card-world__lens::before { animation: none !important; }
   .web-compare__region, .web-compare__note, .web-compare__note::after, .web-compare__grip,
   .web-compare__layer--after, .web-compare__switch button,
   .web-range__row, .web-range__word, .web-range__card, .web-subaction, .web-subaction__rule {
@@ -1315,7 +1397,7 @@
 
 /* ── Carbon Forge: the moving concept site (CarbonForgeSite.tsx) ── */
 .cw__live { position: absolute; inset: 0; display: block; container-type: inline-size; }
-.web-hero__pick--live { display: block; }
+.web-hero__home { position: absolute; inset: 0; display: block; }
 .cf {
   --u: 1cqw; --copper: #d08a52; --ink: #f3ede6;
   position: absolute; inset: 0; display: block; overflow: hidden; background: #050505; color: var(--ink);

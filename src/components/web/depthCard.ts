@@ -1,14 +1,19 @@
 /* ─────────────────────────────────────────────────────────────────────────
    THE DEPTH CARD — what is drawn in (and around) the demo frame.
 
-   One window onto a canyon, and the canyon is a place. It is built the way a
-   film plate is: three layers, each a picture with its own depth map
-   (design-loop/card-textures.py),
+   One window onto a place: a canyon, or a redwood grove (SCENES). Each is
+   built the way a film plate is: three layers, each a picture with its own
+   depth map (design-loop/card-textures.py),
      near  the ferns and boulders under the window
-     mid   the cliffs, the falls, the slopes and the river, with the ground
-           painted in behind the ferns
-     far   the valley and the sky, painted in behind the cliffs
+     mid   the cliffs and falls, or the great trunks, with the ground painted
+           in behind the ferns
+     far   the valley or the deep forest, painted in behind them
    so when the camera moves there is picture behind everything that moves.
+
+   - A CHANGE OF WORLD, in depth. Switching scenes, the new world does not
+     fade in: it arrives from the horizon toward you. A front of light sweeps
+     from the farthest thing to the nearest, and everything behind it is
+     already the new place; the ferns at the glass go last.
 
    - A FLIGHT, not a zoom. The camera travels forward into the canyon. Every
      surface is at its own distance, so the ferns sweep out past the window's
@@ -24,13 +29,69 @@
 
    How: for each pixel and each layer a ray is marched from the camera through
    planes of distance, near to far, until it meets that layer's surface (then
-   closed in on). Plain WebGL2, one triangle, six textures. Drawn from the
+   closed in on). Plain WebGL2, one triangle, six textures a scene; while a
+   change of world runs, the new one is drawn a second time over the old. Drawn from the
    page's shared frame loop by DemoFrame; this file owns no clock and reads
    no layout.
    ───────────────────────────────────────────────────────────────────────── */
 
-export const LAND = { full: "/images/card/canyon-4096.webp", large: "/images/card/canyon-2560.webp", small: "/images/card/canyon-1600.webp" };
-const FILES = ["/images/card/canyon-mid.webp", "/images/card/canyon-far.webp", "/images/card/canyon-a.png", "/images/card/canyon-b.png"];
+export interface CardScene {
+  key: string;
+  /** the scene's name on the switch */
+  name: string;
+  /** the concept site's address bar */
+  url: string;
+  /** where the flight heads, in the photograph */
+  vx: number;
+  vy: number;
+  /** where an upright (phone) window looks, across the photograph */
+  tallX: number;
+  /** its waterfalls fall */
+  water: boolean;
+  /** the concept site's type */
+  brand: string;
+  line1: string;
+  line2: string;
+  sub: string;
+}
+
+export const SCENES: CardScene[] = [
+  {
+    key: "canyon",
+    name: "Canyon",
+    url: "orrinfalls.example",
+    vx: 0.575,
+    vy: 0.4,
+    tallX: 0.6,
+    water: true,
+    brand: "ORRIN FALLS",
+    line1: "Go where",
+    line2: "the water leads.",
+    sub: "Four cabins, one river, no signal.",
+  },
+  {
+    key: "redwood",
+    name: "Redwoods",
+    url: "hollowaygrove.example",
+    vx: 0.515,
+    vy: 0.5,
+    tallX: 0.5,
+    water: false,
+    brand: "HOLLOWAY GROVE",
+    line1: "Sleep beneath",
+    line2: "the tallest trees.",
+    sub: "Six cabins in an old-growth grove.",
+  },
+];
+const files = (key: string, photo: string) => [
+  photo,
+  `/images/card/${key}-mid.webp`,
+  `/images/card/${key}-far.webp`,
+  `/images/card/${key}-a.png`,
+  `/images/card/${key}-b.png`,
+];
+/** seconds a change of world takes */
+const WIPE = 1.9;
 /** the photograph's own shape */
 const IMG_ASPECT = 4096 / 2294;
 /** how much of the photograph's height the window shows: the band around it
@@ -40,9 +101,6 @@ const SHOWN = 0.8;
 export const MARGIN = 0.17;
 
 export interface CardTuning {
-  /** where the valley runs out, in the photograph (the flight heads there) */
-  vx: number;
-  vy: number;
   /** how far the camera travels (the nearest surface is 1 away, the sky 14) */
   travel: number;
   /** how far it moves sideways at full lean */
@@ -51,7 +109,7 @@ export interface CardTuning {
   glass: number;
 }
 
-export const TUNING: CardTuning = { vx: 0.575, vy: 0.4, travel: 0.92, lean: 0.1, glass: 0.74 };
+export const TUNING: CardTuning = { travel: 0.92, lean: 0.1, glass: 0.74 };
 
 export interface CardFonts {
   sans: string;
@@ -68,13 +126,20 @@ export interface CardView {
 export interface DepthCard {
   /** what the card is drawn on, by name (lib/device gpuClass reads it) */
   gpu: string;
-  /** resolves once every texture is on the GPU */
+  /** resolves once the first scene is on the GPU */
   ready: Promise<void>;
+  /** the scene shown (or arriving) */
+  scene(): number;
+  /** change world; resolves when the new one has begun to arrive */
+  show(i: number): Promise<void>;
+  /** load a scene ahead of being asked for it */
+  preload(i: number): void;
   /** 1 = every plane of distance is marched; less, fewer (weaker graphics) */
   quality(q: number): void;
   resize(view: CardView): void;
-  /** tilt -1..1, flight 0..1 (one run), seconds, falling water on or off */
-  draw(tiltX: number, tiltY: number, flight: number, time: number, flow: boolean): void;
+  /** tilt -1..1, flight 0..1 (one run), seconds, falling water on or off,
+   *  warp 0..1 (the fly-in: a narrower lens and light streaming past) */
+  draw(tiltX: number, tiltY: number, flight: number, time: number, flow: boolean, warp: number): void;
   dispose(): void;
 }
 
@@ -111,6 +176,9 @@ uniform float uTravel;
 uniform float uLean;
 uniform float uGlassD;
 uniform float uMargin;
+uniform float uWipe;   // the front of a change of world (as nearness); < -0.5: none
+uniform float uGlassW; // how much of this scene's type is on the glass
+uniform float uWarp;
 
 const float ZN = 1.0;
 const float ZF = 14.0;
@@ -217,7 +285,8 @@ void main() {
   // it gathers speed: most of a run is spent near the start, among the ferns
   d = uTravel * pow(uFlight, 1.25);
   o = uTilt * vec2(uLean, uLean * 0.62);
-  pg = p - uV - o * disp(uGlassD);
+  // the fly-in narrows the lens a little: the view leans in toward the valley
+  pg = (p - uV - o * disp(uGlassD)) * (1.0 - 0.07 * uWarp);
 
   float dStart = min(1.0 / ZN, 1.0 / (d + 0.05));
   vec3 col = vec3(0.0);
@@ -249,9 +318,24 @@ void main() {
   }
 
   float alpha = 1.0 - T;
+  // A change of world: this (new) scene is drawn over the old one only where
+  // it is farther than the front; the front sweeps from the horizon to the
+  // glass, a line of light riding it.
+  if (uWipe > -0.5) {
+    float Dn = zSeen < ZF - 0.01 ? (1.0 / zSeen - 1.0 / ZF) / (1.0 / ZN - 1.0 / ZF) : 0.0;
+    if (inside > 0.001 && T > 0.02) Dn = 0.0; // the sky: the far haze goes first
+    float m = 1.0 - smoothstep(uWipe - 0.045, uWipe, Dn);
+    float edge = exp(-pow((Dn - uWipe + 0.012) / 0.02, 2.0)) * (1.0 - smoothstep(1.0, 1.1, uWipe));
+    col *= m;
+    alpha *= m;
+    T = mix(1.0, T, m);
+    float e = edge * max(inside, alpha) * 0.85;
+    col += vec3(0.86, 0.82, 1.0) * e;
+    alpha = max(alpha, e);
+  }
   if (inside > 0.001) {
     // nothing met: the far haze
-    if (T > 0.02) {
+    if (T > 0.02 && uWipe < -0.5) {
       vec2 qf = clamp(ray(ZF), 0.0, 1.0);
       // shaded exactly as a hit on the far layer would be: a different
       // shade here drew a hard diagonal where the sky runs past the far map
@@ -274,7 +358,22 @@ void main() {
         m += smoothstep(0.05, 0.0, r) * (0.35 + 0.65 * hash(id + 1.3)) * smoothstep(0.1, 0.5, rel);
       }
     }
-    col += vec3(1.0, 0.97, 0.88) * m * 0.5 * inside;
+    col += vec3(1.0, 0.97, 0.88) * m * 0.5 * inside * alpha;
+
+    // the fly-in: light streaming past, out from where the flight heads
+    if (uWarp > 0.01) {
+      vec2 rv = vW - (uV - uCrop.xy) / uCrop.zw;
+      rv.x *= uRes.x / uRes.y;
+      float lane = atan(rv.y, rv.x) / 6.2832 * 110.0;
+      float id = floor(lane);
+      float h1 = hash(vec2(id, 1.7));
+      float rr = length(rv);
+      float ph = fract(rr * 1.4 - uTime * (1.1 + h1 * 1.3) + h1 * 9.0);
+      float thin = 1.0 - smoothstep(0.0, 0.18, abs(fract(lane) - 0.5));
+      float dash = smoothstep(0.0, 0.08, ph) * (1.0 - smoothstep(0.08, 0.34, ph));
+      float s = thin * dash * step(0.62, h1) * smoothstep(0.1, 0.55, rr);
+      col += vec3(1.0, 0.98, 0.93) * s * 0.42 * uWarp * alpha * inside;
+    }
 
     // into the light at the end of the run, and out of it at the start
     // a bright mist rather than a blank: the valley stays faintly there
@@ -282,13 +381,13 @@ void main() {
     col = mix(col, HAZE * alpha, clamp(white, 0.0, 1.0) * 0.82 * inside);
 
     // the site's type, on the glass and a little off it
-    vec4 g = textureLod(uGlass, vW + 0.5 - uTilt * vec2(0.010, 0.007), log2(max(1.0, uTpp.w))) * inside;
+    vec4 g = textureLod(uGlass, vW + 0.5 - uTilt * vec2(0.010, 0.007), log2(max(1.0, uTpp.w))) * inside * uGlassW;
     col = col * (1.0 - g.a) + g.rgb;
     alpha = alpha * (1.0 - g.a) + g.a;
 
     // the light on the glass, moving against the lean
     vec2 gl = vW - vec2(-uTilt.x * 0.55, -0.38 - uTilt.y * 0.4);
-    col += vec3(1.0, 0.98, 0.95) * 0.09 * exp(-dot(gl, gl) * 3.2) * (0.35 + length(uTilt)) * inside;
+    col += vec3(1.0, 0.98, 0.95) * 0.09 * exp(-dot(gl, gl) * 3.2) * (0.35 + length(uTilt)) * inside * alpha;
   } else {
     // what stands outside the frame leaves with the light too, and thins
     // out before the canvas ends: it is never cut by a straight line
@@ -331,7 +430,7 @@ async function bitmap(url: string): Promise<ImageBitmap | HTMLImageElement> {
 }
 
 /* ── the site's type, drawn once per size: what sits on the glass ── */
-function drawGlass(w: number, h: number, fonts: CardFonts, tall: boolean): HTMLCanvasElement {
+function drawGlass(w: number, h: number, fonts: CardFonts, tall: boolean, sc: CardScene): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -362,7 +461,7 @@ function drawGlass(w: number, h: number, fonts: CardFonts, tall: boolean): HTMLC
   x.font = `600 ${u * 1.35}px ${fonts.sans}`;
   spaced(u * 0.42);
   x.textAlign = "left";
-  x.fillText("ORRIN FALLS", u * 4, navY);
+  x.fillText(sc.brand, u * 4, navY);
   x.textAlign = "right";
   x.font = `500 ${u * 1.05}px ${fonts.sans}`;
   spaced(u * 0.08);
@@ -393,14 +492,14 @@ function drawGlass(w: number, h: number, fonts: CardFonts, tall: boolean): HTMLC
   const hs = u * (tall ? 4.1 : 5);
   const hy = h - u * (tall ? 13.5 : 14.5);
   x.font = `400 ${hs}px ${serif}`;
-  x.fillText("Go where", u * 4, hy);
+  x.fillText(sc.line1, u * 4, hy);
   x.font = `italic 400 ${hs}px ${serif}`;
-  x.fillText("the water leads.", u * 4, hy + hs * 1.06);
+  x.fillText(sc.line2, u * 4, hy + hs * 1.06);
   x.font = `400 ${u * 1.22}px ${fonts.sans}`;
   x.fillStyle = "rgba(255, 255, 255, 0.92)";
   if (!tall) {
     x.textAlign = "right";
-    x.fillText("Four cabins, one river, no signal.", w - u * 4, hy + hs * 0.55);
+    x.fillText(sc.sub, w - u * 4, hy + hs * 0.55);
     x.font = `500 ${u * 0.82}px ${fonts.mono}`;
     spaced(u * 0.16);
     x.fillStyle = "rgba(255, 255, 255, 0.72)";
@@ -454,6 +553,9 @@ export function createDepthCard(
     lean: U("uLean"),
     glassD: U("uGlassD"),
     margin: U("uMargin"),
+    wipe: U("uWipe"),
+    glassW: U("uGlassW"),
+    warp: U("uWarp"),
   };
   ["uLand", "uMid", "uFar", "uA", "uB", "uGlass"].forEach((n, i) => gl.uniform1i(U(n), i));
 
@@ -467,11 +569,18 @@ export function createDepthCard(
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
   const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
-  const tex = [0, 1, 2, 3, 4, 5].map(() => gl.createTexture()!);
-  const size = [1, 1, 1, 1, 1, 1];
-  const upload = (i: number, src: TexImageSource, w: number, premultiply: boolean) => {
+  // each scene's six textures: photograph, mid plate, far plate, data A, data B, type
+  const sets = SCENES.map(() => ({
+    tex: [0, 1, 2, 3, 4, 5].map(() => gl.createTexture()!),
+    size: [1, 1, 1, 1, 1, 1],
+    loaded: false,
+    loading: null as Promise<void> | null,
+    crop: [0.5, 0.5, 1, 1],
+  }));
+  type TexSet = (typeof sets)[number];
+  const upload = (set: TexSet, i: number, src: TexImageSource, w: number, premultiply: boolean) => {
     gl.activeTexture(gl.TEXTURE0 + i);
-    gl.bindTexture(gl.TEXTURE_2D, tex[i]);
+    gl.bindTexture(gl.TEXTURE_2D, set.tex[i]);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
@@ -481,15 +590,33 @@ export function createDepthCard(
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     if (aniso && i === 0) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
-    size[i] = w;
+    set.size[i] = w;
   };
 
   let alive = true;
   let quality = 1;
-  let loaded = false;
   let view: CardView | null = null;
-  let crop = [0.5, 0.5, 1, 1];
   let win = [1, 1]; // the window, canvas pixels
+  let cur = 0;
+  let next = -1;
+  let wipeAt = -1; // when the change of world began (set on its first draw)
+
+  // a scene's crop and type, for the window's size
+  const typeFor = (k: number) => {
+    const set = sets[k];
+    if (!view || !set.loaded) return;
+    // the window shows the middle of the photograph; an upright one looks
+    // where the scene opens
+    const av = view.width / view.height;
+    const sy = SHOWN * Math.min(1, IMG_ASPECT / av);
+    const sx = (sy * av) / IMG_ASPECT;
+    const half = sx * (0.5 + MARGIN);
+    const cx = av < IMG_ASPECT * 0.9 ? Math.min(1 - half, Math.max(half, SCENES[k].tallX)) : 0.5;
+    set.crop = [cx, 0.5, sx, sy];
+    const gw = Math.min(view.width * view.dpr * 1.5, large ? 2560 : 1536);
+    const glass = drawGlass(Math.round(gw), Math.round((gw * view.height) / view.width), fonts, view.width < 560, SCENES[k]);
+    upload(set, 5, glass, glass.width, true);
+  };
 
   const layout = () => {
     if (!view) return;
@@ -502,75 +629,119 @@ export function createDepthCard(
     }
     win = [w / span, h / span];
     gl.viewport(0, 0, w, h);
-    // the window shows the middle of the photograph. A window narrower than
-    // the photograph looks to the right of its centre, where the valley opens
-    // beside the second waterfall.
-    const av = view.width / view.height;
-    const sy = SHOWN * Math.min(1, IMG_ASPECT / av);
-    const sx = (sy * av) / IMG_ASPECT;
-    const half = sx * (0.5 + MARGIN);
-    const cx = av < IMG_ASPECT * 0.9 ? Math.min(1 - half, Math.max(half, 0.6)) : 0.5;
-    crop = [cx, 0.5, sx, sy];
-    const gw = Math.min(view.width * view.dpr * 1.5, large ? 2560 : 1536);
-    const glass = drawGlass(Math.round(gw), Math.round((gw * view.height) / view.width), fonts, view.width < 560);
-    upload(5, glass, glass.width, true);
+    sets.forEach((_, k) => typeFor(k));
   };
 
-  const ready = (async () => {
+  const load = (k: number) => {
+    const set = sets[k];
+    if (set.loading) return set.loading;
     // the 4K photograph wherever the window is drawn wider than the 2560 one
     // could fill without magnifying it
     const dense = typeof window !== "undefined" && window.innerWidth * (window.devicePixelRatio || 1) >= 1800;
-    const all = await Promise.all([large ? (dense ? LAND.full : LAND.large) : LAND.small, ...FILES].map(bitmap));
-    if (!alive) return;
-    all.forEach((im, i) => {
-      upload(i, im, im.width, false);
-      if ("close" in im) im.close();
-    });
-    loaded = true;
-    layout();
-  })();
+    const key = SCENES[k].key;
+    const photo = `/images/card/${key}-${large ? (dense ? 4096 : 2560) : 1600}.webp`;
+    set.loading = (async () => {
+      const all = await Promise.all(files(key, photo).map(bitmap));
+      if (!alive) return;
+      all.forEach((im, i) => {
+        upload(set, i, im, im.width, false);
+        if ("close" in im) im.close();
+      });
+      set.loaded = true;
+      typeFor(k);
+    })();
+    return set.loading;
+  };
+
+  const ready = load(0);
+
+  const pass = (k: number, tx: number, ty: number, flight: number, time: number, flow: boolean, warp: number, wipe: number, glassW: number) => {
+    const t = tuning;
+    const set = sets[k];
+    const sc = SCENES[k];
+    for (let i = 0; i < 6; i++) {
+      gl.activeTexture(gl.TEXTURE0 + i);
+      gl.bindTexture(gl.TEXTURE_2D, set.tex[i]);
+    }
+    const c = set.crop;
+    const sz = set.size;
+    gl.uniform4f(loc.crop, c[0], c[1], c[2], c[3]);
+    gl.uniform2f(loc.v, sc.vx, sc.vy);
+    gl.uniform4f(loc.tpp, (sz[0] * c[2]) / win[0], (sz[1] * c[2]) / win[0], (sz[3] * c[2]) / win[0], sz[5] / win[0]);
+    gl.uniform1f(loc.flow, flow && sc.water ? 1 : 0);
+    gl.uniform1f(loc.wipe, wipe);
+    gl.uniform1f(loc.glassW, glassW);
+    gl.uniform2f(loc.span, 1 + MARGIN * 2, 1 + MARGIN * 2);
+    gl.uniform2f(loc.res, win[0], win[1]);
+    gl.uniform2f(loc.tilt, tx, ty);
+    gl.uniform1f(loc.flight, flight);
+    gl.uniform1f(loc.time, time % 1000);
+    gl.uniform1f(loc.q, quality);
+    gl.uniform1f(loc.travel, t.travel);
+    gl.uniform1f(loc.lean, t.lean);
+    gl.uniform1f(loc.glassD, t.glass);
+    gl.uniform1f(loc.margin, MARGIN);
+    gl.uniform1f(loc.warp, warp);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
 
   const info = gl.getExtension("WEBGL_debug_renderer_info");
   return {
     gpu: String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)),
     ready,
+    scene: () => (next >= 0 ? next : cur),
+    preload(i) {
+      if (i >= 0 && i < sets.length) load(i);
+    },
+    async show(i) {
+      if (i < 0 || i >= sets.length) return;
+      if (next >= 0) {
+        // mid-change: what is arriving becomes what is there
+        cur = next;
+        next = -1;
+      }
+      if (i === cur) return;
+      await load(i);
+      if (!alive) return;
+      next = i;
+      wipeAt = -1;
+    },
     quality(q) {
       quality = Math.max(0.4, Math.min(1, q));
     },
     resize(v) {
       view = v;
-      if (loaded) layout();
+      layout();
     },
-    draw(tx, ty, flight, time, flow) {
-      if (!alive || !loaded || !view || gl.isContextLost()) return;
-      const t = tuning;
+    draw(tx, ty, flight, time, flow, warp) {
+      if (!alive || !view || gl.isContextLost() || !sets[cur].loaded) return;
       gl.useProgram(prog);
       gl.bindVertexArray(vao);
-      for (let i = 0; i < 6; i++) {
-        gl.activeTexture(gl.TEXTURE0 + i);
-        gl.bindTexture(gl.TEXTURE_2D, tex[i]);
-      }
+      gl.disable(gl.BLEND);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(loc.span, 1 + MARGIN * 2, 1 + MARGIN * 2);
-      gl.uniform2f(loc.res, win[0], win[1]);
-      gl.uniform2f(loc.tilt, tx, ty);
-      gl.uniform1f(loc.flight, flight);
-      gl.uniform1f(loc.time, time % 1000);
-      gl.uniform4f(loc.crop, crop[0], crop[1], crop[2], crop[3]);
-      gl.uniform2f(loc.v, t.vx, t.vy);
-      gl.uniform4f(loc.tpp, (size[0] * crop[2]) / win[0], (size[1] * crop[2]) / win[0], (size[3] * crop[2]) / win[0], size[5] / win[0]);
-      gl.uniform1f(loc.q, quality);
-      gl.uniform1f(loc.flow, flow ? 1 : 0);
-      gl.uniform1f(loc.travel, t.travel);
-      gl.uniform1f(loc.lean, t.lean);
-      gl.uniform1f(loc.glassD, t.glass);
-      gl.uniform1f(loc.margin, MARGIN);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (next < 0) {
+        pass(cur, tx, ty, flight, time, flow, warp, -1, 1);
+        return;
+      }
+      if (wipeAt < 0) wipeAt = time;
+      const k = Math.min(1, (time - wipeAt) / WIPE);
+      const e = k * k * (3 - 2 * k);
+      const g = Math.min(1, Math.max(0, (k - 0.3) / 0.45));
+      // the old world, its type going; the new one over it, from the horizon in
+      pass(cur, tx, ty, flight, time, flow, warp, -1, 1 - g);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      pass(next, tx, ty, flight, time, flow, warp, -0.06 + 1.2 * e, g);
+      gl.disable(gl.BLEND);
+      if (k >= 1) {
+        cur = next;
+        next = -1;
+      }
     },
     dispose() {
       alive = false;
-      tex.forEach((t) => gl.deleteTexture(t));
+      sets.forEach((set) => set.tex.forEach((t) => gl.deleteTexture(t)));
       gl.deleteBuffer(buf);
       gl.deleteVertexArray(vao);
       gl.deleteProgram(prog);

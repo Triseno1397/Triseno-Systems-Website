@@ -7,19 +7,32 @@ The scene is three layers, each a picture with its own depth:
   far   the valley and the sky                          (behind the cliffs, a
         plate with them painted out)
 
-Writes to public/images/card:
-  canyon-a.png   R depth of the photograph   G falling water   B near matte
-  canyon-b.png   R depth of the mid plate    G depth of the far plate   B mid matte
-  canyon-mid.webp, canyon-far.webp   the two plates
-Run from the repo root.
+Writes to public/images/card, for a scene:
+  <scene>-a.png   R depth of the near layer   G falling water   B near matte
+  <scene>-b.png   R depth of the mid layer    G depth of the far layer   B mid matte
+  <scene>-mid.webp, <scene>-far.webp   the two plates
+  <scene>-4096/2560/1600.webp   the photograph
+Run from the repo root:  python design-loop/card-textures.py canyon|redwood
 """
 import os
+import sys
 import numpy as np
 from PIL import Image, ImageFilter
 
 SRC = 'design-loop/art-src/card/'
 OUT = 'public/images/card/'
 W, H = 1344, 752
+SCENE = sys.argv[1] if len(sys.argv) > 1 else 'canyon'
+# each scene's art, and what is particular to it
+ART = {
+    'canyon': dict(photo='c-canyon.png', big='c-canyon-4k.png', depth='depth-a.png', mid='plate-mid.png', far='plate-far.png',
+                   dmid='depth-mid.png', dfar='depth-far.png', near_top=0.40, water=True,
+                   # far falls the map drew as near: held to the slope around them
+                   caps=[(0.29, 0.38, 0.30, 0.52, 0.30), (0.70, 0.76, 0.36, 0.58, 0.30)]),
+    'redwood': dict(photo='d-redwood.png', big='d-redwood-4k.png', depth='depth-redwood.png', mid='plate-redwood-mid.png',
+                    far='plate-redwood-far.png', dmid='depth-redwood-mid.png', dfar='depth-redwood-far.png', near_top=0.45,
+                    water=False, caps=[]),
+}[SCENE]
 
 
 def grey(name):
@@ -38,19 +51,17 @@ def shrink(a, px):
     return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(px))).astype(np.float32) / 255
 
 
-d = grey('depth-a.png')
-dm = grey('depth-mid.png')
-df = grey('depth-far.png')
-rgb = np.asarray(Image.open(SRC + 'c-canyon.png').convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
-pm = np.asarray(Image.open(SRC + 'plate-mid.png').convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
-pf = np.asarray(Image.open(SRC + 'plate-far.png').convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+d = grey(ART['depth'])
+dm = grey(ART['dmid'])
+df = grey(ART['dfar'])
+rgb = np.asarray(Image.open(SRC + ART['photo']).convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+pm = np.asarray(Image.open(SRC + ART['mid']).convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+pf = np.asarray(Image.open(SRC + ART['far']).convert('RGB').resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
 ys, xs = np.mgrid[0:H, 0:W]
 x = xs / W
 y = ys / H
 
-# the far falls on the left slope and in the right gorge are distant: the map
-# drew their white water as near. Hold them to the depth of the slope around.
-for (x0, x1, y0, y1, cap) in [(0.29, 0.38, 0.30, 0.52, 0.30), (0.70, 0.76, 0.36, 0.58, 0.30)]:
+for (x0, x1, y0, y1, cap) in ART['caps']:
     reg = (x > x0) & (x < x1) & (y > y0) & (y < y1)
     soft = np.clip(np.minimum.reduce([(x - x0) / 0.02, (x1 - x) / 0.02, (y - y0) / 0.03, (y1 - y) / 0.03]), 0, 1)
     d = np.where(reg, d * (1 - soft) + np.minimum(d, cap) * soft, d)
@@ -128,7 +139,7 @@ near = ((d - dmc) > 0.07) & ~unchanged
 near = shrink(grow(near.astype(np.float32), 5), 3)
 near = shrink(grow(near, 9), 9)  # close pinholes in the fronds
 # the ferns and boulders are under the window: nothing up the cliffs is theirs
-near = near * np.clip((y - 0.40) / 0.06, 0, 1)
+near = near * np.clip((y - ART['near_top']) / 0.06, 0, 1)
 near = shrink(grow(shrink(near, 7), 7), 1)  # and no specks
 mid = ((dmc - dfc) > 0.06) & ~unchanged_f
 mid = shrink(grow(mid.astype(np.float32), 5), 3)
@@ -148,7 +159,7 @@ mx = rgb.max(2)
 mn = rgb.min(2)
 sat = (mx - mn) / (mx + 1e-6)
 water = (mx > 0.72) & (sat < 0.22) & (d > 0.22) & (near < 0.5)
-region = ((x > 0.115) & (x < 0.235) & (y > 0.06) & (y < 0.66)) | ((x > 0.815) & (x < 0.925) & (y > 0.05) & (y < 0.63))
+region = ART['water'] & ((x > 0.115) & (x < 0.235) & (y > 0.06) & (y < 0.66)) | ((x > 0.815) & (x < 0.925) & (y > 0.05) & (y < 0.63))
 wm = shrink(grow(shrink((water & region).astype(np.float32), 11), 11), 1)
 lab = np.zeros((H, W), np.int32)
 n = 0
@@ -170,6 +181,7 @@ for sy in range(H):
                         st.append((aa, bb))
             sizes[n] = c
 keep = [k for k, v in sizes.items() if v > 2500]
+
 wm = np.isin(lab, keep).astype(np.float32)
 for k in keep:
     top = np.where((lab == k).any(1))[0].min()
@@ -188,9 +200,9 @@ def save(name, r, g, b):
 h_near = layer_depth(d, near, 5)
 h_mid = layer_depth(d_mid, mid, 6)
 h_far = fblur(d_far, 14)
-save('canyon-a.png', h_near, wm, blur(near, 1.2))
+save(SCENE + '-a.png', h_near, wm, blur(near, 1.2))
 print('surfaces: near', np.percentile(h_near, [1, 50, 99]).round(2), 'mid', np.percentile(h_mid, [1, 50, 99]).round(2), 'far', np.percentile(h_far, [1, 50, 99]).round(2))
-save('canyon-b.png', h_mid, h_far, blur(mid, 1.4))
+save(SCENE + '-b.png', h_mid, h_far, blur(mid, 1.4))
 
 
 def match(plate, ref, where, r=48):
@@ -224,10 +236,19 @@ pf_fit = match(pf, pm_fit, unchanged_f)
 for name, a, b, w in (('mid', pm, pm_fit, unchanged), ('far', pf, pf_fit, unchanged_f)):
     ref = rgb if name == 'mid' else pm_fit
     print(name, 'mean error where unchanged: before', round(float(np.abs(a - ref)[w].mean()), 4), 'after', round(float(np.abs(b - ref)[w].mean()), 4))
-Image.fromarray((pm_fit * 255).astype(np.uint8)).save(OUT + 'canyon-mid.webp', quality=86, method=6)
-Image.fromarray((pf_fit * 255).astype(np.uint8)).save(OUT + 'canyon-far.webp', quality=86, method=6)
-if os.path.exists(OUT + 'canyon-depth.png'):
-    os.remove(OUT + 'canyon-depth.png')
+Image.fromarray((pm_fit * 255).astype(np.uint8)).save(OUT + SCENE + '-mid.webp', quality=86, method=6)
+Image.fromarray((pf_fit * 255).astype(np.uint8)).save(OUT + SCENE + '-far.webp', quality=86, method=6)
+big = Image.open(SRC + ART['big']).convert('RGB')
+for wpx, q in ((4096, 86), (2560, 84), (1600, 82)):
+    out = OUT + f'{SCENE}-{wpx}.webp'
+    if not os.path.exists(out):
+        big.resize((wpx, round(wpx * big.height / big.width)), Image.LANCZOS).save(out, quality=q, method=6)
+# where the depth runs out in the middle of the picture: the flight heads there
+dd = fblur(d, 6)
+band = (y > 0.25) & (y < 0.7) & (x > 0.3) & (x < 0.75)
+thr = np.percentile(dd[band], 3)
+fx, fy = x[band & (dd <= thr)].mean(), y[band & (dd <= thr)].mean()
+print('vanishing point', round(float(fx), 3), round(float(fy), 3))
 for f in sorted(os.listdir(OUT)):
     print(f, os.path.getsize(OUT + f) // 1024, 'KB')
 
@@ -235,6 +256,6 @@ for f in sorted(os.listdir(OUT)):
 chk = rgb.copy()
 chk[..., 0] = np.clip(chk[..., 0] + near * 0.7, 0, 1)
 chk[..., 2] = np.clip(chk[..., 2] + mid * (1 - near) * 0.7, 0, 1)
-Image.fromarray((chk * 255).astype(np.uint8)).resize((1008, 564)).save(SRC + 'matte-check.png')
+Image.fromarray((chk * 255).astype(np.uint8)).resize((1008, 564)).save(SRC + SCENE + '-matte-check.png')
 row = np.concatenate([np.repeat(np.clip(a, 0, 1)[..., None], 3, 2) for a in (h_near, h_mid, h_far)], 1)
-Image.fromarray((row * 255).astype(np.uint8)).resize((2016, 376)).save(SRC + 'depth-check.png')
+Image.fromarray((row * 255).astype(np.uint8)).resize((2016, 376)).save(SRC + SCENE + '-depth-check.png')

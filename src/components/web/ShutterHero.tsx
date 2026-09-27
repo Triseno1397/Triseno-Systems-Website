@@ -44,9 +44,11 @@ export default function ShutterHero() {
   const [run, setRun] = useState(0);
   const replay = () => setRun((v) => v + 1);
   const rootRef = useRef<HTMLElement>(null);
-  // which concept site the browser shows: null = its own live Vale & Hollis
+  // which concept site the browser shows: null = its own, Carbon Forge (the
+  // live, moving one), which it opens on and returns to
   const [pick, setPick] = useState<number | null>(null);
   const picked = pick === null ? null : SITE_TEMPLATES[pick];
+  const home = SITE_TEMPLATES.find((tpl) => tpl.live) ?? SITE_TEMPLATES[0];
 
   // Leaving: the whole hero fades and lifts away as it scrolls out, so no
   // part of it (the CTA row least of all) lingers under the lockup.
@@ -172,7 +174,7 @@ export default function ShutterHero() {
                 key={`s${run}`}
                 className="web-hero__site"
                 onClick={replay}
-                aria-label={`Concept site for ${picked ? picked.name : "Vale and Hollis"}. Replay the shutter.`}
+                aria-label={`Concept site for ${picked ? picked.name : home.name}. Replay the shutter.`}
               >
                 <span className="web-browser__bar">
                   <span aria-hidden="true" className="web-browser__dots">
@@ -180,17 +182,15 @@ export default function ShutterHero() {
                     <i />
                     <i />
                   </span>
-                  <span className="web-browser__url">{picked ? picked.url : "valeandhollis.example"}</span>
+                  <span className="web-browser__url">{picked ? picked.url : home.url}</span>
                   <span className="web-browser__tag">Concept</span>
                 </span>
                 <span className="web-hero__site-view">
-                  <HeroSite />
-                  {/* the orbit's pick, laid over the live site */}
-                  {picked?.live ? (
-                    <span className="web-hero__pick web-hero__pick--live" data-on="">
-                      <CarbonForgeSite />
-                    </span>
-                  ) : null}
+                  {/* its own site: Carbon Forge, live */}
+                  <span className="web-hero__home">
+                    <CarbonForgeSite />
+                  </span>
+                  {/* the orbit's pick, laid over it */}
                   {SITE_TEMPLATES.filter((tpl) => !tpl.live).map((tpl) => (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -210,55 +210,5 @@ export default function ShutterHero() {
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * Concept site shown inside the hero's browser frame — fictional landscape
- * architecture practice. Live HTML/CSS in container units, so it stays crisp
- * at any frame size. Depicted content: it carries its own palette and serif
- * voice (design-system §2, mocks inside device frames are exempt).
- */
-function HeroSite() {
-  return (
-    <span className="hs">
-      <span className="hs-nav">
-        <span className="hs-logo">Vale &amp; Hollis</span>
-        <span className="hs-links">
-          <span>Gardens</span>
-          <span>Practice</span>
-          <span>Journal</span>
-        </span>
-        <span className="hs-cta">Book a site visit</span>
-      </span>
-      <span className="hs-body">
-        <span className="hs-copy">
-          <span className="hs-kicker">Landscape architecture · Est. 2009</span>
-          <span className="hs-h">
-            Gardens that look <em>older</em> than the house.
-          </span>
-          <span className="hs-p">
-            Planting plans, hard landscaping and ten-year maintenance, drawn for
-            one plot at a time.
-          </span>
-        </span>
-        <span className="hs-art" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-      </span>
-      <span className="hs-facts">
-        <span>
-          <b>140</b>gardens built
-        </span>
-        <span>
-          <b>3 wks</b>to first drawing
-        </span>
-        <span>
-          <b>10 yr</b>planting plan
-        </span>
-      </span>
-    </span>
   );
 }
