@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import GlassPanel from "@/components/world/GlassPanel";
 import { addFrameJob, frameInterval } from "@/components/world/frameLoop";
+import { getLenis } from "@/components/world/SmoothScroll";
 import { deviceClass, gpuClass } from "@/lib/device";
 import { MARGIN, SCENES, TUNING, createDepthCard, type CardTuning, type DepthCard } from "./depthCard";
 
@@ -96,14 +97,15 @@ export default function DemoFrame() {
             end: "bottom bottom",
             scrub: 0.6,
             invalidateOnRefresh: true,
-            // the flight waits for the frame to stand (a gate, not a drive)
+            // the flight, the step-in and the switch wait for the frame to
+            // stand (a gate, not a drive), and let go if it is scrolled back down
             onUpdate: (self) => {
-              if (self.progress > 0.42) uprightRef.current = true;
-              // the switch shows once the frame stands
+              uprightRef.current = self.progress > 0.42;
               root.toggleAttribute("data-upright", self.progress > 0.4);
             },
           },
         });
+
 
         tl.fromTo(
           device,
@@ -140,6 +142,23 @@ export default function DemoFrame() {
         tl.fromTo(".web-demo__head", { autoAlpha: 1, yPercent: 0 }, { autoAlpha: 0, yPercent: -18, duration: 0.16, ease: "power1.in" }, 0.05);
         // upright, it holds: the rest of the section is the visitor's
         tl.to({}, { duration: 0.5 });
+
+        // The stand-up is the section's one scroll moment, and stopping half
+        // way through it left the card leaning and asleep. Once the page comes
+        // to rest past a fifth of the way up (heading down), it glides on to
+        // the frame standing. Scrolling back up is never pulled.
+        const st = tl.scrollTrigger!;
+        const UPRIGHT = 0.52;
+        const settle = () => {
+          const p = st.progress;
+          if (st.direction < 0 || p <= 0.2 || p >= UPRIGHT - 0.01 || !st.isActive) return;
+          const y = st.start + UPRIGHT * (st.end - st.start);
+          const lenis = getLenis();
+          if (lenis) lenis.scrollTo(y, { duration: 0.9 });
+          else window.scrollTo({ top: y, behavior: "smooth" });
+        };
+        ScrollTrigger.addEventListener("scrollEnd", settle);
+        return () => ScrollTrigger.removeEventListener("scrollEnd", settle);
       });
     },
     { scope: rootRef },
