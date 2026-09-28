@@ -18,8 +18,6 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 export interface TunnelSetup {
   hue: [number, number, number];
-  /** the destination glyph's outline, 96 points (x, y pairs) */
-  ring: Float32Array | number[];
   reduced: boolean;
   /** streak count */
   stars: number;
@@ -38,7 +36,7 @@ export interface Tunnel {
 }
 
 export function createTunnel(ctx: Ctx2D, size: () => { w: number; h: number; dpr: number }, setup: TunnelSetup): Tunnel {
-  const { hue, ring, reduced } = setup;
+  const { hue, reduced } = setup;
   const [hr, hg, hb] = hue;
   const n = setup.stars;
   // struct of arrays: no objects to chase per frame
@@ -72,7 +70,6 @@ export function createTunnel(ctx: Ctx2D, size: () => { w: number; h: number; dpr
   // the streak buckets: [alpha step][width] -> flat list of segment coords
   const buckets: number[][] = Array.from({ length: ALPHA_STEPS * WIDTHS.length }, () => []);
   const styles = Array.from({ length: ALPHA_STEPS }, (_, a) => `rgba(${hr},${hg},${hb},${((a + 0.5) / ALPHA_STEPS).toFixed(3)})`);
-  const gateStyle = `rgb(${hr},${hg},${hb})`;
 
   let t = 0;
   return {
@@ -143,25 +140,6 @@ export function createTunnel(ctx: Ctx2D, size: () => { w: number; h: number; dpr
           }
         }
 
-        // a procession of destination-glyph gates flying past the camera
-        ctx.strokeStyle = gateStyle;
-        for (let g = 0; g < 5; g++) {
-          const phase = ((t / 1100) * (0.6 + speed * 14) + g / 5) % 1;
-          const gs = Math.pow(phase, 3.2) * scale * 2.4 + 6;
-          const ga = Math.sin(phase * Math.PI) * 0.85 * cover;
-          if (ga <= 0.01) continue;
-          ctx.globalAlpha = ga;
-          ctx.lineWidth = 1 + phase * 2;
-          ctx.beginPath();
-          for (let i = 0; i <= 96; i++) {
-            const k = (i % 96) * 2;
-            const px = cx + ring[k] * gs;
-            const py = cy - ring[k + 1] * gs;
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          }
-          ctx.stroke();
-        }
         ctx.globalAlpha = 1;
       }
       return !!outAt && outK >= 1;

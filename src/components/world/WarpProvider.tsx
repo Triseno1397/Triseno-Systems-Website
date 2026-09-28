@@ -15,9 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { divisionForHref, type Division } from "@/lib/divisions";
-import { glyphPoints } from "@/lib/glyph-path";
 import TrisenoMark from "./TrisenoMark";
-import Glyph from "./Glyph";
 import { deviceClass } from "@/lib/device";
 import { T_OUT, createTunnel } from "./warpTunnel";
 
@@ -57,7 +55,7 @@ const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
-const STAR_COUNT = 720;
+const STAR_COUNT = 420;
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -158,7 +156,6 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       const dpr = Math.min(window.devicePixelRatio || 1, weak ? 1 : 1.5);
       const setup = {
         hue: hexToRgb(target.hue),
-        ring: Array.from(glyphPoints(target.glyph, 96)),
         reduced,
         stars: weak ? STAR_COUNT / 2 : STAR_COUNT,
       };
@@ -298,29 +295,9 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         className="fixed inset-0 z-[1000] cursor-wait"
       >
         <canvas ref={canvasRef} className="block h-full w-full" />
-        <div ref={titleRef} className="warp-title absolute inset-0 flex flex-col items-center justify-center gap-8 px-6 text-center text-white">
-          {dest ? (
-            <>
-              <span className="warp-title__glyph">
-                <Glyph kind={dest.glyph} size={56} color={dest.hue} strokeWidth={1.5} glow />
-              </span>
-              <span className="warp-title__name font-display font-bold uppercase" aria-hidden="true">
-                {Array.from(dest.name.toUpperCase()).map((ch, i) =>
-                  ch === " " ? (
-                    <span key={i} className="warp-title__space" />
-                  ) : (
-                    <span key={i} className="warp-title__char" style={{ ["--i" as string]: i }}>
-                      {ch}
-                    </span>
-                  ),
-                )}
-              </span>
-              <span className="warp-title__label font-mono uppercase">
-                <TrisenoMark className="warp-title__mark" />
-                Triseno / {dest.name}
-              </span>
-            </>
-          ) : null}
+        <div ref={titleRef} className="warp-title absolute inset-0 flex items-center justify-center text-white">
+          {/* one thing in the middle of the hop: the TS mark */}
+          {dest ? <TrisenoMark className="warp-title__mark" /> : null}
         </div>
       </div>
       <div aria-live="polite" className="sr-only">

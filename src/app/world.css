@@ -325,22 +325,13 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
 .warp-title[data-show] { animation: warp-title-push 2.6s linear forwards; }
 .warp-title[data-out] { opacity: 0; }
 @keyframes warp-title-push { from { transform: scale(0.94); } to { transform: scale(1.04); } }
-.warp-title__glyph { opacity: 0; transform: scale(0.5) rotate(-90deg); transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo); }
-.warp-title__name { display: block; font-size: clamp(30px, 6.4vw, 104px); line-height: 1.05; letter-spacing: 0.08em; }
-/* each letter resolves by opacity and transform only: a blur per letter was
-   a filter pass per letter per frame, in the middle of the hop */
-.warp-title__char {
-  display: inline-block; opacity: 0;
-  transform: translate3d(0, 0.35em, 0) scale(1.35);
-  transition: opacity 800ms var(--ease-expo), transform 1000ms var(--ease-expo);
-  transition-delay: calc(var(--i) * 34ms);
+/* the TS mark alone: it resolves out of the light and holds, calm */
+.warp-title__mark {
+  height: clamp(64px, 9vw, 104px); width: auto;
+  opacity: 0; transform: scale(0.86);
+  transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo);
 }
-.warp-title__space { display: inline-block; width: 0.4em; }
-.warp-title__label { display: inline-flex; align-items: center; gap: 14px; font-size: var(--fs-label); letter-spacing: 0.3em; opacity: 0; transition: opacity 900ms var(--ease-expo) 300ms; }
-.warp-title[data-show] .warp-title__glyph { opacity: 1; transform: scale(1) rotate(0deg); }
-.warp-title[data-show] .warp-title__char { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-.warp-title[data-show] .warp-title__label { opacity: 1; }
-.warp-title__mark { height: 1.5em; width: auto; flex: none; }
+.warp-title[data-show] .warp-title__mark { opacity: 1; transform: scale(1); }
 
 /* ── portal ── */
 .portal-hero { transition: opacity 500ms var(--ease-expo); }
@@ -866,7 +857,7 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   .world-loader[data-leaving] { clip-path: inset(0 0 0 0); }
   .morph-nav__mark, .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
   .world-menu, .world-menu__link, .world-menu__glyph, .portal-word, .ghost-btn__fill,
-  .division-world__canvas, .warp-title__char, .warp-title__glyph, .warp-title__label {
+  .division-world__canvas, .warp-title__mark {
     transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
 }
