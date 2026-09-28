@@ -24,7 +24,7 @@ export default function Loader({ ready }: LoaderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
-  const fillRef = useRef<HTMLSpanElement>(null);
+  const markRef = useRef<HTMLSpanElement>(null);
   const readyRef = useRef(ready);
   const [phase, setPhase] = useState<"loading" | "leaving" | "gone">("loading");
   // The component stays mounted once it is gone (it renders null), so its
@@ -71,7 +71,7 @@ export default function Loader({ ready }: LoaderProps) {
       if (target === 1 && progress > 0.985) progress = 1;
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress.toFixed(4)})`;
       // the mark fills from its foot to its crown as the world loads
-      if (fillRef.current) fillRef.current.style.clipPath = `inset(${((1 - progress) * 100).toFixed(2)}% 0 0 0)`;
+      if (markRef.current) markRef.current.style.setProperty("--unfilled", `${((1 - progress) * 100).toFixed(2)}%`);
       if (countRef.current) countRef.current.textContent = String(Math.round(progress * 100)).padStart(3, "0");
       if (progress >= 1 && !left) {
         left = true;
@@ -93,6 +93,12 @@ export default function Loader({ ready }: LoaderProps) {
       const sy = Math.sin(ry);
       const cx = Math.cos(rx);
       const sx = Math.sin(rx);
+      // the mark turns inside the ring on the ring's own axes and perspective
+      // (the canvas projects with its eye 3.4 units = 211px away, y up; CSS
+      // is y down, so the tilt flips sign)
+      if (markRef.current) {
+        markRef.current.style.transform = `translate(-50%, -50%) perspective(211px) rotateX(${(-rx).toFixed(4)}rad) rotateY(${ry.toFixed(4)}rad)`;
+      }
 
       const project = (x: number, y: number, z: number): [number, number] => {
         const x1 = x * cy + z * sy;
@@ -178,11 +184,16 @@ export default function Loader({ ready }: LoaderProps) {
     >
       <div className="relative" style={{ width: 220, height: 220 }}>
         <canvas ref={canvasRef} aria-hidden="true" style={{ width: 220, height: 220 }} />
-        <span aria-hidden="true" className="world-loader__mark">
-          <TrisenoMark className="world-loader__ghost" />
-          <span ref={fillRef} className="world-loader__fill" style={{ clipPath: "inset(100% 0 0 0)" }}>
-            <TrisenoMark />
-          </span>
+        {/* a coin: the mark on both faces, so it never reads mirrored as it turns */}
+        <span ref={markRef} aria-hidden="true" className="world-loader__mark">
+          {["front", "back"].map((face) => (
+            <span key={face} className={`world-loader__face world-loader__face--${face}`}>
+              <TrisenoMark className="world-loader__ghost" />
+              <span className="world-loader__fill">
+                <TrisenoMark />
+              </span>
+            </span>
+          ))}
         </span>
       </div>
       <div className="mt-8 w-[min(240px,60vw)]">

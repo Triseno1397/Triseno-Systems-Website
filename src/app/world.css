@@ -73,12 +73,15 @@ html[data-warping] .orb-cursor { opacity: 0 !important; }
 /* the TS mark sits inside the morphing ring: a ghost of it, and a solid copy
    revealed from the foot up by the same progress as the bar */
 .world-loader__mark {
-  position: absolute; left: 50%; top: 50%; height: 46px; aspect-ratio: 866 / 816;
-  transform: translate(-50%, -50%); color: #ffffff;
+  position: absolute; left: 50%; top: 50%; height: 50px; aspect-ratio: 866 / 816;
+  transform: translate(-50%, -50%); color: #ffffff; will-change: transform;
 }
+.world-loader__mark { transform-style: preserve-3d; --unfilled: 100%; }
+.world-loader__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.world-loader__face--back { transform: rotateY(180deg); }
 .world-loader__mark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .world-loader__ghost { opacity: 0.16; }
-.world-loader__fill { position: absolute; inset: 0; }
+.world-loader__fill { position: absolute; inset: 0; clip-path: inset(var(--unfilled) 0 0 0); }
 
 /* ── chrome floats on the scene: no bar, no box. It leaves during a warp and
       arrives last on the other side. ── */
