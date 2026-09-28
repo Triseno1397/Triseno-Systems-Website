@@ -11,6 +11,7 @@ import WhyTriseno from "./WhyTriseno";
 import AiGate from "./AiGate";
 import FaqSection from "@/components/world/FaqSection";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * /ai-infrastructure. One world (AiWorld) renders behind every section from the
  * first frame to the last — nothing here paints its own background, so there is
@@ -33,6 +34,7 @@ export default function AiPage() {
       <WhyTriseno />
       <FaqSection division="ai" />
       <AiGate />
+      <SignOff />
     </main>
   );
 }

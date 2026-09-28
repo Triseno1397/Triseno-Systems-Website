@@ -4,6 +4,7 @@ import WorldPlate from "@/components/world/WorldPlate";
 import WorkIndex from "./WorkIndex";
 import WorkGate from "./WorkGate";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * /work — achromatic (white diamond glyph). An index of what the studio can
  * build across the three divisions; each entry takes its division's hue only
@@ -22,6 +23,7 @@ export default function WorkPage() {
 
       <WorkIndex />
       <WorkGate />
+      <SignOff />
     </main>
   );
 }

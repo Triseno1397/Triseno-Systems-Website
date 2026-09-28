@@ -10,6 +10,7 @@ import { SITE, jsonLdHtml } from "@/lib/seo";
 import { plateForDivision } from "@/components/world/plates";
 import "../../contact.css";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * /answers/[slug] — one buying-stage question, answered.
  *
@@ -181,6 +182,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ slug: s
           </footer>
         </GlassPanel>
       </section>
+      <SignOff />
     </main>
   );
 }

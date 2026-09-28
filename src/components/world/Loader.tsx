@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { glyphPoints } from "@/lib/glyph-path";
 import type { GlyphKind } from "@/lib/divisions";
+import TrisenoMark from "./TrisenoMark";
 
 /**
  * Loader = wireframe of the signature object + one progress bar
@@ -23,6 +24,7 @@ export default function Loader({ ready }: LoaderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
+  const fillRef = useRef<HTMLSpanElement>(null);
   const readyRef = useRef(ready);
   const [phase, setPhase] = useState<"loading" | "leaving" | "gone">("loading");
   // The component stays mounted once it is gone (it renders null), so its
@@ -68,6 +70,8 @@ export default function Loader({ ready }: LoaderProps) {
       progress += (target - progress) * (1 - Math.exp(-dt * (target === 1 ? 9 : 5)));
       if (target === 1 && progress > 0.985) progress = 1;
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress.toFixed(4)})`;
+      // the mark fills from its foot to its crown as the world loads
+      if (fillRef.current) fillRef.current.style.clipPath = `inset(${((1 - progress) * 100).toFixed(2)}% 0 0 0)`;
       if (countRef.current) countRef.current.textContent = String(Math.round(progress * 100)).padStart(3, "0");
       if (progress >= 1 && !left) {
         left = true;
@@ -172,7 +176,15 @@ export default function Loader({ ready }: LoaderProps) {
       className="world-loader fixed inset-0 z-[900] flex flex-col items-center justify-center bg-black"
       data-leaving={phase === "leaving" ? "" : undefined}
     >
-      <canvas ref={canvasRef} aria-hidden="true" style={{ width: 220, height: 220 }} />
+      <div className="relative" style={{ width: 220, height: 220 }}>
+        <canvas ref={canvasRef} aria-hidden="true" style={{ width: 220, height: 220 }} />
+        <span aria-hidden="true" className="world-loader__mark">
+          <TrisenoMark className="world-loader__ghost" />
+          <span ref={fillRef} className="world-loader__fill" style={{ clipPath: "inset(100% 0 0 0)" }}>
+            <TrisenoMark />
+          </span>
+        </span>
+      </div>
       <div className="mt-8 w-[min(240px,60vw)]">
         <div className="relative h-px w-full bg-white/25">
           <span ref={barRef} className="absolute inset-0 origin-left bg-white" style={{ transform: "scaleX(0)" }} />

@@ -10,6 +10,7 @@ import HiddenPortalSeal from "./HiddenPortalSeal";
 import { EMAIL, INSTAGRAM_HANDLE, INSTAGRAM_URL, type ContactDivision } from "./form";
 import { SITE } from "@/lib/seo";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * /contact — achromatic (white hexagon glyph), on the revamp foundation: the
  * world chrome, the portal's gallery plate through WorldPlate, ContentFade and
@@ -91,6 +92,7 @@ export default function ContactPage() {
           <HiddenPortalSeal />
         </div>
       </section>
+      <SignOff />
     </main>
   );
 }

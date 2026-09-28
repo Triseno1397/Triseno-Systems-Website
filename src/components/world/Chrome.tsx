@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CaretLeft, CaretUp, EnvelopeSimple } from "@phosphor-icons/react";
+import TrisenoMark from "./TrisenoMark";
 import {
   DIVISIONS,
   MENU_LABEL,
@@ -142,6 +143,7 @@ function MorphNav({
           aria-label={`Triseno / ${division.name} — go to portal`}
           className="morph-nav__lockup pointer-events-auto relative block h-[72px] w-[300px] max-w-[70vw] text-white"
         >
+          <TrisenoMark className="morph-nav__mark" />
           <span ref={wordRef} className="morph-nav__word font-display font-bold uppercase">
             Triseno
           </span>
@@ -249,6 +251,9 @@ function MenuOverlay({
             </div>
           );
         })}
+        <div className="world-menu__glyph world-menu__glyph--mark absolute right-0" data-on={shown === "portal" ? "" : undefined}>
+          <TrisenoMark variant="line" strokeWidth={1.5} color="#ffffff" />
+        </div>
       </div>
 
       <nav className="relative flex min-h-[100svh] flex-col justify-center px-[var(--gutter)] pb-[96px] pt-[120px]">

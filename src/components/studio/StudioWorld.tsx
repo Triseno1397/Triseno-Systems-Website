@@ -8,6 +8,7 @@ import ProofMarquee from "./ProofMarquee";
 import StudioGate from "./StudioGate";
 import FaqSection from "@/components/world/FaqSection";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * Triseno Creative — the Creative division world (`/studio`, amber, aperture).
  * A complete standalone pitch (D3): hero -> offer -> founder/process -> proof -> gate.
@@ -39,6 +40,7 @@ export default function StudioWorld() {
         <FaqSection division="creative" />
         <StudioGate />
       </div>
+      <SignOff />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, CircleNotch } from "@phosphor-icons/react";
+import TrisenoMark from "@/components/world/TrisenoMark";
 import Glyph from "@/components/world/Glyph";
 import GlassPanel from "@/components/world/GlassPanel";
 import GhostButton from "@/components/ui/GhostButton";
@@ -130,7 +131,7 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
       <GlassPanel world="portal" className="cf-panel" veil={0.55}>
         <div className="cf cf-done" style={{ ["--cf-hue" as string]: hue }}>
           <span className="cf-done__glyph" aria-hidden="true">
-            <Glyph kind="hexagon" size="100%" color="#ffffff" strokeWidth={1.5} glow />
+            <TrisenoMark title="Triseno Systems" />
           </span>
           <h2 ref={doneRef} className="cf-legend font-display" tabIndex={-1}>
             Message sent

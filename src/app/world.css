@@ -70,6 +70,15 @@ html[data-warping] .orb-cursor { opacity: 0 !important; }
   transition: opacity 520ms var(--ease-expo), clip-path 580ms var(--ease-expo);
 }
 .world-loader[data-leaving] { opacity: 0; clip-path: inset(0 0 100% 0); pointer-events: none; }
+/* the TS mark sits inside the morphing ring: a ghost of it, and a solid copy
+   revealed from the foot up by the same progress as the bar */
+.world-loader__mark {
+  position: absolute; left: 50%; top: 50%; height: 46px; aspect-ratio: 866 / 816;
+  transform: translate(-50%, -50%); color: #ffffff;
+}
+.world-loader__mark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.world-loader__ghost { opacity: 0.16; }
+.world-loader__fill { position: absolute; inset: 0; }
 
 /* ── chrome floats on the scene: no bar, no box. It leaves during a warp and
       arrives last on the other side. ── */
@@ -186,19 +195,36 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
   font-size: var(--fs-label); line-height: 1; will-change: transform;
   transition: transform 800ms var(--ease-expo);
 }
-.morph-nav__word { letter-spacing: 0.34em; transform: translate3d(0, 30px, 0); }
+/* The TS mark stands beside the stacked pair, as tall as both lines; when the
+   bar collapses to one line it shrinks to that line's cap height. Hover turns
+   it once on its vertical axis. */
+.morph-nav { --mark-h: 36px; --mark-x: 50px; --mark-xc: 26px; }
+.morph-nav__mark {
+  position: absolute; left: 0; top: 0; height: var(--mark-h); width: auto; overflow: visible;
+  transform-origin: 0 0; transform: translate3d(0, 28px, 0);
+  transition: transform 800ms var(--ease-expo);
+}
+.morph-nav__mark path { transform-box: view-box; }
+.morph-nav__lockup:hover .morph-nav__mark,
+.morph-nav__lockup:focus-visible .morph-nav__mark { animation: nav-mark-turn 1200ms var(--ease-expo); }
+@keyframes nav-mark-turn {
+  from { rotate: y 0deg; }
+  to { rotate: y 360deg; }
+}
+.morph-nav__word { letter-spacing: 0.34em; transform: translate3d(var(--mark-x), 30px, 0); }
 .morph-nav__division {
   display: inline-flex; align-items: center; gap: 10px; letter-spacing: 0.24em;
-  transform: translate3d(0, 52px, 0);
+  transform: translate3d(var(--mark-x), 52px, 0);
 }
 .morph-nav__rule {
   position: absolute; left: 0; top: 44px; height: 1px; background: #ffffff;
-  width: calc(var(--word-w) + 14px + var(--div-w));
+  width: calc(var(--mark-xc) + var(--word-w) + 14px + var(--div-w));
   transform: scaleX(0); transform-origin: left center;
   transition: transform 900ms var(--ease-expo);
 }
-.morph-nav[data-compact] .morph-nav__word { transform: translate3d(0, 22px, 0); }
-.morph-nav[data-compact] .morph-nav__division { transform: translate3d(calc(var(--word-w) + 14px), 22px, 0); }
+.morph-nav[data-compact] .morph-nav__mark { transform: translate3d(0, 20px, 0) scale(0.44); }
+.morph-nav[data-compact] .morph-nav__word { transform: translate3d(var(--mark-xc), 22px, 0); }
+.morph-nav[data-compact] .morph-nav__division { transform: translate3d(calc(var(--mark-xc) + var(--word-w) + 14px), 22px, 0); }
 .morph-nav[data-compact] .morph-nav__rule { transform: scaleX(1); }
 
 .morph-nav__trigger { transform: translate3d(0, 14px, 0); transition: transform 800ms var(--ease-expo); }
@@ -247,6 +273,9 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
   transition: opacity 700ms var(--ease-expo), transform 1000ms var(--ease-expo);
 }
 .world-menu__glyph[data-on] { opacity: 1; transform: scale(1) rotate(0deg); }
+.world-menu__glyph--mark { margin-top: -170px; transform: scale(0.92) translate3d(0, 24px, 0); }
+.world-menu__glyph--mark[data-on] { transform: scale(1) translate3d(0, 0, 0); }
+.world-menu__glyph--mark svg { display: block; height: 340px; width: auto; }
 .world-underline { position: relative; }
 .world-underline::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px; background: #ffffff;
@@ -307,10 +336,11 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
   transition-delay: calc(var(--i) * 34ms);
 }
 .warp-title__space { display: inline-block; width: 0.4em; }
-.warp-title__label { font-size: var(--fs-label); letter-spacing: 0.3em; opacity: 0; transition: opacity 900ms var(--ease-expo) 300ms; }
+.warp-title__label { display: inline-flex; align-items: center; gap: 14px; font-size: var(--fs-label); letter-spacing: 0.3em; opacity: 0; transition: opacity 900ms var(--ease-expo) 300ms; }
 .warp-title[data-show] .warp-title__glyph { opacity: 1; transform: scale(1) rotate(0deg); }
 .warp-title[data-show] .warp-title__char { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 .warp-title[data-show] .warp-title__label { opacity: 1; }
+.warp-title__mark { height: 1.5em; width: auto; flex: none; }
 
 /* ── portal ── */
 .portal-hero { transition: opacity 500ms var(--ease-expo); }
@@ -790,16 +820,19 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
      its glyph on top of the menu trigger's rules — two chrome elements in the
      same pixels. Stacked, it is capped well clear of the trigger. */
   .morph-nav__lockup { width: calc(100vw - var(--gutter) - 92px) !important; }
-  .morph-nav__word { transform: translate3d(0, 22px, 0); letter-spacing: 0.26em; }
+  .morph-nav { --mark-h: 32px; --mark-x: 42px; }
+  .morph-nav__mark { transform: translate3d(0, 21px, 0); }
+  .morph-nav[data-compact] .morph-nav__mark { transform: translate3d(0, 17px, 0); }
+  .morph-nav__word { transform: translate3d(var(--mark-x), 22px, 0); letter-spacing: 0.26em; }
   .morph-nav__division {
-    transform: translate3d(0, 42px, 0);
+    transform: translate3d(var(--mark-x), 42px, 0);
     letter-spacing: 0.12em; gap: 7px;
     max-width: 100%; overflow: hidden;
   }
   /* the rule sits under the stacked pair, never through the division name */
-  .morph-nav__rule { top: 57px; width: max(var(--word-w), var(--div-w)); }
-  .morph-nav[data-compact] .morph-nav__word { transform: translate3d(0, 18px, 0); }
-  .morph-nav[data-compact] .morph-nav__division { transform: translate3d(0, 38px, 0); }
+  .morph-nav__rule { top: 57px; width: calc(var(--mark-x) + max(var(--word-w), var(--div-w))); }
+  .morph-nav[data-compact] .morph-nav__word { transform: translate3d(var(--mark-x), 18px, 0); }
+  .morph-nav[data-compact] .morph-nav__division { transform: translate3d(var(--mark-x), 38px, 0); }
   .morph-nav__trigger { transform: translate3d(0, 10px, 0); }
   .morph-nav[data-compact] .morph-nav__trigger { transform: translate3d(0, 6px, 0); }
 
@@ -824,11 +857,14 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   .scroll-tick__line,
   .placeholder-world__glyph,
   .world-atmos__haze,
-  .world-atmos__dust { animation: none; }
+  .world-atmos__dust,
+  .morph-nav__lockup:hover .morph-nav__mark,
+  .morph-nav__lockup:focus-visible .morph-nav__mark,
+  .sign-off__giant svg { animation: none; }
   .hrotate__char, .hrotate__rule, .hrotate__glyph, .hrotate__out { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .lite-signature__halo, .lite-signature__glyph[data-on] { animation: none; }
   .world-loader[data-leaving] { clip-path: inset(0 0 0 0); }
-  .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
+  .morph-nav__mark, .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
   .world-menu, .world-menu__link, .world-menu__glyph, .portal-word, .ghost-btn__fill,
   .division-world__canvas, .warp-title__char, .warp-title__glyph, .warp-title__label {
     transition-duration: 1ms !important; transition-delay: 0ms !important;
@@ -1310,3 +1346,62 @@ html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
 .faq-more__link {
   font-family: var(--font-geist-sans), sans-serif; font-size: 16px; font-weight: 300; line-height: 1.4; color: #ffffff;
 }
+
+/* ── sign-off: the TS mark closing every page ── */
+.sign-off {
+  position: relative; overflow: hidden; color: #ffffff;
+  padding: clamp(80px, 14svh, 160px) var(--gutter) calc(var(--gutter-y, 24px) + 150px);
+}
+.sign-off__giant {
+  position: relative; margin: 0 auto; width: fit-content;
+  /* only the crown clears the floor: the rest stays below the page */
+  height: min(46vw, 420px); overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+.sign-off__giant svg { display: block; height: min(56vw, 520px); width: auto; opacity: 0.34; }
+@supports (animation-timeline: view()) {
+  .sign-off__giant svg {
+    animation: sign-off-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 55%;
+  }
+}
+@keyframes sign-off-rise {
+  from { transform: translate3d(0, 34%, 0); opacity: 0; }
+  to { transform: translate3d(0, 0, 0); opacity: 0.34; }
+}
+.sign-off__row {
+  position: relative; max-width: 1400px; margin: 0 auto; padding-top: 28px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+.sign-off__mark { height: 40px; width: auto; flex: none; }
+.sign-off__id { display: flex; flex-direction: column; gap: 8px; }
+.sign-off__name { font-size: var(--fs-label); letter-spacing: 0.34em; line-height: 1; }
+.sign-off__line { font-size: var(--fs-label); letter-spacing: 0.2em; line-height: 1; opacity: 0.55; }
+.sign-off__meta {
+  margin-left: auto; display: flex; gap: 28px;
+  font-size: var(--fs-label); letter-spacing: 0.2em; opacity: 0.55;
+}
+@media (max-width: 767px) {
+  .sign-off__meta { margin-left: 0; width: 100%; justify-content: space-between; }
+  .sign-off__line { letter-spacing: 0.12em; }
+}
+
+/* ── 404 ── */
+.lost__mark {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  clip-path: inset(0 0 0 0);
+  animation: lost-mark 2.2s var(--ease-expo) both;
+}
+.lost__mark svg { display: block; height: min(82svh, 88vw); width: auto; opacity: 0.2; }
+@keyframes lost-mark {
+  from { clip-path: inset(100% 0 0 0); transform: translate(-50%, -46%); }
+  to { clip-path: inset(0 0 0 0); transform: translate(-50%, -50%); }
+}
+.lost__copy { display: flex; flex-direction: column; align-items: center; max-width: 620px; }
+.lost__eyebrow { font-size: var(--fs-label); letter-spacing: 0.3em; opacity: 0.6; margin-bottom: 22px; }
+.lost__title { font-size: clamp(30px, 5.4vw, 72px); line-height: 1.05; letter-spacing: 0.08em; }
+.lost__body { margin: 22px 0 36px; font-size: 17px; line-height: 1.5; color: #cfcfcf; }
+@media (prefers-reduced-motion: reduce) { .lost__mark { animation: none; } }

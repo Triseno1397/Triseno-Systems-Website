@@ -1,26 +1,19 @@
-import Link from "next/link";
+import GhostButton from "@/components/ui/GhostButton";
+import TrisenoMark from "@/components/world/TrisenoMark";
 
+/* 404: the TS mark, drawn large in hairline, standing over an empty address. */
 export default function NotFound() {
   return (
-    <div className="min-h-[100svh] flex items-center justify-center px-6">
-      <div className="text-center max-w-md">
-        <span className="font-mono text-sm text-cyan-400 tracking-[0.2em] uppercase">
-          404
-        </span>
-        <h1 className="mt-4 text-4xl md:text-5xl font-bold text-text-primary tracking-tight">
-          Page Not Found
-        </h1>
-        <p className="mt-4 text-text-secondary leading-relaxed">
-          The system you&apos;re looking for doesn&apos;t exist at this
-          address. Let&apos;s get you back on track.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center mt-8 px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-400 to-cyan-600 text-navy-950 font-semibold text-sm transition-shadow hover:shadow-[0_0_30px_rgba(0,180,216,0.25)]"
-        >
-          Back to Home
-        </Link>
+    <main className="lost relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-black px-[var(--gutter)] text-white">
+      <div aria-hidden="true" className="lost__mark">
+        <TrisenoMark variant="line" strokeWidth={1} color="#ffffff" />
       </div>
-    </div>
+      <div className="lost__copy relative text-center">
+        <p className="lost__eyebrow font-mono uppercase">404 / Off the map</p>
+        <h1 className="lost__title font-display font-bold uppercase">Nothing built here</h1>
+        <p className="lost__body">This address doesn&apos;t lead anywhere. The portal does.</p>
+        <GhostButton href="/" className="lost__cta">Back to the portal</GhostButton>
+      </div>
+    </main>
   );
 }

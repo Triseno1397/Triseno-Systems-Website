@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { divisionForHref, type Division } from "@/lib/divisions";
 import { glyphPoints } from "@/lib/glyph-path";
+import TrisenoMark from "./TrisenoMark";
 import Glyph from "./Glyph";
 import { deviceClass } from "@/lib/device";
 import { T_OUT, createTunnel } from "./warpTunnel";
@@ -314,7 +315,10 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
                   ),
                 )}
               </span>
-              <span className="warp-title__label font-mono uppercase">Triseno / {dest.name}</span>
+              <span className="warp-title__label font-mono uppercase">
+                <TrisenoMark className="warp-title__mark" />
+                Triseno / {dest.name}
+              </span>
             </>
           ) : null}
         </div>

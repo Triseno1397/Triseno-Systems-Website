@@ -9,6 +9,7 @@ import RangeGallery from "./RangeGallery";
 import WebGate from "./WebGate";
 import FaqSection from "@/components/world/FaqSection";
 
+import SignOff from "@/components/world/SignOff";
 /**
  * Web Design Division — violet world, square / frame glyph.
  * One continuous camera-driven volume (WebWorld); every section below is an
@@ -33,6 +34,7 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
       <RangeGallery />
       <FaqSection division="web" />
       <WebGate />
+      <SignOff />
     </main>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from "./portalState";
 import { statue } from "./statue";
 
+import SignOff from "@/components/world/SignOff";
 gsap.registerPlugin(ScrollTrigger);
 
 // 3D is never in the server HTML or the first bundle: the LCP element is the headline.
@@ -640,6 +641,7 @@ export default function PortalPage() {
           </GhostButton>
         </div>
       </section>
+      <SignOff />
     </main>
   );
 }
