@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { makeGlowTexture } from "@/components/world/scene/textures";
+import { MARK_OUTLINE } from "./markOutline";
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE REACTOR in the Operator's chest: the Triseno mark as the glowing heart
@@ -7,72 +8,16 @@ import { makeGlowTexture } from "@/components/world/scene/textures";
    rendered reactor (a chrome bezel, ten coils of blue plasma, a lit core) on
    a disc, seated into the plate by a slim chrome rim; its light pulses on its
    own, flickers faintly, and surges when he draws power (the forge, the
-   jets). The mark burns white-hot in the core, drawn in code from the logo's
-   own proportions (public/icons/icon-512.png) so it stays exact.
+   jets). The mark burns white-hot in the core, traced from the logo itself
+   (markOutline.ts, from public/images/triseno-mark-white.png) so it stays exact.
 
    The reactor's radius is 1; a few hundred triangles, one texture, and no
    light (a light would change the light count and recompile every shader in
    the world).
    ───────────────────────────────────────────────────────────────────────── */
 
-const CX = 318;
-const CY = 255;
-/** logo pixels -> emblem units: the mark is ~1 unit across */
-const K = 1 / 290;
-
-/** the logo is drawn y-down; the emblem is y-up, centred on the mark */
-const P = (x: number, y: number) => new THREE.Vector2((x - CX) * K, (CY - y) * K);
-
-function poly(pts: [number, number][]) {
-  const s = new THREE.Shape();
-  pts.forEach(([x, y], i) => {
-    const v = P(x, y);
-    if (i === 0) s.moveTo(v.x, v.y);
-    else s.lineTo(v.x, v.y);
-  });
-  s.closePath();
-  return s;
-}
-
-/** a ring sector (a curved stroke), angles in degrees, y-up, from a0 to a1 */
-function arc(cx: number, cy: number, r0: number, r1: number, a0: number, a1: number) {
-  const c = P(cx, cy);
-  const d = Math.PI / 180;
-  const s = new THREE.Shape();
-  const cw = a1 < a0;
-  s.moveTo(c.x + Math.cos(a0 * d) * r1 * K, c.y + Math.sin(a0 * d) * r1 * K);
-  s.absarc(c.x, c.y, r1 * K, a0 * d, a1 * d, cw);
-  s.lineTo(c.x + Math.cos(a1 * d) * r0 * K, c.y + Math.sin(a1 * d) * r0 * K);
-  s.absarc(c.x, c.y, r0 * K, a1 * d, a0 * d, !cw);
-  s.closePath();
-  return s;
-}
-
 function markShapes(): THREE.Shape[] {
-  return [
-    // the T: a chamfered bar and its stem
-    // (strokes fattened over the logo's: at the size of a medallion on his
-    // chest, thin strokes read as scratches)
-    poly([
-      [188, 118],
-      [447, 118],
-      [426, 148],
-      [209, 148],
-    ]),
-    poly([
-      [296, 148],
-      [339, 148],
-      [339, 385],
-      [296, 385],
-    ]),
-    // the three speed-arcs, nested, sweeping back to the left
-    arc(292, 300, 88, 108, 90, 205),
-    arc(292, 300, 60, 80, 90, 222),
-    arc(292, 300, 32, 52, 90, 250),
-    // the hook over the bowl, and the bowl
-    arc(350, 300, 82, 104, 90, -8),
-    arc(352, 325, 40, 62, 90, -90),
-  ];
+  return MARK_OUTLINE.map((pts) => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))));
 }
 
 export interface Emblem {

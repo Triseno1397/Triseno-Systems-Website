@@ -195,10 +195,10 @@ export default function HiddenPortalSeal() {
             }}
           >
             <Image
-              src="/images/triseno-logo-v2.png"
+              src="/images/triseno-mark-white.png"
               alt=""
-              width={400}
-              height={400}
+              width={866}
+              height={816}
               className="h-[136px] w-[136px] object-contain pointer-events-none"
               draggable={false}
               priority={false}
@@ -212,10 +212,10 @@ export default function HiddenPortalSeal() {
           className="relative flex h-[148px] w-[148px] items-center justify-center"
         >
           <Image
-            src="/images/triseno-logo-v2.png"
+            src="/images/triseno-mark-white.png"
             alt=""
-            width={400}
-            height={400}
+            width={866}
+            height={816}
             className="h-[136px] w-[136px] object-contain select-none pointer-events-none"
             draggable={false}
             style={{
