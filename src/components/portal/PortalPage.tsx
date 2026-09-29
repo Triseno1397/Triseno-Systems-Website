@@ -16,6 +16,9 @@ import SceneGuard from "@/components/world/SceneGuard";
 import { prefersLite } from "@/lib/device";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
+
+/** the portal's division legend, in menu order (Web, Creative, AI) */
+const LEGEND = ["Websites", "Ad creative", "AI infrastructure"];
 import {
   DOOR_ITEMS,
   DOOR_Z,
@@ -520,8 +523,30 @@ export default function PortalPage() {
                 <HeadlineRotate words={lineTwo} index={active} />
               </span>
             </h1>
-            <p className="portal-sub mt-6 max-w-[46ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
-              Three divisions. Websites · Ad creative · AI infrastructure.
+            {/* the three divisions as a legend: each in its own glyph and hue,
+                lit in step with the menu (the hovered division holds, the
+                others step back) */}
+            <p
+              className="portal-sub portal-legend mt-7"
+              data-hot={hot ? "" : undefined}
+              aria-label="Three divisions: websites, ad creative, AI infrastructure."
+            >
+              <span aria-hidden="true" className="portal-legend__count font-mono">
+                <b>03</b> Divisions
+              </span>
+              <span aria-hidden="true" className="portal-legend__rule" />
+              {LEGEND.map((label, i) => (
+                <span
+                  key={label}
+                  aria-hidden="true"
+                  className="portal-legend__item font-mono"
+                  data-on={hot && active === i ? "" : undefined}
+                  style={{ ["--c" as string]: MENU_ITEMS[i].hue, ["--i" as string]: i }}
+                >
+                  <Glyph kind={MENU_ITEMS[i].glyph} size={11} color={MENU_ITEMS[i].hue} strokeWidth={1.4} />
+                  <span>{label}</span>
+                </span>
+              ))}
             </p>
           </div>
 

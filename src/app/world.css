@@ -381,6 +381,39 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
 @keyframes hrotate-rule-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes hrotate-glyph-in { from { opacity: 0; transform: scale(0.4) rotate(-120deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
 
+/* the division legend under the headline: a count, a rule, and the three
+   divisions in their own glyph and hue. Each item wipes in on arrival; while a
+   division is hot in the menu it holds full strength and the others step back. */
+.portal-legend {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 0;
+  font-size: 11.5px; letter-spacing: 0.24em; text-transform: uppercase; line-height: 1;
+}
+.portal-legend__count { color: rgba(255, 255, 255, 0.55); white-space: nowrap; }
+.portal-legend__count b { font-weight: 500; color: #ffffff; margin-right: 0.5em; }
+.portal-legend__rule {
+  display: block; width: 44px; height: 1px; margin: 0 20px; background: rgba(255, 255, 255, 0.5);
+  transform-origin: left center; animation: legend-rule 900ms var(--ease-expo) 500ms both;
+}
+.portal-legend__item {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; padding: 0 18px; white-space: nowrap;
+  color: #ffffff; transition: opacity 500ms var(--ease-expo);
+  animation: legend-in 1000ms var(--ease-expo) both; animation-delay: calc(700ms + var(--i) * 120ms);
+}
+.portal-legend__item:first-of-type { padding-left: 0; }
+.portal-legend__item + .portal-legend__item::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 1px; height: 14px; margin-top: -7px; background: rgba(255, 255, 255, 0.28);
+}
+.portal-legend__item > svg { flex: none; filter: drop-shadow(0 0 6px var(--c)); transition: transform 600ms var(--ease-expo); }
+.portal-legend[data-hot] .portal-legend__item { opacity: 0.34; }
+.portal-legend[data-hot] .portal-legend__item[data-on] { opacity: 1; }
+.portal-legend__item[data-on] > svg { transform: scale(1.35); }
+/* (no opacity in the entrance: the hot/dim state owns opacity) */
+@keyframes legend-in { from { clip-path: inset(0 100% 0 0); transform: translate3d(-8px, 0, 0); } to { clip-path: inset(0 -20px 0 0); transform: none; } }
+@keyframes legend-rule { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .portal-legend__rule, .portal-legend__item { animation: none; }
+}
+
 /* menu: the three divisions carry their glyph; WORK and CONTACT sit apart, below a hairline */
 .portal-menu__group { display: flex; flex-direction: column; gap: 0.3em; }
 .portal-menu__rule { display: block; width: 56px; height: 1px; background: #ffffff; margin: 20px 0 18px; }

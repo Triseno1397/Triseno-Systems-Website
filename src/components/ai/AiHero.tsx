@@ -1,74 +1,98 @@
 "use client";
 
+import { useRef } from "react";
 import { ArrowDown } from "@phosphor-icons/react";
 import GhostButton from "@/components/ui/GhostButton";
 import Glyph from "@/components/world/Glyph";
 import { getLenis } from "@/components/world/SmoothScroll";
-import { DIVISIONS } from "@/lib/divisions";
 import { HERO } from "./content";
+import DitherLens from "./DitherLens";
+import Scramble from "./Scramble";
 
 /**
- * 1. Hero — the world is the spotlight (site-map: "interactive 3D + spotlight").
- * The cathedral plate parallaxes with the pointer and carries a cyan light
- * that follows it (AiWorld). The copy stands directly in the calm dark centre
- * of the nave — no box — over a soft local neutral scrim, so no filament ever
- * sits behind a letterform (world-plates.md: "a local soft neutral scrim").
+ * 1. Hero — sheet one of the spec.
  *
- * Entrance: the label, then each headline line rising out of its own mask,
- * then the sub line and the calls to action. The masks only run during the
- * entrance; at rest the headline is solid white. Reduced motion: no entrance.
+ * The page is a clean room: paper, ink and one signal colour. The headline
+ * decodes into place line by line; beside it the division's world (the
+ * cathedral nave every other page of the site would show you in full dark)
+ * is printed as a 1-bit negative, and the pointer is a lens that develops the
+ * real frame under it. Nothing here is scroll-driven.
  */
 export default function AiHero() {
+  const readoutRef = useRef<HTMLSpanElement>(null);
+
   const toCapabilities = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const target = document.getElementById("capabilities");
     if (!target) return;
     e.preventDefault();
     const lenis = getLenis();
     if (lenis) lenis.scrollTo(target, { duration: 1.4 });
-    else {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
-    }
+    else target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
 
   return (
-    <section data-rail="Layer" aria-label="AI Infrastructure" className="ai-hero relative z-10 min-h-[100svh]">
-      <div className="ai-hero__inner ai-wrap relative flex min-h-[100svh] flex-col justify-center">
-        <div className="ai-hero__stack">
-          <span aria-hidden="true" className="ai-scrim ai-hero__scrim" />
-          <p className="ai-label ai-rise mb-6 flex items-center justify-center gap-3" style={{ ["--d" as string]: 0 }}>
-            <Glyph kind="triangle" size={14} color={DIVISIONS.ai.hue} strokeWidth={1.25} glow />
-            <span>{HERO.label}</span>
-          </p>
+    <section data-rail="Layer" aria-labelledby="ai-hero-title" className="ai-hero relative z-10">
+      <div className="ai-wrap">
+        {/* the sheet's title block */}
+        <div className="ai-sheetbar ai-in" style={{ ["--d" as string]: 0 }}>
+          <span>
+            <b>AI-01</b>
+            <span className="max-md:hidden">Triseno Systems / AI Infrastructure</span>
+            <span className="md:hidden">Spec</span>
+          </span>
+          <span className="max-md:hidden">{HERO.label}</span>
+          <span>Sheet 01 / 07</span>
+        </div>
 
-          <h1 className="ai-hero__title font-display font-bold uppercase">
-            {HERO.headline.map((line, i) => (
-              <span key={line} className="ai-hero__line">
-                <span className="ai-hero__word" style={{ ["--d" as string]: i + 1 }}>
-                  {line}
-                </span>{" "}
-              </span>
-            ))}
-          </h1>
-
-          <p className="ai-body ai-rise ai-hero__sub mt-7 max-md:hidden" style={{ ["--d" as string]: 5 }}>
-            {HERO.sub}
-          </p>
-          {/* phone: the same three offers as a mono line, so the frame keeps
-              its message and the display type stays >= 2.5x the body size */}
-          <p className="ai-label ai-rise ai-hero__offers mt-6 md:hidden" style={{ ["--d" as string]: 5 }}>
-            {HERO.offers.map((o) => (
-              <span key={o}>{o}</span>
-            ))}
-          </p>
-
-          <div className="ai-rise mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-5" style={{ ["--d" as string]: 6 }}>
-            <GhostButton href="/contact?division=ai">Start with a diagnostic</GhostButton>
-            <a href="#capabilities" onClick={toCapabilities} className="ai-textlink">
-              <span>Explore what we build</span>
-              <ArrowDown size={16} weight="light" aria-hidden="true" />
-            </a>
+        <div className="ai-hero__grid">
+          <div className="ai-hero__copy">
+            <p className="ai-label ai-in flex items-center gap-3" style={{ ["--d" as string]: 1 }}>
+              <Glyph kind="triangle" size={13} color="#00a3c4" strokeWidth={1.4} />
+              <span>Division 03 / Operational intelligence</span>
+            </p>
+            <h1 id="ai-hero-title" className="ai-hero__title font-display font-bold uppercase" aria-label={HERO.headline.join(" ")}>
+              {HERO.headline.map((line, i) => (
+                <span key={line} className="ai-hero__line" data-hot={i === 2 ? "" : undefined}>
+                  <Scramble text={line} delay={0.25 + i * 0.18} duration={0.8} />
+                </span>
+              ))}
+            </h1>
+            <p className="ai-body ai-in ai-hero__sub" style={{ ["--d" as string]: 4 }}>
+              {HERO.sub}
+            </p>
+            <div className="ai-in ai-hero__cta" style={{ ["--d" as string]: 5 }}>
+              <GhostButton href="/contact?division=ai">Start with a diagnostic</GhostButton>
+              <a href="#capabilities" onClick={toCapabilities} className="ai-textlink">
+                <span>Explore what we build</span>
+                <ArrowDown size={16} weight="light" aria-hidden="true" />
+              </a>
+            </div>
           </div>
+
+          <figure className="ai-hero__fig ai-in" style={{ ["--d" as string]: 2 }}>
+            <div className="ai-frame">
+              <i className="ai-frame__crop" data-c="tl" />
+              <i className="ai-frame__crop" data-c="tr" />
+              <i className="ai-frame__crop" data-c="bl" />
+              <i className="ai-frame__crop" data-c="br" />
+              <DitherLens
+                src="/worlds/ai-desktop.webp"
+                srcMobile="/worlds/ai-mobile.webp"
+                lens={0.22}
+                readout={readoutRef}
+                label="The AI division's world, a nave of dark pillars strung with cyan light, printed as a one-bit negative with a lens that shows the real image"
+                className="ai-hero__lens"
+              />
+            </div>
+            <figcaption className="ai-figcap">
+              <span>
+                <b>Fig. 01</b> The layer, printed. <span className="max-md:hidden">Move over it to develop the frame.</span>
+              </span>
+              <span ref={readoutRef} className="ai-figcap__read" aria-hidden="true">
+                X 0.620  Y 0.460
+              </span>
+            </figcaption>
+          </figure>
         </div>
       </div>
     </section>

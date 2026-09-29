@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import GlassPanel from "@/components/world/GlassPanel";
 import { WHY } from "./content";
 
 /**
@@ -26,8 +25,7 @@ export default function WhyTriseno() {
     <section data-rail="Why" aria-labelledby="ai-why-title" className="ai-section relative z-10">
       <div className="ai-wrap ai-why-split">
         <header className="ai-why__head">
-          <span aria-hidden="true" className="ai-scrim" />
-          <p className="ai-label">
+                    <p className="ai-label">
             <b>06</b> / {WHY.label}
           </p>
           <h2 id="ai-why-title" className="ai-h2 font-display font-semibold uppercase">
@@ -52,7 +50,7 @@ export default function WhyTriseno() {
           </div>
         </header>
 
-        <GlassPanel world="ai" className="ai-why__panel">
+        <div className="ai-panel ai-why__panel">
           <ul className="ai-why" data-state={state} aria-live="polite">
             {WHY.rows.map((row, i) => (
               <li key={row.topic} className="ai-why__row" style={{ ["--i" as string]: i }}>
@@ -72,7 +70,7 @@ export default function WhyTriseno() {
               </li>
             ))}
           </ul>
-        </GlassPanel>
+        </div>
       </div>
     </section>
   );

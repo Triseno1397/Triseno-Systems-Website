@@ -1,238 +1,94 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { addFrameJob } from "@/components/world/frameLoop";
-import GlassPanel from "@/components/world/GlassPanel";
-import CapabilityDiagram from "./CapabilityDiagram";
+import { useEffect, useRef, useState } from "react";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
+import CapabilityDiagram from "./CapabilityDiagram";
+import Scramble from "./Scramble";
 
 /**
- * 2. Capabilities — spotlight cards in a bento (site-map mechanic; the 21st.dev
- * spotlight-card component, tailored). ONE frame, not six clones.
+ * 2. Capabilities — an expanding-column accordion (after 21st.dev's
+ * "Interactive Image Accordion", rebuilt for the spec sheet). Six columns side
+ * by side: five fold to spines (number and name set vertically) while one
+ * stands open with its brief and its live diagram. Hover, focus or click a
+ * spine and it opens as the rest fold.
  *
- * Each card is frosted glass (GlassPanel) with its diagram and its name. A
- * light travels over the bento — the pointer, or on its own when idle — and
- * inside its radius the card's edge lights cyan (active state) and a cyan
- * hairline field appears (clip-path circles; line-work, never a colour wash).
- *
- * Beyond the stock demo: exactly one card is ever LIVE (the one nearest the
- * light), its diagram comes up to full strength, and its description is read
- * out in the single caption line under the bento. So the frame carries six
- * names and six drawings but only ever one paragraph — the light decides which.
- * Touch devices have no light: every card shows full borders and its own
- * description, and the caption is not rendered. Reduced motion: the light rests
- * on the first card.
+ * Nothing changes width. Every column is laid out at the open width and
+ * placed with a transform; what shows of it is a clip-path. Opening one moves
+ * the columns after it and widens its clip, so the accordion runs on the
+ * compositor. Phones: a stack of rows, one open at a time.
  */
-const RADIUS = 300;
+
+const SPINE = 68;
 
 export default function Capabilities() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const capIndexRef = useRef<HTMLElement>(null);
-  const capTitleRef = useRef<HTMLSpanElement>(null);
-  const capBodyRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [w, setW] = useState(0);
 
   useEffect(() => {
-    const section = sectionRef.current;
-    const grid = gridRef.current;
-    if (!section || !grid) return;
-    const hover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!hover) {
-      // A thumb has no hover for the spotlight to follow, and this used to bail
-      // here — so on a phone no card ever went live and the readout never
-      // changed. A tap makes a card live now, and the first card starts live so
-      // the readout is never empty.
-      const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ai-card"));
-      let live = -1;
-      const pick = (i: number) => {
-        if (i === live) return;
-        if (live >= 0) cards[live].removeAttribute("data-live");
-        live = i;
-        cards[i].setAttribute("data-live", "");
-        const cap = CAPABILITIES[i];
-        if (capIndexRef.current) capIndexRef.current.textContent = String(i + 1).padStart(2, "0");
-        if (capTitleRef.current) capTitleRef.current.textContent = cap.title;
-        if (capBodyRef.current) capBodyRef.current.textContent = cap.body;
-      };
-      const taps = cards.map((card, i) => {
-        const on = () => pick(i);
-        card.addEventListener("click", on);
-        return on;
-      });
-      pick(0);
-      return () => cards.forEach((card, i) => card.removeEventListener("click", taps[i]));
-    }
-
-    const cards = Array.from(grid.querySelectorAll<HTMLElement>(".ai-card"));
-    const rings = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__ring"));
-    const fields = cards.map((c) => c.querySelector<HTMLElement>(".ai-card__field"));
-
-    let visible = false;
-    let px = -9999;
-    let py = -9999;
-    let x = 0;
-    let y = 0;
-    let started = false;
-    let lastMove = 0;
-    let last = performance.now();
-    let live = -1;
-
-    const readOut = (i: number) => {
-      const cap = CAPABILITIES[i];
-      if (capIndexRef.current) capIndexRef.current.textContent = String(i + 1).padStart(2, "0");
-      if (capTitleRef.current) capTitleRef.current.textContent = cap.title;
-      if (capBodyRef.current) capBodyRef.current.textContent = cap.body;
-    };
-
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      px = e.clientX;
-      py = e.clientY;
-      lastMove = performance.now();
-    };
-
-    // measured in the frame loop's read phase, styled in its write phase:
-    // the spotlight never forces a layout in the middle of a frame
-    let g: DOMRect | null = null;
-    let rects: DOMRect[] = [];
-    const read = () => {
-      if (!visible) return;
-      g = grid.getBoundingClientRect();
-      rects = cards.map((card) => card.getBoundingClientRect());
-    };
-    const write = () => {
-      if (!visible || !g) return;
-      const now = performance.now();
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const inside = px >= g.left - 60 && px <= g.right + 60 && py >= g.top - 60 && py <= g.bottom + 60;
-      const idle = !inside || now - lastMove > 4000;
-      let tx = px;
-      let ty = py;
-      if (idle) {
-        if (reduced) {
-          const r0 = rects[0];
-          tx = r0.left + r0.width / 2;
-          ty = r0.top + r0.height / 2;
-        } else {
-          // a slow lissajous over the bento, so every card gets its turn
-          const t = now / 1000;
-          tx = g.left + g.width * (0.5 + 0.44 * Math.sin(t * 0.23));
-          ty = g.top + g.height * (0.5 + 0.36 * Math.sin(t * 0.37 + 0.8));
-        }
-      }
-      if (!started) {
-        started = true;
-        x = tx;
-        y = ty;
-      }
-      const k = reduced ? 1 : 1 - Math.exp(-dt * (idle ? 2 : 12));
-      x += (tx - x) * k;
-      y += (ty - y) * k;
-
-      let nearest = -1;
-      let nearestD = Infinity;
-      cards.forEach((card, i) => {
-        const r = rects[i];
-        const lx = x - r.left;
-        const ly = y - r.top;
-        const ring = rings[i];
-        const field = fields[i];
-        if (ring) ring.style.clipPath = `circle(${RADIUS}px at ${lx.toFixed(1)}px ${ly.toFixed(1)}px)`;
-        if (field) field.style.clipPath = `circle(${RADIUS - 50}px at ${lx.toFixed(1)}px ${ly.toFixed(1)}px)`;
-        const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
-        if (d < nearestD) {
-          nearestD = d;
-          nearest = i;
-        }
-      });
-      if (nearest !== live) {
-        if (live >= 0) cards[live].removeAttribute("data-live");
-        live = nearest;
-        cards[live].setAttribute("data-live", "");
-        readOut(live);
-      }
-    };
-
-    const io = new IntersectionObserver(([entry]) => (visible = entry.isIntersecting), { threshold: 0 });
-    io.observe(section);
-    window.addEventListener("pointermove", onMove, { passive: true });
-    const stop = addFrameJob({ read, write });
-    return () => {
-      stop();
-      io.disconnect();
-      window.removeEventListener("pointermove", onMove);
-    };
+    const el = listRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setW(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
-  const total = String(CAPABILITIES.length).padStart(2, "0");
+  const n = CAPABILITIES.length;
+  const openW = Math.max(0, w - SPINE * (n - 1));
 
   return (
-    <section
-      ref={sectionRef}
-      id="capabilities"
-      data-rail="Capabilities"
-      aria-labelledby="ai-cap-title"
-      className="ai-section ai-caps relative z-10"
-    >
+    <section id="capabilities" data-rail="Capabilities" aria-labelledby="ai-cap-title" className="ai-section relative z-10">
       <div className="ai-wrap">
-        <div ref={gridRef} className="ai-bento">
-          <header className="ai-bento__head">
-            <GlassPanel world="ai" className="ai-sheet ai-bento__headpanel">
-              <p className="ai-label">
-                <b>02</b> / Capabilities
-              </p>
-              <h2 id="ai-cap-title" className="ai-h2 font-display font-semibold uppercase">
-                {CAPABILITIES_INTRO.title}
-              </h2>
-              <p className="ai-body">{CAPABILITIES_INTRO.body}</p>
-            </GlassPanel>
-          </header>
+        <header className="ai-head">
+          <p className="ai-label">
+            <b>02</b> / Capabilities
+          </p>
+          <h2 id="ai-cap-title" className="ai-h2 font-display font-semibold uppercase">
+            {CAPABILITIES_INTRO.title}
+          </h2>
+          <p className="ai-body ai-head__aside">{CAPABILITIES_INTRO.body}</p>
+        </header>
 
-          {CAPABILITIES.map((cap, i) => (
-            <article key={cap.id} className="ai-card">
-              <span aria-hidden="true" className="ai-card__ring" />
-              <GlassPanel world="ai" className="ai-card__panel">
-                <span aria-hidden="true" className="ai-card__field" />
-                <div className="ai-card__inner">
-
-                <p className="ai-card__meta ai-label">
-                  <span>
-                    <b>{String(i + 1).padStart(2, "0")}</b> / {total}
-                  </span>
-                  <span aria-hidden="true" className="ai-card__status">
-                    <i>Idle</i>
-                    <i>Live</i>
-                  </span>
-                </p>
-                <div className="ai-card__figure">
-                  <CapabilityDiagram kind={cap.id} />
+        <ul ref={listRef} className="ai-cols" data-ready={w > 0 ? "" : undefined} style={{ ["--open-w" as string]: `${openW}px`, ["--spine" as string]: `${SPINE}px` }}>
+          {CAPABILITIES.map((cap, i) => {
+            const on = open === i;
+            const x = i * SPINE + (i > open ? openW - SPINE : 0);
+            const cut = on ? 0 : openW - SPINE;
+            return (
+              <li
+                key={cap.id}
+                className="ai-col"
+                data-open={on ? "" : undefined}
+                style={{ ["--x" as string]: `${x}px`, ["--cut" as string]: `${cut}px` }}
+                onMouseEnter={() => setOpen(i)}
+              >
+                <button
+                  type="button"
+                  className="ai-col__spine"
+                  aria-expanded={on}
+                  aria-controls={`ai-col-${cap.id}`}
+                  onClick={() => setOpen(i)}
+                  onFocus={() => setOpen(i)}
+                >
+                  <span className="ai-col__num">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="ai-col__name">{cap.title}</span>
+                  <span aria-hidden="true" className="ai-col__dot" />
+                </button>
+                <div id={`ai-col-${cap.id}`} className="ai-col__body" aria-hidden={!on}>
+                  <p className="ai-label ai-col__tag">
+                    <i aria-hidden="true" className="ai-live" /> {cap.tag}
+                  </p>
+                  <h3 className="ai-col__title font-display font-semibold uppercase">
+                    <span className="sr-only">{cap.title}</span>
+                    {on ? <Scramble key={i} text={cap.title} duration={0.55} /> : <span aria-hidden="true">{cap.title}</span>}
+                  </h3>
+                  <p className="ai-body ai-col__text">{cap.body}</p>
+                  <div className="ai-col__fig">{on ? <CapabilityDiagram kind={cap.id} /> : null}</div>
                 </div>
-                <h3 className="ai-h3 font-display font-semibold uppercase">{cap.title}</h3>
-                {/* on pointer devices this is read out in the caption instead */}
-                <p className="ai-body ai-card__body">{cap.body}</p>
-                </div>
-              </GlassPanel>
-            </article>
-          ))}
-        </div>
-
-        <div aria-hidden="true" className="ai-bento__captionwrap">
-        <GlassPanel world="ai" className="ai-bento__caption">
-          <span className="ai-label">
-            <b ref={capIndexRef}>01</b> / Live
-          </span>
-          <span className="ai-bento__read">
-            <span ref={capTitleRef} className="ai-h3 font-display font-semibold uppercase">
-              {CAPABILITIES[0].title}
-            </span>
-            <span ref={capBodyRef} className="ai-body">
-              {CAPABILITIES[0].body}
-            </span>
-          </span>
-        </GlassPanel>
-        </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );

@@ -109,8 +109,7 @@ export default function AiGate() {
       </svg>
 
         <div className="ai-gate__copy">
-        <span aria-hidden="true" className="ai-scrim" />
-        <p className="ai-label">
+                <p className="ai-label">
           <b>07</b> / Next: Contact
         </p>
         <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">

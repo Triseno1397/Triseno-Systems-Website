@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import GlassPanel from "@/components/world/GlassPanel";
 import { COMPRESSION } from "./content";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -212,8 +211,7 @@ export default function Compression() {
       <div ref={stageRef} className="ai-compress__stage">
         <div className="ai-wrap ai-compress__grid">
           <header className="ai-compress__copy">
-            <span aria-hidden="true" className="ai-scrim" />
-            <p className="ai-label">
+                        <p className="ai-label">
               <b>03</b> / Workflow compression
             </p>
             <h2 id="ai-flow-title" className="ai-h2 mt-4 font-display font-semibold uppercase">
@@ -228,7 +226,7 @@ export default function Compression() {
             </p>
           </header>
 
-          <GlassPanel world="ai" as="div" className="ai-compress__figure">
+          <div className="ai-panel ai-compress__figure">
             <svg
               ref={svgRef}
               className="ai-flow"
@@ -279,7 +277,7 @@ export default function Compression() {
               ))}
             </svg>
             <p className="ai-label ai-compress__note">{COMPRESSION.note}</p>
-          </GlassPanel>
+          </div>
         </div>
       </div>
     </section>
