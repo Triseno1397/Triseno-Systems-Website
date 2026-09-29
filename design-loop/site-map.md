@@ -28,14 +28,18 @@ Copy source: `Downloads/triseno-website-copy.md` (AI infrastructure), existing `
 5. Range: **cursor-follow image trail / hover-swap gallery** of industry concepts (labelled concepts).
 6. Gate → contact (violet warp).
 
-## `/ai-infrastructure` AI — cyan
-1. Hero: **Splite** (21st: splite) — interactive Spline 3D scene with spotlight; headline "We Build the Operational Intelligence Layer".
-2. Capabilities: **spotlight cards** (21st) in a bento of the 7 capabilities; cursor spotlight reveals hairline borders.
-3. Workflow compression: **scroll-scrubbed SVG draw** — a 12-step process line collapses into a 2-layer system as you scroll.
-4. Process: **radial orbital timeline** (21st) — Diagnose → Architect → Build → Deploy → Compound.
-5. Industries: **accordion rows with mono agent-log typewriter** on open.
-6. Why Triseno: **two-way toggle** — typical AI vendor vs Triseno, three rows wiping between answers. (The odometer is a separate Counts section that counts only what the page draws.)
-7. Gate → "Start with a diagnostic" (cyan warp).
+## `/ai-infrastructure` AI — cyan, "the clean room" (2026-09-28 redesign)
+The one LIGHT page on the site: cool paper, ink, cyan as the only signal colour, laid out as a numbered spec (sheets 01-07). `data-clean` on <html> (set by AiPage) inverts the shared chrome to ink (invert + hue-rotate keeps the cyan glyph cyan) until the descent's dark reaches the top (`data-clean-dark`). Scoped entirely to ai.css.
+1. Hero: headline **text decode/scramble** (21st: Text Scramble) + **dither lens** figure — the cathedral plate printed as a 1-bit negative (WebGL Bayer dither) with a plotter-pass reveal; the pointer (or an idle drift) is a lens that develops the real dark frame.
+2. **Signal ticker** — a band of ink with the offer on an endless belt (hover slows).
+3. Capabilities: **expanding-column accordion** (21st: Interactive Image Accordion) — spines fold/open via transform + clip-path only; open column shows its live micro-diagram.
+4. Workflow compression: **scroll-scrubbed SVG draw** (unchanged mechanic), as ink blueprint.
+5. **Fig. 02 interlude** — full-width dithered plate with lens (cinematic breath).
+6. Industries: **runnable agent trace** (21st: Agent Trace / Tool Call) — industry tabs; a dark console types each step, spinner -> tick + ms, cycle-closed line; Replay.
+7. Process: **draggable rail** slider (pointer/keyboard), snaps to 5 stations, step sheet wipes in.
+8. Why Triseno: **two-way toggle** (unchanged mechanic), in ink.
+9. Questions (shared FAQ, restyled on paper).
+10. Gate: **iris descent** — a scrubbed clip-path circle opens the paper onto the full-colour dark core plate; gate glyph morph + sign-off stand in the dark.
 
 ## `/work` — achromatic (white diamond), an entry takes its division's hue only while active
 Reframed: an **index of what the studio can build**, never a portfolio of past clients. 23 entries: the 8 Creative
