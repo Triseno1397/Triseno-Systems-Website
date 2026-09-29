@@ -18,6 +18,7 @@ import { divisionForHref, type Division } from "@/lib/divisions";
 import TrisenoMark from "./TrisenoMark";
 import { deviceClass } from "@/lib/device";
 import { T_OUT, createTunnel } from "./warpTunnel";
+import { createVortex, type Vortex } from "./vortex";
 
 /* ─────────────────────────────────────────────────────────────────────────
    M2 — travel between worlds, as one arc of ~2.5s:
@@ -29,6 +30,8 @@ import { T_OUT, createTunnel } from "./warpTunnel";
            while the tunnel is still pushing;
      1.7s+ the tunnel decelerates and dissolves over the incoming page;
      2.5s  chrome arrives.
+   Creative is entered differently: down its own vortex (vortex.ts), a
+   spiral that opens over the page and ends in a dark eye, held ~0.5s longer.
    The cover is drawn with alpha over the live page, so there is never a blank
    frame. The tunnel draws in a worker (warp.worker.ts, warpTunnel.ts): the
    route change and the destination's first render run on this thread in the
@@ -53,6 +56,7 @@ export function useWarp(): WarpApi {
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
+const T_MIN_HOLD_VORTEX = 2200; // Creative's dive lingers, like a fall
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
 const STAR_COUNT = 420;
@@ -82,6 +86,50 @@ function ensureWorker(canvas: HTMLCanvasElement): Worker | null {
   return tunnelWorker;
 }
 
+/* Creative's own warp, the vortex (vortex.ts), on a second canvas: WebGL2,
+   in its own worker where the browser allows, else on this thread. It is set
+   up once, ahead of time (on idle), so the studio plate is decoded before the
+   first dive; until it reports ready, a warp to Creative takes the tunnel. */
+const VORTEX_TEXTURE = "/worlds/creative-vortex.webp";
+interface VortexHost {
+  worker: Worker | null;
+  main: Vortex | null;
+  canvas: HTMLCanvasElement;
+  ok: boolean | null; // null while the worker is still starting
+}
+let vortexHost: VortexHost | null | undefined;
+function ensureVortex(canvas: HTMLCanvasElement): VortexHost | null {
+  if (vortexHost !== undefined) return vortexHost;
+  vortexHost = null;
+  const q = new URLSearchParams(window.location.search);
+  if (q.has("novortex")) return null;
+  try {
+    if (!q.has("warpmain") && typeof Worker !== "undefined" && typeof OffscreenCanvas !== "undefined" && "transferControlToOffscreen" in canvas) {
+      const w = new Worker(new URL("./vortex.worker.ts", import.meta.url), { type: "module" });
+      const host: VortexHost = { worker: w, main: null, canvas, ok: null };
+      w.onmessage = (e: MessageEvent<{ type: string }>) => {
+        if (e.data.type === "ready") host.ok = true;
+        else if (e.data.type === "nogl") host.ok = false;
+      };
+      const off = canvas.transferControlToOffscreen();
+      w.postMessage({ type: "init", canvas: off, texture: VORTEX_TEXTURE }, [off]);
+      vortexHost = host;
+      return host;
+    }
+    const gl = canvas.getContext("webgl2", { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
+    if (!gl) return null;
+    const main = createVortex(gl, () => ({ w: canvas.width, h: canvas.height }));
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => main.setTexture(img);
+    img.src = VORTEX_TEXTURE;
+    vortexHost = { worker: null, main, canvas, ok: true };
+  } catch {
+    vortexHost = null;
+  }
+  return vortexHost;
+}
+
 export default function WarpProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
@@ -89,6 +137,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
   const [dest, setDest] = useState<Division | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const vortexRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
@@ -101,12 +150,24 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
     if (busyRef.current && pathname !== fromPathRef.current) arrivedRef.current = true;
   }, [pathname]);
 
+  // Creative's vortex is readied while nothing else is happening, so its
+  // shader is compiled and its plate decoded before anyone clicks.
+  useEffect(() => {
+    const go = () => {
+      if (vortexRef.current) ensureVortex(vortexRef.current);
+    };
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    const id = window.setTimeout(() => (ric ? ric(go, { timeout: 3000 }) : go()), 2500);
+    return () => window.clearTimeout(id);
+  }, []);
+
   // Coming back through the bfcache after a document navigation: clear the tunnel.
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => {
       if (!e.persisted) return;
       cancelAnimationFrame(rafRef.current);
       tunnelWorker?.postMessage({ type: "stop" });
+      vortexHost?.worker?.postMessage({ type: "stop" });
       busyRef.current = false;
       setBusy(false);
       if (overlayRef.current) overlayRef.current.style.display = "none";
@@ -163,15 +224,23 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       // The tunnel draws in a worker wherever the canvas can be handed to
       // one, so it keeps its frame rate while this thread builds the next
       // page; otherwise here, from the same code.
-      const worker = ensureWorker(canvas);
-      const dims = { w: window.innerWidth, h: window.innerHeight, dpr };
+      // Creative dives into its vortex instead (when it is ready); the
+      // vortex is soft by nature, so it draws at a fraction of the pixels
+      const host = target.key === "creative" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
+      const vortex = host && host.ok ? host : null;
+      const vdpr = weak ? 0.4 : 0.6;
+      canvas.style.visibility = vortex ? "hidden" : "visible";
+      if (vortexRef.current) vortexRef.current.style.visibility = vortex ? "visible" : "hidden";
+      const worker = vortex ? vortex.worker : ensureWorker(canvas);
+      const dims = { w: window.innerWidth, h: window.innerHeight, dpr: vortex ? vdpr : dpr };
       const sizeIt = () => {
         dims.w = window.innerWidth;
         dims.h = window.innerHeight;
         if (worker) worker.postMessage({ type: "size", ...dims });
         else {
-          canvas.width = Math.round(dims.w * dpr);
-          canvas.height = Math.round(dims.h * dpr);
+          const c = vortex ? vortex.canvas : canvas;
+          c.width = Math.round(dims.w * dims.dpr);
+          c.height = Math.round(dims.h * dims.dpr);
         }
       };
       sizeIt();
@@ -230,7 +299,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         const wall = performance.now() - start;
         if (target.external) return wall >= T_GIVE_UP;
         const worldLoading = document.documentElement.hasAttribute("data-world-loading");
-        return (arrivedRef.current && !worldLoading && wall >= (reduced ? 600 : T_MIN_HOLD)) || wall >= T_GIVE_UP;
+        return (arrivedRef.current && !worldLoading && wall >= (reduced ? 600 : vortex ? T_MIN_HOLD_VORTEX : T_MIN_HOLD)) || wall >= T_GIVE_UP;
       };
 
       if (worker) {
@@ -247,13 +316,19 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         // never trap the visitor, even if the worker goes quiet
         timers.push(window.setTimeout(() => finish(), T_GIVE_UP + T_OUT + 1500));
       } else {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          finish();
-          window.location.assign(href);
-          return;
+        let tunnel: { frame(step: number, outAt: number): boolean; time(): number };
+        if (vortex?.main) {
+          vortex.main.reset();
+          tunnel = vortex.main;
+        } else {
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            finish();
+            window.location.assign(href);
+            return;
+          }
+          tunnel = createTunnel(ctx, () => dims, setup);
         }
-        const tunnel = createTunnel(ctx, () => dims, setup);
         let last = start;
         let maxGap = 0;
         let long = 0;
@@ -295,6 +370,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         className="fixed inset-0 z-[1000] cursor-wait"
       >
         <canvas ref={canvasRef} className="block h-full w-full" />
+        <canvas ref={vortexRef} className="absolute inset-0 block h-full w-full" style={{ visibility: "hidden" }} />
         <div ref={titleRef} className="warp-title absolute inset-0 flex items-center justify-center text-white">
           {/* one thing in the middle of the hop: the TS mark */}
           {dest ? <TrisenoMark className="warp-title__mark" /> : null}

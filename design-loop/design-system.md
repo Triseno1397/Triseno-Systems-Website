@@ -51,7 +51,7 @@ from a screenshot or filmstrip.
 
 ## 5. Motion
 - **M1. No mechanic twice.** No two sections on the whole site share the same primary motion mechanic. Each section's mechanic is named in `design-loop/site-map.md`; the critic checks the filmstrip against it.
-- **M2. Travel between worlds.** Route changes between portal and divisions play a full-screen warp in the destination hue, 1.2–2.5s, no blank frame.
+- **M2. Travel between worlds.** Route changes between portal and divisions play a full-screen warp in the destination hue, 1.2–2.5s, no blank frame. Creative has its own warp (Tristen's call, 2026-09-28): a painted vortex in amber that opens over the page, dives, and ends in a dark eye that swallows the screen (`vortex.ts`), ~3s. Every other destination keeps the streak tunnel. The centre of any warp shows only the TS mark.
 - **M3.** Nothing animates for under 400ms or over 2.5s (scroll-scrubbed motion exempt). One easing family: `power3/expo.out`-style decelerations; no bounce, no elastic.
 - **M4.** Only `transform`, `opacity`, `clip-path`, `filter` on composited layers, and shader uniforms animate. Never layout properties.
 - **M5.** `prefers-reduced-motion`: every section renders its final state, fully readable, with no scroll-jacking. Mobile (< 768px): no pinned section longer than 2 viewport heights; 3D scenes fall back to video/poster.
