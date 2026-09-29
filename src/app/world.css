@@ -335,6 +335,8 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
   transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo);
 }
 .warp-title[data-show] .warp-title__mark { opacity: 1; transform: scale(1); }
+/* Creative's ascent is pure sky: no mark (Tristen's call) */
+.warp-title[data-ascent] .warp-title__mark { visibility: hidden; }
 
 /* ── portal ── */
 .portal-hero { transition: opacity 500ms var(--ease-expo); }

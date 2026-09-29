@@ -9,7 +9,7 @@ const b = await chromium.launch({ headless: false, args: ['--ignore-gpu-blocklis
 const ctx = await b.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: 'design-loop/vid', size: { width: W, height: H } }, isMobile: W < 768, hasTouch: W < 768 });
 const p = await ctx.newPage();
 const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 200)));
-await p.goto(BASE + FROM, { waitUntil: 'load' }); await p.waitForTimeout(6000);
+await p.goto(BASE + FROM + (process.env.Q || ''), { waitUntil: 'load' }); await p.waitForTimeout(6000);
 await p.click('.morph-nav__trigger'); await p.waitForTimeout(1000);
 const t0 = Date.now();
 await p.click('#world-menu a[href="/studio"]');
@@ -18,5 +18,5 @@ const stats = await p.evaluate(() => window.__warpStats);
 await p.waitForTimeout(1500);
 const path = await p.video().path();
 await ctx.close(); await b.close();
-const out = `design-loop/vid/vortex-${W}.webm`; fs.renameSync(path, out);
+const out = `design-loop/vid/${process.env.NAME || 'vortex'}-${W}.webm`; fs.renameSync(path, out);
 console.log(JSON.stringify({ out, stats, clickAt: t0, errors: errs }));

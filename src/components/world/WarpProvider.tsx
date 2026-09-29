@@ -18,7 +18,7 @@ import { divisionForHref, type Division } from "@/lib/divisions";
 import TrisenoMark from "./TrisenoMark";
 import { deviceClass } from "@/lib/device";
 import { T_OUT, createTunnel } from "./warpTunnel";
-import { createVortex, type Vortex } from "./vortex";
+import { VORTEX_OUT, createVortex, vortexTexture, type Vortex } from "./vortex";
 
 /* ─────────────────────────────────────────────────────────────────────────
    M2 — travel between worlds, as one arc of ~2.5s:
@@ -30,8 +30,8 @@ import { createVortex, type Vortex } from "./vortex";
            while the tunnel is still pushing;
      1.7s+ the tunnel decelerates and dissolves over the incoming page;
      2.5s  chrome arrives.
-   Creative is entered differently: down its own vortex (vortex.ts), a
-   spiral that opens over the page and ends in a dark eye, held ~0.5s longer.
+   Creative is entered differently: an ascent through a painted heaven
+   (vortex.ts) that breaks out into open sky and settles onto the studio, ~4.5s.
    The cover is drawn with alpha over the live page, so there is never a blank
    frame. The tunnel draws in a worker (warp.worker.ts, warpTunnel.ts): the
    route change and the destination's first render run on this thread in the
@@ -56,7 +56,7 @@ export function useWarp(): WarpApi {
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
-const T_MIN_HOLD_VORTEX = 2200; // Creative's dive lingers, like a fall
+const T_MIN_HOLD_VORTEX = 2600; // Creative's ascent lingers: ~4.5s with its break and settle
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
 const STAR_COUNT = 420;
@@ -90,7 +90,6 @@ function ensureWorker(canvas: HTMLCanvasElement): Worker | null {
    in its own worker where the browser allows, else on this thread. It is set
    up once, ahead of time (on idle), so the studio plate is decoded before the
    first dive; until it reports ready, a warp to Creative takes the tunnel. */
-const VORTEX_TEXTURE = "/worlds/creative-vortex.webp";
 interface VortexHost {
   worker: Worker | null;
   main: Vortex | null;
@@ -103,6 +102,7 @@ function ensureVortex(canvas: HTMLCanvasElement): VortexHost | null {
   vortexHost = null;
   const q = new URLSearchParams(window.location.search);
   if (q.has("novortex")) return null;
+  const texture = vortexTexture(window.innerWidth);
   try {
     if (!q.has("warpmain") && typeof Worker !== "undefined" && typeof OffscreenCanvas !== "undefined" && "transferControlToOffscreen" in canvas) {
       const w = new Worker(new URL("./vortex.worker.ts", import.meta.url), { type: "module" });
@@ -112,7 +112,7 @@ function ensureVortex(canvas: HTMLCanvasElement): VortexHost | null {
         else if (e.data.type === "nogl") host.ok = false;
       };
       const off = canvas.transferControlToOffscreen();
-      w.postMessage({ type: "init", canvas: off, texture: VORTEX_TEXTURE }, [off]);
+      w.postMessage({ type: "init", canvas: off, texture }, [off]);
       vortexHost = host;
       return host;
     }
@@ -122,7 +122,7 @@ function ensureVortex(canvas: HTMLCanvasElement): VortexHost | null {
     const img = new Image();
     img.decoding = "async";
     img.onload = () => main.setTexture(img);
-    img.src = VORTEX_TEXTURE;
+    img.src = texture;
     vortexHost = { worker: null, main, canvas, ok: true };
   } catch {
     vortexHost = null;
@@ -224,11 +224,11 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       // The tunnel draws in a worker wherever the canvas can be handed to
       // one, so it keeps its frame rate while this thread builds the next
       // page; otherwise here, from the same code.
-      // Creative dives into its vortex instead (when it is ready); the
-      // vortex is soft by nature, so it draws at a fraction of the pixels
+      // Creative rises through its painted heaven instead (when it is ready);
+      // the painting is 4K, so it draws near full resolution
       const host = target.key === "creative" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
       const vortex = host && host.ok ? host : null;
-      const vdpr = weak ? 0.4 : 0.6;
+      const vdpr = weak ? 0.62 : Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.style.visibility = vortex ? "hidden" : "visible";
       if (vortexRef.current) vortexRef.current.style.visibility = vortex ? "visible" : "hidden";
       const worker = vortex ? vortex.worker : ensureWorker(canvas);
@@ -251,6 +251,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       document.documentElement.setAttribute("data-warping", "");
       const title = titleRef.current;
       title?.removeAttribute("data-show");
+      title?.toggleAttribute("data-ascent", !!vortex);
       title?.removeAttribute("data-out");
       window.dispatchEvent(new CustomEvent(WARP_EVENT, { detail: { href, key: target.key } }));
 
@@ -314,7 +315,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
           worker.postMessage({ type: "out" });
         }, 40);
         // never trap the visitor, even if the worker goes quiet
-        timers.push(window.setTimeout(() => finish(), T_GIVE_UP + T_OUT + 1500));
+        timers.push(window.setTimeout(() => finish(), T_GIVE_UP + (vortex ? VORTEX_OUT : T_OUT) + 1500));
       } else {
         let tunnel: { frame(step: number, outAt: number): boolean; time(): number };
         if (vortex?.main) {
