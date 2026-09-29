@@ -404,10 +404,9 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
    context, the world's own light and reflections on his chrome. He is only up
    while the hero is (the camera leaves him behind on the way to the doors).
 
-   He keeps himself busy on the statue (statue.ts), one thing for ten
-   seconds, picked at random: leaning back on its rail with his arms folded,
-   sitting inside it, looking his blade over in front of it, doing sets of
-   pull-ups off its top. Between two of them nothing jumps: he eases out of
+   He keeps himself busy by the statue (statue.ts), one thing at a time,
+   picked at random: standing easy in front of it, looking his blade over
+   there, or leaning back on its rail with his arms folded for a few seconds. Between two of them nothing jumps: he eases out of
    the one, stands, walks over on his own two feet, and settles into the next.
    Tapped, he hops down to the floor in front of the statue to perform.
 
@@ -415,9 +414,9 @@ const PLATE_HORIZON = plate("portal").horizon.desktop;
    half-scrolled can never leave him frozen half-way through a move. */
 
 /** the things he does, and for how long (seconds, picked in the range) */
-const ACTS = ["lean", "sit", "blade", "pull"] as const;
-type Act = (typeof ACTS)[number];
-const ACT_TIME: [number, number] = [10, 10];
+const ACTS = ["stand", "blade", "lean"] as const;
+type Act = (typeof ACTS)[number] | "sit" | "pull";
+const ACT_TIME: Record<string, number> = { stand: 10, blade: 10, lean: 5 };
 /** easing out of a pose to stand, and into the next from standing, seconds */
 const EASE_OUT = 1.6;
 const EASE_IN = 1.9;
@@ -430,8 +429,8 @@ const REP = { up: 0.7, top: 0.25, down: 0.85, hang: 0.3 };
 const REP_T = REP.up + REP.top + REP.down + REP.hang;
 const SET = { reps: 5, before: 0.9, after: 1.1 };
 const PULL_TIME = SET.before + SET.reps * REP_T + SET.after;
-/** how long a thing lasts: ten seconds, except the one set of pull-ups */
-const durFor = (a: Act, dbgDur: number) => (a === "pull" ? PULL_TIME : dbgDur || mix(ACT_TIME[0], ACT_TIME[1], Math.random()));
+/** how long a thing lasts (the pull-ups, held with ?act=pull, one set) */
+const durFor = (a: Act, dbgDur: number) => (a === "pull" ? PULL_TIME : dbgDur || ACT_TIME[a] || 10);
 /** the blade: first look soon after he arrives, then again every so often */
 const BLADE_FIRST = 2.5;
 const BLADE_EVERY = 19;
@@ -499,7 +498,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     const u = new URLSearchParams(window.location.search);
     const a = u.get("act");
     return {
-      act: a && (ACTS as readonly string[]).includes(a) ? (a as Act) : null,
+      act: a && ["stand", "blade", "lean", "sit", "pull"].includes(a) ? (a as Act) : null,
       t: u.has("actt") ? Number(u.get("actt")) : -1,
       fly: u.has("opfly") ? Number(u.get("opfly")) : -1,
       // ?actspeed=10 runs his clock faster, to watch the changes
@@ -548,7 +547,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
   }, []);
 
   const pick = (not: Act | null) => {
-    const all = ACTS.filter((a) => a !== not && !(tall && a === "lean"));
+    const all: Act[] = ACTS.filter((a) => a !== not && !(tall && a === "lean"));
     return all[Math.floor(Math.random() * all.length)];
   };
 

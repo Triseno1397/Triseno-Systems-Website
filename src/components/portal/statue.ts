@@ -133,14 +133,15 @@ export interface Build {
 }
 
 /**
- * His four things to do on the statue, taken in turns at random:
+ * His three things to do by the statue, taken in turns at random:
+ *   stand — stood easy in front of it, a normal upright stance
+ *   blade — stood there, drawing his blade to look it over, then away
  *   lean  — his back against its right rail, ankles crossed, arms folded
- *   sit   — sat inside it on the bottom rail, forearms on his knees
- *   blade — stood in front of it, drawing his blade to look it over, then away
- *   pull  — hanging from its top in front of it, doing pull-ups
+ * (sit and pull are kept for ?act= looks but no longer in the rotation:
+ *   sit — sat inside it on the bottom rail; pull — pull-ups off its top)
  * `stage` is where he performs a sword move when he is tapped.
  */
-export type PoseKey = "lean" | "sit" | "blade" | "pull" | "stage";
+export type PoseKey = "stand" | "lean" | "sit" | "blade" | "pull" | "stage";
 
 /** how far the hip joints sit above the seat's surface */
 const SEAT = 0.13;
@@ -278,6 +279,7 @@ export function resolvePose(
       out.spotYaw = bodyYaw;
       break;
     }
+    case "stand":
     case "blade":
     case "stage": {
       out.root.copy(stage);
