@@ -30,8 +30,8 @@ import { VORTEX_OUT, createVortex, vortexTexture, type Vortex } from "./vortex";
            while the tunnel is still pushing;
      1.7s+ the tunnel decelerates and dissolves over the incoming page;
      2.5s  chrome arrives.
-   Creative is entered differently: an ascent through a painted heaven
-   (vortex.ts) that breaks out into open sky and settles onto the studio, ~4.5s.
+   AI Infrastructure is entered differently: a dive down a painted storm
+   wormhole (vortex.ts) that ends in a dark eye and fades up onto the page, ~5s.
    The cover is drawn with alpha over the live page, so there is never a blank
    frame. The tunnel draws in a worker (warp.worker.ts, warpTunnel.ts): the
    route change and the destination's first render run on this thread in the
@@ -56,7 +56,7 @@ export function useWarp(): WarpApi {
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
-const T_MIN_HOLD_VORTEX = 3500; // Creative's dive: ~2.3s down the tunnel, ~5s in all with the swallow and fade
+const T_MIN_HOLD_VORTEX = 3500; // AI's dive: ~2.3s down the tunnel, ~5s in all with the swallow and fade
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
 const STAR_COUNT = 420;
@@ -86,10 +86,10 @@ function ensureWorker(canvas: HTMLCanvasElement): Worker | null {
   return tunnelWorker;
 }
 
-/* Creative's own warp, the vortex (vortex.ts), on a second canvas: WebGL2,
+/* AI Infrastructure's own warp, the vortex (vortex.ts), on a second canvas: WebGL2,
    in its own worker where the browser allows, else on this thread. It is set
    up once, ahead of time (on idle), so the studio plate is decoded before the
-   first dive; until it reports ready, a warp to Creative takes the tunnel. */
+   first dive; until it reports ready, a warp to AI takes the tunnel. */
 interface VortexHost {
   worker: Worker | null;
   main: Vortex | null;
@@ -150,7 +150,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
     if (busyRef.current && pathname !== fromPathRef.current) arrivedRef.current = true;
   }, [pathname]);
 
-  // Creative's vortex is readied while nothing else is happening, so its
+  // AI's vortex is readied while nothing else is happening, so its
   // shader is compiled and its plate decoded before anyone clicks.
   useEffect(() => {
     const go = () => {
@@ -224,9 +224,9 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       // The tunnel draws in a worker wherever the canvas can be handed to
       // one, so it keeps its frame rate while this thread builds the next
       // page; otherwise here, from the same code.
-      // Creative rises through its painted heaven instead (when it is ready);
-      // the painting is 4K, so it draws near full resolution
-      const host = target.key === "creative" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
+      // AI Infrastructure dives down its painted storm instead (when it is
+      // ready); the painting is 4K, so it draws near full resolution
+      const host = target.key === "ai" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
       const vortex = host && host.ok ? host : null;
       const vdpr = weak ? 0.62 : Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.style.visibility = vortex ? "hidden" : "visible";
@@ -252,7 +252,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       const title = titleRef.current;
       title?.removeAttribute("data-show");
       title?.toggleAttribute("data-ascent", !!vortex);
-      // Creative's arrival: the stage fades up first, its headline after (world.css)
+      // AI's arrival by its dive: the figure fades up first, the headline after (world.css)
       document.documentElement.toggleAttribute("data-ascent", !!vortex);
       title?.removeAttribute("data-out");
       window.dispatchEvent(new CustomEvent(WARP_EVENT, { detail: { href, key: target.key } }));

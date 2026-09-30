@@ -5,7 +5,7 @@ import fs from 'node:fs';
 const src = fs.readFileSync('src/components/world/vortex.ts', 'utf8');
 const frag = src.match(/const FRAG = `([\s\S]*?)`;/)[1];
 const vert = src.match(/const VERT = `([\s\S]*?)`;/)[1];
-const tex = 'data:image/webp;base64,' + fs.readFileSync(process.env.TEX || 'public/worlds/creative-storm-3072.webp').toString('base64');
+const tex = 'data:image/webp;base64,' + fs.readFileSync(process.env.TEX || 'public/worlds/ai-storm-3072.webp').toString('base64');
 // [time s, depth, front, open, reveal, zoom, fade]
 const shots = [[0,0,0,0,0,0.04,0,0,0,1],[0,0,0,0,0,0.04,1,0.068,0,1],[0.2,0.05,0.03,2.0,0.5,1.0,1,0.068,0,1],[2.5,0.8,0.5,4.0,1,2.24,1,0.07,0,1],[5.5,1,1.1,7.2,1,2.24,1,0.066,0,1],[7.0,1,1.4,9.0,1,2.24,1,0.9,0.2,1]];
 const bg = 'data:image/webp;base64,' + fs.readFileSync('public/worlds/creative-desktop.webp').toString('base64');

@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   THE CREATIVE DIVE: the warp into Triseno Studio, beat for beat after
+   THE AI DIVE: the warp into AI Infrastructure, beat for beat after
    Tristen's reference (a painted storm wormhole, ~5s):
 
      0.00s  still     the painting fades in over the page: the tunnel seen
@@ -9,14 +9,14 @@
      0.75s  opens     ...and opens outward over the whole corridor as the
                       fall begins;
      1.15s  dive      down the tunnel: painted storm walls (navy and white
-                      cloud, amber light, handwritten equations streaking
+                      cloud, cyan light, handwritten equations streaking
                       past), a dark eye at the far end drifting across the
-                      frame as the tunnel turns, an amber flank sweeping past
+                      frame as the tunnel turns, a cyan flank sweeping past
                       about once a second;
      out    swallow   the eye grows until it fills the screen,
-            dark      a beat of dark navy with a soft amber glow at the top,
-            fade      and the studio's stage fades up out of it (its headline
-                      follows: html[data-ascent] in world.css).
+            dark      a beat of dark navy with a soft cyan glow at the top,
+            fade      and the page fades up out of it, its figure first and
+                      its headline after (html[data-ascent] in world.css).
 
    One full-screen WebGL2 fragment shader. Shared by the worker that draws it
    off the main thread (vortex.worker.ts) and, where a browser cannot hand a
@@ -33,7 +33,7 @@ export const VORTEX_OUT = 1500;
 /** the storm painting (4K, GPT Image 2.5: navy cloud, orange light, handwritten
  *  maths), at the size the screen can use */
 export const vortexTexture = (screenW: number) =>
-  `/worlds/creative-storm-${screenW * Math.min(2, globalThis.devicePixelRatio || 1) > 1700 ? 3072 : 1600}.webp`;
+  `/worlds/ai-storm-${screenW * Math.min(2, globalThis.devicePixelRatio || 1) > 1700 ? 3072 : 1600}.webp`;
 
 export interface Vortex {
   /** advance by `step` ms of warp time and draw; `outAt` is the warp time the
@@ -74,6 +74,18 @@ const float PI = 3.14159265;
 vec2 bendAt(float s) {
   return vec2(sin(s * 0.42) * 1.7 + sin(s * 0.17 + 2.0) * 1.2,
               sin(s * 0.33 + 1.3) * 1.3 + cos(s * 0.15) * 1.0);
+}
+
+// the painting re-coloured in AI's palette from its brightness alone: navy
+// shadows, blue body, white rims, and cyan wherever it held warm light
+vec3 toCyan(vec3 c) {
+  float l = dot(c, vec3(0.3, 0.59, 0.11));
+  float warmth = smoothstep(0.02, 0.28, (c.r - c.b) / (l + 0.08));
+  vec3 blue = mix(vec3(0.008, 0.02, 0.06), vec3(0.08, 0.2, 0.45), smoothstep(0.0, 0.35, l));
+  blue = mix(blue, vec3(0.45, 0.62, 0.9), smoothstep(0.35, 0.7, l));
+  blue = mix(blue, vec3(0.93, 0.96, 1.0), smoothstep(0.7, 0.95, l));
+  vec3 cyan = mix(vec3(0.0, 0.12, 0.2), vec3(0.62, 0.95, 1.0), smoothstep(0.1, 0.8, l));
+  return mix(blue, cyan, warmth);
 }
 
 void main() {
@@ -120,15 +132,14 @@ void main() {
   vec3 paint = mix(textureGrad(uTex, tuvA, gx, gy).rgb, textureGrad(uTex, tuvB, gx, gy).rgb, smoothstep(0.35, 0.8, seamW));
   vec3 wall = mix(vec3(0.05, 0.1, 0.22), paint, uTexOn);
 
-  // colour: the reference's storm, nudged toward the studio: navy a touch
-  // deeper, its orange pulled to Creative's amber
-  float warmth = clamp((wall.r - wall.b) * 2.0, 0.0, 1.0);
-  wall = mix(wall * vec3(0.92, 0.96, 1.0), wall * vec3(1.05, 0.92, 0.78), warmth);
+  // colour: the reference's storm in AI's one hue: navy a touch deeper, and
+  // the painting's orange light re-lit as cyan (#00b4d8)
+  wall = toCyan(wall);
 
-  // the amber flank sweeping round, about once a second
+  // the cyan flank sweeping round, about once a second
   float near = smoothstep(4.5, 1.2, z);
   float flank = smoothstep(0.35, 1.0, cos(atan(q.y, q.x) - uSweep)) * near * uWander;
-  wall = mix(wall, wall * vec3(1.35, 0.95, 0.6) + vec3(0.2, 0.08, 0.0), flank * 0.6);
+  wall = mix(wall, wall * vec3(0.7, 1.15, 1.35) + vec3(0.0, 0.1, 0.16), flank * 0.6);
 
   // the walls shade as they recede toward the eye
   wall *= mix(1.0, 0.3, smoothstep(1.3, 4.5, z));
@@ -143,18 +154,17 @@ void main() {
   vec2 fuv = scr > imgA ? vec2(p.x / scr, -p.y * imgA / scr) : vec2(p.x / imgA, -p.y);
   fuv = 0.5 + fuv / (1.0 + 0.05 * uDark);
   vec3 still = mix(vec3(0.05, 0.1, 0.22), texture(uTex, fuv).rgb, uTexOn);
-  float fw = clamp((still.r - still.b) * 2.0, 0.0, 1.0);
-  still = mix(still * vec3(0.92, 0.96, 1.0), still * vec3(1.05, 0.92, 0.78), fw);
+  still = toCyan(still);
   col = mix(still, col, inside);
   // the centre darkens before the spiral is born
   col *= 1.0 - uDark * 0.7 * smoothstep(0.38, 0.04, dv);
   // the eye: soft-lipped black; at the end it grows over everything
   col = mix(col, ink, smoothstep(uEye + 0.05, uEye, dv));
 
-  // the dark beat: navy, with the studio's light glowing softly at the top
+  // the dark beat: navy, with the page's light glowing softly at the top
   vec3 navy = vec3(0.05, 0.065, 0.1);
   vec2 g = p - vec2(0.0, 0.33);
-  navy += vec3(0.42, 0.2, 0.06) * exp(-(g.x * g.x * 7.0 + g.y * g.y * 16.0)) * 0.8;
+  navy += vec3(0.0, 0.26, 0.34) * exp(-(g.x * g.x * 7.0 + g.y * g.y * 16.0)) * 0.8;
   col = mix(col, navy, uGlow);
 
   frag = vec4(col * uAlpha, uAlpha);

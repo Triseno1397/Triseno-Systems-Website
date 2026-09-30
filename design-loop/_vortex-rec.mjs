@@ -12,7 +12,7 @@ const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 200)));
 await p.goto(BASE + FROM + (process.env.Q || ''), { waitUntil: 'load' }); await p.waitForTimeout(6000);
 await p.click('.morph-nav__trigger'); await p.waitForTimeout(1000);
 const t0 = Date.now();
-await p.click('#world-menu a[href="/studio"]');
+await p.click(`#world-menu a[href="${process.env.TO || '/studio'}"]`);
 await p.waitForFunction(() => window.__warpStats, null, { timeout: 15000 });
 const stats = await p.evaluate(() => window.__warpStats);
 await p.waitForTimeout(1500);

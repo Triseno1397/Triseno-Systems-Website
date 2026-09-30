@@ -335,14 +335,15 @@ html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-im
   transition: opacity 700ms var(--ease-expo), transform 1100ms var(--ease-expo);
 }
 .warp-title[data-show] .warp-title__mark { opacity: 1; transform: scale(1); }
-/* Creative's ascent is pure sky: no mark (Tristen's call) */
+/* the AI dive shows no mark (Tristen's call) */
 .warp-title[data-ascent] .warp-title__mark { visibility: hidden; }
-/* arriving in Creative by its dive, the stage fades up out of the dark first
-   and the headline blurs in after it, as the reference's page does */
-html[data-ascent] :is(.sx-hero__title, .sx-hero__ring) { opacity: 0; filter: blur(14px); }
-.sx-hero__title, .sx-hero__ring { transition: opacity 900ms var(--ease-expo) 250ms, filter 1100ms var(--ease-expo) 250ms; }
+/* arriving in AI Infrastructure by its dive, the page fades up out of the
+   dark with its figure first and the headline blurs in after it, as the
+   reference's page does */
+html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
+.ai-hero__copy { transition: opacity 900ms var(--ease-expo) 250ms, filter 1100ms var(--ease-expo) 250ms; }
 @media (prefers-reduced-motion: reduce) {
-  html[data-ascent] :is(.sx-hero__title, .sx-hero__ring) { opacity: 1; filter: none; }
+  html[data-ascent] .ai-hero__copy { opacity: 1; filter: none; }
 }
 
 /* ── portal ── */
