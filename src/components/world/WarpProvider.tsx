@@ -56,7 +56,7 @@ export function useWarp(): WarpApi {
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
-const T_MIN_HOLD_VORTEX = 2600; // Creative's ascent lingers: ~4.5s with its break and settle
+const T_MIN_HOLD_VORTEX = 3500; // Creative's dive: ~2.3s down the tunnel, ~5s in all with the swallow and fade
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
 const STAR_COUNT = 420;
@@ -252,6 +252,8 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       const title = titleRef.current;
       title?.removeAttribute("data-show");
       title?.toggleAttribute("data-ascent", !!vortex);
+      // Creative's arrival: the stage fades up first, its headline after (world.css)
+      document.documentElement.toggleAttribute("data-ascent", !!vortex);
       title?.removeAttribute("data-out");
       window.dispatchEvent(new CustomEvent(WARP_EVENT, { detail: { href, key: target.key } }));
 
@@ -271,6 +273,7 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         title?.removeAttribute("data-show");
         title?.removeAttribute("data-out");
         document.documentElement.removeAttribute("data-warping");
+        document.documentElement.removeAttribute("data-ascent");
         busyRef.current = false;
         setBusy(false);
         // for the design-loop tools: how the tunnel's own frames went

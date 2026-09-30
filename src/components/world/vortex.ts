@@ -1,28 +1,35 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   THE CREATIVE DIVE: the warp into Triseno Studio, after Tristen's reference
-   (a painted storm-cloud wormhole):
+   THE CREATIVE DIVE: the warp into Triseno Studio, beat for beat after
+   Tristen's reference (a painted storm wormhole, ~5s):
 
-     open     a hole opens at the centre and eats outward over the page you
-              are leaving, pulling it in;
-     dive     you fall down a narrow pipe that twists and winds, its walls a
-              4K painted storm (navy and white cloud, orange light breaking
-              through, handwritten equations and orbits drifting past), toward
-              a dark eye at the far end;
-     swallow  on arrival the eye grows until it has swallowed the screen,
-              holds a beat of dark, and the studio fades up out of it.
+     0.00s  still     the painting fades in over the page: the tunnel seen
+                      from its mouth, a still corridor of cloud;
+     0.40s  dark      its centre darkens;
+     0.65s  born      a spiral is born in the dark centre...
+     0.75s  opens     ...and opens outward over the whole corridor as the
+                      fall begins;
+     1.15s  dive      down the tunnel: painted storm walls (navy and white
+                      cloud, amber light, handwritten equations streaking
+                      past), a dark eye at the far end drifting across the
+                      frame as the tunnel turns, an amber flank sweeping past
+                      about once a second;
+     out    swallow   the eye grows until it fills the screen,
+            dark      a beat of dark navy with a soft amber glow at the top,
+            fade      and the studio's stage fades up out of it (its headline
+                      follows: html[data-ascent] in world.css).
 
    One full-screen WebGL2 fragment shader. Shared by the worker that draws it
    off the main thread (vortex.worker.ts) and, where a browser cannot hand a
    WebGL canvas to a worker, by WarpProvider itself. The dive holds until the
-   page underneath is ready; the swallow then takes VORTEX_OUT.
+   page underneath is ready; swallow, dark and fade then take VORTEX_OUT.
    ───────────────────────────────────────────────────────────────────────── */
 
 type GL = WebGL2RenderingContext;
 
-/** how long the hole takes to open over the page */
-export const VORTEX_IN = 800;
+/** still + dark + born + opens: the dive is under way by here */
+export const VORTEX_IN = 1150;
 /** swallow + dark beat + fade up, once the page underneath is ready */
-export const VORTEX_OUT = 1900;
+export const VORTEX_OUT = 1500;
 /** the storm painting (4K, GPT Image 2.5: navy cloud, orange light, handwritten
  *  maths), at the size the screen can use */
 export const vortexTexture = (screenW: number) =>
@@ -46,113 +53,111 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 const FRAG = `#version 300 es
 precision highp float;
 uniform vec2 uRes;
-uniform float uTime;    // seconds
-uniform float uDepth;   // distance fallen down the pipe
-uniform float uFront;   // how far the opening has eaten outward (screen radii)
+uniform float uDepth;   // distance fallen down the tunnel
+uniform float uWander;  // 0 = straight corridor, 1 = the tunnel turns
+uniform float uSpin;    // the walls' slow turn (radians)
+uniform float uSweep;   // angle of the amber flank sweeping round
+uniform float uTwist;   // 0..1 the spiral's strength
+uniform float uFrontR;  // how far out the spiral has opened (screen radii)
+uniform float uDark;    // 0..1 the centre darkening before the spiral
 uniform float uEye;     // radius of the dark eye (grows to swallow the screen)
-uniform float uFade;    // 1 = drawn, 0 = gone
+uniform float uGlow;    // 0..1 the dark beat after the swallow
+uniform float uAlpha;   // overall: fade in, then fade up onto the studio
 uniform float uTexOn;   // 0..1 while the painting fades in
-uniform vec2 uVP;       // where the pipe runs deepest on screen (found on the CPU)
+uniform vec2 uVP;       // where the tunnel runs deepest on screen (found on the CPU)
 uniform sampler2D uTex;
 out vec4 frag;
 
 const float PI = 3.14159265;
 
-float hash(vec3 p) {
-  p = fract(p * 0.3183099 + 0.1);
-  p *= 17.0;
-  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-float noise(vec3 x) {
-  vec3 i = floor(x);
-  vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
-                 mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
-             mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
-                 mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
-}
-float fbm(vec3 p) {
-  return 0.5 * noise(p) + 0.25 * noise(p * 2.03 + 1.7) + 0.125 * noise(p * 4.11 + 9.2);
-}
-
-// the centre line of the pipe: two slow incommensurate curves per axis
+// the tunnel's centre line: slow incommensurate curves, so the far end drifts
 vec2 bendAt(float s) {
-  return vec2(sin(s * 0.42) * 3.3 + sin(s * 0.17 + 2.0) * 2.4,
-              sin(s * 0.33 + 1.3) * 2.5 + cos(s * 0.15) * 2.0);
-}
-
-// until the painting arrives, and under it while it fades in: storm haze
-vec3 haze(float v) {
-  return mix(vec3(0.03, 0.07, 0.18), vec3(0.45, 0.6, 0.85), v);
+  return vec2(sin(s * 0.42) * 1.7 + sin(s * 0.17 + 2.0) * 1.2,
+              sin(s * 0.33 + 1.3) * 1.3 + cos(s * 0.15) * 1.0);
 }
 
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
   float r = length(p);
-  vec3 ink = vec3(0.006, 0.012, 0.035);
+  vec3 ink = vec3(0.01, 0.014, 0.03);
 
-  // the pipe winds: its centre line C(s) curves, so each depth slice sits
-  // off-centre on screen by f * (C(s + z) - C(s)) / z; the far end wanders as
-  // the pipe turns and the slices stack into offset crescents. Depth comes
-  // from a relaxed fixed-point solve (z = f / distance to that slice's centre).
+  // the tunnel: each depth slice sits off-centre on screen by
+  // f * (C(s + z) - C(s)) / z as the centre line turns; depth comes from a
+  // relaxed fixed-point solve (z = f / distance to that slice's centre)
   float f = 0.2;
-  // the camera rolls as it banks through the turns
-  float roll = uTime * 0.45 + 0.6 * sin(uDepth * 0.13);
-  vec2 pr = mat2(cos(roll), -sin(roll), sin(roll), cos(roll)) * p;
   vec2 base = bendAt(uDepth);
   float z = f / max(r, 0.004);
-  vec2 q = pr;
+  vec2 q = p;
   for (int i = 0; i < 6; i++) {
-    // the bend is read no further than 6 units ahead: beyond that the far
-    // pipe converges smoothly on its vanishing point and the solve settles
-    vec2 off = f * (bendAt(uDepth + min(z, 6.0)) - base) / max(z, 0.4);
-    q = pr - off;
+    vec2 off = f * (bendAt(uDepth + min(z, 6.0)) - base) / max(z, 0.4) * uWander;
+    q = p - off;
     z = mix(z, min(f / max(length(q), 0.004), 40.0), 0.7);
   }
   float rq = length(q);
-  // where the solve has not settled (a false second centre on a hard bend)
-  // the wall there is unreliable: it sinks into the dark below
+  float wz = uDepth + z;
+  // where the solve has not settled the wall is unreliable: it sinks into dark
   float unsettled = smoothstep(0.15, 0.6, abs(z - min(f / max(rq, 0.004), 40.0)) / max(z, 0.5));
-  float wz = uDepth + z; // how far along the pipe this piece of wall is
-  // the walls spiral along the pipe, tighter toward the eye
-  float ang = atan(q.y, q.x) + wz * 0.2 + 0.22 / (rq + 0.08);
-  float w = fbm(vec3(cos(ang) * 1.6, sin(ang) * 1.6, wz * 0.35 + uTime * 0.25));
-  // far down the pipe the walls compress into a few pixels: their detail
-  // fades out with distance instead of aliasing
-  float near = smoothstep(4.5, 1.5, z);
-  w = mix(0.5, w, near);
-  // the painting is packed densely along the pipe so the near walls, which
-  // perspective stretches hardest, still show billows (mirrored repeat has
-  // period 2 = one turn at 2 * ang / PI)
-  vec2 tuv = vec2(2.0 * ang / PI + (w - 0.5) * 0.08, wz * 1.7 + (w - 0.5) * 0.05);
+
+  // the spiral: strongest toward the eye (the white crescent curls), and only
+  // inside the front it has opened out to
+  float inside = smoothstep(uFrontR, uFrontR - 0.35, r);
+  float twist = uTwist * 0.42 / (rq + 0.1) * inside;
+  float ang = atan(q.y, q.x) + uSpin + twist;
+  // the painting wrapped once round the walls. Its two edges would meet in a
+  // seam, so a second copy offset half a turn is blended in toward it: each
+  // copy fades out where its own seam is, and the wrap closes invisibly
+  float u = ang / (2.0 * PI);
+  vec2 tuvA = vec2(fract(u), wz * 0.8);
+  vec2 tuvB = vec2(fract(u + 0.5), wz * 0.8 + 0.37);
+  float seamW = abs(fract(u) - 0.5) * 2.0; // 1 at copy A's seam, 0 at copy B's
   // atan jumps by 2*PI on one ray; mip selection must not see that jump, so
   // the gradients come from whichever of two branch cuts is smooth here
-  float angB = atan(-q.y, -q.x) + PI + wz * 0.2 + 0.22 / (rq + 0.08);
-  float dux = dFdx(2.0 * ang / PI), duxB = dFdx(2.0 * angB / PI);
-  float duy = dFdy(2.0 * ang / PI), duyB = dFdy(2.0 * angB / PI);
-  vec2 gx = vec2(abs(dux) < abs(duxB) ? dux : duxB, dFdx(tuv.y));
-  vec2 gy = vec2(abs(duy) < abs(duyB) ? duy : duyB, dFdy(tuv.y));
-  vec3 wall = mix(haze(w), textureGrad(uTex, tuv, gx, gy).rgb, uTexOn);
-  // rings of cloud: billowed slices stacked into the distance
-  float ring = 0.5 + 0.5 * sin((wz * 1.1 + w * 0.9) * 2.0 * PI);
-  wall *= mix(1.0, mix(0.6, 1.12, smoothstep(0.1, 0.9, ring)), near);
+  float angB = atan(-q.y, -q.x) + PI + uSpin + twist;
+  float dux = dFdx(ang), duxB = dFdx(angB);
+  float duy = dFdy(ang), duyB = dFdy(angB);
+  vec2 gx = vec2((abs(dux) < abs(duxB) ? dux : duxB) / (2.0 * PI), dFdx(tuvA.y));
+  vec2 gy = vec2((abs(duy) < abs(duyB) ? duy : duyB) / (2.0 * PI), dFdy(tuvA.y));
+  vec3 paint = mix(textureGrad(uTex, tuvA, gx, gy).rgb, textureGrad(uTex, tuvB, gx, gy).rgb, smoothstep(0.35, 0.8, seamW));
+  vec3 wall = mix(vec3(0.05, 0.1, 0.22), paint, uTexOn);
 
-  // the eye sits where the pipe runs deepest on screen (uVP, found each frame
-  // by running this same solve on a coarse grid): one clean shape, exactly at
-  // the far end, even where the per-pixel solve wobbles
+  // colour: the reference's storm, nudged toward the studio: navy a touch
+  // deeper, its orange pulled to Creative's amber
+  float warmth = clamp((wall.r - wall.b) * 2.0, 0.0, 1.0);
+  wall = mix(wall * vec3(0.92, 0.96, 1.0), wall * vec3(1.05, 0.92, 0.78), warmth);
+
+  // the amber flank sweeping round, about once a second
+  float near = smoothstep(4.5, 1.2, z);
+  float flank = smoothstep(0.35, 1.0, cos(atan(q.y, q.x) - uSweep)) * near * uWander;
+  wall = mix(wall, wall * vec3(1.35, 0.95, 0.6) + vec3(0.2, 0.08, 0.0), flank * 0.6);
+
+  // the walls shade as they recede toward the eye
+  wall *= mix(1.0, 0.3, smoothstep(1.3, 4.5, z));
   float dv = length(p - uVP);
-  // the walls darken as they recede into the eye
-  wall *= mix(1.0, 0.25, smoothstep(1.3, 4.2, z) * smoothstep(0.45, 0.12, dv));
   vec3 col = mix(wall, ink, smoothstep(3.2, 6.0, z) * smoothstep(0.3, 0.1, dv));
   col = mix(col, ink, unsettled * 0.85);
-  // the eye itself: black, soft-lipped; on arrival it grows over everything
-  col = mix(col, ink, smoothstep(uEye + 0.07, uEye, dv));
+  // before the spiral: the painting itself, flat and still, filling the
+  // screen as the page did in the reference, easing forward a touch; the
+  // spiral opens the tunnel out of its centre
+  float scr = uRes.x / uRes.y;
+  float imgA = 16.0 / 9.0;
+  vec2 fuv = scr > imgA ? vec2(p.x / scr, -p.y * imgA / scr) : vec2(p.x / imgA, -p.y);
+  fuv = 0.5 + fuv / (1.0 + 0.05 * uDark);
+  vec3 still = mix(vec3(0.05, 0.1, 0.22), texture(uTex, fuv).rgb, uTexOn);
+  float fw = clamp((still.r - still.b) * 2.0, 0.0, 1.0);
+  still = mix(still * vec3(0.92, 0.96, 1.0), still * vec3(1.05, 0.92, 0.78), fw);
+  col = mix(still, col, inside);
+  // the centre darkens before the spiral is born
+  col *= 1.0 - uDark * 0.7 * smoothstep(0.38, 0.04, dv);
+  // the eye: soft-lipped black; at the end it grows over everything
+  col = mix(col, ink, smoothstep(uEye + 0.05, uEye, dv));
 
-  // the hole eats outward over the page being left
-  float edge = smoothstep(uFront, uFront - 0.3, r);
-  float alpha = edge * uFade;
-  frag = vec4(col * alpha, alpha);
+  // the dark beat: navy, with the studio's light glowing softly at the top
+  vec3 navy = vec3(0.05, 0.065, 0.1);
+  vec2 g = p - vec2(0.0, 0.33);
+  navy += vec3(0.42, 0.2, 0.06) * exp(-(g.x * g.x * 7.0 + g.y * g.y * 16.0)) * 0.8;
+  col = mix(col, navy, uGlow);
+
+  frag = vec4(col * uAlpha, uAlpha);
 }`;
 
 function compile(gl: GL, type: number, src: string): WebGLShader {
@@ -164,18 +169,18 @@ function compile(gl: GL, type: number, src: string): WebGLShader {
 }
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-// the shader's pipe, on the CPU: the same centre line, roll and solve
+// the shader's tunnel, on the CPU: the same centre line and solve
 const bendAt = (s: number): [number, number] => [
-  Math.sin(s * 0.42) * 3.3 + Math.sin(s * 0.17 + 2.0) * 2.4,
-  Math.sin(s * 0.33 + 1.3) * 2.5 + Math.cos(s * 0.15) * 2.0,
+  Math.sin(s * 0.42) * 1.7 + Math.sin(s * 0.17 + 2.0) * 1.2,
+  Math.sin(s * 0.33 + 1.3) * 1.3 + Math.cos(s * 0.15) * 1.0,
 ];
-/** where on screen (the shader's p units) the pipe runs deepest */
-function deepest(depth: number, time: number, aspect: number): [number, number] {
+/** where on screen (the shader's p units) the tunnel runs deepest */
+function deepest(depth: number, wander: number, aspect: number): [number, number] {
+  if (wander < 0.001) return [0, 0];
   const f = 0.2;
-  const roll = time * 0.45 + 0.6 * Math.sin(depth * 0.13);
-  const c = Math.cos(roll);
-  const s = Math.sin(roll);
   const base = bendAt(depth);
   const zs: number[] = [];
   const xs: number[] = [];
@@ -184,15 +189,12 @@ function deepest(depth: number, time: number, aspect: number): [number, number] 
     for (let i = -14; i <= 14; i++) {
       const px = (i / 14) * 0.5 * aspect * 0.9;
       const py = (j / 9) * 0.45;
-      // pr = M p, M = [[c, s], [-s, c]] as the shader's mat2(c, -s, s, c)
-      const rx = c * px + s * py;
-      const ry = -s * px + c * py;
       let z = f / Math.max(Math.hypot(px, py), 0.004);
       for (let k = 0; k < 6; k++) {
         const b = bendAt(depth + Math.min(z, 6));
         const d = Math.max(z, 0.4);
-        const qx = rx - (f * (b[0] - base[0])) / d;
-        const qy = ry - (f * (b[1] - base[1])) / d;
+        const qx = px - ((f * (b[0] - base[0])) / d) * wander;
+        const qy = py - ((f * (b[1] - base[1])) / d) * wander;
         z += (Math.min(f / Math.max(Math.hypot(qx, qy), 0.004), 40) - z) * 0.7;
       }
       zs.push(z);
@@ -214,7 +216,6 @@ function deepest(depth: number, time: number, aspect: number): [number, number] 
   });
   return [bx / sw, by / sw];
 }
-const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export function createVortex(gl: GL, size: () => { w: number; h: number }): Vortex {
   const prog = gl.createProgram()!;
@@ -232,14 +233,21 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
   const u = (n: string) => gl.getUniformLocation(prog, n);
-  const uRes = u("uRes");
-  const uTime = u("uTime");
-  const uDepth = u("uDepth");
-  const uFront = u("uFront");
-  const uEye = u("uEye");
-  const uFade = u("uFade");
-  const uTexOn = u("uTexOn");
-  const uVP = u("uVP");
+  const U = {
+    res: u("uRes"),
+    depth: u("uDepth"),
+    wander: u("uWander"),
+    spin: u("uSpin"),
+    sweep: u("uSweep"),
+    twist: u("uTwist"),
+    frontR: u("uFrontR"),
+    dark: u("uDark"),
+    eye: u("uEye"),
+    glow: u("uGlow"),
+    alpha: u("uAlpha"),
+    texOn: u("uTexOn"),
+    vp: u("uVP"),
+  };
 
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -257,6 +265,7 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
 
   let t = 0;
   let depth = 0;
+  let spin = 0;
   let vx = 0;
   let vy = 0;
   return {
@@ -264,11 +273,14 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
     reset() {
       t = 0;
       depth = 0;
+      spin = 0;
+      vx = 0;
+      vy = 0;
     },
     setTexture(img) {
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      // mipmaps: the pipe's far walls read from them
+      // mipmaps: the tunnel's far walls read from them
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       texReady = true;
@@ -276,33 +288,47 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
     frame(step, outAt) {
       t += step;
       const { w, h } = size();
-      const inK = clamp01(t / VORTEX_IN);
       const outK = outAt ? clamp01((t - outAt) / VORTEX_OUT) : 0;
-      // out: the eye swallows the screen over the first half, a beat of dark,
-      // then the studio fades up out of it
-      const eye = 0.075 + 0.015 * Math.sin(t / 420) + Math.pow(clamp01(outK / 0.5), 2.2) * 2.6;
-      const fade = 1 - easeInOutCubic(clamp01((outK - 0.62) / 0.38));
-      // world units of pipe per second: the fall gathers, and keeps pushing
-      // into the eye as it swallows
-      const speed = 1.5 + 5.5 * easeInOutCubic(inK);
-      depth += (speed * step) / 1000;
-      if (texReady) texOn = Math.min(1, texOn + step / 350);
 
-      gl.viewport(0, 0, w, h);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(uRes, w, h);
-      gl.uniform1f(uTime, t / 1000);
-      gl.uniform1f(uDepth, depth);
-      gl.uniform1f(uFront, 0.04 + (1 - Math.pow(1 - inK, 3)) * 1.45);
-      gl.uniform1f(uEye, eye);
-      gl.uniform1f(uFade, fade);
-      gl.uniform1f(uTexOn, texOn);
-      // the eye follows the pipe's deepest point, eased so it glides
-      const [dx, dy] = deepest(depth, t / 1000, w / h);
+      // the beats in (see the header)
+      const alphaIn = easeOutCubic(clamp01(t / 350));
+      const dark = easeInOutCubic(clamp01((t - 400) / 250));
+      const twist = easeOutCubic(clamp01((t - 650) / 500));
+      const frontR = 0.04 + easeInOutCubic(clamp01((t - 650) / 500)) * 2.2;
+      const go = easeInOutCubic(clamp01((t - 750) / 700));
+      const wander = easeInOutCubic(clamp01((t - 850) / 1000));
+      // the fall, and the walls' slow turn
+      depth += (3.2 * go * step) / 1000;
+      spin += (0.55 * go * step) / 1000;
+      if (texReady) texOn = Math.min(1, texOn + step / 250);
+
+      // the beats out: swallow (0-27%), dark (27-60%), fade up (60-100%)
+      const swallow = Math.pow(clamp01(outK / 0.27), 2);
+      const eye = 0.068 * dark + 0.008 * Math.sin(t / 380) * go + swallow * 2.6;
+      const glow = easeInOutCubic(clamp01((outK - 0.18) / 0.14));
+      const alpha = alphaIn * (1 - easeInOutCubic(clamp01((outK - 0.6) / 0.4)));
+
+      // the eye follows the tunnel's deepest point, eased so it glides
+      const [dx, dy] = deepest(depth, wander, w / h);
       const k = t < 50 ? 1 : 1 - Math.exp(-step / 90);
       vx += (dx - vx) * k;
       vy += (dy - vy) * k;
-      gl.uniform2f(uVP, vx, vy);
+
+      gl.viewport(0, 0, w, h);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform2f(U.res, w, h);
+      gl.uniform1f(U.depth, depth);
+      gl.uniform1f(U.wander, wander);
+      gl.uniform1f(U.spin, spin);
+      gl.uniform1f(U.sweep, (t / 1000) * Math.PI * 1.9);
+      gl.uniform1f(U.twist, twist);
+      gl.uniform1f(U.frontR, frontR);
+      gl.uniform1f(U.dark, dark);
+      gl.uniform1f(U.eye, eye);
+      gl.uniform1f(U.glow, glow);
+      gl.uniform1f(U.alpha, alpha);
+      gl.uniform1f(U.texOn, texOn);
+      gl.uniform2f(U.vp, vx, vy);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       return !!outAt && outK >= 1;
     },
