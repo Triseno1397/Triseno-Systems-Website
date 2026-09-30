@@ -10,7 +10,7 @@
 export const HERO = {
   label: "Consulting / Architecture / Implementation",
   headline: ["We Build the", "Operational", "Intelligence", "Layer"],
-  sub: "Multi-agent orchestration, workflow compression and decision-layer automation for organizations that need systems, not features.",
+  sub: "AI agent systems that take the manual work out of your operations. Designed, built and handed over.",
   /** the phone hero carries the same offer as a mono line */
   offers: ["Multi-agent orchestration", "Workflow compression", "Decision automation"],
 };

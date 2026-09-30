@@ -161,24 +161,19 @@ html[data-clean] .chrome-scrim { display: none; }
 .ai-lens[data-fallback] .ai-lens__canvas { display: none; }
 
 /* ── 01 hero ── */
-.ai-hero { padding-top: calc(var(--lane-top) + 8px); padding-bottom: clamp(56px, 9svh, 110px); }
-.ai-sheetbar {
-  display: flex; justify-content: space-between; gap: 20px; padding-block: 10px;
-  border-block: 1px solid var(--rule-2);
-  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-2);
-}
-.ai-sheetbar b { font-weight: 500; color: var(--signal-ink); margin-right: 0.8em; }
-.ai-hero__grid { display: grid; gap: 40px; margin-top: clamp(28px, 5svh, 56px); align-items: center; }
+.ai-hero { padding-top: calc(var(--lane-top) + clamp(8px, 3svh, 40px)); padding-bottom: clamp(56px, 9svh, 110px); }
+.ai-hero__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; align-items: center; }
 @media (min-width: 1024px) {
-  .ai-hero__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr); gap: clamp(40px, 4vw, 72px); }
+  .ai-hero__grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(40px, 5vw, 88px); }
 }
-.ai-hero__copy { display: grid; justify-items: start; gap: 22px; }
-.ai-hero__title { display: grid; font-size: var(--ai-display); line-height: 0.96; letter-spacing: -0.01em; color: var(--ink); }
-@media (min-width: 1024px) { .ai-hero__title { font-size: clamp(34px, 4.3vw, 84px); } }
+/* the copy column is a size container: the headline is set in its units, so
+   the longest line ("INTELLIGENCE") always fits the column and can never run
+   under the figure */
+.ai-hero__copy { container-type: inline-size; display: grid; justify-items: start; gap: clamp(18px, 2.6svh, 28px); min-width: 0; }
+.ai-hero__title { display: grid; font-size: clamp(28px, 10.4cqi, 92px); line-height: 0.98; letter-spacing: -0.01em; color: var(--ink); }
 .ai-hero__line { display: block; white-space: nowrap; }
-.ai-hero__line[data-hot] { color: transparent; -webkit-text-stroke: 1.4px var(--ink); }
-.ai-hero__sub { max-width: 44ch; }
-.ai-hero__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 32px; margin-top: 6px; }
+.ai-hero__sub { max-width: 40ch; font-size: clamp(17px, 1.35vw, 21px); }
+.ai-hero__cta { margin-top: 4px; }
 .ai-hero__fig { margin: 0; }
 .ai-hero__lens { aspect-ratio: 5 / 4; width: 100%; }
 @media (max-width: 767px) { .ai-hero__lens { aspect-ratio: 4 / 5; } }
