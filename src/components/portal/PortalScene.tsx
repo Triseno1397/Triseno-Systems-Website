@@ -541,6 +541,8 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       root: v(),
       yaw: 0,
       gaze: v(),
+      /** seconds of attention left: topped up while the pointer is on him */
+      attend: 0,
       tmp: v(),
       tmp2: v(),
     };
@@ -551,7 +553,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     return all[Math.floor(Math.random() * all.length)];
   };
 
-  useFrame((_, rawDt) => {
+  useFrame((three, rawDt) => {
     const dt = Math.min(rawDt, 1 / 20) * dbg.speed;
     state.px = portalState.px;
     state.py = portalState.py;
@@ -581,6 +583,28 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     }
     const hold = dbg.act !== null && dbg.t >= 0;
     const flying = P.flight !== "here";
+
+    /* ── the visitor's pointer on him: he stops what he was about to do and
+       gives them his attention. "On him" is an ellipse around his body on
+       screen (his limbs are too thin a target to hover), and the attention
+       outlasts the pointer by a beat so its edge never flickers. Left alone,
+       he goes back to keeping himself busy. ── */
+    const cam = three.camera;
+    const ndcX = portalState.px;
+    const ndcY = -portalState.py;
+    P.tmp.copy(g.position).project(cam);
+    const cx = P.tmp.x;
+    const cy = P.tmp.y;
+    P.tmp2.copy(g.position);
+    P.tmp2.y += stand.position[1] * 1.1;
+    P.tmp2.project(cam);
+    const ry = Math.max(0.1, Math.abs(P.tmp2.y - cy)) * 1.25;
+    const rx = ry * 0.62 * (size.height / Math.max(1, size.width));
+    const over = !coarse && !state.hidden && ((ndcX - cx) / rx) ** 2 + ((ndcY - cy) / ry) ** 2 < 1;
+    P.attend = over ? 0.8 : Math.max(0, P.attend - dt);
+    const attending = P.attend > 0 && !flying && !busy.current;
+    // a look at his blade already under way is finished, not cut off
+    const inspecting = P.act === "blade" && P.mode === "on" && P.actT >= BLADE_FIRST && (P.actT - BLADE_FIRST) % BLADE_EVERY < INSPECT;
     // a hovered word changed the glyph under a lean or a hang: he gets off it
     if (!flying && P.mode === "on" && (P.act === "lean" || P.act === "pull") && statue.morphing && !dbg.act) P.actT = P.actDur;
 
@@ -660,7 +684,9 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
         case "on": {
           P.e = 1;
           blend(1, pose.spot.x, pose.spot.z, pose.spotYaw);
-          if (!hold) P.actT += dt;
+          // while he has the visitor's attention his own clock stands still:
+          // he does not move on to the next thing, or start on his blade
+          if (!hold && (!attending || inspecting)) P.actT += dt;
           if (P.actT >= P.actDur) {
             P.next = pick(P.act);
             P.mode = "off";
@@ -909,6 +935,13 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
       gaze = P.gaze.copy(L.hands[0]!).add(L.hands[1]!).multiplyScalar(0.5);
       gaze.y += 0.25;
     }
+    // attending: his eyes go to the pointer — a point on the ray from the
+    // camera through it, most of the way to him, so he looks out toward the
+    // visitor and the pointer's place on his body swings his head a long way
+    if (!gaze && attending && inspect < 0) {
+      P.tmp.set(ndcX, ndcY, 0.5).unproject(cam).sub(cam.position).normalize();
+      gaze = P.gaze.copy(cam.position).addScaledVector(P.tmp, cam.position.distanceTo(g.position) * 0.84);
+    }
     // the statue holds its shape while he leans on it or hangs from it
     statue.hold = !flying && (P.act === "lean" || P.act === "pull") && P.mode !== "walk" && P.mode !== "stage";
 
@@ -916,6 +949,7 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
     state.yaw = P.yaw;
     state.limbs = L;
     state.gaze = gaze;
+    state.attend = attending;
     state.inspect = busy.current ? -1 : inspect;
     state.thrust = thrust;
     g.position.set(P.root.x, P.root.y - dip, P.root.z);

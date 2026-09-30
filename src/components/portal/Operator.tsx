@@ -55,6 +55,9 @@ export interface OperatorState {
   inspect?: number;
   /** something in the world he looks at instead of the visitor */
   gaze?: THREE.Vector3 | null;
+  /** the visitor's pointer is on him: he gives it his attention (looks at it,
+   *  reaches toward it). Otherwise he minds his own business. */
+  attend?: boolean;
   /** 0..1 — the jets under his feet (take-off and landing) */
   thrust?: number;
   /** touch screens: performance.now() of the last touch — he looks at the
@@ -1141,7 +1144,10 @@ export default function Operator({
     // ── look at the visitor (or scan around on touch) ──
     let tx: number, ty: number;
     const touching = !state.fine && !!state.touchAt && performance.now() - state.touchAt < 1800;
-    if (state.fine || touching) {
+    // (with a mouse he only follows it while it is on him — state.gaze then
+    // carries where; left alone he looks around on his own)
+    const attend = !!state.attend;
+    if (touching) {
       tx = state.px;
       ty = state.py;
     } else {
@@ -1163,8 +1169,10 @@ export default function Operator({
       ty = THREE.MathUtils.clamp(-Math.atan2(tmp.pos2.y - 0.4, Math.hypot(tmp.pos2.x, tmp.pos2.z)) / (0.6 * 1.08), -1, 1);
     }
     s.follow = damp(s.follow, s.seq >= 0 ? 0 : 1, 4, dt);
-    s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.05, 3.4, dt);
-    s.pitch = damp(s.pitch, THREE.MathUtils.clamp(ty, -1, 1) * 0.6, 3.4, dt);
+    // attention is quick; his own looking around is unhurried
+    const quick = attend ? 6.5 : 3.4;
+    s.yaw = damp(s.yaw, THREE.MathUtils.clamp(tx, -1, 1) * 1.05, quick, dt);
+    s.pitch = damp(s.pitch, THREE.MathUtils.clamp(ty, -1, 1) * 0.6, quick, dt);
     // While a move plays the mixer owns the bones, and it only rewrites a bone
     // whose value changed since the last frame: anything turned on top of it
     // would stack up frame after frame and leave him twisted when the move
@@ -1283,9 +1291,9 @@ export default function Operator({
     // At rest the hands follow the pointer as well, a little and after the
     // head: each fist drifts toward the cursor's side and lifts with it, so he
     // reaches toward the visitor rather than only looking at them.
-    if (s.seq < 0 && (state.fine || touching) && tuck < 0.999 && ins < 0) {
+    if (s.seq < 0 && (attend || touching) && tuck < 0.999 && ins < 0) {
       const placed = L ? Math.max(L.handW[0], L.handW[1], L.footW[0] * 0.6) : 0;
-      const reach = 0.42 * s.follow * (1 - tuck) * (1 - placed);
+      const reach = (attend ? 0.6 : 0.42) * s.follow * (1 - tuck) * (1 - placed);
       const lift = 0.05 - s.pitch * 0.14;
       rig.b.rHand.getWorldPosition(tmp.TR).addScaledVector(tmp.side, -s.yaw * 0.07).addScaledVector(tmp.fwd, 0.07);
       tmp.TR.y += lift;
