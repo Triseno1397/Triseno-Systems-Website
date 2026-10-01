@@ -56,7 +56,7 @@ export function useWarp(): WarpApi {
 const T_NAV = 900; // router.push fires here (page fully covered)
 const T_TITLE = 980; // title card starts resolving
 const T_MIN_HOLD = 1720; // earliest the out phase may start
-const T_MIN_HOLD_VORTEX = 3500; // AI's dive: ~2.3s down the tunnel, ~5s in all with the swallow and fade
+const T_MIN_HOLD_VORTEX = 4300; // AI's dive: ~3.1s down the tunnel, ~6s in all with the swallow and fade
 const T_GIVE_UP = 5000; // never trap the visitor behind the tunnel
 
 const STAR_COUNT = 420;

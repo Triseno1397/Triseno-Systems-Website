@@ -12,7 +12,7 @@
                       cloud, cyan light, handwritten equations streaking
                       past), a dark eye at the far end drifting across the
                       frame as the tunnel turns, a cyan flank sweeping past
-                      about once a second;
+                      every couple of seconds; slow and smooth throughout;
      out    swallow   the eye grows until it fills the screen,
             dark      a beat of dark navy with a soft cyan glow at the top,
             fade      and the page fades up out of it, its figure first and
@@ -29,7 +29,7 @@ type GL = WebGL2RenderingContext;
 /** still + dark + born + opens: the dive is under way by here */
 export const VORTEX_IN = 1150;
 /** swallow + dark beat + fade up, once the page underneath is ready */
-export const VORTEX_OUT = 1500;
+export const VORTEX_OUT = 1800;
 /** the storm painting (4K, GPT Image 2.5: navy cloud, orange light, handwritten
  *  maths), at the size the screen can use */
 export const vortexTexture = (screenW: number) =>
@@ -305,22 +305,22 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
       const dark = easeInOutCubic(clamp01((t - 400) / 250));
       const twist = easeOutCubic(clamp01((t - 650) / 500));
       const frontR = 0.04 + easeInOutCubic(clamp01((t - 650) / 500)) * 2.2;
-      const go = easeInOutCubic(clamp01((t - 750) / 700));
-      const wander = easeInOutCubic(clamp01((t - 850) / 1000));
+      const go = easeInOutCubic(clamp01((t - 750) / 1200));
+      const wander = easeInOutCubic(clamp01((t - 850) / 1800));
       // the fall, and the walls' slow turn
-      depth += (3.2 * go * step) / 1000;
-      spin += (0.55 * go * step) / 1000;
+      depth += (1.7 * go * step) / 1000;
+      spin += (0.28 * go * step) / 1000;
       if (texReady) texOn = Math.min(1, texOn + step / 250);
 
       // the beats out: swallow (0-27%), dark (27-60%), fade up (60-100%)
       const swallow = Math.pow(clamp01(outK / 0.27), 2);
-      const eye = 0.068 * dark + 0.008 * Math.sin(t / 380) * go + swallow * 2.6;
+      const eye = 0.068 * dark + 0.006 * Math.sin(t / 700) * go + swallow * 2.6;
       const glow = easeInOutCubic(clamp01((outK - 0.18) / 0.14));
       const alpha = alphaIn * (1 - easeInOutCubic(clamp01((outK - 0.6) / 0.4)));
 
       // the eye follows the tunnel's deepest point, eased so it glides
       const [dx, dy] = deepest(depth, wander, w / h);
-      const k = t < 50 ? 1 : 1 - Math.exp(-step / 90);
+      const k = t < 50 ? 1 : 1 - Math.exp(-step / 260);
       vx += (dx - vx) * k;
       vy += (dy - vy) * k;
 
@@ -330,7 +330,7 @@ export function createVortex(gl: GL, size: () => { w: number; h: number }): Vort
       gl.uniform1f(U.depth, depth);
       gl.uniform1f(U.wander, wander);
       gl.uniform1f(U.spin, spin);
-      gl.uniform1f(U.sweep, (t / 1000) * Math.PI * 1.9);
+      gl.uniform1f(U.sweep, (t / 1000) * Math.PI * 1.1);
       gl.uniform1f(U.twist, twist);
       gl.uniform1f(U.frontR, frontR);
       gl.uniform1f(U.dark, dark);
