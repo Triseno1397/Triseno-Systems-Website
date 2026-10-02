@@ -178,6 +178,21 @@ html[data-clean] .chrome-scrim { display: none; }
 .ai-hero__lens { aspect-ratio: 5 / 4; width: 100%; }
 @media (max-width: 767px) { .ai-hero__lens { aspect-ratio: 4 / 5; } }
 
+/* the hero object (IntelligenceCore): the canvas, two hairline corner ticks,
+   and a live caption in the page's mono */
+.ai-core { position: relative; }
+.ai-core__stage { position: absolute; inset: 0; cursor: crosshair; }
+.ai-core__tick { position: absolute; width: 22px; height: 22px; pointer-events: none; border-color: var(--rule-2); border-style: solid; border-width: 0; }
+.ai-core__tick--tl { top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+.ai-core__tick--br { right: 0; bottom: 0; border-bottom-width: 1px; border-right-width: 1px; }
+.ai-core__cap {
+  position: absolute; left: 0; bottom: 0; display: inline-flex; align-items: center; gap: 10px;
+  font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); pointer-events: none;
+}
+.ai-core__live { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); animation: ai-core-live 1.6s ease-in-out infinite; }
+@keyframes ai-core-live { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ai-core__live { animation: none; } }
+
 /* ── ticker: a band of ink ── */
 .ai-ticker { background: var(--ink); color: var(--paper); overflow: hidden; border-block: 1px solid var(--ink); }
 .ai-ticker__belt { display: flex; width: max-content; animation: ai-belt 46s linear infinite; }

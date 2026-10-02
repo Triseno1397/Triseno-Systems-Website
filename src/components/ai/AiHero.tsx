@@ -2,13 +2,14 @@
 
 import GhostButton from "@/components/ui/GhostButton";
 import { HERO } from "./content";
-import DitherLens from "./DitherLens";
+import IntelligenceCore from "./IntelligenceCore";
 import Scramble from "./Scramble";
 
 /**
  * 1. Hero — the offer, and nothing else: the headline (decoding into place),
- * one sentence, one button. Beside it the division's world is printed as a
- * 1-bit negative, and the pointer is a lens that develops the real frame.
+ * one sentence, one button. Beside it, the intelligence layer as one object:
+ * a liquid-chrome core inside a dotted globe with cyan routes, ringed by a
+ * swarm of agents that scatter from the pointer (IntelligenceCore).
  * The headline is sized to its own column (container units), so it can never
  * run under the figure at any width. Nothing here is scroll-driven.
  */
@@ -34,11 +35,8 @@ export default function AiHero() {
           </div>
 
           <figure className="ai-hero__fig ai-in" style={{ ["--d" as string]: 1 }}>
-            <DitherLens
-              src="/worlds/ai-desktop.webp"
-              srcMobile="/worlds/ai-mobile.webp"
-              lens={0.22}
-              label="The AI division's world, a nave of dark pillars strung with cyan light, printed as a one-bit negative with a lens that shows the real image"
+            <IntelligenceCore
+              label="A liquid chrome core inside a dotted globe, cyan routes arcing between cities, and a swarm of agents orbiting it that scatter from the pointer"
               className="ai-hero__lens"
             />
           </figure>
