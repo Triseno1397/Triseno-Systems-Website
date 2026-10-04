@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════════════
+   05 Process: true-focus step names + stroke-text step word.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── true focus: one name sharp, the rest out of focus ── */
+.ai-world .ai-rail__names.ai-focus button {
+  filter: blur(2.5px);
+  opacity: 0.5;
+  transition: filter 600ms var(--ease-expo), opacity 600ms var(--ease-expo), color 300ms linear;
+}
+.ai-world .ai-rail__names.ai-focus button[data-focus] { filter: blur(0); opacity: 1; color: var(--ink); }
+.ai-world .ai-rail__names.ai-focus button[data-focus] b { color: var(--signal-ink); }
+/* while dragging, the frame and the focus ride with the handle */
+.ai-world .ai-rail[data-dragging] .ai-rail__names.ai-focus button { transition-duration: 400ms, 400ms, 300ms; }
+
+/* the frame: four corner brackets, moved by transform only; it shares the
+   names row's box so its coordinates are measured against itself */
+.ai-world .ai-focus__frame {
+  position: absolute; left: 14px; right: 14px; bottom: 0; height: 30px;
+  pointer-events: none; opacity: 0; transition: opacity 400ms linear;
+}
+.ai-world .ai-focus__frame[data-ready] { opacity: 1; }
+.ai-world .ai-focus__frame i {
+  position: absolute; left: 0; top: 0; width: 9px; height: 9px;
+  border: 0 solid var(--signal);
+  transition: transform var(--dur, 700ms) var(--ease-expo);
+  will-change: transform;
+}
+.ai-world .ai-focus__frame i:nth-child(1) { border-top-width: 2px; border-left-width: 2px; }
+.ai-world .ai-focus__frame i:nth-child(2) { border-top-width: 2px; border-right-width: 2px; margin-left: -9px; }
+.ai-world .ai-focus__frame i:nth-child(3) { border-bottom-width: 2px; border-left-width: 2px; margin-top: -9px; }
+.ai-world .ai-focus__frame i:nth-child(4) { border-bottom-width: 2px; border-right-width: 2px; margin: -9px 0 0 -9px; }
+.ai-world .ai-rail[data-dragging] .ai-focus__frame i { transition-duration: 420ms; }
+
+@media (max-width: 767px) {
+  .ai-world .ai-focus__frame i { width: 7px; height: 7px; }
+  .ai-world .ai-focus__frame i:nth-child(2) { margin-left: -7px; }
+  .ai-world .ai-focus__frame i:nth-child(3) { margin-top: -7px; }
+  .ai-world .ai-focus__frame i:nth-child(4) { margin: -7px 0 0 -7px; }
+  .ai-world .ai-rail__names.ai-focus button { filter: blur(1.6px); }
+  .ai-world .ai-rail__names.ai-focus button[data-focus] { filter: blur(0); }
+}
+
+/* ── stroke text: the big step word ── */
+/* the lead no longer wipes as one block; the word has its own reveal and
+   the label and summary rise in around it */
+.ai-world .ai-stepsheet__lead.ai-stepsheet__lead--stroke { animation: none; }
+.ai-world .ai-stepsheet__lead--stroke > .ai-label { animation: ai-in 700ms var(--ease-expo) both; }
+.ai-world .ai-stepsheet__lead--stroke > .ai-body { animation: ai-in 900ms var(--ease-expo) 500ms both; }
+
+.ai-world .ai-stroke { position: relative; letter-spacing: 0; }
+/* holds the line box and carries the accessible text; painted by the SVGs */
+.ai-world .ai-stroke__sizer { display: inline-block; color: transparent; white-space: nowrap; }
+.ai-world .ai-stroke__svg {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;
+}
+.ai-world .ai-stroke__svg text {
+  font-family: inherit; font-weight: inherit; font-size: inherit; letter-spacing: 0;
+}
+
+/* the outline: an ink hairline that draws itself on, glyph by glyph */
+.ai-world .ai-stroke__line text {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.15px;
+  stroke-linejoin: round;
+  stroke-dasharray: 7em 0em;
+  animation: ai-stroke-draw 1300ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+@keyframes ai-stroke-draw {
+  from { stroke-dasharray: 0em 7em; }
+  to { stroke-dasharray: 7em 0em; }
+}
+
+/* the fill: solid ink, wiped in left to right once the outline is mostly down */
+.ai-world .ai-stroke__fill text { fill: var(--ink); stroke: none; }
+.ai-world .ai-stroke__fill {
+  clip-path: inset(0 0 0 0);
+  animation: ai-stroke-fill 1100ms var(--ease-expo) 750ms both;
+}
+@keyframes ai-stroke-fill {
+  from { clip-path: inset(-10% 100% -10% 0); }
+  to { clip-path: inset(-10% 0% -10% 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-world .ai-stroke__line text,
+  .ai-world .ai-stroke__fill,
+  .ai-world .ai-stepsheet__lead--stroke > .ai-label,
+  .ai-world .ai-stepsheet__lead--stroke > .ai-body { animation: none !important; }
+  .ai-world .ai-focus__frame i,
+  .ai-world .ai-rail__names.ai-focus button { transition-duration: 1ms !important; }
+}

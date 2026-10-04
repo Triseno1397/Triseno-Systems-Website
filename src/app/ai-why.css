@@ -1,0 +1,176 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   06 WHY TRISENO — flip cards + liquid-metal mark (components/ai/WhyFlip.tsx,
+   components/ai/MetallicMark.tsx). Every selector is scoped under .wf, the
+   section's own class, and reads the clean-room tokens set on .ai-world.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.wf {
+  --wf-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --wf-turn: 1150ms;
+  --wf-step: 120ms;
+}
+
+/* ── head: copy left, the emblem right (beside the title on phones too) ── */
+.wf .wf-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(112px, 30vw, 380px);
+  gap: clamp(16px, 4vw, 72px);
+  align-items: center;
+  margin-bottom: clamp(36px, 6svh, 72px);
+}
+.wf .wf-head__copy { display: grid; justify-items: start; gap: 16px; min-width: 0; }
+.wf .wf-head__lead { max-width: 34ch; }
+@media (max-width: 639px) { .wf .wf-head { align-items: start; } }
+
+/* the master switch: a thumb that slides under the active side */
+.wf .wf-switch {
+  position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;
+  margin-top: 10px; border: 1px solid var(--ink);
+}
+.wf .wf-switch__thumb {
+  position: absolute; inset: 0 50% 0 0; background: var(--ink);
+  transition: transform 800ms var(--wf-ease), opacity 400ms linear;
+}
+.wf .wf-switch[data-state="1"] .wf-switch__thumb { transform: translate3d(100%, 0, 0); }
+.wf .wf-switch[data-state="-1"] .wf-switch__thumb { opacity: 0; }
+.wf .wf-switch__opt {
+  position: relative; z-index: 1; min-height: 44px; padding: 0 clamp(14px, 1.6vw, 22px);
+  font-family: var(--font-unbounded), sans-serif; font-weight: 500; font-size: var(--fs-label);
+  letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; color: var(--ink);
+  transition: color 500ms var(--wf-ease), opacity 500ms linear;
+}
+.wf .wf-switch__opt[aria-checked="true"] { color: var(--paper); }
+.wf .wf-switch[data-state="-1"] .wf-switch__opt,
+.wf .wf-switch__opt[aria-checked="false"] { opacity: 0.6; }
+.wf .wf-switch__opt:hover { opacity: 1; }
+
+/* ── the emblem ─────────────────────────────────────────────────────────── */
+.wf .wf-emblem { position: relative; margin: 0; justify-self: end; width: 100%; }
+.wf .wf-emblem::before,
+.wf .wf-emblem::after {
+  /* registration ticks, the clean room's figure frame */
+  content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none;
+}
+.wf .wf-emblem::before { top: 0; left: 0; border-top: 1px solid var(--rule-2); border-left: 1px solid var(--rule-2); }
+.wf .wf-emblem::after { right: 0; bottom: 26px; border-right: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2); }
+.wf .wf-emblem__cap {
+  display: flex; justify-content: space-between; gap: 12px; margin-top: 10px;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+}
+@media (max-width: 639px) { .wf .wf-emblem__cap span:last-child { display: none; } }
+
+.wf .wf-metal { position: relative; width: 100%; aspect-ratio: 1; touch-action: pan-y; }
+.wf .wf-metal__gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.wf .wf-metal__svg {
+  /* the same footprint the shader paints (78% of the square on the mark's long side) */
+  position: absolute; left: 50%; top: 50%; width: 79.7%; height: auto;
+  transform: translate3d(-50%, -50%, 0); transition: opacity 700ms linear;
+}
+.wf .wf-metal[data-gl="1"] .wf-metal__svg { opacity: 0; }
+
+/* ── the deck ───────────────────────────────────────────────────────────── */
+.wf .wf-deck { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
+@media (min-width: 640px) { .wf .wf-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .wf .wf-deck { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(12px, 1.2vw, 20px); } }
+
+.wf .wf-cell { display: flex; }
+.wf .wf-card {
+  display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; perspective: 1600px;
+  transition: transform 600ms var(--wf-ease);
+}
+.wf .wf-card:active { transform: scale(0.985); }
+.wf .wf-card:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 6px; }
+
+.wf .wf-card__inner {
+  position: relative; display: grid; height: 100%;
+  min-height: clamp(300px, 52svh, 480px);
+  transform-style: preserve-3d;
+  transition: transform var(--wf-turn) var(--wf-ease);
+  will-change: transform;
+}
+.wf .wf-card[data-shown="1"] .wf-card__inner { transform: rotateY(180deg); }
+.wf .wf-deck[data-cascade="1"] .wf-card__inner { transition-delay: calc(var(--i) * var(--wf-step)); }
+@media (max-width: 639px) { .wf .wf-card__inner { min-height: 300px; } }
+
+.wf .wf-face {
+  grid-area: 1 / 1; position: relative; display: flex; flex-direction: column; gap: 14px;
+  padding: clamp(20px, 1.8vw, 28px); border: 1px solid var(--rule-2);
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+}
+/* each face darkens a little as it turns away — the depth cue */
+.wf .wf-face::after {
+  content: ""; position: absolute; inset: -1px; background: var(--ink); opacity: 0; pointer-events: none;
+  transition: opacity calc(var(--wf-turn) * 0.6) var(--wf-ease);
+}
+.wf .wf-deck[data-cascade="1"] .wf-face::after { transition-delay: calc(var(--i) * var(--wf-step)); }
+.wf .wf-card[data-shown="1"] .wf-face--front::after { opacity: 0.28; }
+.wf .wf-card[data-shown="0"] .wf-face--back::after { opacity: 0.4; }
+
+.wf .wf-face__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.wf .wf-face__tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.wf .wf-face__say {
+  margin-top: auto; padding-top: clamp(28px, 6svh, 64px);
+  font-family: var(--font-unbounded), sans-serif; font-weight: 600;
+  font-size: clamp(17px, 1.45vw, 23px); line-height: 1.2; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.wf .wf-face__note { display: block; max-width: 34ch; }
+.wf .wf-face__foot {
+  display: flex; align-items: center; gap: 10px; padding-top: 14px; margin-top: 4px;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.wf .wf-face__foot svg { flex: none; transition: transform 900ms var(--wf-ease); }
+.wf .wf-card:hover .wf-face__foot svg,
+.wf .wf-card:focus-visible .wf-face__foot svg { transform: rotate(180deg); }
+.wf .wf-hint--touch { display: none; }
+@media (hover: none) {
+  .wf .wf-hint--hover { display: none; }
+  .wf .wf-hint--touch { display: inline; }
+}
+
+/* front: the typical vendor — grey hatched stock, the claim struck through */
+.wf .wf-face--front {
+  background-color: var(--paper-2);
+  background-image: repeating-linear-gradient(135deg, var(--rule) 0 1px, transparent 1px 10px);
+  color: var(--ink-3);
+}
+.wf .wf-face--front .ai-label { color: var(--ink-3); }
+.wf .wf-face--front .ai-label b { color: var(--ink-3); }
+.wf .wf-face--front .wf-face__say { color: var(--ink-3); }
+.wf .wf-face--front .wf-face__say s {
+  text-decoration-line: line-through; text-decoration-thickness: 1px; text-decoration-color: var(--ink-2);
+}
+.wf .wf-face--front .wf-face__note { color: var(--ink-3); }
+.wf .wf-face--front .wf-face__foot { border-top: 1px solid var(--rule-2); color: var(--ink-2); }
+
+/* back: Triseno — ink stock, paper type, the cyan label */
+.wf .wf-face--back {
+  transform: rotateY(180deg);
+  background: var(--ink); border-color: var(--ink); color: var(--paper);
+}
+.wf .wf-face--back::before {
+  content: ""; position: absolute; top: -1px; left: -1px; right: -1px; height: 1px; background: var(--signal);
+}
+.wf .wf-face__label {
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
+  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(230, 233, 232, 0.72);
+}
+.wf .wf-face__label b { font-weight: 500; color: var(--signal); }
+.wf .wf-face--back .wf-face__tag { color: var(--signal); }
+.wf .wf-face--back .wf-face__say { color: var(--paper); }
+.wf .wf-face--back .wf-face__note { color: rgba(230, 233, 232, 0.74); }
+.wf .wf-face--back .wf-face__foot { border-top: 1px solid rgba(230, 233, 232, 0.18); color: rgba(230, 233, 232, 0.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wf .wf-card, .wf .wf-card__inner, .wf .wf-face::after, .wf .wf-switch__thumb,
+  .wf .wf-switch__opt, .wf .wf-face__foot svg, .wf .wf-metal__svg {
+    transition: none !important;
+  }
+  .wf .wf-card:active { transform: none; }
+}

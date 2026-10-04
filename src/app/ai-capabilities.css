@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════════════════════════
+   AI INFRASTRUCTURE — 02 / Capabilities: the flowing index
+   (src/components/ai/FlowingCapabilities.tsx)
+
+   Six ruled rows in ink on the paper. Hover sends a cyan signal band in from
+   the edge the pointer crossed, carrying a marquee; titles decode glyph by
+   glyph. Everything is scoped to .ai-flow-cap and uses the .ai-world tokens.
+   Animated: transform, opacity (and the brief's grid-template-rows).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-flow-cap {
+  --fc-title: clamp(22px, 3.05vw, 50px);
+  --fc-pad: clamp(20px, 2.5vw, 38px);
+  --fc-meta: clamp(150px, 15vw, 210px);
+}
+
+.ai-flow-cap__list { border-top: 1px solid var(--ink); }
+.ai-flow-cap__row { position: relative; border-bottom: 1px solid var(--ink); }
+.ai-flow-cap__h { margin: 0; font: inherit; }
+
+/* ── the row head (the whole row is one button) ── */
+.ai-flow-cap__head {
+  position: relative; display: grid; width: 100%; align-items: center;
+  grid-template-columns: var(--fc-meta) minmax(0, 1fr) 44px; column-gap: clamp(16px, 2vw, 32px);
+  padding: var(--fc-pad) 0; text-align: left; color: var(--ink); cursor: pointer;
+  overflow: hidden; isolation: isolate; -webkit-tap-highlight-color: transparent;
+}
+.ai-flow-cap__head:focus-visible { outline-offset: -1px; }
+
+.ai-flow-cap__meta { display: grid; gap: 8px; align-self: center; }
+.ai-flow-cap__num {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.18em; color: var(--ink-3);
+  transition: color 400ms linear;
+}
+.ai-flow-cap__node { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.1; transition: fill 400ms linear, stroke 400ms linear; }
+.ai-flow-cap__tag {
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-2);
+}
+.ai-flow-cap__row[data-open] .ai-flow-cap__num { color: var(--signal-ink); }
+.ai-flow-cap__row[data-open] .ai-flow-cap__node { fill: var(--signal); stroke: var(--signal); }
+
+.ai-flow-cap__title {
+  display: block; font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: var(--fc-title);
+  line-height: 1.02; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink);
+  text-wrap: balance; transition: opacity 500ms linear;
+}
+.ai-flow-cap__titleline { display: block; }
+
+/* plus that turns to minus when open */
+.ai-flow-cap__plus { position: relative; justify-self: end; width: 22px; height: 22px; }
+.ai-flow-cap__plus i {
+  position: absolute; left: 0; top: 50%; width: 100%; height: 1px; margin-top: -0.5px; background: var(--ink);
+  transition: transform 700ms var(--ease-expo);
+}
+.ai-flow-cap__plus i:last-child { transform: rotate(90deg); }
+.ai-flow-cap__row[data-open] .ai-flow-cap__plus i:last-child { transform: rotate(0deg); }
+
+/* resting rows dim while one is pointed at (pointer devices only) */
+@media (hover: hover) and (pointer: fine) {
+  .ai-flow-cap__list:hover .ai-flow-cap__row:not(:hover) .ai-flow-cap__title { opacity: 0.32; }
+}
+
+/* ── glyph slots: the real character holds the width; noise is painted over it ── */
+.ai-flow-cap__w { display: inline-block; white-space: nowrap; }
+.ai-flow-cap__ch { position: relative; display: inline-block; }
+.ai-flow-cap__real { display: inline-block; }
+.ai-flow-cap__fake {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  color: var(--signal-ink); pointer-events: none; white-space: pre;
+}
+.ai-flow-cap__ch[data-s] .ai-flow-cap__real { opacity: 0; }
+.ai-flow-cap__list[data-armed] .ai-flow-cap__titleline:not([data-go]) .ai-flow-cap__real { opacity: 0; }
+
+/* ── the signal band ── */
+.ai-flow-cap__band {
+  position: absolute; inset: -1px 0; z-index: 2; overflow: hidden; pointer-events: none;
+  background: var(--signal); color: var(--ink); visibility: hidden;
+  will-change: transform;
+}
+.ai-flow-cap__head[data-ready] .ai-flow-cap__band { visibility: visible; }
+.ai-flow-cap__bandin { position: absolute; inset: 0; display: flex; align-items: center; will-change: transform; }
+.ai-flow-cap__track {
+  display: flex; width: max-content;
+  animation: ai-flow-cap-belt var(--dur, 22s) linear infinite; animation-play-state: paused;
+}
+.ai-flow-cap__band[data-on] .ai-flow-cap__track { animation-play-state: running; }
+.ai-flow-cap__run { display: flex; flex: none; }
+.ai-flow-cap__item { display: inline-flex; align-items: center; flex: none; gap: clamp(18px, 2vw, 34px); padding-right: clamp(18px, 2vw, 34px); white-space: nowrap; }
+.ai-flow-cap__mtitle {
+  font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: calc(var(--fc-title) * 0.78);
+  line-height: 1; letter-spacing: 0.03em; text-transform: uppercase;
+}
+.ai-flow-cap__band .ai-flow-cap__fake { color: #ffffff; }
+.ai-flow-cap__sep { width: clamp(10px, 0.9vw, 14px); height: clamp(10px, 0.9vw, 14px); flex: none; fill: none; stroke: var(--ink); stroke-width: 1.1; }
+.ai-flow-cap__phrase {
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink);
+}
+@keyframes ai-flow-cap-belt { to { transform: translate3d(-50%, 0, 0); } }
+
+/* ── the brief ── */
+.ai-flow-cap__panel {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 800ms var(--ease-expo);
+}
+.ai-flow-cap__row[data-open] .ai-flow-cap__panel { grid-template-rows: 1fr; }
+.ai-flow-cap__panelin { min-height: 0; overflow: hidden; }
+.ai-flow-cap__brief {
+  display: grid; grid-template-columns: var(--fc-meta) minmax(0, 1fr) 44px; column-gap: clamp(16px, 2vw, 32px); row-gap: 14px;
+  padding: 0 0 calc(var(--fc-pad) + 6px);
+  opacity: 0; transform: translate3d(0, -10px, 0);
+  transition: opacity 400ms linear, transform 800ms var(--ease-expo);
+}
+.ai-flow-cap__row[data-open] .ai-flow-cap__brief { opacity: 1; transform: none; transition-delay: 140ms; }
+.ai-flow-cap__live { display: flex; align-items: center; gap: 10px; grid-column: 1; grid-row: 1; align-self: start; padding-top: 4px; }
+.ai-flow-cap__body { grid-column: 2; grid-row: 1; max-width: 52ch; font-size: clamp(17px, 1.3vw, 20px); color: var(--ink); }
+.ai-flow-cap__spec {
+  grid-column: 2; grid-row: 2; display: flex; gap: 22px; padding-top: 12px; border-top: 1px solid var(--rule-2); max-width: 52ch;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+.ai-flow-cap__spec span:last-child { color: var(--signal-ink); }
+
+.ai-flow-cap__foot {
+  display: flex; justify-content: space-between; gap: 16px; margin-top: 14px;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ── phones ── */
+@media (max-width: 767px) {
+  .ai-flow-cap { --fc-title: clamp(19px, 5.6vw, 26px); --fc-pad: 20px; }
+  .ai-flow-cap__head {
+    grid-template-columns: 30px minmax(0, 1fr) 22px; grid-template-areas: "num title plus" ". tag ."; column-gap: 14px; row-gap: 8px; align-items: start;
+  }
+  .ai-flow-cap__meta { display: contents; }
+  .ai-flow-cap__num { grid-area: num; padding-top: 0.3em; gap: 0; }
+  .ai-flow-cap__node { display: none; }
+  .ai-flow-cap__tag { grid-area: tag; }
+  .ai-flow-cap__title { grid-area: title; }
+  .ai-flow-cap__plus { grid-area: plus; width: 16px; height: 16px; margin-top: 0.35em; }
+  .ai-flow-cap__mtitle { font-size: calc(var(--fc-title) * 0.95); }
+  .ai-flow-cap__phrase { font-size: 11px; }
+  .ai-flow-cap__brief { grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; }
+  .ai-flow-cap__live { grid-column: 2; grid-row: 1; padding-top: 0; }
+  .ai-flow-cap__body { grid-column: 2; grid-row: 2; font-size: 16px; }
+  .ai-flow-cap__spec { grid-row: 3; }
+  .ai-flow-cap__hint { display: none; }
+}
+
+/* pressed state for touch (no hover there) */
+.ai-flow-cap__head:active .ai-flow-cap__title { opacity: 0.7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-flow-cap__track { animation: none; }
+  .ai-flow-cap__panel, .ai-flow-cap__brief, .ai-flow-cap__plus i, .ai-flow-cap__title { transition: none; }
+  .ai-flow-cap__list[data-armed] .ai-flow-cap__titleline:not([data-go]) .ai-flow-cap__real { opacity: 1; }
+}

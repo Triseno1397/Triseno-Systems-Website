@@ -4,12 +4,14 @@ import { useEffect } from "react";
 import { DIVISIONS } from "@/lib/divisions";
 import AiHero from "./AiHero";
 import SignalTicker from "./SignalTicker";
-import Capabilities from "./Capabilities";
-import Compression from "./Compression";
-import Interlude from "./Interlude";
+import FlowingCapabilities from "./FlowingCapabilities";
+import CubeCompression from "./CubeCompression";
+import ExpandInterlude from "./ExpandInterlude";
+import StackViewer from "./StackViewer";
 import AgentConsole from "./AgentConsole";
 import ProcessRail from "./ProcessRail";
-import WhyTriseno from "./WhyTriseno";
+import WhyFlip from "./WhyFlip";
+import AiAmbience from "./AiAmbience";
 import AiGate from "./AiGate";
 import Descent from "./Descent";
 import FaqSection from "@/components/world/FaqSection";
@@ -26,10 +28,14 @@ import SignOff from "@/components/world/SignOff";
  * onto that dark world in full colour, and the gate stands in it, so leaving
  * the page returns you to the site's dark.
  *
- *   01 hero (decode + dither lens) · ticker · 02 capabilities (accordion)
- *   03 compression (scrubbed draw) · Fig. 02 interlude · 04 industries (agent
- *   trace) · 05 process (drag rail) · 06 compare (switch) · questions
- *   07 gate (iris descent) · sign-off
+ *   01 hero (chrome core, dotted globe, agent swarm) · ticker (pixel trail)
+ *   02 capabilities (flowing menu + decrypted titles) · 03 compression (cubes
+ *   + depth text) · Fig. 02 interlude (scroll expand: dither -> halftone ->
+ *   colour) · Fig. 03 the stack (model viewer) · 04 industries (chroma grid +
+ *   agent trace) · 05 process (drag rail, true focus, stroke text) · 06 compare
+ *   (flip cards + metallic mark) · questions · 07 gate (iris descent) · sign-off
+ *   Over all of it (AiAmbience): living grain, a cyan grid glow under the
+ *   pointer, and a glint on the labels.
  *
  * `data-clean` on <html> flips the shared chrome (nav, rail, corner buttons,
  * cursor) to a difference blend while this page is mounted, so its white
@@ -46,14 +52,16 @@ export default function AiPage() {
   return (
     <main className="ai-world ai-clean relative" style={{ ["--hue" as string]: DIVISIONS.ai.hue }}>
       <span aria-hidden="true" data-world-layer="" className="ai-paper" />
+      <AiAmbience />
       <AiHero />
       <SignalTicker />
-      <Capabilities />
-      <Compression />
-      <Interlude />
+      <FlowingCapabilities />
+      <CubeCompression />
+      <ExpandInterlude />
+      <StackViewer />
       <AgentConsole />
       <ProcessRail />
-      <WhyTriseno />
+      <WhyFlip />
       <FaqSection division="ai" />
       <Descent>
         <AiGate />

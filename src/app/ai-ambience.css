@@ -1,0 +1,60 @@
+/* ── the clean room's air (AiAmbience) ── */
+
+/* grain: an oversized noise sheet jumping between offsets, never repainted */
+.ai-grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.ai-grain i {
+  position: absolute; inset: -50%; opacity: 0.55; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.34  0 0 0 0.22 0'/></filter><rect width='220' height='220' filter='url(%23g)'/></svg>");
+  animation: ai-grain 0.9s steps(1) infinite;
+  will-change: transform;
+}
+@keyframes ai-grain {
+  0% { transform: translate3d(0, 0, 0); }
+  12% { transform: translate3d(-7%, 4%, 0); }
+  25% { transform: translate3d(5%, -6%, 0); }
+  37% { transform: translate3d(-3%, 8%, 0); }
+  50% { transform: translate3d(8%, 2%, 0); }
+  62% { transform: translate3d(-9%, -4%, 0); }
+  75% { transform: translate3d(2%, 7%, 0); }
+  87% { transform: translate3d(6%, -8%, 0); }
+}
+
+/* glow: a lens of cyan grid, registered with the sheet's grid, under the pointer */
+.ai-glow {
+  position: fixed; left: 0; top: 0; z-index: -1; pointer-events: none;
+  width: 460px; height: 460px; margin: -230px 0 0 -230px;
+  opacity: 0; transition: opacity 500ms var(--ease-expo);
+  background-image:
+    linear-gradient(rgba(0, 180, 216, 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 180, 216, 0.55) 1px, transparent 1px),
+    linear-gradient(rgba(0, 180, 216, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 180, 216, 0.28) 1px, transparent 1px),
+    radial-gradient(closest-side, rgba(0, 180, 216, 0.07), transparent);
+  background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px, 100% 100%;
+  -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
+}
+.ai-glow[data-on] { opacity: 1; }
+/* once the descent's dark world is up, the glow and grain step aside */
+html[data-clean-dark] :is(.ai-glow, .ai-grain) { opacity: 0; }
+
+/* shine: a cyan glint across a label, then solid again */
+.ai-world .ai-shine.is-shining {
+  background-image: linear-gradient(100deg, currentColor 0 42%, #00b4d8 50%, currentColor 58% 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ai-shine 1.25s cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+@keyframes ai-shine { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-grain i { animation: none; }
+  .ai-glow { display: none; }
+  .ai-world .ai-shine.is-shining { animation: none; -webkit-text-fill-color: currentColor; background: none; }
+}
+
+/* pixel trail in the ink ticker (SignalTicker) */
+.ai-ticker { position: relative; }
+.ai-ticker__trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen; }
+.ai-ticker__belt { position: relative; }

@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════════════════════
+   04 Industries: the chroma grid (picker for the agent console).
+   Four world plates printed as ink on paper (grayscale, inverted, multiplied
+   onto the sheet). A spotlight that spans the whole grid develops the plate
+   under it back into cyan data-light; the selected card stays developed.
+   The grid writes --sx/--sy/--sr (spotlight, grid space); each card knows
+   its own offset (--ox/--oy), so the mask is one circle across all four.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-world .ai-chroma {
+  --sx: -999px;
+  --sy: -999px;
+  --sr: 0px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule-2);
+  border: 1px solid var(--rule-2);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ai-world .ai-chroma__card {
+  --ox: 0px;
+  --oy: 0px;
+  --pos: 50% 50%;
+  --s: 1.2;
+  --hov: 1;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  text-align: left;
+  background: var(--paper);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 300ms linear;
+}
+.ai-world .ai-chroma__card:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: -4px; z-index: 2; }
+
+/* ── the plate ── */
+.ai-world .ai-chroma__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--paper);
+}
+.ai-world .ai-chroma__plate { position: absolute; inset: 0; display: block; }
+.ai-world .ai-chroma__plate img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: var(--pos);
+  transform-origin: var(--pos);
+  transform: scale(calc(var(--s) * var(--hov)));
+  transition: transform 1200ms var(--ease-expo);
+  pointer-events: none;
+}
+
+/* ink: the dark plate inverted to filaments of ink on the paper sheet */
+.ai-world .ai-chroma__plate--ink img {
+  filter: grayscale(1) invert(1) contrast(1.35) brightness(1.04);
+  mix-blend-mode: multiply;
+}
+
+/* lit: the plate as it really is, held to the one hue, under the spotlight */
+.ai-world .ai-chroma__plate--lit {
+  -webkit-mask-image: radial-gradient(
+    circle var(--sr) at calc(var(--sx) - var(--ox)) calc(var(--sy) - var(--oy)),
+    #000 0%, rgba(0, 0, 0, 0.82) 38%, rgba(0, 0, 0, 0.3) 70%, transparent 100%
+  );
+  mask-image: radial-gradient(
+    circle var(--sr) at calc(var(--sx) - var(--ox)) calc(var(--sy) - var(--oy)),
+    #000 0%, rgba(0, 0, 0, 0.82) 38%, rgba(0, 0, 0, 0.3) 70%, transparent 100%
+  );
+  background: var(--ink);
+}
+.ai-world .ai-chroma__plate--lit img { filter: saturate(1.25) contrast(1.08); }
+.ai-world .ai-chroma__plate--lit::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--signal); mix-blend-mode: color; opacity: 0.6;
+}
+
+/* the selected card stays developed */
+.ai-world .ai-chroma__card[data-on] .ai-chroma__plate--lit {
+  -webkit-mask-image: none;
+  mask-image: none;
+  animation: ai-chroma-develop 900ms var(--ease-expo) both;
+}
+@keyframes ai-chroma-develop {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(75% at 50% 50%); }
+}
+
+/* plate stamps: index top-left, state top-right (mono, small) */
+.ai-world .ai-chroma__num,
+.ai-world .ai-chroma__live {
+  position: absolute; top: 10px; z-index: 1;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  line-height: 1; padding: 5px 6px;
+  background: var(--paper); color: var(--ink);
+  transition: background-color 300ms linear, color 300ms linear;
+}
+.ai-world .ai-chroma__num { left: 10px; }
+.ai-world .ai-chroma__live { right: 10px; color: var(--ink-3); }
+.ai-world .ai-chroma__card[data-on] .ai-chroma__num { background: var(--ink); color: var(--signal); }
+.ai-world .ai-chroma__card[data-on] .ai-chroma__live { background: var(--ink); color: var(--paper); }
+.ai-world .ai-chroma__live::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 6px; vertical-align: 1px;
+  border: 1px solid currentColor;
+}
+.ai-world .ai-chroma__card[data-on] .ai-chroma__live::before { background: var(--signal); border-color: var(--signal); }
+
+/* ── caption ── */
+.ai-world .ai-chroma__cap {
+  display: grid; gap: 8px; align-content: start;
+  padding: 14px 14px 16px;
+  border-top: 1px solid var(--rule-2);
+}
+.ai-world .ai-chroma__name {
+  font-family: var(--font-unbounded), sans-serif; font-weight: 500; text-transform: uppercase;
+  font-size: clamp(12px, 1vw, 15px); line-height: 1.25; letter-spacing: 0.04em;
+  color: var(--ink-2); transition: color 300ms linear;
+}
+.ai-world .ai-chroma__meta {
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ai-world .ai-chroma__card[data-on] .ai-chroma__name { color: var(--ink); }
+.ai-world .ai-chroma__card[data-on] .ai-chroma__meta { color: var(--signal-ink); }
+
+/* ── the selected card's cyan hairline: draws in from the corners ── */
+.ai-world .ai-chroma__frame {
+  position: absolute; inset: -1px; z-index: 1; pointer-events: none;
+  border: 1px solid var(--signal);
+  opacity: 0;
+  clip-path: inset(50% 50% 50% 50%);
+  transition: opacity 300ms linear, clip-path 900ms var(--ease-expo);
+}
+.ai-world .ai-chroma__card[data-on] .ai-chroma__frame { opacity: 1; clip-path: inset(0 0 0 0); }
+.ai-world .ai-chroma__card[data-on] { z-index: 1; }
+
+/* hover (real pointers only): the plate leans in, the name sharpens */
+@media (hover: hover) and (pointer: fine) {
+  .ai-world .ai-chroma__card:hover { --hov: 1.06; }
+  .ai-world .ai-chroma__card:hover .ai-chroma__name { color: var(--ink); }
+}
+
+/* the body copy under the grid sits closer than the old tab list */
+.ai-world .ai-console-side { gap: 24px; }
+
+@media (max-width: 767px) {
+  .ai-world .ai-chroma__media { aspect-ratio: 1 / 1; }
+  .ai-world .ai-chroma__cap { padding: 12px 10px 14px; gap: 6px; }
+  .ai-world .ai-chroma__name { font-size: 11px; letter-spacing: 0.03em; }
+  .ai-world .ai-chroma__meta { font-size: 10px; letter-spacing: 0.1em; }
+  .ai-world .ai-chroma__live { display: none; }
+  .ai-world .ai-chroma__num { top: 8px; left: 8px; }
+}
+
+/* tablet: the console sits below, so the grid can run four across */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ai-world .ai-chroma { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ai-world .ai-chroma__media { aspect-ratio: 3 / 4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-world .ai-chroma__card[data-on] .ai-chroma__plate--lit { animation: none; }
+  .ai-world .ai-chroma__plate img,
+  .ai-world .ai-chroma__frame,
+  .ai-world .ai-chroma__card,
+  .ai-world .ai-chroma__name { transition-duration: 1ms !important; }
+}

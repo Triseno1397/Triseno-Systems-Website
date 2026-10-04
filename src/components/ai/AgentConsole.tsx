@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import "../../app/ai-industries.css";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
 
@@ -13,9 +14,26 @@ import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
  * the cycle closes with a result line. It runs when it first comes into view
  * and whenever you pick another industry; Replay runs it again.
  *
+ * The industry picker is a chroma grid: four plates printed as ink on the
+ * paper (the world plates, inverted to a grayscale duotone). A spotlight
+ * follows the pointer across the whole grid and develops the plate under it
+ * back into its cyan data-light; the selected industry stays developed, with
+ * a cyan hairline. On touch the spotlight blooms where you tap.
+ *
  * The durations are illustrative (the section says so); nothing here claims a
- * real result. Reduced motion: the whole trace, settled, no typing.
+ * real result. Reduced motion: the whole trace, settled, no typing; the
+ * spotlight jumps instead of easing.
  */
+
+/** one world plate per industry, cropped differently so no two read alike */
+const PLATES = [
+  { src: "/worlds/ai-station3-card.webp", pos: "50% 46%", scale: 1.55, meta: "Rundown / post" },
+  { src: "/worlds/ai-station2-card.webp", pos: "6% 38%", scale: 1.3, meta: "SKU graph" },
+  { src: "/worlds/ai-desktop-card.webp", pos: "94% 72%", scale: 1.4, meta: "PO / ledger" },
+  { src: "/worlds/ai-mobile-card.webp", pos: "50% 30%", scale: 1.2, meta: "Ticket / runbook" },
+];
+
+const SPOT_R = 170; // spotlight radius, px
 
 const STEP_MS = 1150;
 
@@ -41,6 +59,73 @@ export default function AgentConsole() {
 
   const industry = INDUSTRIES[active];
   const total = industry.log.length;
+
+  /* chroma grid spotlight: one set of CSS vars on the grid, eased in rAF */
+  const gridRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const spot = useRef({ x: 0, y: 0, r: 0, tx: 0, ty: 0, tr: 0, raf: 0 });
+
+  const tick = useCallback(function step() {
+    const s = spot.current;
+    const k = reduced.current ? 1 : 0.16;
+    s.x += (s.tx - s.x) * k;
+    s.y += (s.ty - s.y) * k;
+    s.r += (s.tr - s.r) * (reduced.current ? 1 : 0.12);
+    const el = gridRef.current;
+    if (el) {
+      el.style.setProperty("--sx", `${s.x.toFixed(1)}px`);
+      el.style.setProperty("--sy", `${s.y.toFixed(1)}px`);
+      el.style.setProperty("--sr", `${Math.max(0, s.r).toFixed(1)}px`);
+    }
+    const done = Math.abs(s.tx - s.x) < 0.3 && Math.abs(s.ty - s.y) < 0.3 && Math.abs(s.tr - s.r) < 0.3;
+    s.raf = done ? 0 : requestAnimationFrame(step);
+  }, []);
+
+  const aim = useCallback(
+    (clientX: number, clientY: number, r: number, jump = false) => {
+      const el = gridRef.current;
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      const s = spot.current;
+      s.tx = clientX - b.left;
+      s.ty = clientY - b.top;
+      s.tr = r;
+      if (jump) {
+        s.x = s.tx;
+        s.y = s.ty;
+      }
+      if (!s.raf) s.raf = requestAnimationFrame(tick);
+    },
+    [tick],
+  );
+
+  const release = useCallback(() => {
+    const s = spot.current;
+    s.tr = 0;
+    if (!s.raf) s.raf = requestAnimationFrame(tick);
+  }, [tick]);
+
+  // each card's offset inside the grid, so one spotlight spans all four
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      tabRefs.current.forEach((card) => {
+        if (!card) return;
+        card.style.setProperty("--ox", `${card.offsetLeft}px`);
+        card.style.setProperty("--oy", `${card.offsetTop}px`);
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    const s = spot.current;
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(s.raf);
+      s.raf = 0;
+    };
+  }, []);
 
   useEffect(() => {
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -78,6 +163,22 @@ export default function AgentConsole() {
     setRun((r) => r + 1);
   };
 
+  const onTabKey = (e: React.KeyboardEvent) => {
+    const n = INDUSTRIES.length;
+    let next = -1;
+    // 2x2: left/right step through, up/down jump a row
+    if (e.key === "ArrowRight") next = (active + 1) % n;
+    else if (e.key === "ArrowLeft") next = (active - 1 + n) % n;
+    else if (e.key === "ArrowDown") next = (active + 2) % n;
+    else if (e.key === "ArrowUp") next = (active - 2 + n) % n;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = n - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    pick(next);
+    tabRefs.current[next]?.focus();
+  };
+
   const sum = industry.log.reduce((a, _, i) => a + fakeMs(active + 1, i), 0);
   const closed = step >= total;
 
@@ -93,22 +194,68 @@ export default function AgentConsole() {
               {INDUSTRIES_INTRO.title}
             </h2>
           </header>
-          <div role="tablist" aria-label="Industries" className="ai-tabs">
-            {INDUSTRIES.map((ind, i) => (
-              <button
-                key={ind.title}
-                type="button"
-                role="tab"
-                aria-selected={i === active}
-                aria-controls="ai-console"
-                className="ai-tab"
-                onClick={() => pick(i)}
-              >
-                <span className="ai-tab__num">{String(i + 1).padStart(2, "0")}</span>
-                <span className="ai-tab__name">{ind.title}</span>
-                <span aria-hidden="true" className="ai-tab__bar" />
-              </button>
-            ))}
+          <div
+            ref={gridRef}
+            role="tablist"
+            aria-label="Industries"
+            className="ai-chroma"
+            onKeyDown={onTabKey}
+            onPointerEnter={(e) => {
+              if (e.pointerType !== "touch") aim(e.clientX, e.clientY, SPOT_R, true);
+            }}
+            onPointerMove={(e) => {
+              if (e.pointerType !== "touch") aim(e.clientX, e.clientY, SPOT_R);
+            }}
+            onPointerLeave={release}
+            onPointerDown={(e) => {
+              if (e.pointerType === "touch") aim(e.clientX, e.clientY, SPOT_R * 0.8, true);
+            }}
+            onPointerUp={(e) => {
+              if (e.pointerType === "touch") release();
+            }}
+            onPointerCancel={release}
+          >
+            {INDUSTRIES.map((ind, i) => {
+              const plate = PLATES[i % PLATES.length];
+              const on = i === active;
+              return (
+                <button
+                  key={ind.title}
+                  ref={(el) => {
+                    tabRefs.current[i] = el;
+                  }}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  aria-controls="ai-console"
+                  tabIndex={on ? 0 : -1}
+                  className="ai-chroma__card"
+                  data-on={on ? "" : undefined}
+                  onClick={() => pick(i)}
+                  style={{ ["--pos" as string]: plate.pos, ["--s" as string]: plate.scale }}
+                >
+                  <span className="ai-chroma__media" aria-hidden="true">
+                    <span className="ai-chroma__plate ai-chroma__plate--ink">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={plate.src} alt="" decoding="async" loading="lazy" draggable={false} />
+                    </span>
+                    <span className="ai-chroma__plate ai-chroma__plate--lit">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={plate.src} alt="" decoding="async" loading="lazy" draggable={false} />
+                    </span>
+                    <span className="ai-chroma__num">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="ai-chroma__live">{on ? "Running" : "Standby"}</span>
+                  </span>
+                  <span className="ai-chroma__cap">
+                    <span className="ai-chroma__name">{ind.title}</span>
+                    <span className="ai-chroma__meta">
+                      {ind.log.length} agents / {plate.meta}
+                    </span>
+                  </span>
+                  <span className="ai-chroma__frame" aria-hidden="true" />
+                </button>
+              );
+            })}
           </div>
           <p key={active} className="ai-body ai-console-side__body">
             {industry.body}
