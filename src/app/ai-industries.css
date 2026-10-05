@@ -57,9 +57,10 @@
   pointer-events: none;
 }
 
-/* ink: the dark plate inverted to filaments of ink on the paper sheet */
+/* ink: the scene as a cool silver-gelatin print on the sheet, until the
+   spotlight brings its colour back */
 .ai-world .ai-chroma__plate--ink img {
-  filter: grayscale(1) invert(1) contrast(1.35) brightness(1.04);
+  filter: grayscale(1) contrast(1.12) brightness(1.08);
   mix-blend-mode: multiply;
 }
 

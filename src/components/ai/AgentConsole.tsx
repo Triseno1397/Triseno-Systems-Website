@@ -25,12 +25,12 @@ import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
  * spotlight jumps instead of easing.
  */
 
-/** one world plate per industry, cropped differently so no two read alike */
+/** one scene per industry (GPT Image 2.5, design-loop/art-src/industries) */
 const PLATES = [
-  { src: "/worlds/ai-station3-card.webp", pos: "50% 46%", scale: 1.55, meta: "Rundown / post" },
-  { src: "/worlds/ai-station2-card.webp", pos: "6% 38%", scale: 1.3, meta: "SKU graph" },
-  { src: "/worlds/ai-desktop-card.webp", pos: "94% 72%", scale: 1.4, meta: "PO / ledger" },
-  { src: "/worlds/ai-mobile-card.webp", pos: "50% 30%", scale: 1.2, meta: "Ticket / runbook" },
+  { src: "/worlds/ai-ind-broadcast.webp", pos: "50% 45%", scale: 1.08, meta: "Rundown / post" },
+  { src: "/worlds/ai-ind-ecommerce.webp", pos: "50% 55%", scale: 1.08, meta: "SKU graph" },
+  { src: "/worlds/ai-ind-enterprise.webp", pos: "50% 60%", scale: 1.08, meta: "PO / ledger" },
+  { src: "/worlds/ai-ind-saas.webp", pos: "50% 50%", scale: 1.08, meta: "Ticket / runbook" },
 ];
 
 const SPOT_R = 170; // spotlight radius, px

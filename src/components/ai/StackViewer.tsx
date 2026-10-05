@@ -87,7 +87,7 @@ const LAYERS: Layer[] = [
 /* ── geometry constants (world units) ─────────────────────────────────── */
 const PW = 3.0; // plate width (x)
 const PD = 2.0; // plate depth (z)
-const PT = 0.07; // plate thickness
+const PT = 0.11; // plate thickness: thick enough to read as glass
 const TOP = PT / 2;
 const SPACING = 0.82;
 const PART = 0.62; // extra gap opened around a focused layer
@@ -122,8 +122,22 @@ void main() {
   vec3 n = normalize(vN);
   vec3 v = normalize(vView);
   float fr = pow(1.0 - abs(dot(n, v)), 2.2);
-  vec3 col = vec3(0.985, 0.99, 0.99);
-  float a = 0.2 + fr * 0.46;
+  // frosted glass with a little thickness: a cool tint in the body, the
+  // sides denser than the face, a studio softbox sliding across the top
+  // face and a bright lip where the edges catch the light
+  float isTop = step(uTop - 0.0005, vLocal.y);
+  float isSide = 1.0 - step(0.5, abs(n.y));
+  vec3 col = mix(vec3(0.90, 0.94, 0.955), vec3(0.985, 0.99, 0.995), isTop);
+  col = mix(col, vec3(0.74, 0.8, 0.83), isSide * 0.55);
+  float a = 0.24 + fr * 0.5 + isSide * 0.22;
+  // the softbox: a broad diagonal band of light on the top face, read in view
+  // space so it slides as the stack turns
+  vec3 r = reflect(-v, n);
+  float box = smoothstep(0.55, 0.95, r.y) * smoothstep(0.75, 0.15, abs(r.x + 0.25));
+  col = mix(col, vec3(1.0), box * 0.75 * isTop);
+  a += box * 0.18 * isTop;
+  // edge lip: the rim of each face glows a touch, cyan on the focused layer
+  col += fr * vec3(0.06, 0.08, 0.09);
   // the drafting grid, on the top face only
   float top = step(uTop - 0.0005, vLocal.y) * uGrid;
   vec2 g = vLocal.xz / 0.25;
@@ -132,8 +146,8 @@ void main() {
   float line = 1.0 - min(min(gd.x, gd.y), 1.0);
   col = mix(col, uInk, line * 0.4 * top);
   a += line * 0.08 * top;
-  col = mix(col, uSignal, uFocus * 0.12);
-  a += uFocus * 0.06;
+  col = mix(col, uSignal, uFocus * (0.14 + isSide * 0.3));
+  a += uFocus * 0.08;
   gl_FragColor = vec4(col, a * uOpacity);
 }`;
 
