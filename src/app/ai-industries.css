@@ -172,3 +172,13 @@
   .ai-world .ai-chroma__card,
   .ai-world .ai-chroma__name { transition-duration: 1ms !important; }
 }
+
+/* the selected card's loop sits over its still, cropped and scaled the same */
+.ai-world .ai-chroma__loop {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: var(--pos); transform-origin: var(--pos); transform: scale(calc(var(--s) * var(--hov, 1))); pointer-events: none;
+  transition: transform 1200ms var(--ease-expo);
+  animation: ai-loop-in 700ms var(--ease-expo) both;
+}
+@keyframes ai-loop-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ai-world .ai-chroma__loop { display: none; } }

@@ -27,11 +27,31 @@ import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
 
 /** one scene per industry (GPT Image 2.5, design-loop/art-src/industries) */
 const PLATES = [
-  { src: "/worlds/ai-ind-broadcast.webp", pos: "50% 45%", scale: 1.08, meta: "Rundown / post" },
-  { src: "/worlds/ai-ind-ecommerce.webp", pos: "50% 55%", scale: 1.08, meta: "SKU graph" },
-  { src: "/worlds/ai-ind-enterprise.webp", pos: "50% 60%", scale: 1.08, meta: "PO / ledger" },
-  { src: "/worlds/ai-ind-saas.webp", pos: "50% 50%", scale: 1.08, meta: "Ticket / runbook" },
+  { src: "/worlds/ai-ind-broadcast.webp", loop: "/videos/ai-ind-broadcast.mp4", pos: "50% 45%", scale: 1.08, meta: "Rundown / post" },
+  { src: "/worlds/ai-ind-ecommerce.webp", loop: "/videos/ai-ind-ecommerce.mp4", pos: "50% 55%", scale: 1.08, meta: "SKU graph" },
+  { src: "/worlds/ai-ind-enterprise.webp", loop: "/videos/ai-ind-enterprise.mp4", pos: "50% 60%", scale: 1.08, meta: "PO / ledger" },
+  { src: "/worlds/ai-ind-saas.webp", loop: "/videos/ai-ind-saas.mp4", pos: "50% 50%", scale: 1.08, meta: "Ticket / runbook" },
 ];
+
+/** the selected card's scene, alive: a silent loop (Kling 3.0 from the same
+ *  still) that plays only while the card is on screen; reduced motion and
+ *  data-saver keep the still */
+function CardLoop({ src, poster }: { src: string; poster: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || conn?.saveData) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) v.play().catch(() => {});
+      else v.pause();
+    });
+    io.observe(v);
+    return () => io.disconnect();
+  }, []);
+  return <video ref={ref} className="ai-chroma__loop" src={src} poster={poster} muted loop playsInline preload="metadata" />;
+}
 
 const SPOT_R = 170; // spotlight radius, px
 
@@ -242,6 +262,7 @@ export default function AgentConsole() {
                     <span className="ai-chroma__plate ai-chroma__plate--lit">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={plate.src} alt="" decoding="async" loading="lazy" draggable={false} />
+                      {on ? <CardLoop key={plate.loop} src={plate.loop} poster={plate.src} /> : null}
                     </span>
                     <span className="ai-chroma__num">{String(i + 1).padStart(2, "0")}</span>
                     <span className="ai-chroma__live">{on ? "Running" : "Standby"}</span>
