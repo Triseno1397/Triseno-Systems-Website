@@ -7,7 +7,7 @@ import SignalTicker from "./SignalTicker";
 import FlowingCapabilities from "./FlowingCapabilities";
 import CubeCompression from "./CubeCompression";
 import ExpandInterlude from "./ExpandInterlude";
-import StackViewer from "./StackViewer";
+import StackFilm from "./StackFilm";
 import AgentConsole from "./AgentConsole";
 import ProcessRail from "./ProcessRail";
 import WhyFlip from "./WhyFlip";
@@ -31,7 +31,7 @@ import SignOff from "@/components/world/SignOff";
  *   01 hero (chrome core, dotted globe, agent swarm) · ticker (pixel trail)
  *   02 capabilities (flowing menu + decrypted titles) · 03 compression (cubes
  *   + depth text) · Fig. 02 interlude (scroll expand: dither -> halftone ->
- *   colour) · Fig. 03 the stack (model viewer) · 04 industries (chroma grid +
+ *   colour) · Fig. 03 the stack (film + HUD hotspots) · 04 industries (chroma grid +
  *   agent trace) · 05 process (drag rail, true focus, stroke text) · 06 compare
  *   (flip cards + metallic mark) · questions · 07 gate (iris descent) · sign-off
  *   Over all of it (AiAmbience): living grain, a cyan grid glow under the
@@ -58,7 +58,7 @@ export default function AiPage() {
       <FlowingCapabilities />
       <CubeCompression />
       <ExpandInterlude />
-      <StackViewer />
+      <StackFilm />
       <AgentConsole />
       <ProcessRail />
       <WhyFlip />

@@ -36,7 +36,7 @@ const PLATES = [
 /** the selected card's scene, alive: a silent loop (Kling 3.0 from the same
  *  still) that plays only while the card is on screen; reduced motion and
  *  data-saver keep the still */
-function CardLoop({ src, poster }: { src: string; poster: string }) {
+function CardLoop({ src, poster, className = "ai-chroma__loop" }: { src: string; poster: string; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
@@ -50,7 +50,7 @@ function CardLoop({ src, poster }: { src: string; poster: string }) {
     io.observe(v);
     return () => io.disconnect();
   }, []);
-  return <video ref={ref} className="ai-chroma__loop" src={src} poster={poster} muted loop playsInline preload="metadata" />;
+  return <video ref={ref} className={className} src={src} poster={poster} muted loop playsInline preload="metadata" />;
 }
 
 const SPOT_R = 170; // spotlight radius, px
@@ -283,6 +283,11 @@ export default function AgentConsole() {
           </p>
         </div>
 
+        {/* the console floats over a live macro of the silicon it runs on */}
+        <div className="ai-rig">
+        <CardLoop className="ai-rig__film" src="/videos/ai-chip.mp4" poster="/worlds/ai-chip.webp" />
+        <span aria-hidden="true" className="ai-rig__veil" />
+        <span aria-hidden="true" className="ai-rig__hud font-mono"><i />Node 07 · live</span>
         <div id="ai-console" role="tabpanel" aria-label={`${industry.full}: example agent cycle`} className="ai-console">
           <div className="ai-console__bar">
             <span className="ai-console__lights" aria-hidden="true">
@@ -342,6 +347,7 @@ export default function AgentConsole() {
             </li>
           </ol>
           <p className="ai-console__note">An example cycle, timings illustrative.</p>
+        </div>
         </div>
       </div>
     </section>
