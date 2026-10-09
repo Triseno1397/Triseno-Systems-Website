@@ -160,7 +160,7 @@ function Overlay({ copy }: { copy: boolean }) {
       </Title>
       <div className="ai-xp__foot">
         <p className="ai-xp__cap">
-          <b>Fig. 02</b> <span>The operational layer</span>
+          <b>Built once</b> <span>Runs every day</span>
         </p>
         <p className="ai-xp__read" aria-hidden="true">
           {STAGES.map((s, i) => (
@@ -513,7 +513,7 @@ export default function ExpandInterlude() {
   }, []);
 
   return (
-    <section data-rail="Scale" data-ch="06" aria-labelledby="ai-xp-title" className="ai-xp relative z-10">
+    <section data-rail="Scale" data-ch="03" aria-labelledby="ai-xp-title" className="ai-xp relative z-10">
       <div ref={stageRef} className="ai-xp__stage">
         <div
           ref={mediaRef}

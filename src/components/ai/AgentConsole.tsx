@@ -56,10 +56,10 @@ function fmtMs(ms: number, human = false) {
 
 /** one scene per industry (GPT Image 2.5, design-loop/art-src/industries) */
 const PLATES = [
-  { src: "/worlds/ai-ind-broadcast.webp", loop: "/videos/ai-ind-broadcast.mp4", pos: "50% 45%", scale: 1.08, meta: "Rundown / post" },
-  { src: "/worlds/ai-ind-ecommerce.webp", loop: "/videos/ai-ind-ecommerce.mp4", pos: "50% 55%", scale: 1.08, meta: "SKU graph" },
-  { src: "/worlds/ai-ind-enterprise.webp", loop: "/videos/ai-ind-enterprise.mp4", pos: "50% 60%", scale: 1.08, meta: "PO / ledger" },
-  { src: "/worlds/ai-ind-saas.webp", loop: "/videos/ai-ind-saas.mp4", pos: "50% 50%", scale: 1.08, meta: "Ticket / runbook" },
+  { src: "/worlds/ai-ind-broadcast.webp", loop: "/videos/ai-ind-broadcast.mp4", pos: "50% 45%", scale: 1.08, meta: "Footage / delivery" },
+  { src: "/worlds/ai-ind-ecommerce.webp", loop: "/videos/ai-ind-ecommerce.mp4", pos: "50% 55%", scale: 1.08, meta: "Catalog / orders" },
+  { src: "/worlds/ai-ind-enterprise.webp", loop: "/videos/ai-ind-enterprise.mp4", pos: "50% 60%", scale: 1.08, meta: "Quotes / orders" },
+  { src: "/worlds/ai-ind-saas.webp", loop: "/videos/ai-ind-saas.mp4", pos: "50% 50%", scale: 1.08, meta: "Bookings / intake" },
 ];
 
 /** the selected card's scene, alive: a silent loop (Kling 3.0 from the same
@@ -382,7 +382,7 @@ export default function AgentConsole() {
     <section
       ref={rootRef}
       data-rail="Industries"
-      data-ch="08"
+      data-ch="04"
       data-fig="industries"
       aria-labelledby="ai-ind-title"
       className="ai-section relative z-10"
@@ -391,7 +391,7 @@ export default function AgentConsole() {
         <div className="ai-console-side">
           <header>
             <p className="ai-label">
-              <b>08</b> / Industries
+              <b>04</b> / Who it is for
             </p>
             <h2 id="ai-ind-title" className="ai-h2 font-display font-semibold uppercase">
               {INDUSTRIES_INTRO.title}
@@ -453,7 +453,7 @@ export default function AgentConsole() {
                   <span className="ai-chroma__cap">
                     <span className="ai-chroma__name">{ind.title}</span>
                     <span className="ai-chroma__meta">
-                      {ind.log.length} agents / {plate.meta}
+                      {ind.log.length} jobs / {plate.meta}
                     </span>
                   </span>
                   <span className="ai-chroma__frame" aria-hidden="true" />
@@ -470,8 +470,8 @@ export default function AgentConsole() {
         <div className="ai-rig">
         <CardLoop className="ai-rig__film" src="/videos/ai-chip.mp4" poster="/worlds/ai-chip.webp" />
         <span aria-hidden="true" className="ai-rig__veil" />
-        <span aria-hidden="true" className="ai-rig__hud font-mono"><i />Node 07 · live</span>
-        <div id="ai-console" role="tabpanel" aria-label={`${industry.full}: example agent cycle`} className="ai-console">
+        <span aria-hidden="true" className="ai-rig__hud font-mono"><i />Running now · live</span>
+        <div id="ai-console" role="tabpanel" aria-label={`${industry.full}: example day`} className="ai-console">
           <div className="ai-console__bar">
             <span className="ai-console__lights" aria-hidden="true">
               <i />
@@ -479,14 +479,14 @@ export default function AgentConsole() {
               <i />
             </span>
             <span className="ai-console__path">
-              ~/triseno/agents <b>run</b> {industry.title.toLowerCase().replace(/[^a-z]+/g, "-")}
+              a day at <b>{industry.title.toLowerCase()}</b>
             </span>
             <button
               ref={replayRef}
               type="button"
               className="ai-console__replay"
               onClick={() => setRun((r) => r + 1)}
-              aria-label="Replay the cycle"
+              aria-label="Replay"
             >
               <ArrowClockwise size={14} weight="light" aria-hidden="true" />
               <span>Replay</span>
@@ -497,7 +497,7 @@ export default function AgentConsole() {
             <li className="ai-trace__boot" data-on="">
               <span className="ai-trace__t">00:00.000</span>
               <span>
-                orchestrator <em>online</em> / {total} agents assigned / fallback: human review
+                tool <em>on</em> / {total} jobs today / anything unusual goes to a person
                 {lastTrace ? <> / {CONSOLE_SLIP.bootBench(lastTrace.totalMs)}</> : null}
               </span>
             </li>
@@ -552,11 +552,11 @@ export default function AgentConsole() {
             <li className="ai-trace__end" data-on={closed ? "" : undefined}>
               <span className="ai-trace__t">&gt;</span>
               <span>
-                cycle closed <b>{total}/{total}</b> / {(sum / 1000).toFixed(2)}s / audit trail written
+                all done <b>{total}/{total}</b> / {(sum / 1000).toFixed(2)}s / nobody lifted a finger
               </span>
             </li>
           </ol>
-          <p className="ai-console__note">An example cycle, timings illustrative.</p>
+          <p className="ai-console__note">An example day, timings illustrative.</p>
         </div>
         {/* the routing slip prints out of the slot under the glass; its bay is
             held for the whole Enterprise run, so the rig grows with the tab

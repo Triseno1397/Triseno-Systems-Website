@@ -1,18 +1,18 @@
-// Copy for /ai-infrastructure. Source: the owner's approved copy doc
-// (triseno-website-copy.md), trimmed hard so no viewport carries a wall of
-// text — one idea per frame. Voice: precise systems engineer, numbers over
-// adjectives. The word "chatbot" appears once, in contrast only.
+// Copy for /ai-infrastructure. Positioning (owner, 2026-10-09): custom AI
+// tools and software for businesses of any size, in plain English, no
+// enterprise jargon, no specific client projects; the only ask is "Book a
+// call". The owner's live-broadcast engineering background is the trust angle.
 //
 // D3 (divisions stay separate): website design and development is the Web
 // Design Division's offer and is NOT listed here. The only route to it from
 // this page is the cross-division link in the gate.
 
 export const HERO = {
-  label: "Consulting / Architecture / Implementation",
-  headline: ["We Build the", "Operational", "Intelligence", "Layer"],
-  sub: "AI agent systems that take the manual work out of your operations. Designed, built and handed over.",
+  label: "Custom AI tools / Software / Automation",
+  headline: ["Tell Us the", "Problem.", "We Build", "the Tool."],
+  sub: "Custom AI tools and software for businesses that have outgrown spreadsheets and copy-paste. Built fast, handed over, kept running.",
   /** the phone hero carries the same offer as a mono line */
-  offers: ["Multi-agent orchestration", "Workflow compression", "Decision automation"],
+  offers: ["Product finders", "Inbox automation", "Custom software"],
 };
 
 export type DiagramKind = "orchestration" | "catalog" | "compression" | "revenue" | "broadcast" | "retainer";
@@ -25,71 +25,71 @@ export interface Capability {
 }
 
 export const CAPABILITIES_INTRO = {
-  title: "Infrastructure That Thinks",
-  body: "We don't build chatbots. We build the layer underneath them.",
+  title: "If It Eats Your Day, We Can Build It",
+  body: "Six of the tools we build most. If yours is not here, ask anyway.",
 };
 
 /** One per frame. Bodies are capped at ~22 words on purpose. */
 export const CAPABILITIES: Capability[] = [
   {
-    id: "orchestration",
-    tag: "Core capability",
-    title: "Multi-Agent Orchestration",
-    body: "Research, analysis, generation and validation run as separate agents in parallel under one orchestrator. Not one bot. An operations team.",
-  },
-  {
-    id: "compression",
-    tag: "Core capability",
-    title: "Workflow Compression Engines",
-    body: "We find the manual processes buried in your operations and rebuild them as agent pipelines. Compressed, automated, monitored.",
-  },
-  {
     id: "catalog",
-    tag: "Specialized system",
-    title: "Product & Catalog Intelligence",
-    body: "Sprawling catalogs become systems that understand specifications, compatibility and context, so your team stops answering the same question.",
+    tag: "Answers in seconds",
+    title: "Product Finders",
+    body: "Which part fits, which size works, which model to buy: answered instantly from your own catalog, for your customers and your staff.",
   },
   {
     id: "revenue",
-    tag: "Outcome-tied",
-    title: "Revenue Operations Intelligence",
-    body: "Lead qualification, pipeline acceleration and conversion work driven by AI that knows your sales process. Priced against numbers you already track.",
+    tag: "Nothing slips",
+    title: "Inbox & Lead Handlers",
+    body: "Emails and form leads read, sorted and answered or routed to the right person, the minute they arrive.",
+  },
+  {
+    id: "orchestration",
+    tag: "Knows your business",
+    title: "Assistants Trained on You",
+    body: "An assistant that has read your docs, policies and prices, so it answers like your best employee, not like a search engine.",
+  },
+  {
+    id: "compression",
+    tag: "Lands on your phone",
+    title: "Reports That Build Themselves",
+    body: "Numbers pulled from your tools on a schedule and delivered as a clean summary, before you ask for it.",
   },
   {
     id: "broadcast",
-    tag: "Industry specialty",
-    title: "Broadcast & Production AI",
-    body: "Production automation built by someone who has lived in the control room. Metadata, routing, asset orchestration, real-time decisions.",
+    tag: "Made to fit",
+    title: "Custom Internal Tools",
+    body: "The dashboard, tracker or app your team keeps wishing existed, built around how you actually work.",
   },
   {
     id: "retainer",
-    tag: "Ongoing engagement",
-    title: "AI Infrastructure Retainers",
-    body: "Ongoing architecture, optimization and expansion for organizations that need a dedicated infrastructure partner, not a support queue.",
+    tag: "One system, not ten tabs",
+    title: "Connect What You Already Use",
+    body: "The software you already pay for, finally talking to each other, so nobody re-types the same thing twice.",
   },
 ];
 
 export const COMPRESSION = {
-  title: "Not Automation. Compression.",
-  body: "A twelve-step manual process, redesigned as a two-layer agent system.",
-  note: "An example workflow, drawn to show the method.",
+  title: "Twelve Steps. One Run.",
+  body: "Every morning someone copies forty orders from email into a spreadsheet. Here is that chore, done for them.",
+  note: "An example chore, drawn to show the idea.",
   steps: [
-    "Intake email",
-    "Manual data entry",
-    "Spreadsheet check",
-    "Manager approval",
-    "Re-key to ERP",
-    "Vendor lookup",
-    "Compliance review",
-    "Second approval",
-    "Reconcile totals",
-    "Export report",
-    "Email handoff",
-    "Archive",
+    "Open the email",
+    "Copy the order",
+    "Paste to sheet",
+    "Check the price",
+    "Re-type to system",
+    "Look up supplier",
+    "Check stock",
+    "Ask the manager",
+    "Fix the totals",
+    "Make the report",
+    "Email the team",
+    "File it away",
   ],
   /** which of the five system nodes each manual step collapses into (0 = orchestrator) */
   collapseTo: [0, 1, 2, 0, 1, 3, 2, 0, 3, 4, 0, 4],
-  agents: ["Orchestrator", "Extract", "Verify", "Reconcile", "Report"],
+  agents: ["Run", "Read", "Check", "Update", "Report"],
 };
 
 export interface ProcessStep {
@@ -100,65 +100,34 @@ export interface ProcessStep {
 }
 
 export const PROCESS_INTRO = {
-  title: "From Architecture to Deployment",
-  body: "Five steps, every engagement. Select one, or let the orbit run.",
+  title: "How It Works",
+  body: "Four steps, every project. Drag the handle along the rail, or pick a step.",
 };
 
 export const PROCESS: ProcessStep[] = [
   {
-    name: "Diagnose",
-    summary: "We map your workflows and quantify the cost of the problems worth solving.",
-    happens: [
-      "Deep-dive into current workflows, tools and data systems",
-      "Highest-friction bottlenecks and manual processes identified",
-      "Cost of each problem quantified in time, money and throughput",
-      "Opportunity map ranked by impact and feasibility",
-    ],
-    deliverable: "A diagnostic report with specific compression targets, not generic recommendations.",
+    name: "Talk",
+    summary: "Tell us the problem in plain words. We ask the right questions and find what is worth building.",
+    happens: ["A short call about what eats your team's time", "We look at the tools you already use"],
+    deliverable: "A clear picture of the tool that would help most.",
   },
   {
-    name: "Architect",
-    summary: "Blueprints specifying agent roles, data flows, fallback logic and success metrics before any code.",
-    happens: [
-      "Every component, data flow and decision point mapped",
-      "Agent roles defined with input and output specifications",
-      "Integration planned against your existing infrastructure",
-      "Fallback and failure handling designed in from the start",
-    ],
-    deliverable: "A technical blueprint you approve. Nothing is built until the architecture is locked.",
+    name: "Sketch",
+    summary: "We show you exactly what the tool will do, how it fits your day, and what it costs. Fixed price, no surprises.",
+    happens: ["A simple plan you can read in five minutes", "One fixed quote before any work starts"],
+    deliverable: "A plan and a price you approve.",
   },
   {
     name: "Build",
-    summary: "Modular construction with continuous testing. No monoliths, no black boxes.",
-    happens: [
-      "Iterative development in defined sprints with visible progress",
-      "Each module built and tested before integration",
-      "Continuous visibility: you see the system come together",
-      "Quality assurance at every stage, not just the end",
-    ],
-    deliverable: "Tested modules, integrated sprint by sprint against the locked blueprint.",
+    summary: "We build it in weeks, not quarters, and you see it working along the way, not just at the end.",
+    happens: ["Working previews as it comes together", "Tested on your real data before launch"],
+    deliverable: "A working tool, set up in your business.",
   },
   {
-    name: "Deploy",
-    summary: "Production rollout with monitoring and benchmarking against the metrics set in Architect.",
-    happens: [
-      "Controlled production rollout, monitored from day one",
-      "Benchmarking against the success metrics set in Architect",
-      "Iterative tuning on real operational data",
-      "Knowledge transfer so the system is not a black box",
-    ],
-    deliverable: "A production system measured against agreed metrics, with your team trained to run it.",
-  },
-  {
-    name: "Compound",
-    summary: "Each new module plugs into the layer already running, so every build costs less than the last.",
-    happens: [
-      "Ongoing monitoring, optimization and performance tuning",
-      "New compression opportunities surfaced from live data",
-      "Architecture expanded as operations change",
-      "Priority access for new builds and integrations",
-    ],
-    deliverable: "Monthly performance reporting, plus a standing roadmap for the next expansion.",
+    name: "Run",
+    summary: "It is yours. We hand it over, show your team how to use it, and keep it running as you grow.",
+    happens: ["You own it: no per-seat fees", "A real person to call when you need a change"],
+    deliverable: "A tool you own, with someone looking after it.",
   },
 ];
 
@@ -170,56 +139,56 @@ export interface Industry {
 }
 
 export const INDUSTRIES_INTRO = {
-  title: "Built for Complex Operations",
+  title: "Built for Businesses Like Yours",
 };
 
 export const INDUSTRIES: Industry[] = [
   {
-    title: "Broadcast & Production",
-    full: "Broadcast & Production",
-    body: "One of the most complex operational environments in any industry, and one of the least touched by AI. Real-time decisioning, multi-source routing and metadata management, from rundown to post.",
+    title: "Media & Production",
+    full: "Media & Production",
+    body: "Studios, agencies and production teams: clips tagged, footage logged, deliverables checked and packaged without the late-night busywork.",
     log: [
-      ["intake", "rundown received, segments indexed"],
-      ["router", "sources mapped to program bus"],
-      ["metadata", "clips tagged: speaker, topic, rights"],
-      ["qc", "loudness and caption check passed"],
-      ["handoff", "post package assembled, editor notified"],
+      ["intake", "new footage arrived, logged by scene"],
+      ["tagging", "clips tagged: who, what, where"],
+      ["check", "audio and captions checked"],
+      ["package", "deliverables named and packaged"],
+      ["notify", "editor notified, ready to cut"],
     ],
   },
   {
-    title: "E-Commerce & Catalog",
-    full: "E-Commerce & Large-Catalog Companies",
-    body: "Thousands of SKUs with technical specifications that overwhelm customers and internal teams alike. If your catalog is big enough to be a problem, it is big enough to be an advantage.",
+    title: "Retail & Online Stores",
+    full: "Retail & Online Stores",
+    body: "Big catalogs and busy inboxes: a product finder customers trust, orders that update themselves, and fewer 'does this fit?' emails.",
     log: [
-      ["catalog", "spec sheets parsed into attributes"],
-      ["graph", "compatibility rules linked across SKUs"],
-      ["advisor", "buyer requirements matched to configuration"],
-      ["quote", "line items assembled, constraints verified"],
-      ["learn", "unanswered question logged for catalog team"],
+      ["question", "customer asks which part fits"],
+      ["catalog", "matched against 4,200 products"],
+      ["answer", "right part suggested with a reason"],
+      ["order", "order added, stock updated"],
+      ["follow-up", "thank-you email sent"],
     ],
   },
   {
-    title: "Enterprise Operations",
-    full: "Enterprise Operations & Services",
-    body: "Logistics, supply chain, manufacturing and large-scale service delivery: environments where throughput and decision accuracy move revenue directly.",
+    title: "Trades & Industrial",
+    full: "Trades, Industrial & Supply",
+    body: "Suppliers, contractors and manufacturers: quotes, purchase orders and job paperwork that move themselves from inbox to system.",
     log: [
-      ["intake", "purchase order read, fields extracted"],
-      ["verify", "totals reconciled against ledger"],
-      ["route", "exception flagged, approver assigned"],
-      ["fallback", "low confidence, human review requested"],
-      ["report", "cycle closed, audit trail written"],
+      ["inbox", "purchase order read from email"],
+      ["check", "prices checked against the price list"],
+      ["fallback", "unusual order flagged for a person"],
+      ["system", "order entered, nobody re-typed it"],
+      ["report", "daily summary sent to the owner"],
     ],
   },
   {
-    title: "Technology & SaaS",
-    full: "Technology & SaaS Companies",
-    body: "Intelligence pushed deeper into the product and the operations around it: internal tooling, onboarding compression, support architecture.",
+    title: "Services & Offices",
+    full: "Service Businesses & Offices",
+    body: "Clinics, firms and service teams: bookings, intake forms, reminders and the questions your front desk answers fifty times a day.",
     log: [
-      ["signup", "account context gathered from intake form"],
-      ["onboard", "setup steps sequenced for this use case"],
-      ["support", "ticket classified, known fix attached"],
-      ["escalate", "novel issue routed to engineer on call"],
-      ["tooling", "internal runbook updated from resolution"],
+      ["form", "new client intake received"],
+      ["sort", "request sorted to the right person"],
+      ["book", "appointment booked, calendar updated"],
+      ["remind", "reminder text scheduled"],
+      ["answer", "common question answered instantly"],
     ],
   },
 ];
@@ -231,45 +200,56 @@ export const INDUSTRIES: Industry[] = [
 export const WHY = {
   title: "Why Triseno",
   label: "Compare",
-  lead: "Flip between what a typical AI vendor sells you and what we build.",
-  states: ["Typical AI vendor", "Triseno"] as const,
-  /** phone labels — the long one does not fit half a 300px switch */
-  statesShort: ["Vendor", "Triseno"] as const,
+  lead: "Flip between what the usual software subscription gives you and what we build.",
+  states: ["The usual way", "Triseno"] as const,
+  /** phone labels: the long one does not fit half a 300px switch */
+  statesShort: ["Usual", "Triseno"] as const,
   rows: [
     {
-      topic: "Pricing",
-      vendor: "Per-seat licence, whatever happens",
-      vendorNote: "You pay the same whether the tool moves a number or not.",
-      triseno: "Fees tied to numbers you already track",
-      trisenoNote: "Cycle time, error rate, revenue recovered: agreed before the build.",
+      topic: "Fit",
+      vendor: "Software built for everyone",
+      vendorNote: "You bend your business around someone else's idea of it.",
+      triseno: "A tool built around how you work",
+      trisenoNote: "Your steps, your words, your systems. Nothing you don't need.",
     },
     {
-      topic: "Scope",
-      vendor: "A tool bolted onto your stack",
-      vendorNote: "One more login, one more silo, one more export to reconcile.",
-      triseno: "The orchestration layer underneath it",
-      trisenoNote: "Agents that read from and write to the systems you already run.",
+      topic: "Cost",
+      vendor: "Per-seat fees forever",
+      vendorNote: "The bill grows every time your team does.",
+      triseno: "One fixed price, and you own it",
+      trisenoNote: "No per-seat fees. Pay once for the build, keep it.",
     },
     {
-      topic: "Failure",
-      vendor: "A support ticket and a wait",
-      vendorNote: "When a model is unsure, the process simply stops.",
-      triseno: "Fallback logic built into every agent",
-      trisenoNote: "Low confidence routes to a named person, with the full trail attached.",
+      topic: "Support",
+      vendor: "A ticket and a wait",
+      vendorNote: "Somebody, somewhere, will get back to you.",
+      triseno: "A real person who built it",
+      trisenoNote: "Changes and fixes from the engineer who knows your tool.",
     },
     {
-      topic: "Ownership",
-      vendor: "Their platform, their roadmap",
-      vendorNote: "Your workflow lives inside someone else's product.",
-      triseno: "Your system, documented and handed over",
-      trisenoNote: "Architecture, prompts and logs stay yours, with your team trained to run it.",
+      topic: "Reliability",
+      vendor: "It works, most of the time",
+      vendorNote: "Downtime is just part of the deal.",
+      triseno: "Built to live-TV standards",
+      trisenoNote: "Engineered by someone who keeps live broadcasts on air. Nothing is allowed to break.",
     },
   ],
 };
 
 export const GATE = {
-  title: "Ready to Build Something That Compounds?",
-  body: "Start with the AI Operations Audit: a focused diagnostic that finds your highest-leverage opportunities before you commit to a build.",
-  primary: "Start with a diagnostic",
+  title: "Tell Us What's Eating Your Day.",
+  body: "Book a call. Fifteen minutes, plain talk, and you leave knowing whether a tool would help and what it would take.",
+  primary: "Book a call",
   secondary: "Start a Conversation",
+};
+
+/** the trust section: who builds it (the owner's background, stated broadly) */
+export const BUILT_BY = {
+  label: "Built by",
+  title: "Engineered Like Live TV",
+  body: "Before Triseno: years of video engineering and systems reliability for some of the biggest live television in the world, where there is no second take and nothing is allowed to fail.",
+  names: ["The Grammys", "The Oscars", "American Idol"],
+  corporate: ["Google", "Meta"],
+  more: "And many more live shows, broadcasts and corporate events. These are just a few.",
+  close: "Every tool we build is held to the same standard.",
 };

@@ -18,7 +18,7 @@ export const DIVE = {
     "Inside the core: the Triseno mark cast in the same liquid chrome, two routes orbiting it, the drafting grid continuing into the dark.",
   /** the live caption once the camera has crossed the skin; the request is this visitor's own (session.mint) */
   captionInside: (id: string, local: string, tz: string): string =>
-    `The layer underneath · REQ ${id} · ${local}${tz ? ` ${tz}` : ""}`,
+    `Every tool starts here · ${local}${tz ? ` ${tz}` : ""}`,
   /** low devices never dive: the hold only swells the mercury */
   captionLow: "core · hold to swell",
 } as const;

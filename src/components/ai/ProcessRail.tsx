@@ -170,7 +170,7 @@ export default function ProcessRail() {
           <h2 id="ai-proc-title" className="ai-h2 font-display font-semibold uppercase">
             {PROCESS_INTRO.title}
           </h2>
-          <p className="ai-body ai-head__aside">Five steps, every engagement. Drag the handle along the rail, or pick a step.</p>
+          <p className="ai-body ai-head__aside">{PROCESS_INTRO.body}</p>
         </header>
 
         <div className="ai-rail" data-dragging={dragging ? "" : undefined}>

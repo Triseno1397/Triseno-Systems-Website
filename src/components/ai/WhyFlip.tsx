@@ -142,7 +142,7 @@ export default function WhyFlip() {
                         <span className="ai-label">
                           <b>{n}</b> / {row.topic}
                         </span>
-                        <span className="wf-face__tag">Typical vendor</span>
+                        <span className="wf-face__tag">{WHY.states[0]}</span>
                       </span>
                       <span className="wf-face__say">
                         <s>{row.vendor}</s>

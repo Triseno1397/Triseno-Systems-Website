@@ -7,27 +7,16 @@ import { WarpLink } from "@/components/world/WarpProvider";
 import { DIVISIONS } from "@/lib/divisions";
 import { glyphPoints } from "@/lib/glyph-path";
 import { GATE } from "./content";
-import { DIAGNOSTIC_HREF } from "./exit.content";
-import Ticket from "./Ticket";
 
 /**
- * 12. Gate — the division glyph announces where the button goes (bar.md rule 7),
+ * 7. Gate — the division glyph announces where the button goes (bar.md rule 7),
  * not a footer. At rest it is the cyan triangle filling the frame. Hover or
  * focus the diagnostic button and the same outline (the foundation's coherent
  * glyph sampling) morphs into the plus glyph of Contact and drains to white,
  * echoed by the hairline copies around it — the world recolours toward the
- * destination before you travel. One ghost button names the next destination.
- *
- * Beside the glyph lies the diagnostic ticket (Ticket.tsx): what this
- * visitor did on the way down, printed on paper, with a stub to tear. The
- * tear fires the identical travel as the button (DIAGNOSTIC_HREF), and while
- * the stub is pulled the glyph plays the same morph it plays for the button.
- * The section clips only horizontally, so a torn stub can fall past its
- * foot over the credits below.
- *
- * The two cross-division links are the only place on this page another
- * division may be named (D3), and they are set in the same Unbounded
- * uppercase as every other link on the page.
+ * destination before you travel. One ghost button names the next destination. The two cross-division links are the only place on
+ * this page another division may be named (D3), and they are set in the same
+ * Unbounded uppercase as every other link on the page.
  */
 
 const SAMPLES = 360;
@@ -43,8 +32,6 @@ export default function AiGate() {
   const figureRef = useRef<SVGSVGElement>(null);
   const ctaRef = useRef<HTMLSpanElement>(null);
   const state = useRef({ m: 0 });
-  /** the morph, for the ticket's pull: 1 toward the plus, 0 back to the triangle */
-  const morphRef = useRef<((target: number) => void) | null>(null);
 
   const from = useMemo(() => glyphPoints("triangle", SAMPLES), []);
   const to = useMemo(() => glyphPoints("plus", SAMPLES), []);
@@ -82,7 +69,6 @@ export default function AiGate() {
       }
       tween = gsap.to(s, { m: target, duration: 1.1, ease: "expo.out", onUpdate: paint });
     };
-    morphRef.current = go;
     const on = () => go(1);
     const off = () => go(0);
     cta?.addEventListener("pointerenter", on);
@@ -91,7 +77,6 @@ export default function AiGate() {
     cta?.addEventListener("blur", off);
     return () => {
       tween?.kill();
-      morphRef.current = null;
       cta?.removeEventListener("pointerenter", on);
       cta?.removeEventListener("pointerleave", off);
       cta?.removeEventListener("focus", on);
@@ -103,47 +88,43 @@ export default function AiGate() {
     <section
       data-rail="Gate"
       data-rail-next="Contact"
-      data-ch="12"
       aria-labelledby="ai-gate-title"
-      className="ai-gate ai-gate--ticket relative z-10 min-h-[100svh] overflow-x-clip"
+      className="ai-gate relative z-10 min-h-[100svh] overflow-hidden"
     >
       <div className="ai-wrap ai-gate__inner">
-        <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.8 -2 3.6 3.6">
-          <defs>
-            <polygon id="ai-gate-shape" ref={shapeRef} points={points(0)} />
-          </defs>
-          {ECHOES.map((scale, i) => (
-            <use
-              key={scale}
-              href="#ai-gate-shape"
-              className="ai-gate__echo"
-              transform={`scale(${scale})`}
-              style={{ opacity: 0.34 - i * 0.09 }}
-            />
-          ))}
-          <use href="#ai-gate-shape" className="ai-gate__glyph" />
-        </svg>
+      <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.8 -2 3.6 3.6">
+        <defs>
+          <polygon id="ai-gate-shape" ref={shapeRef} points={points(0)} />
+        </defs>
+        {ECHOES.map((scale, i) => (
+          <use
+            key={scale}
+            href="#ai-gate-shape"
+            className="ai-gate__echo"
+            transform={`scale(${scale})`}
+            style={{ opacity: 0.34 - i * 0.09 }}
+          />
+        ))}
+        <use href="#ai-gate-shape" className="ai-gate__glyph" />
+      </svg>
 
         <div className="ai-gate__copy">
-          <p className="ai-label">
-            <b>12</b> / Gate
-          </p>
-          <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">
-            {GATE.title}
-          </h2>
-          <p className="ai-body mt-6 max-w-[48ch]">{GATE.body}</p>
+                <p className="ai-label">
+          <b>07</b> / Book a call
+        </p>
+        <h2 id="ai-gate-title" className="ai-h2 mt-6 max-w-[16ch] font-display font-semibold uppercase">
+          {GATE.title}
+        </h2>
+        <p className="ai-body mt-6 max-w-[48ch]">{GATE.body}</p>
 
-          <div className="ai-gate__cta">
-            <span ref={ctaRef}>
-              <GhostButton href={DIAGNOSTIC_HREF}>{GATE.primary}</GhostButton>
-            </span>
-            <WarpLink href={DIAGNOSTIC_HREF} className="ai-textlink">
-              <span>{GATE.secondary}</span>
-            </WarpLink>
-          </div>
+        <div className="ai-gate__cta">
+          <span ref={ctaRef}>
+            <GhostButton href="/contact?division=ai">{GATE.primary}</GhostButton>
+          </span>
+          <WarpLink href="/contact?division=ai" className="ai-textlink">
+            <span>{GATE.secondary}</span>
+          </WarpLink>
         </div>
-
-        <Ticket className="ai-gate__ticket" onPull={(on) => morphRef.current?.(on ? 1 : 0)} />
 
         <nav aria-label="Other Triseno divisions" className="ai-gate__cross">
           <span className="ai-label">Other divisions</span>
@@ -154,6 +135,7 @@ export default function AiGate() {
             <span>Web Design</span>
           </WarpLink>
         </nav>
+        </div>
       </div>
     </section>
   );

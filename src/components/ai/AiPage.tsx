@@ -5,20 +5,14 @@ import { DIVISIONS } from "@/lib/divisions";
 import AiHero from "./AiHero";
 import SignalTicker from "./SignalTicker";
 import FlowingCapabilities from "./FlowingCapabilities";
-import IntakeReading from "./IntakeReading";
 import MercuryCompression from "./MercuryCompression";
-import AgentAnatomy from "./AgentAnatomy";
-import NightWatch from "./NightWatch";
-import Slate from "./Slate";
-import OperatorKeys from "./OperatorKeys";
-import ChapterFrame from "./ChapterFrame";
-import Credits from "./Credits";
 import { cleanDark } from "./cleanDark";
 import ExpandInterlude from "./ExpandInterlude";
 import StackFilm from "./StackFilm";
 import AgentConsole from "./AgentConsole";
 import ProcessRail from "./ProcessRail";
 import WhyFlip from "./WhyFlip";
+import BuiltBy from "./BuiltBy";
 import AiAmbience from "./AiAmbience";
 import AiGate from "./AiGate";
 import Descent from "./Descent";
@@ -69,29 +63,19 @@ export default function AiPage() {
       <span aria-hidden="true" data-world-layer="" className="ai-paper" />
       <span aria-hidden="true" data-world-layer="" className="ai-dive__dark" />
       <AiAmbience />
-      <Slate />
-      <OperatorKeys />
       <AiHero />
       <SignalTicker />
       <FlowingCapabilities />
-      <ChapterFrame title="Intake" />
-      <IntakeReading />
-      <ChapterFrame title="Compression" />
       <MercuryCompression />
-      <AgentAnatomy />
-      <ChapterFrame title="Scale" />
       <ExpandInterlude />
-      <ChapterFrame title="Stack" />
       <StackFilm />
       <AgentConsole />
-      <ChapterFrame title="Night" />
-      <NightWatch />
       <ProcessRail />
+      <BuiltBy />
       <WhyFlip />
       <FaqSection division="ai" />
       <Descent>
         <AiGate />
-        <Credits />
         <SignOff />
       </Descent>
     </main>

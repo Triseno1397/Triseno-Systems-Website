@@ -35,7 +35,7 @@ export default function AiHero() {
               {HERO.sub}
             </p>
             <div className="ai-in ai-hero__cta" style={{ ["--d" as string]: 4 }}>
-              <GhostButton href="/contact?division=ai">Start with a diagnostic</GhostButton>
+              <GhostButton href="/contact?division=ai">Book a call</GhostButton>
             </div>
           </div>
 

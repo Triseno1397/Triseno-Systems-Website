@@ -915,7 +915,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
         capT = t;
         capForce = false;
         const live = routes.filter((r) => r.wait <= 0).length;
-        capRef.current.textContent = `${COUNT || 200} agents · ${live} routes live`;
+        capRef.current.textContent = `${live} tools running · live`;
       }
       if (!reduced && visible) raf = requestAnimationFrame(draw);
     };
@@ -1023,7 +1023,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
       <span aria-hidden="true" className="ai-core__tick ai-core__tick--br" />
       <span className="ai-core__cap font-mono" aria-hidden="true">
         <i className="ai-core__live" />
-        <span ref={capRef}>200 agents · routes live</span>
+        <span ref={capRef}>tools running · live</span>
       </span>
       <p id={descId} className="sr-only">
         {label} {DIVE.inside}

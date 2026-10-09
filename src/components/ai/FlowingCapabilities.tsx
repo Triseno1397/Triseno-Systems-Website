@@ -30,12 +30,12 @@ const POOL = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789/<>_#";
 
 /** a short line per capability for the marquee (falls back to the brief's last sentence) */
 const PHRASES: Record<string, string> = {
-  orchestration: "Not one bot. An operations team.",
-  compression: "Compressed, automated, monitored.",
-  catalog: "Specifications, compatibility, context.",
-  revenue: "Priced against numbers you already track.",
-  broadcast: "Built from inside the control room.",
-  retainer: "A partner, not a support queue.",
+  orchestration: "Answers like your best employee.",
+  compression: "On your phone before you ask.",
+  catalog: "The right part, the first time.",
+  revenue: "Every lead answered in minutes.",
+  broadcast: "Built around how you work.",
+  retainer: "Nobody re-types anything again.",
 };
 
 function phraseFor(id: string, body: string) {

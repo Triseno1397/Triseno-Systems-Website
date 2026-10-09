@@ -11,7 +11,7 @@ import { HERO } from "./content";
  * light up cell by cell and fade (one small 2D canvas, drawn only while a
  * trail is alive). Reduced motion stops the belt and drops the trail.
  */
-const RUN = [...HERO.offers, "Agent pipelines", "Fallback logic", "Owned by you"];
+const RUN = [...HERO.offers, "Reports on autopilot", "Fixed price", "Owned by you"];
 const CELL = 12;
 const LIFE = 700; // ms a pixel stays lit
 

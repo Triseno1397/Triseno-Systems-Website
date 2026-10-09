@@ -78,28 +78,28 @@ export const FAQ: Record<FaqDivision, FaqItem[]> = {
   ],
   ai: [
     {
-      q: "What does AI infrastructure actually mean?",
-      a: "The operational layer a business runs on, built with AI rather than talked about: multi-agent orchestration, workflow automation and compression, catalog and revenue operations, and decision-layer systems. It is the plumbing between your tools, your data and the decisions your team makes every day.",
+      q: "What kind of tools do you build?",
+      a: "Whatever is eating your team's day: product finders, inbox and lead handlers, assistants trained on your own documents, reports that build themselves, custom internal tools, and connections between the software you already pay for. If it is repetitive and it lives on a computer, it can usually be built.",
     },
     {
-      q: "Do you consult, or do you build it?",
-      a: "Both, and the building is the point. Consulting and architecture come first because a system designed around the wrong workflow is expensive to unbuild, but the engagement ends with something deployed and running, not a deck.",
+      q: "Is this only for big companies?",
+      a: "No. We build for small local businesses and for larger companies alike. The tool is sized to the problem, not to the logo.",
     },
     {
-      q: "What kinds of problems is this for?",
-      a: "Repetitive multi-step work that a person currently holds together: catalog and content operations, revenue operations, production and broadcast pipelines, reporting, and any process where the same judgement is made hundreds of times a week.",
+      q: "How long does it take, and what does it cost?",
+      a: "Most tools take weeks, not months. Every project gets one fixed price before any work starts, so there are no surprises. Book a call and you will leave knowing roughly what yours would take.",
     },
     {
-      q: "How does an engagement start?",
-      a: "With a diagnostic. We map the workflow as it actually runs, find where the time and the errors go, and come back with what is worth automating and what is not — because some of it is not.",
+      q: "Do I need to be technical?",
+      a: "Not at all. You tell us the problem in plain words; we handle the rest and show your team how to use it in one short session.",
     },
     {
-      q: "Which AI models and tools do you work with?",
-      a: "Whichever fits the problem. The orchestration layer is built so a model can be swapped without rebuilding the system around it, which matters in a field where the best option changes every few months.",
+      q: "Who owns the tool?",
+      a: "You do. No per-seat fees and no lock-in. It runs on accounts you control.",
     },
     {
-      q: "Do you support the system after it ships?",
-      a: "Yes, on a retainer. An automated workflow touches live tools and real data, so it needs someone watching it the way any production system does.",
+      q: "What happens after it is built?",
+      a: "We keep it running. If something needs changing as your business grows, you talk to the person who built it, not a ticket queue.",
     },
   ],
 };

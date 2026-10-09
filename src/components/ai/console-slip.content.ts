@@ -10,23 +10,23 @@ export const CONSOLE_SLIP = {
   storageKey: "ai:slip-done",
 
   /** appended to the boot line when the stack has timed a trace this session */
-  bootBench: (totalMs: number) => `bench . last trace ${Math.round(totalMs).toLocaleString("en-US")} ms`,
+  bootBench: (totalMs: number) => `last run ${Math.round(totalMs).toLocaleString("en-US")} ms`,
 
   /** the halted step's message, wiped in over the typed one */
-  halt: { lead: "confidence", cmp: "0.61 < 0.80", tail: "routing to a person" },
+  halt: { lead: "unusual order", cmp: "3x the normal size", tail: "asking a person" },
 
   /** the human's row in the trace, before "report" */
   reviewAgent: "review",
   approvedLine: "approved by J. Okafor . 00:00:41",
-  correctedLine: (vendor: string) => `corrected . vendor: ${vendor} . resuming`,
+  correctedLine: (vendor: string) => `fixed . supplier: ${vendor} . carrying on`,
 
   slip: {
-    title: "Routing slip",
-    cycle: "cycle 0418",
-    dialogLabel: "Routing slip . cycle 0418",
+    title: "Needs your OK",
+    cycle: "order check",
+    dialogLabel: "Needs your OK",
     person: "J. Okafor",
     role: "Operations lead",
-    why: { lead: "confidence", cmp: "0.61 < 0.80", tail: "terms conflict" },
+    why: { lead: "unusual order", cmp: "3x the normal size", tail: "please confirm" },
     item: { po: "PO-8841", vendor: "Halvorsen Marine Supply", amount: "$18,420.00" },
     trail: [
       ["intake", "00:00:02"],
@@ -41,9 +41,9 @@ export const CONSOLE_SLIP = {
     resume: "Resume",
     keep: "esc . keep",
     tear: "tear here",
-    vendorLabel: "Vendor name, corrected",
+    vendorLabel: "Supplier name",
     /** sr-only description of what the slip does */
-    description: "The cycle is paused. Approve to let it resume as planned, or correct the vendor name before it resumes.",
+    description: "This order looks unusual, so the tool paused and asked a person. Approve it, or fix the supplier name and it carries on.",
     vendorMax: 32,
     /** inked onto the slip the moment it is decided, before it tears or files */
     stamp: {
