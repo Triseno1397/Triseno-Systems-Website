@@ -1,0 +1,323 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PROJECTION — the clean room as a film (/ai-infrastructure)
+
+   The page-wide instruments that make the reel one picture:
+     .ai-paper__rules / .ai-paper__streak   the gate streak (AiAmbience)
+     .ai-slate                              the slate (Slate.tsx)
+     .ai-frame-ch                           chapter frames (ChapterFrame.tsx)
+     .ai-keys                               operator keys sheet (OperatorKeys.tsx)
+     .ai-spec                               SPEC notes (SpecNote.tsx)
+
+   Only transform / opacity / clip-path animate. Radius 0, 1px hairlines,
+   no shadows. The slate and the keys sheet are portaled to <body>, outside
+   .ai-world, so they carry their own copy of the room's tokens.
+
+   ONE RULE OUTSIDE THESE ROOTS, on purpose: the paper's horizontal grid
+   lines move out of .ai-paper into .ai-paper__rules (same colour, period
+   and registration) so the streak can smear them while the page flings.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── the gate streak ─────────────────────────────────────────────────
+   Fling the page and the drafting grid's horizontal rules smear
+   vertically like film through a projector gate too fast; stop and they
+   snap back crisp in a fifth of a second. Two fixed layers inside the
+   same stacking context as the paper (z -1, under the grain): the crisp
+   rules and the same rules pre-smeared. AiAmbience cross-fades them by
+   scroll velocity and shifts the smear against the motion; two style
+   writes per frame while moving, none at rest. */
+.ai-world > .ai-paper {
+  /* the paper keeps its vertical rules only */
+  background-image:
+    linear-gradient(90deg, rgba(11, 14, 15, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 14, 15, 0.03) 1px, transparent 1px);
+  background-size: 160px 160px, 32px 32px;
+}
+.ai-paper__rules,
+.ai-paper__streak {
+  /* 160px taller than the viewport each way (a period of both grids), so
+     the smear can shift 14px and the lines stay registered with the paper */
+  position: fixed; left: 0; right: 0; top: -160px; bottom: -160px; z-index: -1; pointer-events: none;
+}
+.ai-paper__rules {
+  background-image:
+    linear-gradient(rgba(11, 14, 15, 0.075) 1px, transparent 1px),
+    linear-gradient(rgba(11, 14, 15, 0.03) 1px, transparent 1px);
+  background-size: 160px 160px, 32px 32px;
+  background-position: -1px -1px;
+}
+.ai-paper__streak {
+  opacity: 0; will-change: transform, opacity;
+  background-image:
+    repeating-linear-gradient(180deg, rgba(11, 14, 15, 0) 0px, rgba(11, 14, 15, 0.11) 7px, rgba(11, 14, 15, 0) 14px, rgba(11, 14, 15, 0) 160px),
+    repeating-linear-gradient(180deg, rgba(11, 14, 15, 0) 0px, rgba(11, 14, 15, 0.07) 4.5px, rgba(11, 14, 15, 0) 9px, rgba(11, 14, 15, 0) 32px);
+  /* each smear peaks on the rule it stands for */
+  background-position: -1px -7px, -1px -5px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-paper__streak { display: none; }
+}
+
+/* ── the slate ───────────────────────────────────────────────────────
+   Fixed bottom-centre, in the corner buttons' lane and clear of both
+   (inset by the gutter plus a button's width each side; centred with
+   auto margins, no transform, so the mono stays on the pixel grid). */
+.ai-slate {
+  --paper: #e6e9e8;
+  --ink: #0b0e0f;
+  --signal: #00b4d8;
+  --signal-ink: #00748c;
+  --slate-fill: var(--ink);
+  --slate-on: var(--paper);
+  --slate-accent: var(--signal-ink);
+  position: fixed; z-index: 800;
+  left: calc(var(--gutter) + 56px); right: calc(var(--gutter) + 56px); bottom: var(--gutter-y);
+  width: fit-content; max-width: 100%; margin: 0 auto; padding: 0 6px;
+  display: inline-flex; align-items: center; gap: 12px; height: 44px;
+  overflow: hidden; white-space: nowrap;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; font-weight: 400; line-height: 1;
+  letter-spacing: 0.14em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  transition: color 700ms var(--ease-expo), opacity 700ms var(--ease-expo);
+}
+html[data-clean-dark] .ai-slate {
+  color: #e8f1f3;
+  --slate-fill: #e8f1f3;
+  --slate-on: #0b0e0f;
+  --slate-accent: #00b4d8;
+}
+html[data-warping] .ai-slate,
+html[data-portal-capture] .ai-slate { opacity: 0; pointer-events: none; }
+
+/* the reel is moving: the square at the left goes to the signal. While a
+   chord is armed the same slot reads "g" in the signal colour instead. */
+.ai-slate__run { position: relative; flex: none; width: 8px; height: 14px; }
+.ai-slate__run::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+  background: currentColor; opacity: 0.3;
+  transition: opacity 400ms var(--ease-expo), background-color 400ms var(--ease-expo);
+}
+.ai-slate[data-running] .ai-slate__run::before { background: var(--signal); opacity: 1; }
+.ai-slate[data-armed] .ai-slate__run::before { opacity: 0; }
+
+.ai-slate__f { display: inline-flex; align-items: baseline; gap: 7px; }
+.ai-slate__f i { font-style: normal; opacity: 0.5; }
+.ai-slate__f b { font-weight: 500; }
+.ai-slate__f em { font-style: normal; }
+.ai-slate[data-unnumbered] .ai-slate__f--ch b { display: none; }
+.ai-slate__sep { flex: none; width: 1px; height: 10px; background: currentColor; opacity: 0.3; }
+
+/* a chord is armed: the key lights in the reel slot until its partner lands */
+.ai-slate__g {
+  position: absolute; left: 6px; top: 50%; width: 8px; margin-top: -0.5em; line-height: 1;
+  text-align: center; text-transform: none; color: var(--slate-accent); opacity: 0;
+  transition: opacity 400ms var(--ease-expo);
+}
+.ai-slate[data-armed] .ai-slate__g { opacity: 1; }
+
+/* SPEC and ?: hairline caps; the fill wipes in on hover, holds while on */
+.ai-slate__btn {
+  position: relative; isolation: isolate; display: inline-grid; place-items: center;
+  height: 26px; min-width: 26px; padding: 0 8px; border: 1px solid currentColor; border-radius: 0;
+  background: transparent; color: inherit; font: inherit; letter-spacing: 0.18em; cursor: pointer;
+  transition: color 450ms var(--ease-expo);
+}
+.ai-slate__btn::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--slate-fill);
+  clip-path: inset(0 100% 0 0); transition: clip-path 450ms var(--ease-expo);
+}
+.ai-slate__btn:hover,
+.ai-slate__btn:focus-visible,
+.ai-slate__btn[aria-pressed="true"],
+.ai-slate__btn[aria-expanded="true"] { color: var(--slate-on); }
+.ai-slate__btn:hover::after,
+.ai-slate__btn:focus-visible::after,
+.ai-slate__btn[aria-pressed="true"]::after,
+.ai-slate__btn[aria-expanded="true"]::after { clip-path: inset(0 0 0 0); }
+.ai-slate__btn:focus-visible { outline: 1px solid var(--slate-accent); outline-offset: 4px; }
+
+.ai-slate[data-reduced] :is(.ai-slate__f--fps, .ai-slate__sep--fps) { display: none; }
+@media (max-width: 900px) { .ai-slate :is(.ai-slate__f--fps, .ai-slate__sep--fps) { display: none; } }
+@media (max-width: 767px) {
+  .ai-slate { gap: 10px; }
+  .ai-slate :is(.ai-slate__f--tc, .ai-slate__sep--tc, .ai-slate__f--fps, .ai-slate__sep--fps, .ai-slate__btn--spec, .ai-slate__g) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-slate, .ai-slate__run, .ai-slate__g, .ai-slate__btn, .ai-slate__btn::after { transition-duration: 1ms !important; }
+}
+
+/* ── chapter frames ──────────────────────────────────────────────────
+   44svh of paper (36svh phones): the chapter mark top-left, the logline
+   centred, a cyan rule under it. The glyphs are spread along their line
+   until the frame enters, then settle (GSAP, transform + opacity). */
+.ai-frame-ch { display: grid; min-height: 44svh; padding-block: clamp(28px, 5svh, 56px); }
+@media (max-width: 767px) { .ai-frame-ch { min-height: 36svh; padding-block: 24px; } }
+.ai-frame-ch__wrap { display: grid; grid-template-rows: auto 1fr; row-gap: clamp(20px, 3.5svh, 36px); }
+.ai-frame-ch__mark { margin: 0; align-self: start; }
+.ai-frame-ch__body { align-self: center; display: grid; justify-items: start; gap: clamp(16px, 2.4svh, 24px); }
+.ai-frame-ch__line {
+  margin: 0; max-width: 30ch;
+  font-weight: 500; font-size: clamp(20px, 2.6vw, 34px); line-height: 1.22; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink);
+}
+.ai-frame-ch__glyphs { display: block; }
+.ai-frame-ch__w { display: inline-block; white-space: nowrap; }
+.ai-frame-ch__g { display: inline-block; }
+.ai-frame-ch[data-armed] .ai-frame-ch__g { opacity: 0; }
+.ai-frame-ch__rule { display: block; width: min(100%, 420px); height: 1px; background: var(--signal); transform-origin: left center; }
+.ai-frame-ch[data-armed] .ai-frame-ch__rule { transform: scaleX(0); }
+@media (max-width: 767px) { .ai-frame-ch__line { max-width: 22ch; } .ai-frame-ch__rule { width: min(100%, 220px); } }
+
+/* ── operator keys sheet ─────────────────────────────────────────────
+   A paper dialog above the chrome, rising out of the slate: an ink
+   scrim, a hairline sheet that wipes up in 320 ms, rows of key . action
+   with the keys set in hairline caps. Inert while closed. */
+.ai-keys {
+  --paper: #e6e9e8;
+  --ink: #0b0e0f;
+  --ink-2: #3b4446;
+  --ink-3: #737e81;
+  --rule-2: rgba(11, 14, 15, 0.34);
+  --signal: #00b4d8;
+  --signal-ink: #00748c;
+  position: fixed; inset: 0; z-index: 870; visibility: hidden;
+  font-family: var(--font-geist-mono), monospace; color: var(--ink);
+  transition: visibility 0s linear 360ms;
+}
+.ai-keys[data-open] { visibility: visible; transition: visibility 0s; }
+.ai-keys__probe { position: fixed; left: -9999px; top: 0; width: 0; height: var(--lane-top); visibility: hidden; pointer-events: none; }
+.ai-keys__scrim {
+  position: absolute; inset: 0; background: rgba(11, 14, 15, 0.42); opacity: 0;
+  transition: opacity 360ms var(--ease-expo);
+}
+.ai-keys[data-open] .ai-keys__scrim { opacity: 1; }
+.ai-keys__sheet {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(var(--gutter-y) + 60px);
+  width: min(540px, 100%); margin-inline: auto; max-height: calc(100svh - var(--gutter-y) - 60px - var(--lane-top));
+  overflow: auto; overscroll-behavior: contain;
+  background: var(--paper); border: 1px solid var(--ink); border-radius: 0;
+  clip-path: inset(100% 0 0 0); transition: clip-path 320ms var(--ease-expo);
+}
+.ai-keys[data-open] .ai-keys__sheet { clip-path: inset(0 0 0 0); }
+.ai-keys__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 18px; border-bottom: 1px solid var(--ink);
+}
+.ai-keys__title {
+  display: inline-flex; align-items: center; gap: 10px; margin: 0;
+  font-size: 12px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink);
+}
+.ai-keys__mark { display: inline-block; width: 5px; height: 5px; background: var(--signal); }
+.ai-keys__close,
+.ai-keys__switch {
+  border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink);
+  font: inherit; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+  transition: background-color 400ms var(--ease-expo), color 400ms var(--ease-expo);
+}
+.ai-keys__close { height: 28px; padding: 0 10px; }
+.ai-keys__close:hover,
+.ai-keys__close:focus-visible { background: var(--ink); color: var(--paper); }
+.ai-keys :focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 4px; }
+.ai-keys__rows { list-style: none; margin: 0; padding: 4px 18px 0; }
+.ai-keys__rows li {
+  display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: center; gap: 14px;
+  padding: 9px 0; border-bottom: 1px solid var(--rule-2);
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.ai-keys__rows li:last-child { border-bottom: 0; }
+.ai-keys__k { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.ai-keys__k kbd {
+  display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 6px;
+  border: 1px solid var(--ink); border-radius: 0; background: transparent;
+  font-family: inherit; font-size: 11px; letter-spacing: 0.1em; color: var(--ink);
+}
+.ai-keys__a { color: var(--ink-2); }
+.ai-keys__switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%;
+  padding: 12px 18px; border-width: 1px 0 0; text-align: left;
+}
+.ai-keys__switch-l { display: grid; gap: 4px; }
+.ai-keys__switch-l small { font-size: 10px; letter-spacing: 0.14em; color: var(--ink-3); }
+.ai-keys__switch-box { flex: none; width: 12px; height: 12px; border: 1px solid var(--ink); transition: background-color 400ms var(--ease-expo); }
+.ai-keys__switch[aria-checked="true"] .ai-keys__switch-box { background: var(--signal); border-color: var(--signal); }
+.ai-keys__foot {
+  margin: 0; padding: 12px 18px 14px; border-top: 1px solid var(--rule-2);
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3);
+}
+@media (max-width: 767px) {
+  .ai-keys__sheet { bottom: calc(var(--gutter-y) + 56px); max-height: 72svh; }
+  .ai-keys__rows li { grid-template-columns: 108px minmax(0, 1fr); font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-keys, .ai-keys__scrim, .ai-keys__sheet, .ai-keys__close, .ai-keys__switch, .ai-keys__switch-box { transition-duration: 1ms !important; transition-delay: 0ms !important; }
+}
+
+/* ── SPEC notes ──────────────────────────────────────────────────────
+   Inside a figure's relative container: a 5px cyan square at the anchor
+   corner, a 1px leader to the note, the note in mono inside a cyan
+   hairline box. Hidden until html[data-spec]; then up 8px into place,
+   40 ms apart. Phones: a "+" chip at the corner opens the note on tap. */
+.ai-spec { position: absolute; z-index: 7; pointer-events: none; --dx: 24px; --dy: 24px; --len: 34px; --ang: 45deg; }
+.ai-spec--tl { top: 0; left: 0; }
+.ai-spec--tr { top: 0; right: 0; }
+.ai-spec--bl { bottom: 0; left: 0; }
+.ai-spec--br { bottom: 0; right: 0; }
+.ai-spec__dot { position: absolute; width: 5px; height: 5px; background: var(--signal); }
+.ai-spec--tl .ai-spec__dot { top: -2px; left: -2px; }
+.ai-spec--tr .ai-spec__dot { top: -2px; right: -2px; }
+.ai-spec--bl .ai-spec__dot { bottom: -2px; left: -2px; }
+.ai-spec--br .ai-spec__dot { bottom: -2px; right: -2px; }
+.ai-spec__leader { position: absolute; width: var(--len); height: 1px; background: var(--signal); transform: rotate(var(--ang)); }
+.ai-spec--tl .ai-spec__leader { top: 0; left: 0; transform-origin: 0 50%; }
+.ai-spec--tr .ai-spec__leader { top: 0; right: 0; transform-origin: 100% 50%; }
+.ai-spec--bl .ai-spec__leader { bottom: 0; left: 0; transform-origin: 0 50%; }
+.ai-spec--br .ai-spec__leader { bottom: 0; right: 0; transform-origin: 100% 50%; }
+.ai-spec__note {
+  position: absolute; margin: 0; width: max-content; max-width: min(240px, 60vw); padding: 8px 10px;
+  border: 1px solid var(--signal-ink); background: var(--paper); color: var(--ink);
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.5; letter-spacing: 0.06em; text-transform: none;
+}
+.ai-spec__note b { display: block; margin-bottom: 2px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--signal-ink); }
+.ai-spec--tl .ai-spec__note { top: var(--dy); left: var(--dx); }
+.ai-spec--tr .ai-spec__note { top: var(--dy); right: var(--dx); }
+.ai-spec--bl .ai-spec__note { bottom: var(--dy); left: var(--dx); }
+.ai-spec--br .ai-spec__note { bottom: var(--dy); right: var(--dx); }
+.ai-spec--dark .ai-spec__note { background: rgba(4, 7, 10, 0.82); color: #e8f1f3; border-color: var(--signal); }
+.ai-spec--dark .ai-spec__note b { color: var(--signal); }
+/* hidden until SPEC; then up into place, staggered by note index */
+.ai-spec__dot,
+.ai-spec__leader,
+.ai-spec__note {
+  opacity: 0; transition: opacity 500ms var(--ease-expo), transform 700ms var(--ease-expo);
+  transition-delay: calc(var(--n, 0) * 40ms);
+}
+.ai-spec__note { transform: translate3d(0, 8px, 0); }
+html[data-spec] .ai-spec :is(.ai-spec__dot, .ai-spec__leader) { opacity: 1; }
+html[data-spec] .ai-spec__note { opacity: 1; transform: none; }
+.ai-spec__chip { display: none; }
+@media (hover: none) {
+  html[data-spec] .ai-spec__chip {
+    position: absolute; display: grid; place-items: center; pointer-events: auto;
+    width: 28px; height: 28px; border: 1px solid var(--signal-ink); border-radius: 0; background: var(--paper);
+    font-family: var(--font-geist-mono), monospace; font-size: 15px; line-height: 1; color: var(--signal-ink); cursor: pointer;
+    transition: background-color 400ms var(--ease-expo), color 400ms var(--ease-expo);
+  }
+  /* a 44px target around the 28px chip */
+  html[data-spec] .ai-spec__chip::before { content: ""; position: absolute; inset: -8px; }
+  html[data-spec] .ai-spec--tl .ai-spec__chip { top: 6px; left: 6px; }
+  html[data-spec] .ai-spec--tr .ai-spec__chip { top: 6px; right: 6px; }
+  html[data-spec] .ai-spec--bl .ai-spec__chip { bottom: 6px; left: 6px; }
+  html[data-spec] .ai-spec--br .ai-spec__chip { bottom: 6px; right: 6px; }
+  html[data-spec] .ai-spec--dark .ai-spec__chip { background: rgba(4, 7, 10, 0.82); color: var(--signal); border-color: var(--signal); }
+  html[data-spec] .ai-spec[data-open] .ai-spec__chip { background: var(--signal-ink); color: var(--paper); }
+  /* on touch the leader and dot are the chip; the note waits for a tap */
+  html[data-spec] .ai-spec :is(.ai-spec__dot, .ai-spec__leader) { opacity: 0; }
+  html[data-spec] .ai-spec:not([data-open]) .ai-spec__note { opacity: 0; transform: translate3d(0, 8px, 0); }
+  html[data-spec] .ai-spec--tl .ai-spec__note { top: 42px; left: 6px; }
+  html[data-spec] .ai-spec--tr .ai-spec__note { top: 42px; right: 6px; }
+  html[data-spec] .ai-spec--bl .ai-spec__note { bottom: 42px; left: 6px; }
+  html[data-spec] .ai-spec--br .ai-spec__note { bottom: 42px; right: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-spec__note { transform: none; }
+  .ai-spec__dot, .ai-spec__leader, .ai-spec__note, .ai-spec__chip { transition-duration: 1ms !important; transition-delay: 0ms !important; }
+}

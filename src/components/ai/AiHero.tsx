@@ -2,20 +2,25 @@
 
 import GhostButton from "@/components/ui/GhostButton";
 import { HERO } from "./content";
+import { DIVE } from "./hero-dive.content";
 import IntelligenceCore from "./IntelligenceCore";
 import Scramble from "./Scramble";
+import "@/app/ai-dive.css";
 
 /**
  * 1. Hero — the offer, and nothing else: the headline (decoding into place),
  * one sentence, one button. Beside it, the intelligence layer as one object:
  * a liquid-chrome core inside a dotted globe with cyan routes, ringed by a
- * swarm of agents that scatter from the pointer (IntelligenceCore).
- * The headline is sized to its own column (container units), so it can never
- * run under the figure at any width. Nothing here is scroll-driven.
+ * swarm of agents that scatter from the pointer (IntelligenceCore). Under
+ * the figure, one mono line: press and hold the core. Hold it and the camera
+ * falls through the skin into the nucleus (the dive lives in IntelligenceCore;
+ * this section only carries the hint and the scroll cue). The headline is
+ * sized to its own column (container units), so it can never run under the
+ * figure at any width. Nothing here is scroll-driven.
  */
 export default function AiHero() {
   return (
-    <section data-rail="Layer" aria-labelledby="ai-hero-title" className="ai-hero relative z-10">
+    <section data-rail="Layer" data-ch="01" aria-labelledby="ai-hero-title" className="ai-hero relative z-10">
       <div className="ai-wrap">
         <div className="ai-hero__grid">
           <div className="ai-hero__copy">
@@ -36,11 +41,24 @@ export default function AiHero() {
 
           <figure className="ai-hero__fig ai-in" style={{ ["--d" as string]: 1 }}>
             <IntelligenceCore
-              label="A liquid chrome core inside a dotted globe, cyan routes arcing between cities, and a swarm of agents orbiting it that scatter from the pointer"
+              label="A liquid chrome core inside a dotted globe, cyan routes arcing between cities, and a swarm of agents orbiting it that scatter from the pointer."
               className="ai-hero__lens"
             />
+            {/* the hold hint: pointer and touch wordings, one shown by media query;
+                gone for the session after the first crossing (data-dive-seen) */}
+            <p className="ai-hero__hint">
+              <i aria-hidden="true" className="ai-hero__hint-sq" />
+              <span className="ai-hero__hint-fine">{DIVE.hintFine}</span>
+              <span className="ai-hero__hint-touch">{DIVE.hintTouch}</span>
+            </p>
           </figure>
         </div>
+      </div>
+
+      {/* the scroll cue: a word and a hairline that wipes on a loop, paused off screen */}
+      <div aria-hidden="true" className="ai-hero__cue font-mono">
+        <span>{DIVE.cue}</span>
+        <i />
       </div>
     </section>
   );

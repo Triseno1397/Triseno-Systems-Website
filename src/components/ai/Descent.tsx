@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { cleanDark } from "./cleanDark";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,11 +30,11 @@ export default function Descent({ children }: { children: ReactNode }) {
         trigger: root,
         start: "top 12%",
         end: "bottom top",
-        onToggle: (t) => document.documentElement.toggleAttribute("data-clean-dark", t.isActive),
+        onToggle: (t) => cleanDark("descent", t.isActive),
       });
       return () => {
         st.kill();
-        document.documentElement.removeAttribute("data-clean-dark");
+        cleanDark.leave("descent");
       };
     }
     const ctx = gsap.context(() => {
@@ -53,17 +54,19 @@ export default function Descent({ children }: { children: ReactNode }) {
         },
       );
       // once the dark reaches the top of the frame, the chrome's phone scrims
-      // go back to the site's black (ai.css, data-clean-dark)
+      // go back to the site's black (ai.css, data-clean-dark). The attribute
+      // is shared with the page's other dark moments, so it goes through
+      // cleanDark under this section's own key.
       ScrollTrigger.create({
         trigger: root,
         start: "top 12%",
         end: "bottom top",
-        onToggle: (st) => document.documentElement.toggleAttribute("data-clean-dark", st.isActive),
+        onToggle: (st) => cleanDark("descent", st.isActive),
       });
     }, root);
     return () => {
       ctx.revert();
-      document.documentElement.removeAttribute("data-clean-dark");
+      cleanDark.leave("descent");
     };
   }, []);
 

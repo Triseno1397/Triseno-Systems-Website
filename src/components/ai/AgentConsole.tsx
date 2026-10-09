@@ -1,9 +1,12 @@
 "use client";
 
 import "../../app/ai-industries.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
+import { session, useSession } from "./session";
+import RoutingSlip, { type SlipOutcome } from "./RoutingSlip";
+import { CONSOLE_SLIP } from "./console-slip.content";
 
 /**
  * 4. Industries — an agent trace you can run (after 21st.dev's "Agent Trace" /
@@ -23,7 +26,30 @@ import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
  * The durations are illustrative (the section says so); nothing here claims a
  * real result. Reduced motion: the whole trace, settled, no typing; the
  * spotlight jumps instead of easing.
+ *
+ * The payoff (item "console-slip"): on the Enterprise cycle the fourth step,
+ * "fallback . low confidence, human review requested", means it. The step's
+ * spinner keeps turning, its line halts on "confidence 0.61 < 0.80 . routing
+ * to a person", and a paper routing slip prints out of a slot under the glass
+ * (RoutingSlip). APPROVE tears it and the console resumes, printing the
+ * approval and closing the cycle; CORRECT lets the visitor retype the vendor,
+ * which the resumed log prints back. The person's row carries the time they
+ * really took. Once a slip is resolved the session remembers it, so Replay
+ * and later visits to the tab run straight through.
  */
+
+/** the tab and step that halt: the cycle whose fourth step hands off to a person */
+const HALT_TAB = INDUSTRIES.findIndex((ind) => ind.log.some(([agent]) => agent === "fallback"));
+const HALT_AT = HALT_TAB >= 0 ? INDUSTRIES[HALT_TAB].log.findIndex(([agent]) => agent === "fallback") : -1;
+
+type Halt = "none" | "line" | "slip" | "done";
+type Review = { kind: SlipOutcome; value?: string; ms: number };
+type Row = { key: string; agent: string; msg: string; ms: number; at: number; canHalt: boolean; human: boolean };
+
+/** a step's duration as the console prints it; a person's time can run long */
+function fmtMs(ms: number) {
+  return ms < 10000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
 
 /** one scene per industry (GPT Image 2.5, design-loop/art-src/industries) */
 const PLATES = [
@@ -77,8 +103,49 @@ export default function AgentConsole() {
   const seen = useRef(false);
   const reduced = useRef(false);
 
+  /* the halt: "none" -> "line" (the halted step's message swaps) -> "slip"
+     (the slip is printing or printed) -> "done" (resolved, resuming) */
+  const [halt, setHalt] = useState<Halt>("none");
+  const haltRef = useRef<Halt>("none");
+  const [review, setReview] = useState<Review | null>(null);
+  const slipDone = useRef(false);
+  const timers = useRef<number[]>([]);
+  const lastTrace = useSession((s) => s.lastTrace);
+
   const industry = INDUSTRIES[active];
   const total = industry.log.length;
+
+  /* the rows as printed: the industry's steps, plus the person's review row
+     before "report" once a slip is resolved; each row's clock is everything
+     before it, plus a beat */
+  const rows = useMemo<Row[]>(() => {
+    const list: Row[] = industry.log.map(([agent, msg], i) => ({
+      key: `${active}-${i}`,
+      agent,
+      msg,
+      ms: fakeMs(active + 1, i),
+      at: 0,
+      canHalt: active === HALT_TAB && i === HALT_AT,
+      human: false,
+    }));
+    if (review && active === HALT_TAB) {
+      list.splice(HALT_AT + 1, 0, {
+        key: `${active}-review`,
+        agent: CONSOLE_SLIP.reviewAgent,
+        msg: review.kind === "approve" ? CONSOLE_SLIP.approvedLine : CONSOLE_SLIP.correctedLine(review.value ?? ""),
+        ms: review.ms,
+        at: 0,
+        canHalt: false,
+        human: true,
+      });
+    }
+    let at = 40;
+    for (const row of list) {
+      row.at = at;
+      at += row.ms + 40;
+    }
+    return list;
+  }, [industry, active, review]);
 
   /* chroma grid spotlight: one set of CSS vars on the grid, eased in rAF */
   const gridRef = useRef<HTMLDivElement>(null);
@@ -149,12 +216,18 @@ export default function AgentConsole() {
 
   useEffect(() => {
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try {
+      slipDone.current = window.sessionStorage.getItem(CONSOLE_SLIP.storageKey) === "1";
+    } catch {
+      // storage blocked: the slip prints once per page load instead
+    }
     const el = rootRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting && !seen.current) {
           seen.current = true;
+          session.figure("industries");
           setRun((r) => r + 1);
         }
       },
@@ -164,18 +237,81 @@ export default function AgentConsole() {
     return () => io.disconnect();
   }, []);
 
-  // one run: steps settle one after another, then the result line
+  // one run: steps settle one after another, then the result line. On the
+  // Enterprise tab the run stops at the fallback step until the slip is
+  // resolved (once per session); the resume timers join the same list, so a
+  // tab change or Replay mid-slip clears everything and dismisses the slip.
   useEffect(() => {
     if (run === 0) return;
+    const haltAt = active === HALT_TAB && !slipDone.current ? HALT_AT : -1;
+    const T = timers.current;
+    const later = (fn: () => void, ms: number) => T.push(window.setTimeout(fn, ms));
+    const clear = () => {
+      T.forEach((t) => window.clearTimeout(t));
+      T.length = 0;
+    };
+    setReview(null);
+    haltRef.current = "none";
+    setHalt("none");
     if (reduced.current) {
-      setStep(total);
-      return;
+      if (haltAt >= 0) {
+        setStep(haltAt);
+        haltRef.current = "slip";
+        setHalt("slip");
+      } else setStep(total);
+      return clear;
     }
     setStep(-1);
-    const timers: number[] = [];
-    for (let i = 0; i <= total; i++) timers.push(window.setTimeout(() => setStep(i), 350 + i * STEP_MS));
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    const last = haltAt >= 0 ? haltAt : total;
+    for (let i = 0; i <= last; i++) later(() => setStep(i), 350 + i * STEP_MS);
+    if (haltAt >= 0) {
+      // the step types its message (900 ms), holds a beat, then halts
+      const t0 = 350 + haltAt * STEP_MS;
+      later(() => {
+        haltRef.current = "line";
+        setHalt("line");
+      }, t0 + 1000);
+      later(() => {
+        haltRef.current = "slip";
+        setHalt("slip");
+      }, t0 + 1500);
+    }
+    return clear;
   }, [run, active, total]);
+
+  /* the visitor's decision: remember it, record it, resume the cycle */
+  const resolve = useCallback(
+    (kind: SlipOutcome, decisionMs: number, value?: string) => {
+      if (haltRef.current !== "slip") return;
+      slipDone.current = true;
+      try {
+        window.sessionStorage.setItem(CONSOLE_SLIP.storageKey, "1");
+      } catch {
+        // storage blocked: slipDone still holds for this page
+      }
+      const ms = Math.max(1, Math.round(decisionMs));
+      setReview({ kind, value, ms });
+      haltRef.current = "done";
+      setHalt("done");
+      const S = CONSOLE_SLIP.slip;
+      session.setSlip(
+        kind === "approve"
+          ? { outcome: "approved", to: S.person, at: S.at }
+          : { outcome: "corrected", to: S.person, value, at: S.at },
+      );
+      session.bump(kind === "approve" ? "approvals" : "corrections");
+      const rowsTotal = total + 1; // with the review row
+      if (reduced.current) {
+        setStep(rowsTotal);
+        return;
+      }
+      const T = timers.current;
+      for (let i = HALT_AT + 1; i <= rowsTotal; i++) {
+        T.push(window.setTimeout(() => setStep(i), 160 + (i - HALT_AT - 1) * STEP_MS));
+      }
+    },
+    [total],
+  );
 
   const pick = (i: number) => {
     if (i === active) return;
@@ -199,16 +335,24 @@ export default function AgentConsole() {
     tabRefs.current[next]?.focus();
   };
 
-  const sum = industry.log.reduce((a, _, i) => a + fakeMs(active + 1, i), 0);
-  const closed = step >= total;
+  const sum = rows.reduce((a, r) => a + r.ms, 0);
+  const closed = step >= rows.length;
+  const H = CONSOLE_SLIP.halt;
 
   return (
-    <section ref={rootRef} data-rail="Industries" aria-labelledby="ai-ind-title" className="ai-section relative z-10">
+    <section
+      ref={rootRef}
+      data-rail="Industries"
+      data-ch="08"
+      data-fig="industries"
+      aria-labelledby="ai-ind-title"
+      className="ai-section relative z-10"
+    >
       <div className="ai-wrap ai-console-grid">
         <div className="ai-console-side">
           <header>
             <p className="ai-label">
-              <b>04</b> / Industries
+              <b>08</b> / Industries
             </p>
             <h2 id="ai-ind-title" className="ai-h2 font-display font-semibold uppercase">
               {INDUSTRIES_INTRO.title}
@@ -309,26 +453,44 @@ export default function AgentConsole() {
               <span className="ai-trace__t">00:00.000</span>
               <span>
                 orchestrator <em>online</em> / {total} agents assigned / fallback: human review
+                {lastTrace ? <> / {CONSOLE_SLIP.bootBench(lastTrace.totalMs)}</> : null}
               </span>
             </li>
-            {industry.log.map(([agent, msg], i) => {
+            {rows.map((row, i) => {
               const state = step > i ? "done" : step === i ? "run" : "wait";
-              const ms = fakeMs(active + 1, i);
-              // the clock at the start of this step: everything before it, plus a beat
-              const at = industry.log.slice(0, i).reduce((a, _, j) => a + fakeMs(active + 1, j) + 40, 40);
+              const { ms } = row;
+              const halted = row.canHalt && halt !== "none";
               return (
-                <li key={`${active}-${i}`} className="ai-trace__row" data-state={state}>
-                  <span className="ai-trace__t">{clock(at)}</span>
-                  <span className="ai-trace__agent">{agent}</span>
+                <li
+                  key={row.key}
+                  className="ai-trace__row"
+                  data-state={state}
+                  data-halt={halted ? "" : undefined}
+                  data-human={row.human ? "" : undefined}
+                >
+                  <span className="ai-trace__t">{clock(row.at)}</span>
+                  <span className="ai-trace__agent">{row.agent}</span>
                   <span className="ai-trace__msg">
-                    <span className="ai-trace__type" style={{ ["--n" as string]: msg.length }}>
-                      {msg}
+                    <span className="ai-trace__said">
+                      <span className="ai-trace__type" style={{ ["--n" as string]: row.msg.length }}>
+                        {row.msg}
+                      </span>
                     </span>
+                    {halted ? (
+                      <span className="ai-trace__halt">
+                        {H.lead} <b>{H.cmp}</b> . {H.tail}
+                      </span>
+                    ) : null}
                   </span>
-                  <span className="ai-trace__state" aria-label={state === "done" ? `done in ${ms} ms` : state === "run" ? "running" : "queued"}>
+                  <span
+                    className="ai-trace__state"
+                    aria-label={
+                      state === "done" ? `done in ${fmtMs(ms)}` : state === "run" ? (halted ? "halted, awaiting a person" : "running") : "queued"
+                    }
+                  >
                     {state === "done" ? (
                       <>
-                        <i className="ai-tick" aria-hidden="true" /> {ms}ms
+                        <i className="ai-tick" aria-hidden="true" /> {fmtMs(ms)}
                       </>
                     ) : state === "run" ? (
                       <i className="ai-spin" aria-hidden="true" />
@@ -348,6 +510,9 @@ export default function AgentConsole() {
           </ol>
           <p className="ai-console__note">An example cycle, timings illustrative.</p>
         </div>
+        {/* the routing slip prints out of the slot under the glass; nothing
+            while idle, so the rig's layout only moves while a slip exists */}
+        <RoutingSlip open={halt === "slip"} onResolve={resolve} />
         </div>
       </div>
     </section>

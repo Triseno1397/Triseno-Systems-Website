@@ -513,7 +513,7 @@ export default function ExpandInterlude() {
   }, []);
 
   return (
-    <section aria-labelledby="ai-xp-title" className="ai-xp relative z-10">
+    <section data-rail="Scale" data-ch="06" aria-labelledby="ai-xp-title" className="ai-xp relative z-10">
       <div ref={stageRef} className="ai-xp__stage">
         <div
           ref={mediaRef}

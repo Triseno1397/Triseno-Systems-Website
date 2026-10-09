@@ -1,0 +1,283 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Fig. 09 — the night watch (NightWatch.tsx)
+   A pinned 100svh stage where the sheet itself keeps the night: two full
+   sheets (dusk, ink) fade in over the paper and out again, a hairline
+   24-hour ring fills along its lower half, the clock prints the hour, the
+   margin table prints one line per hour and a canvas draws one point of
+   light per finished task. While the ink is up the section carries
+   data-night and the type flips to paper; the shared chrome follows through
+   cleanDark. Everything here is scoped to .ai-night; the shared tokens come
+   from .ai-world (ai.css). Only opacity, transform, clip-path (and colour
+   on the data-night flip) ever change.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-night {
+  --n-text: var(--ink);
+  --n-text-2: var(--ink-2);
+  --n-text-3: var(--ink-3);
+  --n-rule: var(--rule-2);
+  --n-rule-soft: var(--rule);
+  --n-hot: var(--signal-ink);
+  /* the ring's radius: a third of the shorter side, kept inside the lanes
+     and leaving the two margin columns at least 300px each */
+  --n-R: min(34vmin, calc(50svh - 170px), calc(50vw - var(--gutter) - 300px));
+  position: relative;
+  color: var(--n-text);
+}
+/* the dark: paper type on ink, hairlines at a fifth */
+.ai-night[data-night] {
+  --n-text: #e8f1f3;
+  --n-text-2: rgba(232, 241, 243, 0.74);
+  --n-text-3: rgba(232, 241, 243, 0.5);
+  --n-rule: rgba(232, 241, 243, 0.42);
+  --n-rule-soft: rgba(232, 241, 243, 0.16);
+  --n-hot: var(--signal);
+}
+.ai-night[data-night] :focus-visible { outline-color: var(--signal); }
+
+.ai-night__stage {
+  position: relative; width: 100%; height: 100svh; min-height: 100svh;
+  overflow: hidden; isolation: isolate;
+}
+
+/* ── the sky: the sheet's own drafting grid on two further sheets, dusk and
+   ink, each faded in over the paper (opacity only). Their grids sit on the
+   same 160/32px registration as .ai-paper, so while the stage is pinned to
+   the viewport the lines coincide and the sheet simply darkens. ── */
+.ai-night__dusk, .ai-night__ink {
+  position: absolute; inset: 0; opacity: 0; pointer-events: none; will-change: opacity;
+  background-position: -1px -1px;
+  background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+}
+.ai-night__dusk {
+  z-index: 0; background-color: var(--paper-3);
+  background-image:
+    linear-gradient(rgba(11, 14, 15, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 14, 15, 0.075) 1px, transparent 1px),
+    linear-gradient(rgba(11, 14, 15, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 14, 15, 0.03) 1px, transparent 1px);
+}
+.ai-night__ink {
+  z-index: 1; background-color: var(--ink);
+  background-image:
+    linear-gradient(rgba(230, 233, 232, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 233, 232, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(230, 233, 232, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 233, 232, 0.028) 1px, transparent 1px);
+}
+/* a little film tooth on the night, static */
+.ai-night__ink::after {
+  content: ""; position: absolute; inset: 0; opacity: 0.4; mix-blend-mode: screen; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.34  0 0 0 0.22 0'/></filter><rect width='220' height='220' filter='url(%23g)'/></svg>");
+}
+.ai-night__stars {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; display: block; pointer-events: none;
+}
+
+/* ── the content layer: three columns on a desktop sheet, the ring in the
+   middle, the clock and copy top-left, the table top-right, and under them
+   the summary line and the caption row. Shown only while the stage owns the
+   frame (data-show, JS), so nothing prints through the corner chrome. ── */
+.ai-night__frame {
+  position: absolute; inset: 0; z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "left dial margin"
+    "sum sum sum"
+    "cap cap foot";
+  column-gap: clamp(24px, 3vw, 56px); row-gap: 14px;
+  align-items: center;
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  transition: opacity 600ms var(--ease-expo);
+}
+@media (min-width: 1200px) { .ai-night__frame { padding-right: calc(var(--gutter) + var(--lane-right, 0px)); } }
+.ai-night[data-js] .ai-night__frame { opacity: 0; }
+.ai-night[data-js] .ai-night__frame[data-show] { opacity: 1; }
+/* the flip to paper type is a colour transition, once per night each way */
+.ai-night__frame :is(h2, p, dt, dd, span, i, b, svg, figure, div) {
+  transition: color 450ms linear, border-color 450ms linear;
+}
+
+/* the left column: chapter mark, the clock, the copy that leaves the frame */
+.ai-night__left { grid-area: left; align-self: start; display: grid; align-content: start; gap: clamp(18px, 3svh, 30px); min-width: 0; }
+/* on the sheet the header's pieces are laid out directly in the column:
+   chapter mark, then the clock, then the copy that leaves */
+.ai-night__head { display: contents; }
+.ai-night__head .ai-label { margin: 0; order: 0; }
+.ai-night__copy { order: 2; }
+.ai-night .ai-label { color: var(--n-text-2); }
+.ai-night .ai-label b { color: var(--n-hot); }
+.ai-night__copy { display: grid; gap: 12px; }
+.ai-night__title {
+  margin: 0; font-family: var(--font-unbounded), sans-serif; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; font-size: clamp(20px, 2vw, 36px); line-height: 1.06; color: var(--n-text); max-width: 13ch;
+}
+.ai-night .ai-body { color: var(--n-text-2); }
+.ai-night__aside { max-width: 30ch; }
+
+/* the clock: a cyan square, the hour, and how far into the night we are */
+.ai-night__clock {
+  display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center;
+  column-gap: 16px; row-gap: 10px; order: 1;
+}
+.ai-night__caret { width: 10px; height: 10px; background: var(--signal); }
+.ai-night__hh {
+  font-family: var(--font-geist-mono), monospace; font-weight: 500; font-size: clamp(40px, 4.4vw, 68px); line-height: 1;
+  letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--n-text); will-change: clip-path, transform;
+}
+.ai-night__hour-of {
+  grid-column: 2; font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.18em;
+  text-transform: uppercase; font-variant-numeric: tabular-nums; color: var(--n-text-3);
+}
+/* the hour drops in like a flip card, once per hour; two names so a change
+   always restarts it without a reflow */
+.ai-night__hh[data-tick="a"] { animation: ai-night-tick-a 420ms var(--ease-expo) both; }
+.ai-night__hh[data-tick="b"] { animation: ai-night-tick-b 420ms var(--ease-expo) both; }
+@keyframes ai-night-tick-a { from { clip-path: inset(0 0 100% 0); transform: translate3d(0, -0.1em, 0); } to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes ai-night-tick-b { from { clip-path: inset(0 0 100% 0); transform: translate3d(0, -0.1em, 0); } to { clip-path: inset(0 0 0 0); transform: none; } }
+
+/* the ring: a 24-hour dial, the night in its lower half */
+.ai-night__dial {
+  grid-area: dial; position: relative; margin: 0; justify-self: center; align-self: center;
+  width: calc(var(--n-R) * 2); height: calc(var(--n-R) * 2);
+}
+.ai-night__ring { display: block; width: 100%; height: 100%; overflow: visible; }
+.ai-night__half, .ai-night__tick, .ai-night__horizon { fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ai-night__half--day, .ai-night__tick[data-day] { opacity: 0.3; }
+.ai-night__horizon { opacity: 0.32; }
+.ai-night__arc {
+  fill: none; stroke: var(--signal); stroke-width: 2; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+}
+.ai-night__arc-head {
+  position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  background: var(--signal); transform: rotate(180deg) translate(var(--n-R)); will-change: transform;
+}
+.ai-night__q {
+  position: absolute; margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1;
+  letter-spacing: 0.14em; font-variant-numeric: tabular-nums; color: var(--n-text-3); white-space: nowrap;
+}
+.ai-night__q[data-q="18"] { left: 16px; top: calc(50% - 18px); }
+.ai-night__q[data-q="06"] { right: 16px; top: calc(50% - 18px); }
+.ai-night__q[data-q="00"] { bottom: 14px; left: 50%; transform: translateX(-50%); }
+.ai-night__q[data-q="12"] { top: 14px; left: 50%; transform: translateX(-50%); opacity: 0.5; }
+
+/* the margin table: one line per closed hour, counts only */
+.ai-night__margin { grid-area: margin; justify-self: start; align-self: start; width: min(100%, 340px); min-width: 0; }
+.ai-night__table { margin: 0; display: grid; }
+.ai-night__th, .ai-night__row {
+  display: grid; grid-template-columns: 5ch minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px;
+  align-items: baseline; padding: 7px 0;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; line-height: 1.3; letter-spacing: 0.12em;
+  text-transform: uppercase; font-variant-numeric: tabular-nums;
+}
+.ai-night__th { padding-top: 0; color: var(--n-text-3); border-bottom: 1px solid var(--n-rule); }
+.ai-night__th span:not(:first-child), .ai-night__row dd { text-align: right; }
+.ai-night__th i { font-style: normal; }
+.ai-night__th-short { display: none; }
+@media (max-width: 1279px) {
+  .ai-night__th-long { display: none; }
+  .ai-night__th-short { display: inline; }
+}
+.ai-night__row {
+  color: var(--n-text); border-bottom: 1px solid var(--n-rule-soft); cursor: default;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 260ms var(--ease-expo), color 450ms linear, border-color 450ms linear;
+}
+.ai-night__row[data-on] { clip-path: inset(0 0 0 0); }
+.ai-night__row dt { color: var(--n-text-2); }
+.ai-night__row dd { margin: 0; }
+.ai-night__row[data-hot], .ai-night__row[data-hot] dt { color: var(--n-hot); }
+.ai-night__row:focus-visible { outline: 1px solid var(--n-hot); outline-offset: 3px; }
+.ai-night__hint {
+  margin: 14px 0 0; font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.4;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--n-text-3);
+  opacity: 0; transition: opacity 500ms linear, color 450ms linear;
+}
+.ai-night[data-night] .ai-night__hint { opacity: 1; }
+.ai-night__hint-touch { display: none; }
+@media (hover: none) {
+  .ai-night__hint-fine { display: none; }
+  .ai-night__hint-touch { display: inline; }
+}
+
+/* 06:00: the one line that remains */
+.ai-night__sum {
+  grid-area: sum; margin: 0; justify-self: center; text-align: center; padding-top: 14px;
+  border-top: 1px solid var(--n-rule);
+  font-family: var(--font-geist-mono), monospace; font-size: clamp(13px, 1.4vw, 21px); line-height: 1.3;
+  letter-spacing: 0.14em; text-transform: uppercase; font-variant-numeric: tabular-nums; color: var(--n-text);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 800ms var(--ease-expo), color 450ms linear, border-color 450ms linear;
+}
+.ai-night[data-done] .ai-night__sum { clip-path: inset(0 0 0 0); }
+
+/* the caption row */
+.ai-night__cap { grid-area: cap; margin: 0; align-self: end; justify-content: flex-start; color: var(--n-text-2); }
+.ai-night .ai-figcap b { color: var(--n-text); }
+.ai-night__foot {
+  grid-area: foot; margin: 0; justify-self: end; align-self: end; text-align: right;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.4; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--n-text-3);
+}
+
+/* ── stacked: the ring at the top with the clock beside it, the table under
+   the ring, then the line ── */
+@media (max-width: 1023px) {
+  .ai-night__frame {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto;
+    grid-template-areas:
+      "head head"
+      "dial clock"
+      "margin margin"
+      "sum sum"
+      "cap cap";
+    align-content: start; align-items: center; column-gap: 22px; row-gap: clamp(12px, 2.2svh, 22px);
+  }
+  .ai-night__left { display: contents; }
+  .ai-night__head { grid-area: head; display: grid; gap: 10px; }
+  .ai-night__clock { grid-area: clock; }
+  .ai-night__dial { grid-area: dial; --n-R: min(30vmin, 14svh); justify-self: start; }
+  .ai-night__margin { grid-area: margin; width: 100%; max-width: 520px; }
+  .ai-night__sum { justify-self: start; text-align: left; font-size: 13px; }
+  .ai-night__cap { align-self: start; }
+  .ai-night__foot { display: none; }
+  .ai-night__title { font-size: clamp(22px, 4.2vw, 34px); max-width: 18ch; }
+  .ai-night__hh { font-size: clamp(34px, 9vw, 56px); }
+}
+@media (max-width: 767px) {
+  /* phones fade into fixed scrims (world.css), so the frame starts just
+     under the top chrome's solid zone and ends just above the bottom one */
+  .ai-night__frame { padding: calc(var(--fade-top-solid) + 28px) var(--gutter) calc(var(--fade-bottom-solid) + 8px); }
+  .ai-night__aside { display: none; }
+  .ai-night__title { font-size: clamp(20px, 5.6vw, 26px); }
+  /* six hours per column, the header a key across both */
+  .ai-night__table { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; grid-auto-flow: column; grid-template-rows: auto repeat(6, auto); }
+  .ai-night__th { grid-column: 1 / -1; grid-row: 1; display: flex; gap: 14px; }
+  .ai-night__th span:not(:first-child) { text-align: left; }
+  .ai-night__th, .ai-night__row { font-size: 11px; letter-spacing: 0.08em; padding: 4px 0; column-gap: 8px; grid-template-columns: 5ch minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .ai-night__hint { display: none; }
+  .ai-night__sum { font-size: 11px; letter-spacing: 0.1em; padding-top: 10px; }
+  .ai-night__q { font-size: 10px; }
+  .ai-night__q[data-q="18"] { left: 10px; top: calc(50% - 14px); }
+  .ai-night__q[data-q="06"] { right: 10px; top: calc(50% - 14px); }
+  .ai-night__q[data-q="00"] { bottom: 10px; }
+  .ai-night__q[data-q="12"] { top: 10px; }
+}
+@media (max-width: 767px) and (max-height: 720px) {
+  .ai-night__dial { --n-R: min(30vmin, 11svh); }
+  .ai-night__title { font-size: 20px; }
+  .ai-night__hh { font-size: 34px; }
+  .ai-night__th, .ai-night__row { padding: 3px 0; }
+  .ai-night__cap { display: none; }
+}
+
+/* ── reduced motion: the 03:00 state, no pin, nothing in transit ── */
+@media (prefers-reduced-motion: reduce) {
+  .ai-night__frame, .ai-night__row, .ai-night__sum, .ai-night__hint { transition-duration: 1ms; }
+  .ai-night__hh[data-tick] { animation: none; }
+  .ai-night__arc-head, .ai-night__hh { will-change: auto; }
+}

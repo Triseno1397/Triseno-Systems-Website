@@ -1,0 +1,147 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Fig. 12 — the diagnostic ticket (Ticket.tsx), and the gate's layout
+   around it (.ai-gate--ticket, set by AiGate).
+
+   Paper on the dark arrival plate: background var(--paper), ink type,
+   1px hairlines, radius 0, no shadow. The body and the stub are two
+   clip-path polygons bitten by eleven notches along their shared edge;
+   ten 1px fibres straddle that edge and are stretched to the gap by
+   transform during a pull. Only transform, opacity and clip-path move.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-ticket {
+  position: relative; display: flex; flex-direction: column; width: 100%; max-width: 360px;
+  color: var(--ink); text-align: left;
+  font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12px; letter-spacing: 0.08em; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── the body ── */
+.ai-ticket__body {
+  position: relative; z-index: 1; background: var(--paper); padding: 20px 20px 21px;
+  border: 1px solid var(--rule-2); border-bottom: 0; transform-origin: 0 100%;
+}
+.ai-ticket__body[data-settle] { transition: transform 400ms var(--ease-power3); }
+.ai-ticket__head { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--rule-2); }
+.ai-ticket__title {
+  margin: 0; font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: 12px; line-height: 1.2;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--signal-ink);
+}
+.ai-ticket__sub { margin: 0; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ink-3); }
+.ai-ticket__rows { margin: 0; display: grid; }
+.ai-ticket__row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); }
+.ai-ticket__row dt { margin: 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
+.ai-ticket__row dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink-3); overflow-wrap: anywhere; }
+.ai-ticket__row[data-live] dd { color: var(--ink); }
+.ai-ticket__empty { margin: 12px 0 0; font-size: 11px; letter-spacing: 0.06em; line-height: 1.5; color: var(--ink-2); }
+/* a code strip made of the ticket's own text: hairlines, nothing scanned */
+.ai-ticket__code { display: flex; align-items: stretch; height: 16px; margin-top: 14px; overflow: hidden; }
+.ai-ticket__code i { display: block; flex: none; background: var(--ink); }
+.ai-ticket__foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3);
+}
+.ai-ticket__copy {
+  position: relative; padding: 6px 0; margin: 0; background: none; border: 0; cursor: pointer;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink);
+}
+.ai-ticket__copy::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 4px; height: 1px; background: currentColor;
+  transform-origin: right center; transition: transform 500ms var(--ease-expo);
+}
+.ai-ticket__copy:hover::after, .ai-ticket__copy:focus-visible::after { transform: scaleX(0); }
+.ai-ticket__copy[data-copied] { color: var(--signal-ink); }
+
+/* ── the perforation ── */
+.ai-ticket__fibres { position: absolute; left: 0; right: 0; height: 0; z-index: 2; pointer-events: none; }
+.ai-ticket__fibre {
+  position: absolute; top: 0; width: 1px; height: 6px; background: var(--ink);
+  transform-origin: 0 0; transform: scaleY(0);
+}
+.ai-ticket__fibre[data-snap] { transition: transform 120ms var(--ease-power3); }
+.ai-ticket__fibres[data-return] .ai-ticket__fibre:not([data-snap]) { transition: transform 320ms var(--ease-power3); }
+
+/* ── the stub ── */
+.ai-ticket__stub {
+  position: relative; z-index: 1; display: flex; align-items: center; width: 100%; margin: 0; padding: 0 20px;
+  background: var(--paper); border: 1px solid var(--rule-2); border-top: 0; color: var(--ink);
+  font-family: var(--font-unbounded), sans-serif; font-weight: 500; font-size: 11px; line-height: 1;
+  letter-spacing: 0.22em; text-transform: uppercase; text-align: left;
+  cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
+  transform-origin: 0 0; will-change: transform;
+}
+.ai-ticket__stub:active { cursor: grabbing; }
+/* the fold: one hairline the notches bite through */
+.ai-ticket__stub::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--rule-2);
+  transition: background-color 400ms var(--ease-expo);
+}
+.ai-ticket__stub-in { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; }
+.ai-ticket__glyph { flex: none; color: var(--signal-ink); }
+.ai-ticket__arrow { font-family: var(--font-geist-mono), ui-monospace, monospace; letter-spacing: 0; color: var(--ink-3); }
+.ai-ticket__stub[data-return] { transition: transform 320ms var(--ease-power3); }
+.ai-ticket__stub[data-tug] { animation: ai-ticket-tug 480ms var(--ease-power3); }
+@keyframes ai-ticket-tug {
+  0% { transform: rotate(0deg); }
+  40% { transform: rotate(var(--tug, 6deg)); }
+  100% { transform: rotate(0deg); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .ai-ticket:not([data-drag]):not([data-detached]) .ai-ticket__stub:hover {
+    transform: translate3d(0, -2px, 0); transition: transform 400ms var(--ease-expo);
+  }
+  .ai-ticket__stub:hover::before { background: var(--ink); }
+}
+.ai-ticket__stub:focus-visible { outline: 1px solid var(--signal); outline-offset: 5px; }
+.ai-ticket[data-detached] .ai-ticket__stub { pointer-events: none; }
+.ai-ticket[data-torn] .ai-ticket__stub { visibility: hidden; }
+
+/* ── printing in: each line wipes on, 70 ms apart, once the iris has opened ── */
+.ai-ticket__head, .ai-ticket__row, .ai-ticket__empty, .ai-ticket__code, .ai-ticket__foot, .ai-ticket__stub-in {
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 560ms var(--ease-expo);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.ai-ticket[data-print] :is(.ai-ticket__head, .ai-ticket__row, .ai-ticket__empty, .ai-ticket__code, .ai-ticket__foot, .ai-ticket__stub-in) {
+  clip-path: inset(0 0 0 0);
+}
+
+/* ── reduced motion: printed, and the stub tears by a fade ── */
+@media (prefers-reduced-motion: reduce) {
+  .ai-ticket__head, .ai-ticket__row, .ai-ticket__empty, .ai-ticket__code, .ai-ticket__foot, .ai-ticket__stub-in,
+  .ai-ticket__fibre, .ai-ticket__stub, .ai-ticket__body, .ai-ticket__copy::after, .ai-ticket__stub::before {
+    transition-duration: 1ms !important; transition-delay: 0ms !important; animation: none !important;
+  }
+  .ai-ticket[data-torn] .ai-ticket__stub { visibility: visible; opacity: 0; transition: opacity 1ms linear; }
+}
+
+/* ═══ the gate around it: copy left, the glyph over the ticket right;
+   phones: glyph, copy, the ticket below the CTA, then the cross links ═══ */
+.ai-gate--ticket .ai-gate__inner {
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "figure" "copy" "ticket" "cross";
+  justify-items: center; align-items: start; text-align: center; gap: clamp(20px, 3.5svh, 32px);
+}
+.ai-gate--ticket .ai-gate__figure { grid-area: figure; }
+.ai-gate--ticket .ai-gate__copy { grid-area: copy; }
+.ai-gate--ticket .ai-gate__ticket { grid-area: ticket; }
+.ai-gate--ticket .ai-gate__cross { grid-area: cross; width: 100%; max-width: 720px; }
+.ai-gate--ticket .ai-gate__cross { margin-top: 0; }
+@media (min-width: 1024px) {
+  .ai-gate--ticket .ai-gate__inner {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: "copy figure" "copy ticket" "cross ticket";
+    column-gap: clamp(40px, 6vw, 112px); row-gap: 28px;
+    justify-items: start; text-align: left;
+  }
+  .ai-gate--ticket .ai-gate__copy { justify-items: start; max-width: 620px; }
+  .ai-gate--ticket .ai-gate__copy .ai-h2 { max-width: 16ch; }
+  .ai-gate--ticket .ai-gate__cta { justify-content: flex-start; }
+  .ai-gate--ticket .ai-gate__cross { justify-content: flex-start; align-self: end; max-width: 620px; }
+  .ai-gate--ticket .ai-gate__figure { justify-self: center; align-self: end; }
+  .ai-gate--ticket .ai-gate__ticket { justify-self: center; width: 300px; max-width: none; }
+}
+@media (max-width: 767px) {
+  .ai-gate--ticket .ai-gate__ticket { max-width: none; }
+}

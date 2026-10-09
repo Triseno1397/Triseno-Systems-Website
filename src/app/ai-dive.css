@@ -1,0 +1,107 @@
+/* ── hero-dive: hold the core, fall through its skin into the nucleus ──
+   Imported by IntelligenceCore.tsx and AiHero.tsx. Everything here hangs off
+   .ai-core (the figure), .ai-hero (the section), .ai-dive__dark (the fixed
+   layer AiPage mounts) or html[data-dive-charge] (the grain, while charging).
+   Only transform, opacity, clip-path and stroke-dashoffset move. */
+
+/* ── the dark: the whole viewport falls to ink as the camera crosses the skin.
+   Fixed, under every section (z 5 inside main's own stacking context: above
+   the paper, grain and glow at -1, below the sections at 10), never masked by
+   ContentFade (data-world-layer). IntelligenceCore writes its opacity. ── */
+.ai-dive__dark {
+  position: fixed; inset: 0; z-index: 5; pointer-events: none;
+  background: var(--ink, #0b0e0f); opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-dive__dark { transition: opacity 400ms linear; }
+}
+
+/* ── the stage: a button you hold ── */
+.ai-core__stage {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
+}
+.ai-core__stage:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: -1px; }
+
+/* the hairline ring that fills under the fingertip; its stroke flips to paper once inside */
+.ai-dive__ring {
+  position: absolute; left: 0; top: 0; width: 72px; height: 72px; margin: -36px 0 0 -36px;
+  overflow: visible; pointer-events: none; opacity: 0; transition: opacity 160ms linear;
+}
+.ai-dive__ring[data-on] { opacity: 1; }
+.ai-dive__ring circle {
+  fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  transform: rotate(-90deg); transform-origin: center; transition: stroke 300ms linear;
+}
+.ai-core[data-crossed] .ai-dive__ring circle { stroke: var(--paper); }
+@media (pointer: coarse) {
+  .ai-dive__ring { width: 88px; height: 88px; margin: -44px 0 0 -44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-dive__ring circle { stroke-dashoffset: 0 !important; }
+}
+
+/* the caption and crop ticks on the figure: ink on paper, paper once inside */
+.ai-core__cap { transition: color 400ms linear; }
+.ai-core__tick { transition: opacity 400ms linear; }
+.ai-core[data-crossed] .ai-core__cap { color: rgba(230, 233, 232, 0.78); }
+.ai-core[data-crossed] .ai-core__tick { opacity: 0; }
+
+/* ── the section while a dive is running: the copy trembles by a pixel and
+   fades as the dark comes up (one set of custom properties, written per frame) ── */
+.ai-hero { --tremble: 0px; --tx: 0; --ty: 0; --dive-dark: 0; }
+.ai-hero[data-diving] .ai-hero__copy,
+.ai-hero[data-diving] .ai-hero__hint,
+.ai-hero[data-diving] .ai-hero__cue {
+  opacity: calc(1 - var(--dive-dark));
+  transform: translate(calc(var(--tx) * var(--tremble)), calc(var(--ty) * var(--tremble)));
+}
+.ai-hero[data-diving] .ai-hero__copy { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ai-hero[data-diving] .ai-hero__copy,
+  .ai-hero[data-diving] .ai-hero__hint,
+  .ai-hero[data-diving] .ai-hero__cue { transition: opacity 400ms linear; transform: none; }
+}
+
+/* ── the hint under the figure ── */
+.ai-hero__hint {
+  display: inline-flex; align-items: center; gap: 10px; margin: 14px 0 0;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; line-height: 1.4;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
+  transition: opacity 600ms var(--ease-expo), visibility 0s linear 0s;
+}
+.ai-hero__hint-sq { display: block; flex: none; width: 4px; height: 4px; background: var(--signal); }
+.ai-hero__hint-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .ai-hero__hint-fine { display: none; }
+  .ai-hero__hint-touch { display: inline; }
+}
+/* gone after the first crossing, for the session */
+.ai-hero[data-dive-seen] .ai-hero__hint { opacity: 0; visibility: hidden; transition-delay: 0s, 600ms; }
+.ai-hero[data-dive-seen="instant"] .ai-hero__hint { transition: none; }
+/* no WebGL: nothing to hold */
+.ai-hero[data-fallback] .ai-hero__hint { display: none; }
+
+/* ── the scroll cue, bottom-left of the hero: a word and a line that wipes
+   top to bottom on a loop (PauseOffscreen pauses it off screen) ── */
+.ai-hero__cue {
+  position: absolute; left: var(--gutter); bottom: clamp(18px, 3svh, 32px);
+  display: inline-flex; align-items: center; gap: 12px; pointer-events: none;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3);
+}
+.ai-hero__cue i { display: block; width: 1px; height: 28px; background: var(--ink); animation: ai-dive-cue 2.4s var(--ease-expo) infinite; }
+@keyframes ai-dive-cue {
+  0% { clip-path: inset(0 0 100% 0); }
+  44% { clip-path: inset(0 0 0 0); }
+  56% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(100% 0 0 0); }
+}
+@media (max-height: 559px) { .ai-hero__cue { display: none; } }
+@media (prefers-reduced-motion: reduce) { .ai-hero__cue i { animation: none; } }
+
+/* ── the grain thickens while the core is charging (set on <html> at v > 0.05) ── */
+html[data-clean] .ai-grain > i { transition: opacity 400ms linear; }
+html[data-dive-charge] .ai-grain > i { opacity: 1; }

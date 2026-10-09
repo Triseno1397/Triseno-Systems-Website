@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════════
+   The credits (Credits.tsx) — the build sheet rolling over the dark
+   arrival plate between the gate and the sign-off.
+
+   A runway holds a sticky 100svh view; the roll inside it is one
+   transform, scrubbed by scroll. Type is paper on the dark, hairlines at
+   1px, radius 0, no shadow. The view's mask keeps the rows clear of the
+   chrome lanes (content never collides with chrome).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-credits { position: relative; color: #e8f1f3; }
+.ai-credits__runway { position: relative; height: 220svh; }
+@media (max-width: 767px) { .ai-credits__runway { height: 140svh; } }
+.ai-credits__view {
+  position: sticky; top: 0; height: 100svh; overflow: clip;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--lane-top), #000 calc(100% - var(--lane-bottom)), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 var(--lane-top), #000 calc(100% - var(--lane-bottom)), transparent 100%);
+}
+.ai-credits__crop { position: absolute; width: 22px; height: 22px; border: 0 solid rgba(232, 241, 243, 0.4); pointer-events: none; }
+.ai-credits__crop[data-c="tl"] { top: var(--lane-top); left: var(--gutter); border-top-width: 1px; border-left-width: 1px; }
+.ai-credits__crop[data-c="tr"] { top: var(--lane-top); right: calc(var(--gutter) + var(--lane-right, 0px)); border-top-width: 1px; border-right-width: 1px; }
+.ai-credits__crop[data-c="bl"] { bottom: var(--lane-bottom); left: var(--gutter); border-bottom-width: 1px; border-left-width: 1px; }
+.ai-credits__crop[data-c="br"] { bottom: var(--lane-bottom); right: calc(var(--gutter) + var(--lane-right, 0px)); border-bottom-width: 1px; border-right-width: 1px; }
+
+/* the roll: below the frame until the scrub takes it */
+.ai-credits__roll {
+  position: absolute; top: 0; left: var(--gutter); right: calc(var(--gutter) + var(--lane-right, 0px));
+  max-width: 860px; margin-inline: auto;
+  transform: translate3d(0, 100svh, 0); will-change: transform;
+}
+.ai-credits__title {
+  margin: 0 0 22px 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: clamp(16px, 1.9vw, 24px); line-height: 1.15; color: #ffffff;
+}
+.ai-credits__list { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid rgba(232, 241, 243, 0.16); }
+.ai-credits__row {
+  position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 24px;
+  padding: 13px 0 13px 18px; border-top: 1px solid rgba(232, 241, 243, 0.16);
+  font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; line-height: 1.55;
+  color: rgba(232, 241, 243, 0.78); transition: color 400ms var(--ease-expo);
+}
+/* the row on the frame's centre line */
+.ai-credits__row::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 4px; height: 4px; margin-top: -2px;
+  background: var(--signal); opacity: 0; transition: opacity 300ms var(--ease-expo);
+}
+.ai-credits__row[data-live] { color: #ffffff; }
+.ai-credits__row[data-live]::before { opacity: 1; }
+.ai-credits__fig { color: var(--signal); text-transform: uppercase; letter-spacing: 0.18em; white-space: nowrap; }
+.ai-credits__line { font-variant-numeric: tabular-nums; }
+.ai-credits__end {
+  margin: 0; padding: clamp(44px, 9svh, 110px) 18px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  font-size: clamp(22px, 3.4vw, 48px); line-height: 1; color: #ffffff;
+}
+@media (max-width: 767px) {
+  .ai-credits__row { grid-template-columns: 78px minmax(0, 1fr); column-gap: 14px; padding: 12px 0 12px 14px; font-size: 11px; letter-spacing: 0.1em; }
+  .ai-credits__fig { letter-spacing: 0.14em; }
+  .ai-credits__title { margin-left: 14px; }
+  .ai-credits__end { padding-inline: 14px; }
+}
+
+/* ── reduced motion: no runway, the sheet stands fully printed ── */
+@media (prefers-reduced-motion: reduce) {
+  .ai-credits__runway { height: auto !important; }
+  .ai-credits__view {
+    position: static; height: auto; overflow: visible; padding-block: clamp(64px, 10svh, 128px);
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .ai-credits__roll { position: relative; transform: none; will-change: auto; }
+  .ai-credits__crop { display: none; }
+  .ai-credits__row, .ai-credits__row::before { transition: none; }
+}

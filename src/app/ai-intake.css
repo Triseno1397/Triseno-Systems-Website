@@ -1,0 +1,187 @@
+/* ═══════════════════════════════════════════════════════════════════
+   AI INFRASTRUCTURE — 03 / Intake: the letter and the record
+   (src/components/ai/IntakeReading.tsx)
+
+   A letter printed on the paper, a record in a cropped frame beside it, and
+   a 1px line of cyan light reading the letter at the visitor's scroll pace.
+   The letter is laid down twice: the copy in flow is the unread ink, the
+   overlay is the read ink, clipped to everything above the light. Facts in
+   the read copy carry a 1px underline, so an underline appears exactly as
+   the light crosses it. Chips cross the gutter by transform; values print by
+   clip-path; the conflict dot swaps by opacity. Everything is scoped to
+   .ai-read and uses the .ai-world tokens.
+
+   Not armed (no JS, reduced motion): every value, underline and the conflict
+   are simply shown, the reader parked at the letter's foot, no chips.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-read {
+  /* the letter before the light has reached it */
+  --read-unread: #5f6a6c;
+  --read-lit: rgba(0, 180, 216, 0.14);
+}
+
+.ai-read__grid { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 44px; }
+@media (min-width: 1024px) {
+  .ai-read__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 104px); align-items: start; }
+}
+
+/* ── the letter ── */
+.ai-read__letter { position: relative; margin: 0; padding: 0 0 30px; border-top: 1px solid var(--ink); }
+.ai-read__sheet { position: relative; display: block; }
+
+.ai-read__meta {
+  display: grid; grid-template-columns: 8em minmax(0, 1fr); row-gap: 7px; column-gap: 12px; margin: 0;
+  padding: 16px 0 18px; border-bottom: 1px solid var(--rule-2);
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.12em; line-height: 1.5;
+}
+.ai-read__meta > div { display: contents; }
+.ai-read__meta dt { text-transform: uppercase; color: var(--ink-3); }
+.ai-read__meta dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+
+.ai-read__body {
+  padding-top: 26px; max-width: 58ch;
+  font-family: var(--font-geist-sans), sans-serif; font-size: var(--ai-body); font-weight: 400; line-height: 1.62;
+  color: var(--read-unread);
+}
+.ai-read__body p { margin: 0 0 1.05em; }
+.ai-read__body p:last-child { margin-bottom: 0; }
+.ai-read__sign { display: grid; gap: 3px; margin-top: 1.7em !important; }
+.ai-read__sign b { font-weight: 500; }
+.ai-read__sign span {
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* the read copy: identical type in full ink, lying over the unread copy and
+   clipped to the part the light has passed */
+.ai-read__sheet--read { position: absolute; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.ai-read__sheet--read .ai-read__body { color: var(--ink); }
+.ai-read__sheet--read .ai-read__meta dd { color: var(--ink); }
+.ai-read__sheet--read .ai-read__meta dt { color: var(--ink-2); }
+.ai-read[data-armed] .ai-read__sheet--read { clip-path: inset(0 0 100% 0); will-change: clip-path; }
+
+/* facts: native mark styling off; the read copy underlines them */
+.ai-read mark {
+  background: transparent; color: inherit;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.ai-read__sheet--read mark {
+  text-decoration: underline; text-decoration-color: var(--signal-ink); text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em; text-decoration-skip-ink: none;
+}
+/* a row pointed at lights its source (the unread copy shows through the read copy's glyphs) */
+.ai-read__sheet:not(.ai-read__sheet--read) mark[data-lit] { background: var(--read-lit); }
+@media (hover: hover) and (pointer: fine) {
+  .ai-read__sheet:not(.ai-read__sheet--read) mark { cursor: default; }
+}
+
+/* the reader: 1px of cyan light, a 6px square riding its right end, a faint
+   beam above it. Multiply: where it crosses ink it sinks into the glyphs. */
+.ai-read__line {
+  position: absolute; left: -14px; right: -14px; top: 0; height: 1px; z-index: 2;
+  background: var(--signal); mix-blend-mode: multiply; pointer-events: none;
+  will-change: transform;
+}
+.ai-read__line::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 28px;
+  background: linear-gradient(to top, rgba(0, 180, 216, 0.11), rgba(0, 180, 216, 0));
+}
+.ai-read__line::after {
+  content: ""; position: absolute; right: -3px; top: -2.5px; width: 6px; height: 6px; background: var(--signal);
+}
+/* not armed: the reader rests at the letter's foot */
+.ai-read:not([data-armed]) .ai-read__line { top: auto; bottom: 0; }
+
+/* ── the record ── */
+.ai-read__frame { padding: 10px; }
+.ai-read__rhead {
+  display: flex; justify-content: space-between; gap: 16px; margin: 0; padding: 14px 12px;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule-2);
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+}
+.ai-read__rhead b { font-weight: 500; color: var(--ink); }
+.ai-read__record { margin: 0; display: grid; }
+.ai-read__row {
+  position: relative; display: grid; grid-template-columns: 12px 9.5em minmax(0, 1fr); column-gap: 16px; align-items: baseline;
+  min-height: 54px; padding: 15px 12px; border-bottom: 1px solid var(--rule-2);
+}
+.ai-read__row[data-derived] { border-bottom: 1px solid var(--ink); }
+/* the lit state: a flat tint, opacity only */
+.ai-read__row::before {
+  content: ""; position: absolute; inset: 0; background: rgba(11, 14, 15, 0.045); opacity: 0; pointer-events: none;
+  transition: opacity 320ms var(--ease-expo);
+}
+.ai-read__row[data-lit]::before, .ai-read__row:focus-visible::before { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .ai-read__row:not([data-derived]) { cursor: default; }
+  .ai-read__row:not([data-derived]):hover::before { opacity: 1; }
+}
+.ai-read__row:focus-visible { outline-offset: -1px; }
+
+/* the dot: a hairline ring while the field is empty, filled ink once a value
+   lands, a hollow cyan ring when two readings disagree */
+.ai-read__dot { position: relative; align-self: center; width: 12px; height: 12px; border: 1px solid var(--rule-2); border-radius: 50%; }
+.ai-read__dot i { position: absolute; inset: -1px; border-radius: 50%; }
+.ai-read__dot-fill { background: var(--ink); }
+.ai-read__dot-ring { border: 1px solid var(--signal); background: var(--paper); }
+.ai-read[data-armed] .ai-read__dot-fill, .ai-read[data-armed] .ai-read__dot-ring { opacity: 0; }
+.ai-read:not([data-armed]) .ai-read__row[data-conflict] .ai-read__dot-fill { opacity: 0; }
+.ai-read:not([data-armed]) .ai-read__row:not([data-conflict]) .ai-read__dot-ring { opacity: 0; }
+
+.ai-read__row dt {
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
+}
+.ai-read__row dd {
+  position: relative; margin: 0; min-width: 0;
+  font-family: var(--font-geist-mono), monospace; font-size: 14px; letter-spacing: 0.02em; line-height: 1.45;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.ai-read__row[data-derived] dd { color: var(--ink-2); }
+/* an empty field prints a dash until its value lands */
+.ai-read__blank { position: absolute; left: 0; top: 0; color: var(--ink-3); }
+.ai-read:not([data-armed]) .ai-read__blank { opacity: 0; }
+.ai-read__val { display: inline-block; white-space: pre; vertical-align: top; }
+.ai-read[data-armed] .ai-read__val { clip-path: inset(0% 100% 0% 0%); }
+.ai-read__val[data-signal] { color: var(--signal-ink); }
+.ai-read__note {
+  display: block; margin-top: 5px;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--signal-ink);
+}
+.ai-read[data-armed] .ai-read__note { clip-path: inset(0% 100% 0% 0%); }
+
+.ai-read__hint {
+  margin: 12px 12px 0; font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+.ai-read__hint-touch { display: none; }
+@media (hover: none) {
+  .ai-read__hint-fine { display: none; }
+  .ai-read__hint-touch { display: inline; }
+}
+
+/* ── chips in flight ── */
+.ai-read__chips { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.ai-read__chip {
+  position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px;
+  border: 1px solid var(--ink); background: var(--paper); color: var(--ink);
+  font-family: var(--font-geist-mono), monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; white-space: nowrap;
+  opacity: 0; visibility: hidden; will-change: transform;
+}
+.ai-read__chip::before { content: ""; width: 4px; height: 4px; background: var(--signal); }
+.ai-read:not([data-armed]) .ai-read__chip { display: none; }
+
+/* ── phones ── */
+@media (max-width: 767px) {
+  .ai-read__grid { row-gap: 36px; }
+  .ai-read__body { font-size: 16px; }
+  .ai-read__meta { grid-template-columns: 6.5em minmax(0, 1fr); font-size: 11px; }
+  .ai-read__line { left: -8px; right: -8px; }
+  .ai-read__frame { padding: 8px; }
+  .ai-read__row { grid-template-columns: 10px 6.5em minmax(0, 1fr); column-gap: 12px; min-height: 50px; padding: 13px 8px; }
+  .ai-read__row dd { font-size: 13px; }
+  .ai-read__rhead, .ai-read__hint { padding-inline: 8px; margin-inline: 0; }
+  .ai-read__hint { margin-top: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-read__row::before { transition: none; }
+}
