@@ -1,14 +1,25 @@
 "use client";
 
 import "@/app/ai-night.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { deviceClass } from "@/lib/device";
 import { session } from "./session";
 import { cleanDark } from "./cleanDark";
+import { COMPRESSION } from "./content";
 import { NIGHT } from "./night-watch.content";
-import { NIGHT_HOURS, NIGHT_LEN, NIGHT_START_HOUR, NIGHT_TOTALS, buildConstellation, hourLabel } from "./nightData";
+import {
+  CLUSTERS,
+  NIGHT_HOURS,
+  NIGHT_LEN,
+  NIGHT_START_HOUR,
+  NIGHT_TOTALS,
+  buildConstellation,
+  fmt,
+  hourLabel,
+  nodeCounts,
+} from "./nightData";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,20 +30,23 @@ gsap.registerPlugin(ScrollTrigger);
  * the middle of the sheet with the hour printed beside it: 18:00. Scrolling
  * passes the hours and a cyan arc fills the ring's lower half. The paper goes
  * to dusk, then truly to ink by 23:00; the type flips to paper-white and the
- * chrome follows (cleanDark, owner "night"). From the dark on, every finished
- * task of the example night is a point of light born at the frame's edge in
- * the minute it finished, drifting in a slow loop into its place, and by
- * 03:00 the points have formed the silhouette of the compressed system from
- * chapter four: one orchestrator, four agents, four buses, in 2,318 stars. A
- * table in the margin prints one line per hour, counts only. At dawn the
- * points let go and sink out of the frame, the ink lifts off the paper, and at
- * 06:00 the ring is full, the sheet is paper, and one line remains.
+ * chrome follows (cleanDark, owner "night"). Every finished task of the
+ * example night is a point of light that leaves the frame's edge and drifts
+ * in a slow loop into its place: the evening's tasks, finished while the
+ * sheet was still paper, wait at the edge and stream in as the ink comes up;
+ * from 22:00 each one leaves the minute it finished. By 03:00 the points have
+ * formed the silhouette of the compressed system from chapter four (one
+ * orchestrator, four agents, four buses, 2,318 stars) and the five nodes are
+ * named with what each one finished. A table in the margin prints one line
+ * per hour, counts only. At dawn the points let go and sink out of the frame,
+ * the ink lifts off the paper, the clock strikes 06:00, the ring is full, the
+ * sheet is paper, and one line remains.
  *
  * One scroll-scrubbed progress value p (18:00 at 0, 06:00 at 1) is the only
  * state; every frame is a pure function of it, forwards or back. Per changed
  * frame: two opacity writes (dusk, ink), one dash-offset, one transform, one
- * canvas redraw; the clock, rows, copy and summary are written only when
- * their value changes. Layout is read only on resize and refresh. Reduced
+ * canvas redraw; the clock, rows, copy, node names and summary are written
+ * only when their value changes. Layout is read only on resize and refresh. Reduced
  * motion: no pin, the 03:00 state drawn once. Hover (or tap) an hour row and
  * the tasks it finished light in cyan.
  */
@@ -43,6 +57,7 @@ const ROW_AT = 0.7; // a row prints 42 minutes into its hour (the hour is as goo
 const DONE_AT = 0.97; // the summary, and the session line
 const TRAIL_DT = 0.07; // hours between a point and its trail squares
 const REDUCED_P = 0.81; // 03:43 — the formed constellation, the table through 03:00
+const RING = 0.96; // the ring's radius as a share of the dial's half-width (r 48 in a 100 box)
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 const smooth = (a: number, b: number, v: number): number => {
@@ -74,6 +89,27 @@ const TICKS = Array.from({ length: 24 }, (_, k) => {
 const NIGHT_HALF = "M-48 0 A48 48 0 0 0 48 0";
 const DAY_HALF = "M48 0 A48 48 0 0 0 -48 0";
 
+/**
+ * The five nodes the stars settle into, named as chapter four names them,
+ * each with the tasks it finished that night. Ring units; the label sits
+ * clear of its cluster and of the buses: N and S to the right, E and W
+ * below, the orchestrator on the one empty diagonal (upper left).
+ */
+const NODE_LABELS = (() => {
+  const counts = nodeCounts();
+  const { agentDist, agentAngles } = CLUSTERS;
+  return COMPRESSION.agents.map((name, k) => {
+    if (k === 0) return { name, count: fmt(counts[0]), x: -0.2, y: -0.22, side: "l" as const };
+    const a = agentAngles[k - 1];
+    const cx = Math.cos(a) * agentDist;
+    const cy = Math.sin(a) * agentDist;
+    const vertical = Math.abs(Math.sin(a)) > 0.5;
+    return vertical
+      ? { name, count: fmt(counts[k]), x: cx + 0.17, y: cy, side: "r" as const }
+      : { name, count: fmt(counts[k]), x: cx, y: cy + 0.21, side: "c" as const };
+  });
+})();
+
 export default function NightWatch() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -87,8 +123,11 @@ export default function NightWatch() {
   const hhRef = useRef<HTMLSpanElement>(null);
   const hourOfRef = useRef<HTMLSpanElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
+  const nodesRef = useRef<HTMLDivElement>(null);
   /** set by the effect: light one hour's tasks (-1 clears); "tap" toggles on touch only */
   const hotRef = useRef<(i: number, mode: "hover" | "focus" | "tap") => void>(() => {});
+  /** the pointer that pressed last: a mouse click never toggles (hover already lit the hour) */
+  const ptrRef = useRef<string>("");
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -103,11 +142,11 @@ export default function NightWatch() {
     const hh = hhRef.current;
     const hourOf = hourOfRef.current;
     const copy = copyRef.current;
-    if (!section || !stage || !frame || !dusk || !ink || !canvas || !dial || !arc || !head || !hh || !hourOf || !copy) return;
+    const nodes = nodesRef.current;
+    if (!section || !stage || !frame || !dusk || !ink || !canvas || !dial || !arc || !head || !hh || !hourOf || !copy || !nodes) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const phone = window.matchMedia("(max-width: 767px)").matches;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const phoneMq = window.matchMedia("(max-width: 767px)");
     const cls = deviceClass();
     const rows = Array.from(section.querySelectorAll<HTMLElement>(".ai-night__row"));
     const stars = buildConstellation();
@@ -125,6 +164,7 @@ export default function NightWatch() {
       ink: "",
       night: false,
       copy: "",
+      nodes: "",
       arc: "",
       head: "",
       done: false,
@@ -133,6 +173,12 @@ export default function NightWatch() {
     let tickFlip = false;
     let figured = false;
     let logged = session.lastEvent("night") !== null;
+    const tell = () => {
+      if (logged) return;
+      logged = true;
+      session.setNight({ tasks: NIGHT_TOTALS.tasks, escalations: NIGHT_TOTALS.escalations });
+      session.log("night", NIGHT.sessionLine);
+    };
 
     const measure = () => {
       const r = stage.getBoundingClientRect();
@@ -141,8 +187,11 @@ export default function NightWatch() {
       geo.H = Math.max(1, r.height);
       geo.cx = d.left - r.left + d.width / 2;
       geo.cy = d.top - r.top + d.height / 2;
-      geo.R = Math.max(1, d.width / 2);
-      const cap = phone ? 1 : cls === "high" ? 1.5 : cls === "mid" ? 1.25 : 1;
+      geo.R = Math.max(1, (d.width / 2) * RING);
+      // the arc is drawn in the dial's own units (a dash on a pathLength of 1
+      // is only exact without non-scaling-stroke): 2px at any size
+      arc.style.strokeWidth = (200 / Math.max(1, d.width)).toFixed(3);
+      const cap = phoneMq.matches ? 1 : cls === "high" ? 1.5 : cls === "mid" ? 1.25 : 1;
       geo.dpr = Math.min(window.devicePixelRatio || 1, cap);
       const w = Math.round(geo.W * geo.dpr);
       const h = Math.round(geo.H * geo.dpr);
@@ -162,7 +211,8 @@ export default function NightWatch() {
     const t1y = new Float32Array(N);
     const t2x = new Float32Array(N);
     const t2y = new Float32Array(N);
-    const moving = new Uint8Array(N);
+    /** 0 not yet out, 1 at rest, 2 in flight (drawn with a trail) */
+    const state = new Uint8Array(N);
 
     /** where point i is at night-time tt (hours) and progress pp; returns its flight phase 0..1 */
     const place = (i: number, tt: number, pp: number, ox: Float32Array, oy: Float32Array): number => {
@@ -185,7 +235,7 @@ export default function NightWatch() {
       }
       const tgx = cx + stars.tx[i] * R;
       const tgy = cy + stars.ty[i] * R;
-      const since = tt - stars.birth[i];
+      const since = tt - stars.enter[i];
       const u = clamp01(since / FLIGHT_H);
       const k = 1 - Math.pow(1 - u, 3);
       let x = ex + (tgx - ex) * k;
@@ -223,20 +273,23 @@ export default function NightWatch() {
       if (inkA <= 0.002) return;
       const t = st.t;
       const p = st.p;
-      const sz = Math.max(1, Math.round(1.5 * dpr)) / dpr;
+      // 1.5px squares; on a phone's small ring a crisp 1px reads finer
+      const sz = Math.max(1, Math.round((phoneMq.matches ? 1.25 : 1.5) * dpr)) / dpr;
       const sinking = p > SINK_FROM;
-      let count = 0;
       for (let i = 0; i < N; i++) {
-        if (stars.birth[i] > t) break;
+        if (stars.enter[i] > t) {
+          state[i] = 0;
+          continue;
+        }
         const u = place(i, t, p, px, py);
         const mv = (u > 0.001 && u < 0.999) || sinking;
-        moving[i] = mv ? 1 : 0;
+        state[i] = mv ? 2 : 1;
         if (mv) {
           place(i, t - TRAIL_DT, p - TRAIL_DT / NIGHT_LEN, t1x, t1y);
           place(i, t - 2 * TRAIL_DT, p - 2 * TRAIL_DT / NIGHT_LEN, t2x, t2y);
         }
-        count = i + 1;
       }
+      const count = N;
       const hot = st.hot;
       const dim = hot >= 0 ? 0.42 : 1;
       const r = (v: number) => Math.round(v * dpr) / dpr;
@@ -244,19 +297,19 @@ export default function NightWatch() {
       // trails, faint to less faint
       ctx.fillStyle = PAPER;
       ctx.globalAlpha = inkA * 0.14 * dim;
-      for (let i = 0; i < count; i++) if (moving[i]) ctx.fillRect(r(t2x[i]), r(t2y[i]), sz, sz);
+      for (let i = 0; i < count; i++) if (state[i] === 2) ctx.fillRect(r(t2x[i]), r(t2y[i]), sz, sz);
       ctx.globalAlpha = inkA * 0.32 * dim;
-      for (let i = 0; i < count; i++) if (moving[i]) ctx.fillRect(r(t1x[i]), r(t1y[i]), sz, sz);
+      for (let i = 0; i < count; i++) if (state[i] === 2) ctx.fillRect(r(t1x[i]), r(t1y[i]), sz, sz);
       // the points, paper
       ctx.globalAlpha = inkA * 0.85 * dim;
-      for (let i = 0; i < count; i++) if (!stars.cyan[i] && stars.hour[i] !== hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
+      for (let i = 0; i < count; i++) if (state[i] && !stars.cyan[i] && stars.hour[i] !== hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
       // every sixteenth, signal
       ctx.fillStyle = SIGNAL;
-      for (let i = 0; i < count; i++) if (stars.cyan[i] && stars.hour[i] !== hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
+      for (let i = 0; i < count; i++) if (state[i] && stars.cyan[i] && stars.hour[i] !== hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
       // the hour under the pointer: its tasks, lit
       if (hot >= 0) {
         ctx.globalAlpha = inkA;
-        for (let i = 0; i < count; i++) if (stars.hour[i] === hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
+        for (let i = 0; i < count; i++) if (state[i] && stars.hour[i] === hot) ctx.fillRect(r(px[i]), r(py[i]), sz, sz);
       }
       ctx.globalAlpha = 1;
     };
@@ -288,8 +341,9 @@ export default function NightWatch() {
         section.toggleAttribute("data-night", night);
       }
       if (!reduced) cleanDark("night", night);
-      // the clock, on the hour
-      const hour = Math.min(NIGHT_LEN, Math.floor(t + 1e-6));
+      // the clock, on the hour; it strikes 06:00 with the summary line
+      const done = reduced || p >= DONE_AT;
+      const hour = done && !reduced ? NIGHT_LEN : Math.min(NIGHT_LEN, Math.floor(t + 1e-6));
       if (hour !== last.hour) {
         last.hour = hour;
         hh.textContent = hourLabel(NIGHT_START_HOUR + hour);
@@ -303,7 +357,7 @@ export default function NightWatch() {
         last.arc = as;
         arc.style.strokeDashoffset = as;
       }
-      const hs = `rotate(${(180 - 180 * p).toFixed(2)}deg) translate(${geo.R.toFixed(1)}px)`;
+      const hs = `rotate(${(180 - 180 * p).toFixed(2)}deg) translate3d(${geo.R.toFixed(1)}px, 0, 0)`;
       if (hs !== last.head) {
         last.head = hs;
         head.style.transform = hs;
@@ -318,22 +372,26 @@ export default function NightWatch() {
         }
       }
       // the head copy leaves the frame to the night
-      const c = (1 - smooth(0.05, 0.15, p)).toFixed(2);
+      // (reduced motion keeps it: the still frame has to carry the heading)
+      const c = reduced ? "1" : (1 - smooth(0.05, 0.15, p)).toFixed(2);
       if (c !== last.copy) {
         last.copy = c;
         copy.style.opacity = c;
       }
+      // the five nodes are named once the stars have found them, until dawn
+      const nd = (smooth(0.6, 0.7, p) * (1 - smooth(SINK_FROM - 0.02, SINK_FROM + 0.02, p))).toFixed(2);
+      if (nd !== last.nodes) {
+        last.nodes = nd;
+        nodes.style.opacity = nd;
+      }
       // 06:00: one line remains
-      const done = reduced || p >= DONE_AT;
       if (done !== last.done) {
         last.done = done;
         section.toggleAttribute("data-done", done);
       }
-      if (done && !logged) {
-        logged = true;
-        session.setNight({ tasks: NIGHT_TOTALS.tasks, escalations: NIGHT_TOTALS.escalations });
-        session.log("night", NIGHT.sessionLine);
-      }
+      // the count goes into the session when the visitor reaches 06:00 (under
+      // reduced motion, when the figure is first on screen)
+      if (done && !reduced) tell();
       draw();
     };
 
@@ -347,7 +405,7 @@ export default function NightWatch() {
         focusedRow = i;
       }
       if (mode === "tap") {
-        if (fine) return;
+        if (ptrRef.current === "mouse") return;
         // a tap also focuses the row (which already lit it): do not toggle it straight off
         if (i === focusedRow && performance.now() - focusedAt < 500) return;
         next = st.hot === i ? -1 : i;
@@ -367,6 +425,7 @@ export default function NightWatch() {
         if (!figured) {
           figured = true;
           session.figure("night");
+          if (reduced) tell();
         }
         if (st.dirty) draw();
       },
@@ -393,7 +452,7 @@ export default function NightWatch() {
             trigger: stage,
             start: "top top",
             // phones: the pin stays under two viewport heights (M5)
-            end: phone ? "+=150%" : "+=220%",
+            end: () => (phoneMq.matches ? "+=150%" : "+=220%"),
             pin: true,
             scrub: 0.7,
             invalidateOnRefresh: true,
@@ -499,6 +558,19 @@ export default function NightWatch() {
               <path ref={arcRef} className="ai-night__arc" d={NIGHT_HALF} pathLength={1} />
             </svg>
             <span ref={headRef} aria-hidden="true" className="ai-night__arc-head" />
+            <div ref={nodesRef} aria-hidden="true" className="ai-night__nodes">
+              {NODE_LABELS.map((n) => (
+                <span
+                  key={n.name}
+                  className="ai-night__node"
+                  data-side={n.side}
+                  style={{ "--x": n.x.toFixed(3), "--y": n.y.toFixed(3) } as CSSProperties}
+                >
+                  <b>{n.name}</b>
+                  <i>{n.count}</i>
+                </span>
+              ))}
+            </div>
             {NIGHT.quarters.map((q) => (
               <span key={q} aria-hidden="true" className="ai-night__q" data-q={q.slice(0, 2)}>
                 {q}
@@ -508,14 +580,17 @@ export default function NightWatch() {
 
           <div className="ai-night__margin">
           <dl className="ai-night__table" aria-label="Tasks per hour of the example night">
-            <div className="ai-night__th" aria-hidden="true">
-              {NIGHT.tableHead.map((h, i) => (
-                <span key={h}>
-                  <i className="ai-night__th-long">{h}</i>
-                  <i className="ai-night__th-short">{NIGHT.tableHeadShort[i]}</i>
-                </span>
-              ))}
-            </div>
+            {/* the key; phones print it once over each of their two columns */}
+            {(["a", "b"] as const).map((k) => (
+              <div key={k} className="ai-night__th" data-k={k} aria-hidden="true">
+                {NIGHT.tableHead.map((h, i) => (
+                  <span key={h}>
+                    <i className="ai-night__th-long">{h}</i>
+                    <i className="ai-night__th-short">{NIGHT.tableHeadShort[i]}</i>
+                  </span>
+                ))}
+              </div>
+            ))}
             {NIGHT_HOURS.map((r, i) => (
               <div
                 key={r.h}
@@ -525,6 +600,9 @@ export default function NightWatch() {
                 onPointerLeave={(e) => e.pointerType === "mouse" && hotRef.current(-1, "hover")}
                 onFocus={() => hotRef.current(i, "focus")}
                 onBlur={() => hotRef.current(-1, "focus")}
+                onPointerDown={(e) => {
+                  ptrRef.current = e.pointerType;
+                }}
                 onClick={() => hotRef.current(i, "tap")}
               >
                 <dt>{hourLabel(r.h)}</dt>

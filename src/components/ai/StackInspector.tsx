@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import gsap from "gsap";
 import { STACK_COPY, STACK_LAYERS } from "./stackInstrument.content";
 import {
+  BUDGET_DEFAULT,
   BUDGET_MAX,
   BUDGET_MIN,
   BUDGET_STEP,
@@ -130,7 +131,8 @@ export default function StackInspector({
   const L = STACK_LAYERS[layer];
 
   /* ── range zoom ── */
-  const axisMax = Math.max(1400, trace.totalMs + 100);
+  // the axis always holds the 2 s budget flag and the whole trace, rounded to 100 ms
+  const axisMax = Math.ceil(Math.max(BUDGET_DEFAULT + 200, trace.totalMs + 100) / 100) * 100;
   const root = useMemo<Range>(() => ({ a: 0, b: axisMax }), [axisMax]);
   // the zoom stack belongs to one trace: a new trace reads as the full range
   const [crumbState, setCrumbState] = useState<{ t: TraceResult; c: Range[] }>({ t: trace, c: [] });
@@ -154,7 +156,7 @@ export default function StackInspector({
     for (const el of lineRefs.current) {
       if (!el || el.hasAttribute("data-on")) continue;
       if (Number(el.dataset.t) <= ms) {
-        el.style.setProperty("--i", "0");
+        el.setAttribute("data-now", "");
         el.setAttribute("data-on", "");
       }
     }
@@ -312,12 +314,16 @@ export default function StackInspector({
 
   /* ── drags: the axis selection, the budget flag (one rect read on down) ── */
   const drag = useRef<{ kind: "sel" | "flag"; left: number; width: number; x0: number; x1: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const longest = useMemo(() => trace.spans.reduce((m, s) => (s.dur > m.dur ? s : m), trace.spans[0]), [trace]);
-  const onAxisDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onSelDown = (from: "axis" | "plot") => (e: React.PointerEvent<HTMLDivElement>) => {
     const plot = plotRef.current;
-    if (!plot) return;
-    if (e.pointerType === "touch" || window.matchMedia("(hover: none)").matches) {
-      // phones: tap the axis to zoom the busiest window, tap again to fit
+    if (!plot || e.button !== 0) return;
+    const coarse = e.pointerType === "touch" || window.matchMedia("(hover: none)").matches;
+    if (coarse) {
+      // phones: no drag-zoom (the plot scrolls the page); a tap on the axis
+      // zooms the longest span's window, a second tap fits the whole trace
+      if (from !== "axis") return;
       if (crumbs.length) setCrumbs(() => []);
       else if (longest) setRange({ a: longest.start - 80, b: longest.start + longest.dur + 80 }, false);
       return;
@@ -361,25 +367,27 @@ export default function StackInspector({
     drag.current = { kind: "flag", left: r.left, width: r.width, x0: 0, x1: 0 };
     e.currentTarget.setPointerCapture(e.pointerId);
     e.stopPropagation();
+    setDragging(true);
   };
   const onFlagMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || d.kind !== "flag") return;
-    const x = (e.clientX - d.left) / d.width;
-    onBudget(snap(cur.a + x * span));
+    const x = Math.min(1, Math.max(0, (e.clientX - d.left) / d.width));
+    onBudget(Math.min(snap(cur.a + x * span), Math.floor(axisMax / BUDGET_STEP) * BUDGET_STEP));
   };
   const onFlagUp = () => {
     if (drag.current?.kind === "flag") drag.current = null;
+    setDragging(false);
   };
   const onFlagKey = (e: React.KeyboardEvent) => {
     let next = budget;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = budget - BUDGET_STEP;
     else if (e.key === "ArrowRight" || e.key === "ArrowUp") next = budget + BUDGET_STEP;
     else if (e.key === "Home") next = BUDGET_MIN;
-    else if (e.key === "End") next = BUDGET_MAX;
+    else if (e.key === "End") next = Math.min(BUDGET_MAX, axisMax);
     else return;
     e.preventDefault();
-    onBudget(snap(next));
+    onBudget(Math.min(snap(next), Math.floor(axisMax / BUDGET_STEP) * BUDGET_STEP));
   };
 
   /* ── the bottom sheet: swipe down to close ── */
@@ -413,6 +421,8 @@ export default function StackInspector({
   const ticks: number[] = [];
   for (let t = Math.ceil(cur.a / step) * step; t <= cur.b; t += step) ticks.push(t);
   const laneTransform = `translate3d(${(-(cur.a / axisMax) * zoom * 100).toFixed(4)}%, 0, 0) scaleX(${zoom.toFixed(5)})`;
+  /** a number (percent of the plot) for the unscaled layers, which glide by transform in cqw */
+  const nx = (ms: number) => Number(xOf(ms).toFixed(3));
   const tabIndex = TABS.indexOf(tab);
   const live = (key: LiveKey) => config[key];
   const setLive = (key: LiveKey, v: boolean) => onConfig({ ...config, [key]: v });
@@ -449,7 +459,7 @@ export default function StackInspector({
           ))}
         </div>
         <button type="button" className="ai-insp__close" onClick={() => onClose(false)} aria-label={copy.close}>
-          ×
+          <i aria-hidden="true" />
         </button>
       </div>
       <h3 className="ai-insp__title font-display">{L.name}</h3>
@@ -613,17 +623,17 @@ export default function StackInspector({
                 </li>
               ))}
             </ol>
-            <div className="ai-wf__plotwrap">
+            <div className="ai-wf__plotwrap" data-drag={dragging ? "" : undefined}>
               <div
                 className="ai-wf__axis"
                 aria-label={copy.axisLabel}
-                onPointerDown={onAxisDown}
+                onPointerDown={onSelDown("axis")}
                 onPointerMove={onAxisMove}
                 onPointerUp={onAxisUp}
                 onPointerCancel={onAxisUp}
               >
                 {ticks.map((t) => (
-                  <span key={t} className="ai-wf__tick" style={{ ["--l" as string]: `${xOf(t)}%` }}>
+                  <span key={t} className="ai-wf__tick" data-end={nx(t) > 88 ? "" : undefined} style={{ ["--lx" as string]: nx(t) }}>
                     <span>{fmtMs(t)}</span>
                   </span>
                 ))}
@@ -635,11 +645,15 @@ export default function StackInspector({
                 tabIndex={0}
                 aria-label={`${copy.waterfallLabel}. W and S zoom, A and D pan, Escape resets.`}
                 onKeyDown={onPlotKey}
+                onPointerDown={onSelDown("plot")}
+                onPointerMove={onAxisMove}
+                onPointerUp={onAxisUp}
+                onPointerCancel={onAxisUp}
               >
                 {ticks.map((t) => (
-                  <span key={t} aria-hidden="true" className="ai-wf__tickline" style={{ ["--l" as string]: `${xOf(t)}%` }} />
+                  <span key={t} aria-hidden="true" className="ai-wf__tickline" style={{ ["--lx" as string]: nx(t) }} />
                 ))}
-                <div className="ai-wf__lanes" style={{ transform: laneTransform }}>
+                <div className="ai-wf__lanes" style={{ transform: laneTransform, ["--z" as string]: zoom.toFixed(5) }}>
                   {trace.spans.map((s, i) => (
                     <span
                       key={s.id}
@@ -654,6 +668,8 @@ export default function StackInspector({
                       data-zero={s.dur === 0 ? "" : undefined}
                       data-async={s.async ? "" : undefined}
                       data-over={s.start + s.dur > budget ? "" : undefined}
+                      onPointerEnter={(e) => e.pointerType !== "touch" && onLit(s.layer)}
+                      onPointerLeave={() => onLit(null)}
                     />
                   ))}
                 </div>
@@ -666,13 +682,15 @@ export default function StackInspector({
                         else labelRefs.current.delete(s.id);
                       }}
                       className="ai-wf__ms"
-                      style={{ ["--i" as string]: i, ["--l" as string]: `${xOf(s.start + s.dur)}%` }}
+                      data-flip={nx(s.start + s.dur) > 90 ? "" : undefined}
+                      data-out={nx(s.start + s.dur) < 1 || nx(s.start) > 99 ? "" : undefined}
+                      style={{ ["--i" as string]: i, ["--lx" as string]: nx(s.start + s.dur), ["--lx0" as string]: nx(s.start) }}
                     >
                       {fmtMs(s.dur)}
                     </span>
                   ))}
                 </div>
-                <span aria-hidden="true" className="ai-wf__over" data-on={over ? "" : undefined} style={{ ["--fx" as string]: `${Math.max(0, fx)}%` }} />
+                <span aria-hidden="true" className="ai-wf__over" data-on={over ? "" : undefined} style={{ ["--fx" as string]: Math.min(100, Math.max(0, fx)).toFixed(3) }} />
                 <span ref={selRef} aria-hidden="true" className="ai-wf__sel" />
               </div>
               <span
@@ -681,13 +699,13 @@ export default function StackInspector({
                 tabIndex={0}
                 aria-label="Latency budget"
                 aria-valuemin={BUDGET_MIN}
-                aria-valuemax={BUDGET_MAX}
+                aria-valuemax={Math.min(BUDGET_MAX, axisMax)}
                 aria-valuenow={budget}
                 aria-valuetext={copy.flagText(fmtMs(budget))}
                 aria-orientation="horizontal"
                 data-hide={fx < 0 || fx > 100 ? "" : undefined}
                 data-edge={fx > 72 ? "" : undefined}
-                style={{ ["--fx" as string]: `${fx}%` }}
+                style={{ ["--fx" as string]: fx.toFixed(3) }}
                 onPointerDown={onFlagDown}
                 onPointerMove={onFlagMove}
                 onPointerUp={onFlagUp}
@@ -739,7 +757,7 @@ export default function StackInspector({
                   data-t={l.t}
                   data-on={running ? undefined : ""}
                   data-dim={hit ? undefined : ""}
-                  style={{ ["--i" as string]: running ? 0 : i }}
+                  style={{ ["--i" as string]: i }}
                 >
                   <span className="ai-logs__t">{stamp(l.t)}</span>
                   <span>

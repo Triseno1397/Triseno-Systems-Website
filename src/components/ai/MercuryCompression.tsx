@@ -10,7 +10,7 @@ import { MERCURY } from "./mercury-compression.content";
 import { computeLayout, mercuryFrame, type Pt } from "./compressionLayout";
 import { AGENT_0, AGENT_N, BALLS, BEAD_N, GHOST, MERCURY_VERT, POINTER, mercuryFrag } from "./mercury.glsl";
 import { session } from "./session";
-import { deviceClass } from "@/lib/device";
+import { deviceClass, gpuClass, gpuName } from "@/lib/device";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,12 +29,15 @@ gsap.registerPlugin(ScrollTrigger);
  * draw, the bus clips down, the extruded headline flattens. Reset runs the
  * film backwards and the necks thin and part.
  *
- * Put a pointer on any bead and pull: it stretches, leaves a neck to a ghost
- * where it was, and either springs back or, dropped on another body, merges
- * early into that body's agent (the counts under the agents stay honest). On
- * a mouse the sheet draws a drop of mercury toward the cursor from the
- * nearest body; a tap sends the page's square hairline out and a radius
- * pulse through the nearest body.
+ * Put a pointer on any bead and pull: it stretches, a thread runs back to a
+ * ghost where it was (thinning as it is pulled and gone past ~6.5 bead
+ * radii), and it either springs back or, dropped on another body, merges
+ * early into that body's agent (the counts under the agents stay honest).
+ * On a mouse the nearest body's flank bulges toward the cursor; a tap sends
+ * the page's square hairline out and a radius pulse through the nearest
+ * body. A finger arms a drag after a 140 ms hold or 6 px of mostly sideways
+ * travel; a vertical swipe still scrolls the page. Once the visitor presses
+ * Compress / Reset, a refreshed ScrollTrigger never overrides that choice.
  *
  * The mercury is one raymarched WebGL1 fragment shader (mercury.glsl.ts) on
  * a stage-sized canvas, registered 1:1 with the DOM trail, floors, bus and
@@ -99,7 +102,10 @@ interface Agent extends Body {
 type Pick = { kind: "bead" | "agent"; i: number };
 
 interface GlApi {
-  draw: (balls: Float32Array, k: number, z0: number, settle: number, w: number, h: number, stageW: number) => void;
+  /** "weak" integrated / older mobile GPUs draw one notch smaller */
+  weak: boolean;
+  /** neck = [ghost x, ghost y, body x, body y, radius] (radius 0 = no neck); ptrZ = the drop's centre height */
+  draw: (balls: Float32Array, neck: Float32Array, ptrZ: number, k: number, z0: number, settle: number, w: number, h: number, stageW: number) => void;
   dispose: () => void;
 }
 
@@ -131,6 +137,12 @@ function buildGl(canvas: HTMLCanvasElement, steps: number): GlApi | null {
   }
   if (!gl) return null;
   const ctx = gl;
+  // a raymarch drawn by the CPU is never smooth: no GPU hands over to the goo fallback
+  const gpu = gpuClass(gpuName(ctx));
+  if (gpu === "software") {
+    ctx.getExtension("WEBGL_lose_context")?.loseContext();
+    return null;
+  }
   const deriv = !!ctx.getExtension("OES_standard_derivatives");
   const vs = compile(ctx, ctx.VERTEX_SHADER, MERCURY_VERT);
   const fs = compile(ctx, ctx.FRAGMENT_SHADER, mercuryFrag(steps, deriv));
@@ -165,13 +177,17 @@ function buildGl(canvas: HTMLCanvasElement, steps: number): GlApi | null {
     res: ctx.getUniformLocation(prog, "uRes"),
     inv: ctx.getUniformLocation(prog, "uInvDpr"),
     settle: ctx.getUniformLocation(prog, "uSettle"),
+    neck: ctx.getUniformLocation(prog, "uNeck"),
+    neckR: ctx.getUniformLocation(prog, "uNeckR"),
+    ptrZ: ctx.getUniformLocation(prog, "uPtrZ"),
   };
   ctx.clearColor(0, 0, 0, 0);
   let cw = -1;
   let ch = -1;
   let sw = -1;
   return {
-    draw(balls, k, z0, settle, w, h, stageW) {
+    weak: gpu === "weak",
+    draw(balls, neck, ptrZ, k, z0, settle, w, h, stageW) {
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -188,6 +204,9 @@ function buildGl(canvas: HTMLCanvasElement, steps: number): GlApi | null {
       ctx.uniform1f(u.k, k);
       ctx.uniform1f(u.z0, z0);
       ctx.uniform1f(u.settle, settle);
+      ctx.uniform4f(u.neck, neck[0], neck[1], neck[2], neck[3]);
+      ctx.uniform1f(u.neckR, neck[4]);
+      ctx.uniform1f(u.ptrZ, ptrZ);
       ctx.clear(ctx.COLOR_BUFFER_BIT);
       ctx.drawArrays(ctx.TRIANGLES, 0, 3);
     },
@@ -226,6 +245,8 @@ export default function MercuryCompression() {
   const compressedRef = useRef(false);
   const reducedRef = useRef(false);
   const loggedRef = useRef(false);
+  /** the scroll-in auto-run is armed until it fires or the visitor takes the control */
+  const autoRef = useRef(true);
 
   const [width, setWidth] = useState(0);
   const [compressed, setCompressed] = useState(false);
@@ -338,7 +359,8 @@ export default function MercuryCompression() {
     const { r0, tagBeside } = frame;
     const dc = deviceClass();
     const phone = layout.narrow || window.matchMedia("(max-width: 767px)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1) * (phone ? 0.45 : dc === "high" ? 0.75 : 0.55);
+    const weak = !!glRef.current?.weak;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1) * (phone ? 0.45 : dc === "high" && !weak ? 0.75 : 0.55);
     const cw = Math.max(1, Math.round(W * dpr));
     const ch = Math.max(1, Math.round(H * dpr));
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduced;
@@ -359,7 +381,8 @@ export default function MercuryCompression() {
     });
     const F = { k: 10, settle: 0 };
     const ghost = { x: 0, y: 0, r: 0 };
-    const ptr = { x: 0, y: 0, tx: 0, ty: 0, r: 0, on: false };
+    const neck = new Float32Array(5);
+    const ptr = { x: 0, y: 0, z: r0, tx: 0, ty: 0, r: 0, on: false };
     const balls = new Float32Array(BALLS * 4);
     const extra = new Float64Array(BEAD_N);
     let picked: Pick | null = null;
@@ -370,6 +393,18 @@ export default function MercuryCompression() {
     const tagEls = Array.from(tagsEl.querySelectorAll<HTMLElement>(".ai-merc__tag"));
     const agentEls = Array.from(tagsEl.querySelectorAll<HTMLElement>(".ai-merc__agent"));
     const countEls = agentEls.map((el) => el.querySelector<HTMLElement>("em"));
+    // one layout read per layout: each tag's width, so a tag near the right edge sets on the bead's left
+    const widthOf = (el: HTMLElement) => (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
+    const tagW = tagEls.map(widthOf);
+    const agentW = agentEls.map(widthOf);
+    const edge = W - 6;
+    // the side is settled once from where the body rests, so a tag never jumps sides mid-slide
+    const tagLeft = manual.map((p, i) => p.x + r0 * 1.1 + 10 + tagW[i] > edge);
+    /** the tag's anchor x: beside (right, or left near the edge) or centred under, kept on the stage */
+    const tagX = (x: number, r: number, gap: number, w: number, left: boolean) => {
+      if (tagBeside) return left ? x - r - gap - w : x + r + gap;
+      return Math.min(Math.max(x, 6 + w / 2), edge - w / 2);
+    };
     const discEls = Array.from(stage.querySelectorAll<HTMLElement>(".ai-merc__disc"));
     const lastCount = new Int32Array(AGENT_N).fill(-1);
 
@@ -423,6 +458,7 @@ export default function MercuryCompression() {
       }
       let maxR = 0;
       ghost.r = 0;
+      neck[4] = 0;
       const place = (B: Body, rx: number, ry: number, r: number) => {
         if (B.dragK > 0 && r > 0) {
           // the ghost keeps a share of the volume where the body was; a neck runs between them
@@ -432,6 +468,16 @@ export default function MercuryCompression() {
           r *= Math.cbrt(1 - GHOST_V * B.dragK);
           B.x = rx + (B.dx - rx) * B.dragK;
           B.y = ry + (B.dy - ry) * B.dragK;
+          // the thread between them thins as it is pulled and is gone past ~6.5 bead radii
+          const len = Math.hypot(B.x - rx, B.y - ry);
+          const f = 1 - len / (6.5 * r0);
+          if (f > 0 && len > 1) {
+            neck[0] = rx;
+            neck[1] = ry;
+            neck[2] = B.x;
+            neck[3] = B.y;
+            neck[4] = ghost.r * 0.5 * Math.pow(f, 1.4);
+          }
         } else {
           B.x = rx;
           B.y = ry;
@@ -452,21 +498,36 @@ export default function MercuryCompression() {
       return maxR;
     };
 
-    /** the drop under the cursor: drawn out of the nearest body as the pointer nears it */
+    /**
+     * The nearest body reaches for the cursor: a small drop sits on the sheet
+     * at that body's foot, on the line to the cursor, never further out than
+     * the union can still join (so it reads as the surface flowing toward the
+     * pointer, never as a loose speck). Writes the anchor; returns the radius.
+     */
+    const want = { x: 0, y: 0, z: r0 };
     const dropWant = (): number => {
       if (!ptr.on || dragging) return 0;
       let best = 1e9;
-      let br = r0;
+      let hit: Body | null = null;
       for (let i = 0; i < BEAD_N + AGENT_N; i++) {
         const B = i < BEAD_N ? beads[i] : agents[i - BEAD_N];
         if (B.r <= 0) continue;
-        const d = Math.hypot(ptr.x - B.x, ptr.y - B.y) - B.r;
+        const d = Math.hypot(ptr.tx - B.x, ptr.ty - B.y) - B.r;
         if (d < best) {
           best = d;
-          br = B.r;
+          hit = B;
         }
       }
-      return 0.28 * r0 * (1 - clamp01(best / (2.2 * br)));
+      if (!hit) return 0;
+      const B = hit;
+      const len = Math.hypot(ptr.tx - B.x, ptr.ty - B.y) || 1;
+      const rp = 0.34 * r0 * (1 - clamp01(best / (1.8 * B.r)));
+      // centred inside the flank, so the bulge grows out of the surface toward the pointer
+      const reach = B.r - rp * 0.35 + Math.min(Math.max(best, 0), F.k * 0.3);
+      want.x = B.x + ((ptr.tx - B.x) / len) * reach;
+      want.y = B.y + ((ptr.ty - B.y) / len) * reach;
+      want.z = B.r;
+      return rp;
     };
 
     const fill = (maxR: number): number => {
@@ -496,8 +557,9 @@ export default function MercuryCompression() {
         const b = beads[i];
         const el = tagEls[i];
         if (!el) continue;
-        const op = b.vol < 0.02 ? 0 : clamp01((b.vol - 0.3) / 0.5);
-        const x = tagBeside ? b.x + b.r + 10 : b.x;
+        // a bead's name fades as it is absorbed, and steps back while the bead is held
+        const op = b.vol < 0.02 ? 0 : clamp01((b.vol - 0.3) / 0.5) * (1 - 0.7 * b.dragK);
+        const x = tagX(b.x, b.r, 10, tagW[i], tagLeft[i]);
         const y = tagBeside ? b.y : b.y + b.r + 8;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
         el.style.opacity = op.toFixed(3);
@@ -506,11 +568,12 @@ export default function MercuryCompression() {
         const A = agents[g];
         const el = agentEls[g];
         if (!el) continue;
+        // an agent's name sits centred under its finished body, above its floor
         const rF = r0 * Math.cbrt(Math.max(1, A.count));
-        const x = tagBeside ? A.x + rF + 12 : A.x;
-        const y = tagBeside ? A.y : A.y + rF + 10;
+        const x = Math.min(Math.max(A.x, 6 + agentW[g] / 2), edge - agentW[g] / 2);
+        const y = A.y + rF + 10;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
-        el.style.opacity = clamp01((A.vol - 0.35) / 0.65).toFixed(3);
+        el.style.opacity = (clamp01((A.vol - 0.35) / 0.65) * (1 - 0.7 * A.dragK)).toFixed(3);
         const n = Math.round(A.vol);
         if (n !== lastCount[g]) {
           lastCount[g] = n;
@@ -552,11 +615,19 @@ export default function MercuryCompression() {
       let busy = dirty || dragging || !!tl?.isActive();
       if (finePointer) {
         const e = 1 - Math.exp(-dt * 9);
-        const want = dropWant();
-        ptr.x += (ptr.tx - ptr.x) * e;
-        ptr.y += (ptr.ty - ptr.y) * e;
-        ptr.r += (want - ptr.r) * e;
-        if (Math.abs(ptr.tx - ptr.x) + Math.abs(ptr.ty - ptr.y) > 0.1 || Math.abs(want - ptr.r) > 0.05) busy = true;
+        const wr = dropWant();
+        // while the drop is gone it jumps to its anchor, so it never slides in from where it was last seen
+        if (ptr.r < 0.2) {
+          ptr.x = want.x;
+          ptr.y = want.y;
+          ptr.z = want.z;
+        }
+        ptr.x += (want.x - ptr.x) * e;
+        ptr.y += (want.y - ptr.y) * e;
+        ptr.r += (wr - ptr.r) * e;
+        ptr.z += (want.z - ptr.z) * e;
+        if (ptr.r < 0.05 && wr === 0) ptr.r = 0;
+        if (Math.abs(want.x - ptr.x) + Math.abs(want.y - ptr.y) > 0.1 || Math.abs(wr - ptr.r) > 0.05) busy = true;
       }
       if (!busy || !ctl.visible) {
         running = false;
@@ -565,7 +636,7 @@ export default function MercuryCompression() {
       dirty = false;
       const maxR = fill(solve());
       const api = glRef.current;
-      if (api) api.draw(balls, F.k, maxR * 2 + 2, F.settle, cw, ch, W);
+      if (api) api.draw(balls, neck, ptr.z, F.k, maxR * 2 + 2, F.settle, cw, ch, W);
       else writeDiscs();
       writeTags();
       raf = requestAnimationFrame(tick);
@@ -670,7 +741,7 @@ export default function MercuryCompression() {
     type Press = { id: number; x0: number; y0: number; t0: number; hit: Pick | null; armed: boolean; moved: number; timer: number; touch: boolean };
     let press: Press | null = null;
     let over = false;
-    const canDrag = !reduced && !ctl.fallback;
+    const canDrag = () => !reduced && !ctl.fallback;
     const local = (e: PointerEvent): Pt => {
       const r = stage.getBoundingClientRect();
       return { x: ((e.clientX - r.left) / (r.width || W)) * W, y: ((e.clientY - r.top) / (r.height || H)) * H };
@@ -716,7 +787,7 @@ export default function MercuryCompression() {
       lastX = x;
       lastY = y;
       const touch = e.pointerType === "touch";
-      const hit = canDrag && !tl?.isActive() ? hitTest(x, y) : null;
+      const hit = canDrag() && !tl?.isActive() ? hitTest(x, y) : null;
       press = { id: e.pointerId, x0: x, y0: y, t0: performance.now(), hit, armed: false, moved: 0, timer: 0, touch };
       if (!hit) return;
       if (!touch) arm();
@@ -735,7 +806,7 @@ export default function MercuryCompression() {
         ptr.tx = x;
         ptr.ty = y;
         ptr.on = true;
-        if (!dragging) setOver(canDrag && !tl?.isActive() && !!hitTest(x, y));
+        if (!dragging) setOver(canDrag() && !tl?.isActive() && !!hitTest(x, y));
         wake();
       }
       if (!press || !press.hit) return;
@@ -790,7 +861,11 @@ export default function MercuryCompression() {
         onUpdate: markDirty,
         onComplete: () => {
           setLine(MERCURY.state.pressed);
-          if (!reduced) pulse(agents[0]);
+          if (!reduced) {
+            // the settled field answers once, from the orchestrator
+            pulse(agents[0]);
+            if (ctl.visible) ring(nodes[0].x, nodes[0].y);
+          }
           if (!loggedRef.current) {
             loggedRef.current = true;
             session.log("compression", MERCURY.log);
@@ -843,18 +918,23 @@ export default function MercuryCompression() {
       if (lineRef.current) timeline.fromTo(lineRef.current, { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.out" }, 1.72);
       if (afterRef.current) timeline.fromTo(afterRef.current, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" }, 1.76);
 
+      // a rebuild (a resize mid-run) lands on the end state silently, so the words follow it here
       timeline.progress(compressedRef.current ? 1 : 0, true);
       tlRef.current = timeline;
+      setLine(compressedRef.current ? MERCURY.state.pressed : MERCURY.state.resting);
 
       // the first time the stage comes into view, the process compresses itself;
-      // scrolling back above it resets, so it can run again
+      // scrolling back above it resets, so it can run again. Once the visitor
+      // has pressed the control, a refreshed trigger never overrides them.
       ScrollTrigger.create({
         trigger: stage,
         start: "top 62%",
         onEnter: () => {
-          if (!compressedRef.current) run(true);
+          if (autoRef.current && !compressedRef.current) run(true);
+          autoRef.current = false;
         },
         onLeaveBack: () => {
+          autoRef.current = true;
           if (compressedRef.current && !reducedRef.current) run(false);
         },
       });
@@ -936,8 +1016,56 @@ export default function MercuryCompression() {
     };
   }, [layout, frame, run]);
 
+  /* the extrusion leans away from the pointer, as if the pointer were the light (mouse and pen only) */
+  useEffect(() => {
+    const section = sectionRef.current;
+    const depth = depthRef.current;
+    if (!section || !depth) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let lx = 0;
+    let ly = 0;
+    let raf = 0;
+    const lean = () => {
+      raf = 0;
+      const r = depth.getBoundingClientRect();
+      const vx = (r.left + r.width / 2 - lx) / (window.innerWidth * 0.5);
+      const vy = (r.top + r.height / 2 - ly) / (window.innerHeight * 0.5);
+      const m = Math.min(1, Math.hypot(vx, vy) * 1.6);
+      const len = Math.hypot(vx, vy) || 1;
+      let ax = 0.62 * (1 - m) + (vx / len) * m;
+      let ay = 0.78 * (1 - m) + (vy / len) * m;
+      const n = Math.hypot(ax, ay) || 1;
+      ax /= n;
+      ay /= n;
+      gsap.to(depth, { "--ax": ax, "--ay": ay, duration: 0.9, ease: "power3.out", overwrite: "auto" });
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      lx = e.clientX;
+      ly = e.clientY;
+      if (!raf) raf = requestAnimationFrame(lean);
+    };
+    const onLeave = () => {
+      gsap.to(depth, { "--ax": 0.62, "--ay": 0.78, duration: 1.2, ease: "power3.out", overwrite: "auto" });
+    };
+    section.addEventListener("pointermove", onMove);
+    section.addEventListener("pointerleave", onLeave);
+    return () => {
+      section.removeEventListener("pointermove", onMove);
+      section.removeEventListener("pointerleave", onLeave);
+      if (raf) cancelAnimationFrame(raf);
+      gsap.killTweensOf(depth, "--ax,--ay");
+    };
+  }, []);
+
   const stageStyle = layout && frame
-    ? ({ height: layout.H, ["--r0" as string]: `${frame.r0}px` } as CSSProperties)
+    ? ({
+        height: layout.H,
+        ["--r0" as string]: `${frame.r0}px`,
+        // a step name may wrap to two lines under its bead, never wider than its cell
+        ["--cell" as string]: `${Math.floor((layout.W - layout.pad * 2) / (layout.narrow ? 3 : 6) - 10)}px`,
+      } as CSSProperties)
     : undefined;
 
   return (
@@ -1042,12 +1170,18 @@ export default function MercuryCompression() {
               ))}
             </div>
 
-            <div ref={tagsRef} className="ai-merc__tags" data-tags={frame && !frame.tagBeside ? "below" : "beside"}>
+            <div
+              ref={tagsRef}
+              className="ai-merc__tags"
+              data-tags={frame && !frame.tagBeside ? "below" : "beside"}
+              data-narrow={layout?.narrow ? "" : undefined}
+            >
               {STEPS.map((step, i) => (
                 <span key={step} className="ai-merc__tag">
                   <span>
                     <b>{String(i + 1).padStart(2, "0")}</b>
-                    {step}
+                    {/* a word joiner after each hyphen: "Re-key" never breaks at its hyphen */}
+                    {step.replace(/-/g, "-\u2060")}
                   </span>
                 </span>
               ))}
@@ -1069,7 +1203,10 @@ export default function MercuryCompression() {
             <button
               type="button"
               className="ghost-btn ai-merc__btn"
-              onClick={() => run(!compressed)}
+              onClick={() => {
+                autoRef.current = false;
+                run(!compressed);
+              }}
               aria-label={compressed ? MERCURY.control.resetAria : MERCURY.control.compressAria}
             >
               <span className="ghost-btn__layer">

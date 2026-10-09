@@ -61,11 +61,24 @@ export default function ChapterFrame({ number, title, logline, id, className }: 
     }
     root.setAttribute("data-armed", "");
     let tl: gsap.core.Timeline | null = null;
+    const settle = () => {
+      root.removeAttribute("data-armed");
+      root.setAttribute("data-set", "");
+    };
     const st = ScrollTrigger.create({
       trigger: root,
       start: "top 65%",
+      // active from its start to the end of the page, so a reload or a jump
+      // that lands below the frame still fires onEnter (once) and sets it
+      end: "max",
       once: true,
       onEnter: () => {
+        // already scrolled past (a reload mid-page, a chord jump): no title
+        // card plays where nobody can see it, the frame is simply set
+        if (root.getBoundingClientRect().bottom < 0) {
+          settle();
+          return;
+        }
         // one batched read: the em size and which line each glyph sits on
         const em = parseFloat(getComputedStyle(lineEl).fontSize) || 24;
         const tops = glyphs.map((g) => g.offsetTop);
@@ -84,8 +97,7 @@ export default function ChapterFrame({ number, title, logline, id, className }: 
 
         tl = gsap.timeline({
           onComplete: () => {
-            root.removeAttribute("data-armed");
-            root.setAttribute("data-set", "");
+            settle();
             gsap.set(glyphs, { clearProps: "transform,opacity" });
             gsap.set(rule, { clearProps: "transform" });
           },

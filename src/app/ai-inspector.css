@@ -16,13 +16,20 @@
 .ai-insp::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--ink); }
 .ai-insp[data-open] { clip-path: inset(0 0 0 0); }
 .ai-insp :focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 3px; }
+/* below 1024px the sheet opens in the flow under the film (StackFilm orders
+   it after the controls): closed it is out of the flow and hidden, open it
+   takes its height and wipes down from its top edge. The close is a cut: a
+   wipe out of the flow would play over the headline. */
 @media (max-width: 1023px) {
   .ai-insp {
-    top: auto; left: 0; right: 0; width: auto; max-height: 62svh; clip-path: inset(100% 0 0 0);
-    transition: clip-path 280ms var(--ease-expo), max-height 280ms var(--ease-expo);
+    position: absolute; top: 0; left: 0; right: 0; bottom: auto; width: auto; visibility: hidden;
+    clip-path: inset(0 0 100% 0); transition: none;
+  }
+  .ai-insp[data-open] {
+    position: relative; visibility: visible; clip-path: inset(0 0 0 0);
+    transition: clip-path 420ms var(--ease-expo);
   }
   .ai-insp::before { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 1px; }
-  .ai-insp[data-running] { max-height: 46svh; }
 }
 
 /* ── head ── */
@@ -39,10 +46,17 @@
 .ai-insp__layer:hover { color: var(--ink); border-color: var(--ink); }
 .ai-insp__layer[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .ai-insp__close {
-  width: 44px; height: 44px; margin: -8px -14px -8px 0; display: grid; place-items: center;
-  background: none; border: 0; color: var(--ink-2); cursor: pointer; font-size: 22px; line-height: 1;
+  position: relative; width: 44px; height: 44px; margin: -8px -14px -8px 0; flex: none;
+  background: none; border: 0; color: var(--ink-2); cursor: pointer;
 }
+/* a drawn hairline cross inside a hairline square */
+.ai-insp__close::before { content: ""; position: absolute; inset: 11px; border: 1px solid var(--rule-2); transition: border-color 400ms linear; }
+.ai-insp__close i { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%) rotate(45deg); }
+.ai-insp__close i::before, .ai-insp__close i::after { content: ""; position: absolute; background: currentColor; }
+.ai-insp__close i::before { left: 5.5px; top: 0; width: 1px; height: 12px; }
+.ai-insp__close i::after { top: 5.5px; left: 0; height: 1px; width: 12px; }
 .ai-insp__close:hover { color: var(--ink); }
+.ai-insp__close:hover::before { border-color: var(--ink); }
 .ai-insp__grip { display: none; }
 @media (max-width: 1023px) {
   .ai-insp__grip { display: block; width: 36px; height: 1px; margin: 10px auto 0; background: var(--ink); }
@@ -73,6 +87,13 @@
   transform: translate3d(calc(var(--t) * 100%), 0, 0); transition: transform 500ms var(--ease-expo);
 }
 .ai-insp__panels { position: relative; flex: 1; min-height: 0; display: grid; overflow-y: auto; overscroll-behavior: contain; }
+/* in the flow the sheet is as tall as the open tab, not the tallest one */
+@media (max-width: 1023px) {
+  .ai-insp__panels { overflow: visible; }
+  .ai-insp__panel:not([data-on]) { display: none; }
+  .ai-insp__panel[data-on] { animation: ai-insp-in 160ms linear both; }
+}
+@keyframes ai-insp-in { from { opacity: 0; } }
 .ai-insp__panel {
   grid-area: 1 / 1; min-width: 0; opacity: 0; visibility: hidden;
   transition: opacity 160ms linear, visibility 0s linear 160ms;
@@ -89,7 +110,7 @@
 .ai-code__copy:hover { color: var(--ink); border-color: var(--ink); }
 .ai-code__copy[data-done] { color: var(--signal-ink); border-color: var(--signal-ink); }
 .ai-code__pre { margin: 0; font: inherit; font-size: 12px; line-height: 1.75; white-space: pre; overflow-x: auto; color: var(--ink-2); }
-.ai-code__ln { display: grid; grid-template-columns: 2.6ch 1fr; column-gap: 10px; align-items: center; min-height: 21px; }
+.ai-code__ln { display: grid; grid-template-columns: 4.4ch 1fr; column-gap: 10px; align-items: center; min-height: 21px; }
 .ai-code__ln::before { content: attr(data-n); color: var(--ink-3); font-size: 10px; text-align: right; letter-spacing: 0.04em; }
 .ai-code__ln[data-live]::before { content: "live"; color: var(--signal-ink); letter-spacing: 0.12em; text-transform: uppercase; }
 .ai-code__ln[data-live] { padding: 3px 0; }
@@ -149,15 +170,22 @@
 .ai-wf__name[data-mine] { color: var(--ink); }
 .ai-wf__name[data-failed] { text-decoration: line-through; }
 .ai-wf__name:hover, .ai-wf__name:focus-visible { color: var(--signal-ink); outline-offset: -1px; }
-.ai-wf__plotwrap { position: relative; }
+.ai-wf__plotwrap { position: relative; container-type: inline-size; overflow-x: clip; }
 .ai-wf__axis {
   position: relative; height: 22px; border-bottom: 1px solid var(--rule-2); cursor: col-resize; user-select: none; touch-action: pan-y;
   overflow: hidden;
 }
-.ai-wf__tick { position: absolute; top: 0; bottom: 0; left: var(--l); width: 1px; background: var(--rule-2); }
+.ai-wf__tick, .ai-wf__tickline {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 1px; transform: translate3d(calc(var(--lx) * 1cqw), 0, 0);
+  transition: transform 500ms var(--ease-expo); animation: ai-wf-in 400ms var(--ease-expo) both;
+}
+@keyframes ai-wf-in { from { opacity: 0; } }
+.ai-wf__tick { background: var(--rule-2); }
+.ai-wf__tick[data-end] span { display: none; }
 .ai-wf__tick span { position: absolute; left: 4px; top: 2px; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ai-wf__plot { position: relative; height: calc(var(--rows) * var(--wf-row)); overflow: hidden; outline-offset: 2px; }
-.ai-wf__tickline { position: absolute; top: 0; bottom: 0; left: var(--l); width: 1px; background: var(--rule); }
+.ai-wf__plot { position: relative; height: calc(var(--rows) * var(--wf-row)); overflow: hidden; outline-offset: 2px; user-select: none; cursor: crosshair; }
+@media (hover: none) { .ai-wf__plot { cursor: default; } }
+.ai-wf__tickline { background: var(--rule); }
 .ai-wf__lanes { position: absolute; inset: 0; transform-origin: left center; transition: transform 500ms var(--ease-expo); }
 .ai-wf__bar {
   position: absolute; top: calc(var(--i) * var(--wf-row) + 6px); left: var(--l); width: var(--w); height: 10px; min-width: 1px;
@@ -168,18 +196,27 @@
   background: repeating-linear-gradient(45deg, var(--ink) 0 1px, transparent 1px 5px);
 }
 .ai-wf__bar[data-zero] { width: 2px; min-width: 2px; background: var(--ink); }
-.ai-wf__bar[data-async]::after { content: ""; position: absolute; right: 0; top: -3px; bottom: -3px; width: 1px; background: var(--ink); }
-.ai-wf__bar[data-over] { outline: 1px solid var(--signal-ink); outline-offset: -1px; }
+/* async spans end in a T-mark; it is counter-scaled so it stays 1px at any zoom */
+.ai-wf__bar[data-async]::after {
+  content: ""; position: absolute; right: 0; top: -3px; bottom: -3px; width: 1px; background: var(--ink);
+  transform-origin: right center; transform: scaleX(calc(1 / var(--z, 1))); transition: transform 500ms var(--ease-expo);
+}
+/* past the budget: a cyan hairline over the bar (horizontal, so the zoom never thickens it) */
+.ai-wf__bar[data-over]::before { content: ""; position: absolute; left: 0; right: 0; top: -3px; height: 1px; background: var(--signal-ink); }
 .ai-wf__labels { position: absolute; inset: 0; pointer-events: none; }
 .ai-wf__ms {
-  position: absolute; top: calc(var(--i) * var(--wf-row)); left: var(--l); height: var(--wf-row); line-height: var(--wf-row); padding-left: 6px;
-  font-size: 10px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; transition: opacity 300ms linear;
+  position: absolute; top: calc(var(--i) * var(--wf-row)); left: 0; height: var(--wf-row); line-height: var(--wf-row); padding-left: 6px;
+  font-size: 10px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0;
+  transform: translate3d(calc(var(--lx) * 1cqw), 0, 0); transition: opacity 400ms linear, transform 500ms var(--ease-expo);
 }
 .ai-wf__ms[data-done] { opacity: 1; }
+/* near the right edge the label prints before the bar instead of after it */
+.ai-wf__ms[data-flip] { padding: 0 6px 0 0; transform: translate3d(calc(var(--lx0) * 1cqw - 100%), 0, 0); }
+.ai-wf__ms[data-out] { visibility: hidden; }
 .ai-wf__over {
-  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms linear;
-  background: repeating-linear-gradient(45deg, rgba(11, 14, 15, 0.16) 0 1px, transparent 1px 7px);
-  clip-path: inset(0 0 0 var(--fx));
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 400ms linear, clip-path 500ms var(--ease-expo);
+  background: repeating-linear-gradient(45deg, rgba(0, 116, 140, 0.22) 0 1px, transparent 1px 7px);
+  clip-path: inset(0 0 0 calc(var(--fx) * 1%));
 }
 .ai-wf__over[data-on] { opacity: 1; }
 .ai-wf__sel {
@@ -189,17 +226,22 @@
 .ai-wf__sel[data-on] { opacity: 1; }
 /* the budget flag: a 1px cyan line through the axis and the plot, its label in the axis row */
 .ai-wf__flag {
-  position: absolute; top: 0; bottom: 0; left: var(--fx); width: 1px; margin-left: -0.5px; background: var(--signal); cursor: ew-resize;
-  touch-action: none; z-index: 2; transition: opacity 200ms linear;
+  position: absolute; top: 0; bottom: 0; left: 0; width: 1px; margin-left: -0.5px; background: var(--signal); cursor: ew-resize;
+  touch-action: none; z-index: 2; transform: translate3d(calc(var(--fx) * 1cqw), 0, 0);
+  transition: opacity 400ms linear, transform 500ms var(--ease-expo);
 }
+/* while a drag owns the flag it follows the pointer exactly */
+.ai-wf__plotwrap[data-drag] .ai-wf__flag, .ai-wf__plotwrap[data-drag] .ai-wf__over { transition: none; }
+.ai-wf__flag::after { content: ""; position: absolute; top: -3px; left: -3px; width: 7px; height: 7px; background: var(--signal); clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .ai-wf__flag::before { content: ""; position: absolute; top: 0; bottom: 0; left: -12px; right: -12px; }
 .ai-wf__flag[data-hide] { opacity: 0; pointer-events: none; }
+/* the flag's label hangs under the plot, clear of the tick labels */
 .ai-wf__flag span {
-  position: absolute; top: 3px; left: 5px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--signal-ink); white-space: nowrap;
+  position: absolute; bottom: -17px; left: 5px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--signal-ink); white-space: nowrap;
 }
 .ai-wf__flag[data-edge] span { left: auto; right: 5px; }
 .ai-wf__flag:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 6px; }
-.ai-wf__hint { margin: 10px 0 0; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); }
+.ai-wf__hint { margin: 26px 0 0; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); }
 .ai-wf__hint--touch { display: none; }
 /* hotspot hover lifts its rows; row hover lights its hotspot (StackFilm) */
 .ai-wf[data-lift] .ai-wf__name:not([data-lift]), .ai-wf[data-lift] .ai-wf__bar:not([data-lift]) { opacity: 0.45; }
@@ -229,6 +271,8 @@
   clip-path: inset(0 100% 0 0); transition: opacity 200ms linear;
 }
 .ai-logs__line[data-on] { animation: ai-logs-in 120ms linear both; animation-delay: calc(var(--i, 0) * 60ms); }
+/* a line printed by a running request appears at its own timestamp, not on the stagger */
+.ai-logs__line[data-now] { animation-delay: 0ms; }
 .ai-logs__line[data-dim] { opacity: 0.2; }
 @keyframes ai-logs-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .ai-logs__t { color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -237,7 +281,8 @@
 .ai-logs__empty { margin: 14px 0 0; font-size: 11px; color: var(--ink-3); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-insp, .ai-insp__panel, .ai-insp__ink, .ai-wf__lanes, .ai-wf__bar, .ai-wf__ms, .ai-wf__over, .ai-wf__sel, .ai-wf__flag,
-  .ai-rocker__plate, .ai-rocker__face, .ai-chk__box::after, .ai-insp__layer, .ai-code__copy { transition-duration: 1ms !important; }
+  .ai-insp, .ai-insp[data-open], .ai-insp__panel, .ai-insp__ink, .ai-wf__lanes, .ai-wf__bar, .ai-wf__bar::after, .ai-wf__ms, .ai-wf__over, .ai-wf__sel, .ai-wf__flag,
+  .ai-wf__tick, .ai-wf__tickline, .ai-rocker__plate, .ai-rocker__face, .ai-chk__box::after, .ai-insp__layer, .ai-code__copy { transition-duration: 1ms !important; }
+  .ai-wf__tick, .ai-wf__tickline, .ai-insp__panel[data-on] { animation: none; }
   .ai-logs__line[data-on] { animation: none; clip-path: inset(0 0 0 0); }
 }

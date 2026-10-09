@@ -8,20 +8,37 @@
    is what makes two bodies reach for each other and neck: 10 px while they
    lie apart, 46 while they merge, 18 once they have settled.
 
-   The material is deliberately not the hero's chrome. It is ink-black metal
-   whose only environment is the sheet it rests on: the paper reflects below
-   the horizon (the rim), the room above it is dark (the cap), the drafting
-   grid bends across the reflection, one paper-white highlight rakes it, and
-   a Fresnel term brightens the grazing edge. Cyan appears only where an
-   agent wets the paper, as a 1.5 px meniscus hugging the silhouette.
+   The material is deliberately not the hero's chrome (no PMREM, no studio).
+   It is ink-black metal, a mirror (F0 0.78, Schlick) that reads as ink because its room is dark, and the only
+   things it can reflect are the sheet it rests on and the drafting room
+   above it:
+     · below the horizon (the rim), the paper, with its 32 / 160 px grid
+       traced by a real ray-plane intersection, so the lines bend and crowd
+       toward the silhouette and run continuously through every neck;
+       the paper is in the body's own shade close to the contact;
+     · above it, a dark room with one rectangular softbox up and to the left,
+       mapped stereographically, so each bead carries a small window that
+       stretches into a bar along a neck (the read that says "liquid");
+     · one hard glint inside the window.
+   Cyan appears only where an agent wets the paper: a meniscus line just
+   outside its silhouette and the same line caught in its rim reflection,
+   both scaled by how much of the agent has arrived.
 
    Pixels that miss the union land on the sheet and get the matte contact
-   under every body (a rendered shadow, not a UI one). Output is premultiplied
-   with alpha 0 elsewhere, so paper, grid and grain show through.
+   (a tight occlusion ring plus a soft fall cast away from the light: a
+   rendered shadow, not a UI one). A 2D pass decides first whether a pixel
+   can reach the union at all, so empty paper never marches. Output is
+   premultiplied with alpha 0 elsewhere, so paper, grid and grain show
+   through the canvas.
+
+   While a body is dragged, a capsule (uNeck = ghost xy, body xy; uNeckR its
+   radius) joins the union: the neck thins with distance and is gone past
+   about six bead radii, which reads as the thread snapping.
 
    uBalls[i] = (x, y, r, w): stage px, radius px (0 = absent), meniscus weight.
    Slots: 0-11 the step beads, 12-16 the agent bodies, 17 the drag ghost,
-   18 the pointer's drop.
+   18 the pointer's drop (centred at height uPtrZ, the flank of the body that
+   reaches for the cursor, so it reads as that surface bulging toward it).
    ───────────────────────────────────────────────────────────────────────── */
 
 export const BALLS = 19;
@@ -48,7 +65,7 @@ precision mediump float;
 #endif
 #define N ${BALLS}
 #define STEPS ${Math.max(8, Math.round(steps))}
-${derivatives ? "#define FW(g) max(fwidth(g), vec2(1e-4))" : "#define FW(g) vec2(0.06)"}
+${derivatives ? "#define FW(g) max(fwidth(g), vec2(1e-4))" : "#define FW(g) vec2(0.08)"}
 
 uniform vec4 uBalls[N];
 uniform float uK;
@@ -56,15 +73,29 @@ uniform float uZ0;
 uniform vec2 uRes;
 uniform float uInvDpr;
 uniform float uSettle;
+uniform vec4 uNeck;
+uniform float uNeckR;
+uniform float uPtrZ;
 
 const vec3 PAPER = vec3(0.902, 0.914, 0.910);
 const vec3 INK = vec3(0.043, 0.055, 0.059);
-const vec3 INK2 = vec3(0.102, 0.129, 0.141);
+const vec3 ROOM = vec3(0.035, 0.042, 0.046);
 const vec3 CYAN = vec3(0.0, 0.706, 0.847);
+// the softbox: up and to the left of the sheet (stage y runs down)
+const vec3 LIGHT = vec3(-0.3487, -0.5978, 0.7224);
 
 float smin(float a, float b) {
   float h = max(uK - abs(a - b), 0.0) / uK;
   return min(a, b) - h * h * uK * 0.25;
+}
+
+// the drag neck: a capsule lying on the sheet from the ghost to the picked body
+float neck(vec3 p) {
+  vec3 a = vec3(uNeck.xy, uNeckR);
+  vec3 ba = vec3(uNeck.zw, uNeckR) - a;
+  vec3 pa = p - a;
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-3), 0.0, 1.0);
+  return length(pa - ba * h) - uNeckR;
 }
 
 float scene(vec3 p) {
@@ -72,8 +103,11 @@ float scene(vec3 p) {
   for (int i = 0; i < N; i++) {
     vec4 b = uBalls[i];
     if (b.z <= 0.0) continue;
-    d = smin(d, length(p - vec3(b.xy, b.z)) - b.z);
+    // every body rests on the sheet; the pointer's drop rides at the reaching body's flank
+    float cz = i == ${POINTER} ? uPtrZ : b.z;
+    d = smin(d, length(p - vec3(b.xy, cz)) - b.z);
   }
+  if (uNeckR > 0.0) d = smin(d, neck(p));
   return d;
 }
 
@@ -83,21 +117,70 @@ vec3 normalAt(vec3 p) {
     e.xyy * scene(p + e.xyy) + e.yyx * scene(p + e.yyx) + e.yxy * scene(p + e.yxy) + e.xxx * scene(p + e.xxx));
 }
 
-// the meniscus weight of whichever body owns this pixel's silhouette
-float meniscusAt(vec2 sp) {
-  float best = 1e5;
-  float w = 0.0;
-  for (int i = 0; i < N; i++) {
-    vec4 b = uBalls[i];
-    if (b.z <= 0.0) continue;
-    float di = length(sp - b.xy) - b.z;
-    if (di < best) { best = di; w = b.w; }
-  }
-  return w;
+float gridLine(vec2 q, float cell) {
+  vec2 g = q / cell;
+  vec2 w = FW(g);
+  vec2 a = abs(fract(g - 0.5) - 0.5) / w;
+  // where the reflection crowds the lines below a pixel apart they fade out instead of turning to grey noise
+  return (1.0 - min(min(a.x, a.y), 1.0)) * (1.0 - smoothstep(0.12, 0.4, max(w.x, w.y)));
+}
+
+float roundBox(vec2 p, vec2 b, float r) {
+  vec2 q = abs(p) - b + r;
+  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// what a reflected ray from surface point p sees: the sheet below, the room above
+vec3 envAt(vec3 p, vec3 r, float wm) {
+  float tt = min(p.z / max(-r.z, 0.03), 180.0);
+  vec2 q = p.xy + r.xy * tt;
+  vec3 sheet = PAPER * (1.0 - 0.34 * gridLine(q, 32.0)) * (1.0 - 0.22 * gridLine(q, 160.0));
+  // close to the contact the sheet lies in the body's own shade, and an agent's meniscus is there
+  float nearC = 1.0 - smoothstep(0.0, 5.0, tt);
+  sheet *= 1.0 - 0.6 * nearC;
+  sheet = mix(sheet, CYAN, wm * (1.0 - smoothstep(0.0, 7.0, tt)) * 0.85);
+
+  vec2 s = r.xy / (1.0 + max(r.z, 0.0));
+  vec2 lc = LIGHT.xy / (1.0 + LIGHT.z);
+  float box = 1.0 - smoothstep(-0.015, 0.02, roundBox(s - lc, vec2(0.3, 0.15), 0.07));
+  // the room brightens toward the horizon, where the paper's bounce reaches it
+  vec3 room = mix(ROOM, PAPER * 0.34, smoothstep(0.85, 0.05, r.z)) + vec3(0.98) * box;
+  return mix(sheet, room, smoothstep(-0.08, 0.08, r.z));
 }
 
 void main() {
   vec2 sp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) * uInvDpr;
+
+  // one pass in 2D first: the nearest silhouette, whose meniscus it is, and
+  // the matte contact every body leaves on the sheet
+  float d2 = 1e5;
+  float wm = 0.0;
+  float dark = 0.0;
+  for (int i = 0; i < N; i++) {
+    vec4 b = uBalls[i];
+    if (b.z <= 0.0) continue;
+    vec2 q = sp - b.xy;
+    float di = length(q) - b.z;
+    if (di < d2) { d2 = di; wm = b.w; }
+    float ring = exp(-max(di, 0.0) / (b.z * 0.08 + 0.6));
+    float fall = clamp(1.0 - length(q - vec2(0.2, 0.32) * b.z) / (b.z * 1.42), 0.0, 1.0);
+    dark += 0.16 * ring + 0.2 * fall * fall;
+  }
+  if (uNeckR > 0.0) {
+    float dn = neck(vec3(sp, uNeckR));
+    d2 = min(d2, dn);
+    dark += 0.2 * exp(-max(dn, 0.0) / (uNeckR * 0.5 + 0.6));
+  }
+  dark = min(dark, 0.46);
+
+  // nothing within reach of the union: the sheet only, and no march at all.
+  // Each smooth-min can pull the surface out by uK/4; two stacked blends are
+  // the most this field ever has at one pixel.
+  if (d2 > uK * 0.5 + 2.5) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, dark);
+    return;
+  }
+
   vec3 ro = vec3(sp, uZ0);
   float t = 0.0;
   float minD = 1e5;
@@ -113,22 +196,13 @@ void main() {
     t += d;
   }
 
-  // the sheet: a matte contact under every body
-  float dark = 0.0;
-  for (int i = 0; i < N; i++) {
-    vec4 b = uBalls[i];
-    if (b.z <= 0.0) continue;
-    float c = clamp(1.0 - length(sp - b.xy) / (b.z * 1.15), 0.0, 1.0);
-    dark += 0.18 * c * c;
-  }
-  dark = min(dark, 0.42);
-
-  // coverage: a 1px ramp over the last pixel outside the surface
-  float cov = hit ? 1.0 : 1.0 - smoothstep(0.0, 1.2, minD);
+  // coverage: a ramp over the last pixel outside the surface
+  float aa = 1.2 * uInvDpr;
+  float cov = hit ? 1.0 : 1.0 - smoothstep(0.0, aa, minD);
   // the cyan line where an agent wets the paper, just outside its silhouette
-  float band = 1.5 + 0.6 * uSettle;
-  float wm = meniscusAt(sp) * mix(0.55, 1.0, uSettle);
-  float halo = wm * (1.0 - smoothstep(0.3, 0.3 + band, minD));
+  float wk = wm * mix(0.6, 1.0, uSettle);
+  float band = 1.5 + 0.75 * uSettle;
+  float halo = wk * (1.0 - smoothstep(0.25, 0.25 + band, minD)) * step(0.0, minD);
   vec3 pc = CYAN * halo;
   float pa = halo + dark * (1.0 - halo);
 
@@ -136,22 +210,12 @@ void main() {
   if (cov > 0.0) {
     vec3 p = ro + vec3(0.0, 0.0, -(hit ? t : minT));
     vec3 n = normalAt(p);
-    vec3 l = normalize(vec3(-0.35, -0.6, 0.72));
-    // ink, a shade lighter toward the light
-    vec3 base = mix(INK, INK2, 0.5 - 0.5 * n.y);
-    float spec = pow(max(dot(reflect(-l, n), vec3(0.0, 0.0, 1.0)), 0.0), 64.0) * 0.9;
-    // the environment: what the bead reflects is the sheet below the horizon
     vec3 r = reflect(vec3(0.0, 0.0, -1.0), n);
-    float below = 1.0 - smoothstep(-0.5, 0.2, r.z);
-    float tt = min(p.z / max(-r.z, 0.06), 160.0);
-    vec2 g = (p.xy + r.xy * tt) / 32.0;
-    vec2 fw = FW(g);
-    vec2 a = abs(fract(g - 0.5) - 0.5) / fw;
-    float line = 1.0 - min(min(a.x, a.y), 1.0);
-    vec3 env = PAPER * (1.0 - 0.28 * line) * below;
-    float fres = pow(1.0 - max(n.z, 0.0), 4.0);
-    col = base + env * mix(0.10, 0.55, fres) + spec;
-    col = clamp(col, 0.0, 1.0);
+    // a mirror whose room is dark: the cap holds the dark, the rim holds the sheet
+    float f = 0.78 + 0.22 * pow(1.0 - clamp(n.z, 0.0, 1.0), 5.0);
+    vec3 env = envAt(p, r, wk);
+    float glint = pow(max(dot(r, LIGHT), 0.0), 900.0) * 0.6;
+    col = clamp(INK * (1.0 - f) + env * f + glint, 0.0, 1.0);
   }
 
   gl_FragColor = vec4(col * cov + pc * (1.0 - cov), cov + pa * (1.0 - cov));

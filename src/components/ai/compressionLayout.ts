@@ -162,7 +162,7 @@ export interface MercuryFrame {
   floors: [number, number];
   /** the cyan bus, meeting the bodies */
   bus: string;
-  /** true: a step's name sits to the right of its bead; false: under it */
+  /** true: a step's name sits beside its bead; false: under it (agent names always sit under their body) */
   tagBeside: boolean;
 }
 
@@ -173,8 +173,8 @@ export function mercuryFrame(layout: Layout): MercuryFrame {
   const rAgent = counts.map((n) => r0 * Math.cbrt(n));
   // a step name is ~150px of mono at 11px: beside the bead only when the cell has room
   const tagBeside = !narrow && (W - pad * 2) / 6 >= 190;
-  // under each body: the floor, or the tag then the floor
-  const under = tagBeside ? 14 : 34;
+  // under each agent body: its name (two lines on a phone), then the floor
+  const under = narrow ? 48 : 38;
   const rO = rAgent[0];
   const rW = Math.max(...rAgent.slice(1));
   const f = (n: number) => n.toFixed(1);
@@ -183,8 +183,8 @@ export function mercuryFrame(layout: Layout): MercuryFrame {
     const [o, a, b, c] = nodes;
     const floor1 = o.y + rO + under;
     const floor2 = c.y + rW + under;
-    // the spine drops from the orchestrator's floor through the 2x2; the rungs run centre to centre behind the bodies
-    const bus = `M${f(o.x)} ${f(floor1)} V${f(c.y)} M${f(a.x)} ${f(a.y)} H${f(b.x)} M${f(a.x)} ${f(c.y)} H${f(b.x)}`;
+    // the spine drops from under the orchestrator's floor tag through the 2x2; the rungs run centre to centre behind the bodies
+    const bus = `M${f(o.x)} ${f(floor1 + 28)} V${f(c.y)} M${f(a.x)} ${f(a.y)} H${f(b.x)} M${f(a.x)} ${f(c.y)} H${f(b.x)}`;
     return { r0, rAgent, counts, floors: [floor1, floor2], bus, tagBeside };
   }
 

@@ -48,6 +48,19 @@
 .ai-credits__row[data-live]::before { opacity: 1; }
 .ai-credits__fig { color: var(--signal); text-transform: uppercase; letter-spacing: 0.18em; white-space: nowrap; }
 .ai-credits__line { font-variant-numeric: tabular-nums; }
+/* counts read brighter than words; the separators sit back */
+.ai-credits__line b { font-weight: 400; color: #ffffff; }
+.ai-credits__sep { color: rgba(232, 241, 243, 0.34); }
+
+/* the sheet counter, inside the top-right crop: which row is on the centre line */
+.ai-credits__count {
+  position: absolute; z-index: 1; top: calc(var(--lane-top) + 10px); right: calc(var(--gutter) + var(--lane-right, 0px) + 32px);
+  font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-variant-numeric: tabular-nums; color: rgba(232, 241, 243, 0.55); white-space: nowrap;
+}
+.ai-credits__count > span { color: var(--signal); }
+/* only where the column leaves the right margin free */
+@media (max-width: 1099px) { .ai-credits__count { display: none; } }
 .ai-credits__end {
   margin: 0; padding: clamp(44px, 9svh, 110px) 18px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
   font-size: clamp(22px, 3.4vw, 48px); line-height: 1; color: #ffffff;
@@ -59,6 +72,16 @@
   .ai-credits__end { padding-inline: 14px; }
 }
 
+/* ── the Descent around it: the roll would stretch the iris (its circle and
+   plate are sized in % of the Descent), so while the credits are mounted the
+   iris box keeps the height it had without them (gate + sign-off, measured
+   by Credits.tsx) and the rest of the Descent below it is plain black. That
+   region is below the fold for the whole of the iris scrub. ── */
+.ai-descent[data-credits] {
+  background: linear-gradient(#000000, #000000) no-repeat 0 var(--ai-iris-h, 100%) / 100% calc(100% - var(--ai-iris-h, 100%));
+}
+.ai-descent[data-credits] > .ai-descent__iris { bottom: auto; height: var(--ai-iris-h, 100%); }
+
 /* ── reduced motion: no runway, the sheet stands fully printed ── */
 @media (prefers-reduced-motion: reduce) {
   .ai-credits__runway { height: auto !important; }
@@ -67,6 +90,6 @@
     -webkit-mask-image: none; mask-image: none;
   }
   .ai-credits__roll { position: relative; transform: none; will-change: auto; }
-  .ai-credits__crop { display: none; }
+  .ai-credits__crop, .ai-credits__count { display: none; }
   .ai-credits__row, .ai-credits__row::before { transition: none; }
 }

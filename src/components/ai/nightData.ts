@@ -9,8 +9,9 @@
    computed from them, never typed twice.
 
    The second half of the file builds the constellation: one point of light
-   per finished task, born at the frame's edge in the minute it finished and
-   drifting in a slow loop to its place in the silhouette of the compressed
+   per finished task, leaving the frame's edge (from 22:00 in the minute it
+   finished; the evening's tasks queue at the edge until the dark can show
+   them) and drifting in a slow loop to its place in the silhouette of the compressed
    system from chapter four (one orchestrator, four agents, the four buses
    between them). Everything is seeded, so the same night is drawn on every
    visit and every scroll back.
@@ -90,6 +91,16 @@ export type Constellation = {
   readonly n: number;
   /** hours since 18:00 at which the task finished, ascending */
   readonly birth: Float32Array;
+  /**
+   * hours since 18:00 at which its point leaves the frame's edge. From 22:00
+   * on that is the minute the task finished; the evening's tasks, finished
+   * while the sheet was still paper and nothing bright could show, wait at
+   * the edge and are let go in one long stream as the ink comes up
+   * (21:30 to 22:42). Not monotonic: readers test every point.
+   */
+  readonly enter: Float32Array;
+  /** which node it settles in: 0 the orchestrator, 1..4 the agents (N, E, S, W); bus points count for their agent */
+  readonly node: Uint8Array;
   /** row index 0..11 of the hour it belongs to */
   readonly hour: Uint8Array;
   /** where it enters: 0..4 along the frame's perimeter, clockwise from the top-left corner */
@@ -109,6 +120,12 @@ export type Constellation = {
   /** 1 for the points drawn in the signal colour (every 16th) */
   readonly cyan: Uint8Array;
 };
+
+/** the hour (since 18:00) from which a point leaves the edge the minute its task finished */
+export const STREAM_FROM = 4;
+/** the evening's queued points are let go across [STREAM_AT, STREAM_AT + STREAM_LEN] */
+const STREAM_AT = 3.5;
+const STREAM_LEN = 1.2;
 
 /** a small, fast, seeded generator (mulberry32) */
 function rng(seed: number): () => number {
@@ -140,6 +157,8 @@ export function buildConstellation(seed = 1809): Constellation {
   const rand = rng(seed);
   const n = NIGHT_TOTALS.tasks;
   const birth = new Float32Array(n);
+  const enter = new Float32Array(n);
+  const node = new Uint8Array(n);
   const hour = new Uint8Array(n);
   const edge = new Float32Array(n);
   const tx = new Float32Array(n);
@@ -162,6 +181,7 @@ export function buildConstellation(seed = 1809): Constellation {
       // finished somewhere in its hour, in order, with a little slack
       birth[i] = hi + (j + 0.5) / row.tasks + (rand() - 0.5) * (0.6 / row.tasks);
       hour[i] = hi;
+      enter[i] = birth[i] >= STREAM_FROM ? birth[i] : STREAM_AT + (Math.max(0, birth[i]) / STREAM_FROM) * STREAM_LEN;
       edge[i] = rand() * 4;
 
       // where it belongs
@@ -176,8 +196,11 @@ export function buildConstellation(seed = 1809): Constellation {
         }
         tx[i] = O.x + x;
         ty[i] = O.y + y;
+        node[i] = 0;
       } else if (pick < orchestratorShare + agentShare * 4) {
-        const a = agentAngles[Math.min(3, Math.floor((pick - orchestratorShare) / agentShare))];
+        const k = Math.min(3, Math.floor((pick - orchestratorShare) / agentShare));
+        const a = agentAngles[k];
+        node[i] = k + 1;
         const cx = Math.cos(a) * agentDist;
         const cy = Math.sin(a) * agentDist;
         let x = gauss(rand) * agentR * 0.42;
@@ -191,7 +214,9 @@ export function buildConstellation(seed = 1809): Constellation {
         ty[i] = cy + y;
       } else {
         // a bus: a thin thread of points from the orchestrator to one agent
-        const a = agentAngles[Math.floor(rand() * 4) % 4];
+        const k = Math.floor(rand() * 4) % 4;
+        const a = agentAngles[k];
+        node[i] = k + 1;
         const along = busFrom + (busTo - busFrom) * rand();
         const across = gauss(rand) * 0.012;
         tx[i] = Math.cos(a) * along - Math.sin(a) * across;
@@ -209,6 +234,13 @@ export function buildConstellation(seed = 1809): Constellation {
     }
   });
 
-  cached = { n, birth, hour, edge, tx, ty, lr, lk, lw, lp, sx, sd, cyan };
+  cached = { n, birth, enter, node, hour, edge, tx, ty, lr, lk, lw, lp, sx, sd, cyan };
   return cached;
+}
+
+/** tasks finished by each node across the night (orchestrator, then N, E, S, W), from the point set */
+export function nodeCounts(c: Constellation = buildConstellation()): readonly number[] {
+  const out = [0, 0, 0, 0, 0];
+  for (let i = 0; i < c.n; i++) out[c.node[i]]++;
+  return out;
 }

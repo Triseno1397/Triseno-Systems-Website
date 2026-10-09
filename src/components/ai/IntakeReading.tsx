@@ -172,8 +172,21 @@ export default function IntakeReading() {
       if (mark) return ENTITIES[mark.dataset.entity as EntityId].row;
       return null;
     };
-    const onOver = (e: PointerEvent) => setLit(rowUnder(e.target));
-    const onLeave = () => setLit(null);
+    // pointer devices follow the pointer; a touch is a tap, which lights what
+    // it lands on (a row or a fact) and clears on a tap anywhere else. Touch
+    // fires pointerleave right after pointerup, so it never clears the light.
+    const onOver = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") setLit(rowUnder(e.target));
+    };
+    const onLeave = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") setLit(null);
+    };
+    const onTap = (e: PointerEvent) => {
+      if (e.pointerType === "touch") setLit(rowUnder(e.target));
+    };
+    const onDocTap = (e: PointerEvent) => {
+      if (e.pointerType === "touch" && lit && !(e.target instanceof Node && grid.contains(e.target))) setLit(null);
+    };
     const onFocusIn = (e: FocusEvent) => setLit(rowUnder(e.target));
     const onFocusOut = (e: FocusEvent) => {
       // leaving for another row: focusin will set it; leaving the grid: clear
@@ -181,11 +194,15 @@ export default function IntakeReading() {
     };
     grid.addEventListener("pointerover", onOver);
     grid.addEventListener("pointerleave", onLeave);
+    grid.addEventListener("pointerdown", onTap);
+    document.addEventListener("pointerdown", onDocTap, { passive: true });
     grid.addEventListener("focusin", onFocusIn);
     grid.addEventListener("focusout", onFocusOut);
     return () => {
       grid.removeEventListener("pointerover", onOver);
       grid.removeEventListener("pointerleave", onLeave);
+      grid.removeEventListener("pointerdown", onTap);
+      document.removeEventListener("pointerdown", onDocTap);
       grid.removeEventListener("focusin", onFocusIn);
       grid.removeEventListener("focusout", onFocusOut);
       setLit(null);
@@ -276,7 +293,9 @@ export default function IntakeReading() {
       if (chip) {
         gsap.set(chip, { x: g.sx, y: g.sy + 4, yPercent: -50, autoAlpha: 0 });
         tl.to(chip, { autoAlpha: 1, y: g.sy - 6, duration: 0.22, ease: "power2.out" }, lead);
-        tl.to(chip, { x: g.tx, y: g.ty, duration: 0.7, ease: "power3.inOut" }, lead + 0.2);
+        // x and y on different curves, so the chip arcs across the gutter instead of sliding on a ruler
+        tl.to(chip, { x: g.tx, duration: 0.7, ease: "power3.inOut" }, lead + 0.2);
+        tl.to(chip, { y: g.ty, duration: 0.7, ease: "power2.inOut" }, lead + 0.2);
         tl.to(chip, { autoAlpha: 0, duration: 0.2, ease: "power1.out" }, land);
       }
       const mine = vals.filter((v) => v.dataset.by === e);
@@ -288,6 +307,14 @@ export default function IntakeReading() {
           land,
         );
       }
+      // where a value lands, a cyan hairline writes under its row and fades: the record took a write
+      const landed = new Set(mine.map((v) => v.dataset.val as RowId));
+      landed.forEach((id) => {
+        const tick = part(rows.get(id), ".ai-read__tick");
+        if (!tick) return;
+        tl.fromTo(tick, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.5, ease: "expo.out", immediateRender: false }, land);
+        tl.to(tick, { opacity: 0, duration: 0.6, ease: "power2.out" }, land + 0.45);
+      });
       for (const def of RECORD) {
         const row = rows.get(def.id);
         if (!row) continue;
@@ -461,6 +488,7 @@ export default function IntakeReading() {
                     aria-labelledby={`ai-read-dt-${row.id}`}
                     aria-describedby={sources.length ? sources.map((e) => `ai-read-${ENTITIES[e].id}`).join(" ") : undefined}
                   >
+                    <span aria-hidden="true" className="ai-read__tick" />
                     <span aria-hidden="true" className="ai-read__dot">
                       <i className="ai-read__dot-fill" />
                       <i className="ai-read__dot-ring" />
@@ -475,8 +503,8 @@ export default function IntakeReading() {
                           {v.text}
                         </span>
                       ))}
-                      {row.note ? <span className="ai-read__note">{row.note}</span> : null}
                     </dd>
+                    {row.note ? <dd className="ai-read__note">{row.note}</dd> : null}
                   </div>
                 );
               })}

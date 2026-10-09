@@ -45,5 +45,19 @@ export const CONSOLE_SLIP = {
     /** sr-only description of what the slip does */
     description: "The cycle is paused. Approve to let it resume as planned, or correct the vendor name before it resumes.",
     vendorMax: 32,
+    /** inked onto the slip the moment it is decided, before it tears or files */
+    stamp: {
+      approve: { word: "Approved", line: "J. Okafor . 00:00:41" },
+      correct: { word: "Corrected", line: "vendor amended . 00:00:41" },
+    },
   },
+
+  /** the printer bay under the glass, reserved while the Enterprise cycle runs */
+  bay: {
+    standby: "slot 01 . standby",
+    filed: "slip 0418 . filed to the audit trail",
+  },
+
+  /** the halted step's live wait, printed beside its spinner (not announced) */
+  waitLabel: "waiting on a person",
 } as const;

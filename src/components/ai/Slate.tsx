@@ -23,7 +23,8 @@ import { SLATE, chapterNumber } from "./projection.content";
    FPS  the rate this machine is actually drawing: the ticker's own interval,
         averaged over 30 ticks, rounded; blank while the tab is hidden.
    A 5px square at the left goes cyan while the reel is moving. A small "g"
-   lights while a chord is armed. SPEC toggles the notes, ? opens the keys.
+   lights while a chord is armed. On every chapter change the CH field cuts:
+   the new number and name wipe in left to right (clip-path, 600 ms). SPEC toggles the notes, ? opens the keys.
 
    Every write happens in one frame job's write phase, only when a field's
    string changed; scroll comes from Lenis (or window.scrollY), the document
@@ -113,6 +114,7 @@ export default function Slate() {
     let movedAt = -10;
     let running = false;
     let armed = false;
+    let cut: "a" | "b" = "b";
 
     const read = (t: number) => {
       const lenis = getLenis();
@@ -172,6 +174,10 @@ export default function Slate() {
         pending = null;
         chNum.textContent = num ?? "";
         chName.textContent = rail;
+        // a cut: the new chapter wipes in. Alternating between two identical
+        // keyframe names restarts the animation with no reflow
+        cut = cut === "a" ? "b" : "a";
+        root.setAttribute("data-cut", cut);
         root.toggleAttribute("data-unnumbered", !num);
         setReel({ ch: num, rail });
       }

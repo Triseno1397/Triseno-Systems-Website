@@ -33,9 +33,12 @@ import { CONSOLE_SLIP } from "./console-slip.content";
  * to a person", and a paper routing slip prints out of a slot under the glass
  * (RoutingSlip). APPROVE tears it and the console resumes, printing the
  * approval and closing the cycle; CORRECT lets the visitor retype the vendor,
- * which the resumed log prints back. The person's row carries the time they
- * really took. Once a slip is resolved the session remembers it, so Replay
- * and later visits to the tab run straight through.
+ * which the resumed log prints back. While it waits, the halted step counts
+ * the wait beside its spinner, and the person's row carries the time they
+ * really took. Picking the Enterprise tab reserves the slip's bay under the
+ * glass at once, so nothing on the page moves at the halt itself. Once a slip
+ * is resolved the session remembers it, so Replay and later visits to the
+ * tab run straight through.
  */
 
 /** the tab and step that halt: the cycle whose fourth step hands off to a person */
@@ -46,9 +49,9 @@ type Halt = "none" | "line" | "slip" | "done";
 type Review = { kind: SlipOutcome; value?: string; ms: number };
 type Row = { key: string; agent: string; msg: string; ms: number; at: number; canHalt: boolean; human: boolean };
 
-/** a step's duration as the console prints it; a person's time can run long */
-function fmtMs(ms: number) {
-  return ms < 10000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+/** a step's duration as the console prints it; a person's time is in seconds */
+function fmtMs(ms: number, human = false) {
+  return !human && ms < 10000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 /** one scene per industry (GPT Image 2.5, design-loop/art-src/industries) */
@@ -77,6 +80,32 @@ function CardLoop({ src, poster, className = "ai-chroma__loop" }: { src: string;
     return () => io.disconnect();
   }, []);
   return <video ref={ref} className={className} src={src} poster={poster} muted loop playsInline preload="metadata" />;
+}
+
+/** the halted step's wait, counted beside its spinner: one text write per
+ *  tenth of a second, no React render; aria-hidden so the live log is not
+ *  re-announced ten times a second */
+function HaltClock() {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const t0 = performance.now();
+    let last = "";
+    const id = window.setInterval(() => {
+      const s = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+      if (s !== last) {
+        last = s;
+        el.textContent = s;
+      }
+    }, 100);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span ref={ref} className="ai-trace__wait" aria-hidden="true" title={CONSOLE_SLIP.waitLabel}>
+      0.0s
+    </span>
+  );
 }
 
 const SPOT_R = 170; // spotlight radius, px
@@ -110,6 +139,10 @@ export default function AgentConsole() {
   const [review, setReview] = useState<Review | null>(null);
   const slipDone = useRef(false);
   const timers = useRef<number[]>([]);
+  /* the run holds the slip's bay from its first frame when it can halt */
+  const [bay, setBay] = useState(false);
+  const haltStart = useRef(0);
+  const replayRef = useRef<HTMLButtonElement>(null);
   const lastTrace = useSession((s) => s.lastTrace);
 
   const industry = INDUSTRIES[active];
@@ -253,9 +286,11 @@ export default function AgentConsole() {
     setReview(null);
     haltRef.current = "none";
     setHalt("none");
+    setBay(haltAt >= 0);
     if (reduced.current) {
       if (haltAt >= 0) {
         setStep(haltAt);
+        haltStart.current = performance.now();
         haltRef.current = "slip";
         setHalt("slip");
       } else setStep(total);
@@ -268,6 +303,7 @@ export default function AgentConsole() {
       // the step types its message (900 ms), holds a beat, then halts
       const t0 = 350 + haltAt * STEP_MS;
       later(() => {
+        haltStart.current = performance.now();
         haltRef.current = "line";
         setHalt("line");
       }, t0 + 1000);
@@ -279,10 +315,13 @@ export default function AgentConsole() {
     return clear;
   }, [run, active, total]);
 
-  /* the visitor's decision: remember it, record it, resume the cycle */
+  /* the visitor's decision: remember it, record it, resume the cycle. The
+     person's row carries the whole wait, from the halt line to the decision
+     (the same clock the halted step was counting), not only the slip's part. */
   const resolve = useCallback(
     (kind: SlipOutcome, decisionMs: number, value?: string) => {
       if (haltRef.current !== "slip") return;
+      if (haltStart.current) decisionMs = Math.max(decisionMs, performance.now() - haltStart.current);
       slipDone.current = true;
       try {
         window.sessionStorage.setItem(CONSOLE_SLIP.storageKey, "1");
@@ -442,7 +481,13 @@ export default function AgentConsole() {
             <span className="ai-console__path">
               ~/triseno/agents <b>run</b> {industry.title.toLowerCase().replace(/[^a-z]+/g, "-")}
             </span>
-            <button type="button" className="ai-console__replay" onClick={() => setRun((r) => r + 1)} aria-label="Replay the cycle">
+            <button
+              ref={replayRef}
+              type="button"
+              className="ai-console__replay"
+              onClick={() => setRun((r) => r + 1)}
+              aria-label="Replay the cycle"
+            >
               <ArrowClockwise size={14} weight="light" aria-hidden="true" />
               <span>Replay</span>
             </button>
@@ -458,7 +503,7 @@ export default function AgentConsole() {
             </li>
             {rows.map((row, i) => {
               const state = step > i ? "done" : step === i ? "run" : "wait";
-              const { ms } = row;
+              const dur = fmtMs(row.ms, row.human);
               const halted = row.canHalt && halt !== "none";
               return (
                 <li
@@ -485,15 +530,18 @@ export default function AgentConsole() {
                   <span
                     className="ai-trace__state"
                     aria-label={
-                      state === "done" ? `done in ${fmtMs(ms)}` : state === "run" ? (halted ? "halted, awaiting a person" : "running") : "queued"
+                      state === "done" ? `done in ${dur}` : state === "run" ? (halted ? "halted, awaiting a person" : "running") : "queued"
                     }
                   >
                     {state === "done" ? (
                       <>
-                        <i className="ai-tick" aria-hidden="true" /> {fmtMs(ms)}
+                        <i className="ai-tick" aria-hidden="true" /> {dur}
                       </>
                     ) : state === "run" ? (
-                      <i className="ai-spin" aria-hidden="true" />
+                      <>
+                        {halted ? <HaltClock /> : null}
+                        <i className="ai-spin" aria-hidden="true" />
+                      </>
                     ) : (
                       <i className="ai-wait" aria-hidden="true" />
                     )}
@@ -510,9 +558,15 @@ export default function AgentConsole() {
           </ol>
           <p className="ai-console__note">An example cycle, timings illustrative.</p>
         </div>
-        {/* the routing slip prints out of the slot under the glass; nothing
-            while idle, so the rig's layout only moves while a slip exists */}
-        <RoutingSlip open={halt === "slip"} onResolve={resolve} />
+        {/* the routing slip prints out of the slot under the glass; its bay is
+            held for the whole Enterprise run, so the rig grows with the tab
+            pick, never at the halt or after the tear */}
+        <RoutingSlip
+          open={halt === "slip"}
+          reserve={bay}
+          onResolve={resolve}
+          returnFocus={() => replayRef.current?.focus({ preventScroll: true })}
+        />
         </div>
       </div>
     </section>

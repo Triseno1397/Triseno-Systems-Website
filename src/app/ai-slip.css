@@ -5,16 +5,22 @@
    The cycle halts on its fourth step, confidence 0.61 < 0.80, and a paper
    slip prints out of a slot under the console glass the way a receipt
    feeds: the sheet is revealed by a stepped clip-path (14 steps over 1.1 s,
-   a printer advancing) while each line's ink arrives 90 ms after the last.
-   The slip is two sheets of paper, the body and a stub, meeting on a
-   perforation of real holes (alpha masks on the two facing edges, so the
-   rig's dark shows through them). APPROVE tears along it: the halves fan
-   apart and fall, transform and opacity only, 700 ms. CORRECT turns the
-   vendor's name into an ink-underlined field the console then reads back.
+   a printer advancing) while the print head lights in the slot and each
+   line's ink arrives 90 ms after the last. The slip is two sheets of paper,
+   the body and a stub, meeting on a perforation of real holes (alpha masks
+   on the two facing edges, so the rig's dark shows through them).
+
+   APPROVE stamps it, then tears along the perforation: the halves fan apart
+   and fall, transform and opacity only. CORRECT turns the vendor's name
+   into an ink-underlined field the console then reads back; the slip is
+   stamped and drawn back into the slot.
+
+   The bay (.ai-slip) holds the slip's height under the glass for the whole
+   halting run, so nothing below moves at the halt or after the tear.
 
    Everything here moves by clip-path, transform and opacity. The console's
    look (ai.css) is untouched: the .ai-trace rules below add only the halt
-   line's swap and the human's review row.
+   line's swap, the halted step's wait clock and the human's review row.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── inside the console: the halt ── */
@@ -25,33 +31,73 @@
 .ai-world .ai-trace__halt { grid-area: 1 / 1; min-width: 0; }
 .ai-world .ai-trace__said {
   clip-path: inset(0 -2px 0 0);
-  transition: clip-path 360ms var(--ease-expo);
+  transition: clip-path 420ms var(--ease-expo);
 }
 .ai-world .ai-trace__row[data-halt] .ai-trace__said { clip-path: inset(0 100% 0 0); }
-.ai-world .ai-trace__halt { animation: ai-slip-wipe 560ms var(--ease-expo) 220ms both; }
+.ai-world .ai-trace__halt { animation: ai-slip-wipe 640ms var(--ease-expo) 200ms both; }
 .ai-world .ai-trace__halt b { font-weight: 500; color: var(--signal); }
 @keyframes ai-slip-wipe {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 -2px 0 0); }
 }
+/* the halted step waits on a person: its spinner keeps turning and a clock
+   counts the wait beside it (aria-hidden; the halt line is what is announced) */
+.ai-world .ai-trace__wait {
+  min-width: 4.5ch; text-align: right; color: #e8f1f3; font-variant-numeric: tabular-nums;
+  animation: ai-slip-fade 480ms linear both;
+}
+.ai-world .ai-trace__row[data-halt][data-state="run"] .ai-spin { border-top-color: #e8f1f3; }
+@keyframes ai-slip-fade { from { opacity: 0; } to { opacity: 1; } }
 /* the person's row: not an agent, so the bracket is paper, not signal */
 .ai-world .ai-trace__row[data-human] .ai-trace__agent { color: #e8f1f3; }
 .ai-world .ai-trace__row[data-human] .ai-trace__msg { color: #ffffff; }
+.ai-world .ai-trace__row[data-human][data-state="done"] .ai-trace__state { color: #e8f1f3; }
 
-/* ── the slip ── */
+/* ── the bay: the slot under the glass and the slip's reserved height ── */
 .ai-world .ai-slip {
   --slip-w: 320px;
-  position: relative; z-index: 1; width: var(--slip-w); max-width: 100%; margin: 0;
+  --slip-r: 32px; /* the slip's inset from the glass's right edge */
+  position: relative; z-index: 1; margin: 0;
   color: var(--ink);
   font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.5; letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
 
-/* the slot: the console's mouth, a lip of ink under the glass */
+/* the slot: a lip of black under the glass with a slit cut across it; the
+   print head is a cyan line in the slit, lit only while the sheet feeds */
 .ai-world .ai-slip__slot {
-  display: block; height: 6px; background: var(--ink);
-  border-top: 1px solid rgba(0, 180, 216, 0.45);
-  border-bottom: 1px solid rgba(232, 241, 243, 0.22);
+  position: relative; display: block; height: 9px; margin-inline: 14px;
+  background: #020405;
+  border: 1px solid rgba(232, 241, 243, 0.16); border-top: 0;
+}
+.ai-world .ai-slip__slot::after,
+.ai-world .ai-slip__slot i {
+  content: ""; position: absolute; top: 3px; height: 1px;
+  right: calc(var(--slip-r) - 24px); width: calc(var(--slip-w) + 20px);
+}
+.ai-world .ai-slip__slot::after { background: rgba(232, 241, 243, 0.2); }
+.ai-world .ai-slip__slot i { z-index: 1; background: var(--signal); opacity: 0; }
+.ai-world .ai-slip[data-phase="print"] .ai-slip__slot i { animation: ai-slip-head 1100ms linear both; }
+@keyframes ai-slip-head {
+  0% { opacity: 0; }
+  6%, 82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* the bay's own line, under the slot while no slip is out */
+.ai-world .ai-slip__bay {
+  position: absolute; top: 22px; left: 14px; display: inline-flex; align-items: center; gap: 10px;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232, 241, 243, 0.42);
+  opacity: 0; transition: opacity 500ms linear; pointer-events: none;
+}
+.ai-world .ai-slip__bay::before { content: ""; width: 4px; height: 4px; background: rgba(232, 241, 243, 0.42); }
+.ai-world .ai-slip[data-filed] .ai-slip__bay::before { background: var(--signal); }
+.ai-world .ai-slip[data-phase="idle"] .ai-slip__bay { opacity: 1; transition-delay: 240ms; }
+
+/* the slip hangs from the slot, set in from the glass's right edge */
+.ai-world .ai-slip__form {
+  position: relative; width: var(--slip-w); max-width: 100%;
+  margin: 0 var(--slip-r) 0 auto;
 }
 
 /* the sheet: fed out of the slot by a stepped clip, pulled back in by a
@@ -61,6 +107,9 @@
   position: relative; display: grid;
   clip-path: inset(0 -4px -64px -4px);
   transition: clip-path 240ms var(--ease-expo), transform 240ms var(--ease-expo);
+}
+.ai-world .ai-slip[data-phase="idle"] .ai-slip__sheet {
+  clip-path: inset(0 -4px 100% -4px); transition: none;
 }
 .ai-world .ai-slip[data-phase="print"] .ai-slip__sheet {
   animation: ai-slip-feed 1100ms steps(14, end) both, ai-slip-nudge 1100ms var(--ease-expo) both;
@@ -73,27 +122,33 @@
   from { transform: translate3d(0, -14px, 0); }
   to { transform: none; }
 }
-.ai-world .ai-slip[data-phase="close"] .ai-slip__sheet {
+/* pulled back in: fast on a tab change, after the stamp when filed */
+.ai-world .ai-slip[data-phase="close"] .ai-slip__sheet,
+.ai-world .ai-slip[data-phase="file"] .ai-slip__sheet {
   clip-path: inset(0 -4px 100% -4px);
   transform: translate3d(0, -14px, 0);
 }
+.ai-world .ai-slip[data-phase="file"] .ai-slip__sheet {
+  transition: clip-path 560ms var(--ease-expo) 600ms, transform 560ms var(--ease-expo) 600ms;
+}
 
 /* each line's ink arrives 90 ms after the last, in step with the feed */
-.ai-world .ai-slip__line {
-  opacity: 0;
+.ai-world .ai-slip[data-phase="print"] .ai-slip__line {
   animation: ai-slip-ink 320ms linear both;
   animation-delay: calc(var(--i, 0) * 90ms + 90ms);
 }
-@keyframes ai-slip-ink { to { opacity: 1; } }
+@keyframes ai-slip-ink { from { opacity: 0; } to { opacity: 1; } }
 
 /* two sheets of paper meeting on a perforation: the body's bottom edge and
-   the stub's top edge are masked with half-holes every 8px, so the pair reads
+   the stub's top edge are masked with half-holes every 7px, so the pair reads
    as a row of punched holes with the rig showing through */
 .ai-world .ai-slip__body,
 .ai-world .ai-slip__stub {
   position: relative; background: var(--paper);
   transition: transform 700ms var(--ease-expo), opacity 700ms var(--ease-expo);
 }
+.ai-world .ai-slip[data-phase="idle"] .ai-slip__body,
+.ai-world .ai-slip[data-phase="idle"] .ai-slip__stub { transition: none; }
 .ai-world .ai-slip__body {
   padding: 12px 14px 8px;
   transform-origin: 100% 0;
@@ -114,9 +169,30 @@
     radial-gradient(circle at 3.5px 0, transparent 1.5px, #000 2px) top / 7px 3px repeat-x,
     linear-gradient(#000, #000) bottom / 100% calc(100% - 3px) no-repeat;
 }
-/* the tear: the halves fan apart and fall away */
-.ai-world .ai-slip[data-phase="tear"] .ai-slip__body { transform: translate3d(0, 18px, 0) rotate(-3deg); opacity: 0; }
-.ai-world .ai-slip[data-phase="tear"] .ai-slip__stub { transform: translate3d(0, 26px, 0) rotate(3deg); opacity: 0; }
+/* the tear: after the stamp lands, the halves fan apart and fall away */
+.ai-world .ai-slip[data-phase="tear"] .ai-slip__body,
+.ai-world .ai-slip[data-phase="tear"] .ai-slip__stub { opacity: 0; transition-delay: 500ms; }
+.ai-world .ai-slip[data-phase="tear"] .ai-slip__body { transform: translate3d(0, 18px, 0) rotate(-3deg); }
+.ai-world .ai-slip[data-phase="tear"] .ai-slip__stub { transform: translate3d(0, 26px, 0) rotate(3deg); }
+
+/* the stamp: inked the moment the slip is decided, pressed down from above */
+.ai-world .ai-slip__stamp {
+  position: absolute; top: 46px; right: 16px; z-index: 1;
+  display: grid; justify-items: center; gap: 3px; padding: 6px 10px 5px;
+  color: var(--signal-ink); border: 1px solid currentColor; outline: 1px solid currentColor; outline-offset: 2px;
+  font-family: var(--font-geist-mono), monospace; font-size: 8px; line-height: 1.2; letter-spacing: 0.16em; text-transform: uppercase;
+  white-space: nowrap; pointer-events: none; mix-blend-mode: multiply;
+  transform: rotate(-7deg); opacity: 0.94;
+  animation: ai-slip-stamp 440ms var(--ease-expo) both;
+}
+.ai-world .ai-slip__stamp b {
+  font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 0.2em; line-height: 1.1;
+}
+@keyframes ai-slip-stamp {
+  0% { opacity: 0; transform: rotate(-7deg) scale(1.7); }
+  30% { opacity: 0.94; }
+  100% { opacity: 0.94; transform: rotate(-7deg) scale(1); }
+}
 
 /* header */
 .ai-world .ai-slip__head {
@@ -146,15 +222,19 @@
 .ai-world .ai-slip__trail span time { color: var(--ink); }
 .ai-world .ai-slip__trail span:last-child time { color: var(--signal-ink); }
 
-/* the vendor: a span at rest, the same box as a field while correcting, so
-   the slip's height never moves when one becomes the other */
+/* the item: the order and its amount, then the vendor on a line of its own;
+   a span at rest, the same box as a field while correcting, so the slip's
+   height never moves when one becomes the other */
+.ai-world .ai-slip__item { display: grid; gap: 1px; }
+.ai-world .ai-slip__item > span:first-child { color: var(--ink-2); }
 .ai-world .ai-slip__vendor,
 .ai-world .ai-slip__input {
-  display: inline-block; width: 25ch; max-width: 100%; box-sizing: border-box; vertical-align: baseline;
+  display: block; width: 100%; box-sizing: border-box; height: 1.5em;
   margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: transparent;
   font: inherit; letter-spacing: inherit; line-height: inherit; color: var(--ink);
-  white-space: nowrap;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ai-world .ai-slip__vendor[data-amended] { border-bottom-color: var(--signal-ink); }
 .ai-world .ai-slip__input { border-bottom-color: var(--ink); caret-color: var(--signal); outline: none; }
 .ai-world .ai-slip__input:focus-visible { outline: none; border-bottom-color: var(--signal-ink); }
 .ai-world .ai-slip__input::selection { background: rgba(0, 180, 216, 0.3); color: var(--ink); }
@@ -168,11 +248,12 @@
 .ai-world .ai-slip[data-phase="edit"] .ai-slip__acts { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
 .ai-world .ai-slip__btn {
   position: relative; display: inline-grid; place-items: center; height: 36px; padding: 0 10px; overflow: hidden;
-  border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer;
+  border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); cursor: pointer;
   font-family: var(--font-unbounded), sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
 }
 .ai-world .ai-slip__btn + .ai-slip__btn { margin-left: -1px; }
+.ai-world .ai-slip__btn:focus-visible { outline-offset: 3px; }
 /* the fill wipes in from the left, as the site's ghost buttons do */
 .ai-world .ai-slip__btn::before {
   content: ""; position: absolute; inset: 0; background: var(--ink);
@@ -191,21 +272,35 @@
 .ai-world .ai-slip__btn:active > span { color: var(--paper); }
 .ai-world .ai-slip__hint { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
 
-/* phones: full width, 48px targets */
+/* phones: the slip runs the glass's full width, 48px targets */
 @media (max-width: 767px) {
   .ai-world .ai-slip { --slip-w: 100%; }
+  .ai-world .ai-slip__slot { margin-inline: 0; }
+  .ai-world .ai-slip__slot::after,
+  .ai-world .ai-slip__slot i { left: 10px; right: 10px; width: auto; }
+  .ai-world .ai-slip__form { margin: 0 10px; width: auto; }
+  .ai-world .ai-slip__body { padding-inline: 14px; }
   .ai-world .ai-slip__btn { height: 48px; }
+  /* 16px keeps iOS from zooming the page when the field takes focus */
+  .ai-world .ai-slip__vendor,
+  .ai-world .ai-slip__input { height: 24px; line-height: 24px; }
+  .ai-world .ai-slip__input { font-size: 16px; letter-spacing: 0.01em; }
 }
 
-/* reduced motion: the slip is simply there, fully printed; the tear and the
-   close are a 1 ms fade; the halt line is in place */
+/* reduced motion: the slip is simply there, fully printed; the stamp is
+   skipped; the tear, the filing and the close are a 1 ms fade; the halt
+   line is in place */
 @media (prefers-reduced-motion: reduce) {
-  .ai-world .ai-slip[data-phase="print"] .ai-slip__sheet { animation: none; }
-  .ai-world .ai-slip__line { animation: none; opacity: 1; }
-  .ai-world .ai-trace__halt { animation: none; clip-path: none; }
+  .ai-world .ai-slip[data-phase="print"] .ai-slip__sheet,
+  .ai-world .ai-slip[data-phase="print"] .ai-slip__line,
+  .ai-world .ai-slip[data-phase="print"] .ai-slip__slot i { animation: none; }
+  .ai-world .ai-slip__stamp { display: none; }
+  .ai-world .ai-trace__halt,
+  .ai-world .ai-trace__wait { animation: none; clip-path: none; }
   .ai-world .ai-slip__sheet,
   .ai-world .ai-slip__body,
   .ai-world .ai-slip__stub,
+  .ai-world .ai-slip__bay,
   .ai-world .ai-trace__said,
   .ai-world .ai-slip__btn::before,
   .ai-world .ai-slip__btn > span { transition-duration: 1ms !important; transition-delay: 0ms !important; }

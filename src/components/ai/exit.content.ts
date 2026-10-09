@@ -2,12 +2,15 @@
    THE EXIT — words for the diagnostic ticket and the build sheet.
 
    Kept out of content.ts while the revamp lands in parallel; the lead may
-   fold these into content.ts (CREDITS is the table the SpecNote margin notes
-   are meant to read from, so the two can never disagree).
+   fold these into content.ts.
 
-   Voice: precise systems engineer, numbers over adjectives. Every count in
-   CREDITS must be true to the shipped build — counted, not estimated. The
-   audit is a launch checklist item; see the note on each row.
+   CREDITS below is the one build sheet: the credits roll prints it and
+   the SpecNote margin notes read it (projection.content.ts creditFor), so
+   the roll and the notes can never disagree.
+
+   Voice: precise systems engineer, numbers over adjectives. Every count on
+   the build sheet must be true to the shipped build: counted, not estimated.
+   The audit is a launch checklist item.
    ───────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -47,6 +50,12 @@ export const TICKET = {
   blank: "-",
 } as const;
 
+export const CREDITS_COPY = {
+  /** the counter in the roll's top-right crop: "SHEET 07 / 15" */
+  sheet: "Sheet",
+} as const;
+
+/** set in uppercase by the stylesheet */
 export const CREDITS_TITLE = "Build sheet . /ai-infrastructure";
 export const CREDITS_END = "End of specification";
 
@@ -62,10 +71,18 @@ export type Credit = {
 };
 
 /**
- * One row per figure in the reel, in page order. Counts audited 2026-10-09
- * against the worktree: rows for figures still landing from other builders
- * (01b, 03, 04, 05, 07's spans, 09) carry the counts their locked plans
- * specify and are re-checked at launch.
+ * THE BUILD SHEET. One row per figure in the reel, in page order: the
+ * credits roll prints `fig` + `line`, and the SPEC margin notes
+ * (SpecNote, via creditFor in projection.content.ts) print `notes`, so the
+ * two can never disagree.
+ *
+ * COUNTS MUST BE TRUE TO THE SHIPPED BUILD: counted, not estimated.
+ * Audited 2026-10-09 against the worktree. Assets: plates are the distinct
+ * generated scenes the page shows (interlude, stack poster, chip, 4
+ * industries, station 3; desktop/mobile crops of one scene count once),
+ * loops the /videos it plays (stack, chip, 4 industries). Rows for figures
+ * still landing from other builders (01b, 03, 04, 05, 07's spans, 09) carry
+ * the counts their locked plans specify and are re-checked at launch.
  */
 export const CREDITS: Credit[] = [
   {
@@ -172,23 +189,23 @@ export const CREDITS: Credit[] = [
     fig: "Fig. 12",
     line: "the exit . 1 ticket . 10 fibres . 1 roll . 0 cookies",
     notes: [
-      "rows from the session store . stub hinged at the nearer corner . fibres snap at 2 d sin(a/2)",
-      "credits: CSS sticky + one scrubbed transform . the tear travels by the same href as the button",
+      "rows from the session store . the stub hinges on the far corner . 10 fibres snap from the finger to the hinge",
+      "CSS sticky + 1 scrubbed transform . the tear travels by the same href as the button",
     ],
   },
   {
     id: "amb",
     fig: "Ambience",
-    line: "ambience . 1 paper . 1 grain . 1 lens . 1 slate . 5 frames",
+    line: "1 paper . 1 grain . 1 lens . 1 slate . 5 frames",
     notes: [
       "one fixed sheet, never animated . grain steps between offsets, transform only",
       "the lens is pointer-fine only . the streak is velocity only . both off under the dark",
     ],
   },
   {
-    id: "ast",
+    id: "assets",
     fig: "Assets",
-    line: "assets . 8 plates . 6 loops . 0 added this round",
+    line: "8 plates . 6 loops . 0 added this round",
     notes: [
       "/worlds: interlude (desktop + mobile), stack poster, station 3 (+ mobile), chip, 4 industries",
       "/videos: stack, chip, 4 industries . every loop plays only on screen",

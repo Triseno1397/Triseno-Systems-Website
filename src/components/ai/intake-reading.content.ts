@@ -114,7 +114,7 @@ export const RECORD: RecordRow[] = [
     label: "Terms",
     values: [
       { by: "terms", text: "Net 30" },
-      { by: "terms2", text: " . 14 May" },
+      { by: "terms2", text: ". 14 May" },
     ],
     conflict: "terms2",
     note: INTAKE.note,
@@ -124,7 +124,7 @@ export const RECORD: RecordRow[] = [
     label: "Confidence",
     values: [
       { by: "po", text: "0.94" },
-      { by: "terms2", text: " . 0.61 < 0.80", signal: true },
+      { by: "terms2", text: ". 0.61 < 0.80", signal: true },
     ],
     derived: true,
   },

@@ -20,26 +20,40 @@ export type LayerIndex = 0 | 1 | 2 | 3;
 export const LAYER_KEYS = ["data", "models", "agents", "interface"] as const;
 export const LAYER_NAMES = ["Data", "Models", "Agents", "Interface"] as const;
 
-/** y of each layer's slab in the film frame (0 top .. 1 bottom), bottom-up */
+/** y of each layer's hotspot in the film frame (0 top .. 1 bottom), bottom-up */
 export const LAYER_Y: readonly number[] = [0.81, 0.59, 0.39, 0.22];
-/** the stack's centre line in the source frame, and where the labels hang */
-export const CX = 0.49;
+/** the stack's centre line (the light column) in the source frame, and where the labels hang */
+export const CX = 0.497;
 export const LABEL_X = 0.79;
 export const SRC_AR = 16 / 9;
-/** half-width of a layer's slab around CX, and its height, as frame fractions */
-export const QUAD_HW = 0.23;
-export const QUAD_H = 0.14;
+/** where a request enters the frame (below the Data slab, on the floor) */
+export const ENTRY_Y = 0.97;
+/** where a delivered request leaves it (through the Interface screens) */
+export const EXIT_Y = 0.05;
+/**
+ * Each layer's slab as frame fractions, measured on the film (the camera
+ * pushes in slowly over the loop, so these are the loop's average). The
+ * Interface box takes in the screens standing on its slab: they are the
+ * layer. The inspect box draws exactly this rectangle.
+ */
+export const BOXES: readonly { x: number; y: number; w: number; h: number }[] = [
+  { x: 0.256, y: 0.705, w: 0.488, h: 0.225 },
+  { x: 0.258, y: 0.525, w: 0.484, h: 0.165 },
+  { x: 0.256, y: 0.315, w: 0.488, h: 0.145 },
+  { x: 0.256, y: 0.035, w: 0.488, h: 0.24 },
+];
 /** the source frame the film was rendered at: the inspect rulers print these */
 export const FRAME_W = 1920;
 export const FRAME_H = 1080;
 
 /** a layer's slab in source-frame pixels (constant: the crop never changes the frame) */
 export function frameQuad(layer: number): { x: number; y: number; w: number; h: number } {
+  const b = BOXES[layer];
   return {
-    x: Math.round((CX - QUAD_HW) * FRAME_W),
-    y: Math.round((LAYER_Y[layer] - QUAD_H / 2) * FRAME_H),
-    w: Math.round(QUAD_HW * 2 * FRAME_W),
-    h: Math.round(QUAD_H * FRAME_H),
+    x: Math.round(b.x * FRAME_W),
+    y: Math.round(b.y * FRAME_H),
+    w: Math.round(b.w * FRAME_W),
+    h: Math.round(b.h * FRAME_H),
   };
 }
 

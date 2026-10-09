@@ -3,7 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import "@/app/ai-projection.css";
-import { getLenis } from "@/components/world/SmoothScroll";
+import { getLenis, lockScroll } from "@/components/world/SmoothScroll";
 import { KEYS } from "./projection.content";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -175,7 +175,12 @@ export default function OperatorKeys() {
     const jump = (rail: string) => {
       const el = document.querySelector<HTMLElement>(`main [data-rail="${rail}"]`);
       if (!el) return;
-      closeKeys();
+      if (isKeysOpen()) {
+        // release the page now, not after React's commit, or Lenis (stopped
+        // under the sheet) would drop the scrollTo below
+        closeKeys();
+        lockScroll(false);
+      }
       // a paper sheet opens on its hairline under the chrome lane; a dark band
       // takes the top of the frame
       const lane = el.classList.contains("ai-section") ? (probeRef.current?.offsetHeight ?? 0) : 0;
@@ -194,9 +199,12 @@ export default function OperatorKeys() {
       const k = e.key;
       if (k === "Escape") {
         disarm();
+        // the sheet is the top layer: Esc closes it and stops there, so it
+        // never also resolves a slip or closes a drawer underneath
         if (isKeysOpen()) {
           e.preventDefault();
           closeKeys();
+          return;
         }
         window.dispatchEvent(new CustomEvent("ai:escape"));
         return;
@@ -251,6 +259,8 @@ export default function OperatorKeys() {
       Array.from(sheet.querySelectorAll<HTMLElement>("button, [href], input, [tabindex]:not([tabindex='-1'])")).filter(
         (el) => !el.hasAttribute("disabled"),
       );
+    // the page holds still under a modal sheet (Lenis stopped, overflow hidden)
+    lockScroll(true);
     const raf = window.requestAnimationFrame(() => closeRef.current?.focus());
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
@@ -270,6 +280,7 @@ export default function OperatorKeys() {
     return () => {
       window.cancelAnimationFrame(raf);
       sheet.removeEventListener("keydown", onKey);
+      lockScroll(false);
       if (prev && typeof prev.focus === "function" && document.contains(prev)) prev.focus();
     };
   }, [open]);

@@ -4,8 +4,8 @@
    A 100svh stage, pinned and scrubbed. One SVG: the five agents as a
    hairline plan, and inside Verify a drafted die that the camera pushes
    into, 1x to 14x. Every stroke is non-scaling, so a hairline is 1px at
-   every magnification; type is set in user units sized by JS to read at
-   the zoom where it appears. Only transform, opacity and clip-path move.
+   every magnification; type is set in user units solved by JS (on resize
+   only) to read at 14x. Only transform, opacity and clip-path move.
    Scoped to .ai-anat; tokens come from .ai-world (ai.css).
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -18,97 +18,175 @@
 .ai-anat__stage { position: relative; width: 100%; height: 100svh; min-height: 100svh; overflow: hidden; }
 
 /* ── the figure box: the frame between the chrome lanes. The camera zooms
-   about its centre, and the die at 14x fits inside it with air. ── */
+   about its centre; the die at 14x fits inside it with 8% of air. ── */
 .ai-anat__fig {
-  position: absolute; top: var(--lane-top); bottom: var(--lane-bottom); left: var(--gutter); right: var(--gutter);
+  position: absolute; margin: 0;
+  top: var(--lane-top); bottom: var(--lane-bottom); left: var(--gutter); right: var(--gutter);
 }
 @media (min-width: 1200px) { .ai-anat__fig { right: calc(var(--gutter) + var(--lane-right, 0px)); } }
-@media (min-width: 768px) and (max-width: 1023px) { .ai-anat__fig { bottom: calc(var(--lane-bottom) + 48px); } }
+@media (min-width: 768px) and (max-width: 1023px) { .ai-anat__fig { bottom: calc(var(--lane-bottom) + 72px); } }
+.ai-anat__fig > .ai-frame__crop { border-color: var(--ink-3); }
 .ai-anat__fig > .ai-frame__crop[data-c="tl"] { top: -10px; left: -10px; }
 .ai-anat__fig > .ai-frame__crop[data-c="tr"] { top: -10px; right: -10px; }
 .ai-anat__fig > .ai-frame__crop[data-c="bl"] { bottom: -10px; left: -10px; }
 .ai-anat__fig > .ai-frame__crop[data-c="br"] { bottom: -10px; right: -10px; }
 
+/* the camera's frame: whatever the push carries past the box is cut at it */
 .ai-anat__svg {
-  position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible;
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: hidden;
   font-family: var(--font-geist-mono), monospace; text-rendering: geometricPrecision;
-  /* set by JS on measure: user units that read as px at the zoom where each level appears */
-  --fs-agent: 12px; --fs-block: 2px; --fs-spec: 1.4px; --fs-trace: 1.2px; --fs-tiny: 0.9px;
+  /* set by JS on measure, in user units */
+  --fs-agent: 12; --fs-block: 10; --fs-spec: 8; --fs-tiny: 6.5; --fs-trace: 9; --halo: 2;
 }
-.ai-anat__svg text { fill: var(--ink); letter-spacing: 0.14em; font-size: var(--fs-agent); }
-.ai-anat__zoom, .ai-anat__die { will-change: transform; }
+.ai-anat__svg text {
+  fill: var(--ink); stroke: none; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: calc(var(--fs-agent) * 1px); font-variant-numeric: tabular-nums;
+}
 
 /* hairlines: 1px at every zoom. Orthogonal line-work snaps to the pixel
    grid; circles keep their anti-aliasing. */
 .ai-anat__hair { fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
-.ai-anat__ring { fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .ai-anat__hair--2 { stroke-opacity: 0.55; }
-.ai-anat__hair--3 { stroke-opacity: 0.32; }
-.ai-anat__grid { stroke-opacity: 0.07; }
-.ai-anat__port { fill: var(--paper); }
-.ai-anat__reticle { stroke: var(--signal-ink); }
+.ai-anat__hair--3 { stroke-opacity: 0.3; }
+.ai-anat__grid { stroke-opacity: 0.08; }
+.ai-anat__ring { fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ai-anat__ring--agent { stroke: var(--ink-2); }
+/* Verify, once the camera locks on: the circle takes the signal */
+.ai-anat__ring--lock { stroke: var(--signal-ink); opacity: 0; transition: opacity 700ms var(--ease-expo); }
+.ai-anat[data-locked] .ai-anat__ring--lock { opacity: 1; }
+.ai-anat__reticle { fill: none; stroke: var(--signal-ink); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
 
-/* the plan's type */
-.ai-anat__name { fill: var(--ink-2); }
-.ai-anat__num { fill: var(--signal-ink); font-weight: 500; }
+/* ── the plan's type ── */
+.ai-anat__svg .ai-anat__name { fill: var(--ink-2); }
+.ai-anat__svg .ai-anat__name--verify { fill: var(--ink); font-weight: 500; }
+.ai-anat__svg .ai-anat__num { fill: var(--signal-ink); font-size: calc(var(--fs-agent) * 0.92px); letter-spacing: 0.06em; }
+
+/* ── the die ── */
+.ai-anat__diebody { fill: var(--paper); stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+.ai-anat__blockbody { fill: var(--paper); }
+.ai-anat__pin1 { fill: var(--ink); }
+.ai-anat__port { fill: var(--paper); stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
 
 /* the die's type, by level */
-.ai-anat__blocklabel { font-size: var(--fs-block); font-weight: 500; transition: fill 400ms linear; }
-.ai-anat__spec { font-size: var(--fs-spec); fill: var(--ink-2); }
-.ai-anat__tiny { font-size: var(--fs-tiny); fill: var(--ink-2); letter-spacing: 0.1em; }
-.ai-anat__tlabel { font-size: var(--fs-trace); fill: var(--signal-ink); }
+.ai-anat__svg .ai-anat__blocklabel { font-size: calc(var(--fs-block) * 1px); font-weight: 500; letter-spacing: 0.12em; }
+.ai-anat__svg .ai-anat__spec { font-size: calc(var(--fs-spec) * 1px); fill: var(--ink-2); letter-spacing: 0.04em; text-transform: none; }
+.ai-anat__svg .ai-anat__tiny { font-size: calc(var(--fs-tiny) * 1px); fill: var(--ink-3); letter-spacing: 0.06em; text-transform: none; }
+.ai-anat__svg .ai-anat__tiny--ink { fill: var(--ink); }
+.ai-anat__svg .ai-anat__portlabel { fill: var(--ink-2); text-transform: uppercase; letter-spacing: 0.12em; }
+.ai-anat__svg .ai-anat__title-block { text-transform: uppercase; letter-spacing: 0.12em; }
+/* labels that cross line-work sit on a paper halo */
+.ai-anat__svg :is(.ai-anat__tlabel, .ai-anat__portlabel, .ai-anat__tiny) {
+  paint-order: stroke; stroke: var(--paper); stroke-width: calc(var(--halo) * 1px); stroke-linejoin: round;
+}
 
-/* a block under the pointer: a wash of signal at seven percent, its label in signal ink */
-.ai-anat__block { cursor: default; }
-.ai-anat__blockfill { fill: var(--signal); fill-opacity: 0; pointer-events: all; transition: fill-opacity 360ms linear; }
-.ai-anat__block[data-hot] .ai-anat__blockfill { fill-opacity: 0.07; }
-.ai-anat__block[data-hot] .ai-anat__blocklabel { fill: var(--signal-ink); }
+/* ── the pointer: a wash of signal at eight percent, the label in signal ink ── */
+.ai-anat__hit { fill: transparent; pointer-events: none; }
+.ai-anat[data-live] .ai-anat__hit { pointer-events: all; }
+.ai-anat__wash { fill: var(--signal); fill-opacity: 0.08; opacity: 0; transition: opacity 450ms var(--ease-expo); }
+.ai-anat__svg .ai-anat__blocklabel--hot { fill: var(--signal-ink); opacity: 0; transition: opacity 450ms var(--ease-expo); }
+.ai-anat[data-hot="planner"] [data-for="planner"],
+.ai-anat[data-hot="memory"] [data-for="memory"],
+.ai-anat[data-hot="router"] [data-for="router"],
+.ai-anat[data-hot="guardrails"] [data-for="guardrails"],
+.ai-anat[data-hot="evaluator"] [data-for="evaluator"] { opacity: 1; }
 
-/* the trace: eleven segments in signal, each revealed along its own axis by
-   clip-path (JS). The sizing rect gives each group a real box to clip against. */
-.ai-anat__trace { fill: none; stroke: var(--signal); stroke-width: 1.5; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+/* ── the walk: eleven segments in signal, each revealed along its own axis
+   by clip-path (JS). The sizing rect gives each group a real box to clip
+   against, so a horizontal line's zero-height box never swallows it. ── */
 .ai-anat__segbox { fill: none; stroke: none; }
-.ai-anat__sq { fill: var(--signal); }
+.ai-anat__trace { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-linecap: butt; vector-effect: non-scaling-stroke; }
+.ai-anat__packet { opacity: 0; transition: opacity 400ms var(--ease-expo); }
+.ai-anat__packet[data-on] { opacity: 1; }
+.ai-anat__packet-ring { fill: none; stroke: var(--signal); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+.ai-anat__packet-core { fill: var(--signal); }
+
+/* marks: what the request lights as it passes (toggled once, eased by CSS) */
+.ai-anat__lit, .ai-anat__portlit, .ai-anat__arrow { fill: var(--signal); }
+.ai-anat__value { fill: none; stroke: var(--signal); stroke-width: 2; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+.ai-anat__svg .ai-anat__tlabel { font-size: calc(var(--fs-trace) * 1px); fill: var(--signal-ink); font-weight: 500; letter-spacing: 0.06em; text-transform: none; }
+.ai-anat [data-mark] { opacity: 0; transition: opacity 500ms var(--ease-expo); }
+.ai-anat [data-mark][data-on] { opacity: 1; }
 
 /* ── copy and HUD over the stage ── */
 .ai-anat__head {
-  position: absolute; z-index: 2; top: var(--lane-top); left: var(--gutter); max-width: min(40ch, 34%);
+  position: absolute; z-index: 2; top: var(--lane-top); left: var(--gutter); max-width: min(38ch, 32%);
   display: grid; gap: 16px; margin: 0; pointer-events: none;
 }
-.ai-anat__eyebrow { display: none; }
+.ai-anat__eyebrow { display: none; margin: 0; }
 .ai-anat__title {
   margin: 0; font-family: var(--font-unbounded), sans-serif; font-weight: 600; text-transform: uppercase;
-  font-size: clamp(26px, 2.9vw, 50px); line-height: 1.02; letter-spacing: 0.04em; color: var(--ink);
+  font-size: clamp(26px, 2.9vw, 50px); line-height: 1.02; letter-spacing: 0.06em; color: var(--ink);
 }
-.ai-anat__aside { max-width: 36ch; }
+.ai-anat__aside { margin: 0; max-width: 34ch; }
 .ai-anat__ch { position: absolute; z-index: 2; top: var(--lane-top); right: calc(var(--gutter) + var(--lane-right, 0px)); margin: 0; }
 
 .ai-anat__hud {
   position: absolute; z-index: 2; left: var(--gutter); bottom: var(--lane-bottom); margin: 0;
-  display: grid; gap: 6px; pointer-events: none;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.18em; text-transform: uppercase;
+  display: grid; gap: 7px; pointer-events: none;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1.4; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
-.ai-anat__hud b { font-weight: 500; color: var(--ink); }
-.ai-anat__hud i { display: inline-block; width: 6px; height: 6px; margin-right: 10px; background: var(--signal); vertical-align: 1px; }
-.ai-anat__hud-zoom { display: inline-block; min-width: 5ch; color: var(--signal-ink); }
+.ai-anat__hud-row { display: flex; align-items: center; }
+.ai-anat__hud i { display: inline-block; flex: none; width: 6px; height: 6px; margin-right: 10px; background: var(--signal); }
+.ai-anat__hud-zoom { display: inline-block; min-width: 5.5ch; margin-left: 0.6em; font-weight: 500; color: var(--signal-ink); }
+/* two lines that share a slot and cross-fade */
+.ai-anat__hud-swap { display: grid; }
+.ai-anat__hud-swap > * { grid-area: 1 / 1; transition: opacity 500ms var(--ease-expo); }
+.ai-anat__hud-agent { opacity: 0; color: var(--ink); }
+.ai-anat[data-locked] .ai-anat__hud-plan { opacity: 0; }
+.ai-anat[data-locked] .ai-anat__hud-agent { opacity: 1; }
+.ai-anat__hud-hint { opacity: 0; color: var(--ink-3); }
+.ai-anat[data-live]:not([data-walk]):not([data-hot]) .ai-anat__hud-hint { opacity: 1; }
+.ai-anat__walk { opacity: 0; color: var(--signal-ink); }
+.ai-anat:is([data-walk], [data-hot]) .ai-anat__walk { opacity: 1; }
+.ai-anat__hint-touch { display: none; }
+@media (hover: none), (pointer: coarse) {
+  .ai-anat__hint-fine { display: none; }
+  .ai-anat__hint-touch { display: inline; }
+}
+
 .ai-anat__cap {
   position: absolute; z-index: 2; right: calc(var(--gutter) + var(--lane-right, 0px)); bottom: var(--lane-bottom); margin: 0; pointer-events: none;
 }
 
-/* ── phones: the head sits above the figure in flow; the chapter label becomes its eyebrow ── */
-@media (max-width: 767px) {
-  .ai-anat__stage { display: flex; flex-direction: column; padding: var(--lane-top) var(--gutter) calc(var(--lane-bottom) + 44px); }
-  .ai-anat__head { position: relative; top: auto; left: auto; max-width: none; gap: 12px; margin-bottom: 12px; }
-  .ai-anat__eyebrow { display: block; }
-  .ai-anat__title { font-size: 26px; }
+/* ── tablets: the head takes a little more of the width ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ai-anat__head { max-width: 42%; }
   .ai-anat__aside { display: none; }
-  .ai-anat__ch { display: none; }
-  .ai-anat__fig { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
-  .ai-anat__name { display: none; }
-  .ai-anat__cap { display: none; }
 }
 
+/* ── phones: the head sits above the figure in flow, the HUD under it; the
+   chapter label becomes the eyebrow. The frame starts under the top chrome's
+   solid zone and ends above the bottom one, as the night sheet does. ── */
+@media (max-width: 767px) {
+  .ai-anat__stage {
+    display: flex; flex-direction: column;
+    padding: calc(var(--fade-top-solid) + 28px) var(--gutter) calc(var(--fade-bottom-solid) + 8px);
+  }
+  .ai-anat__head { position: relative; top: auto; left: auto; max-width: none; gap: 10px; margin-bottom: 20px; }
+  .ai-anat__eyebrow { display: block; }
+  .ai-anat__title { font-size: clamp(20px, 5.6vw, 26px); }
+  .ai-anat__aside, .ai-anat__ch, .ai-anat__cap { display: none; }
+  .ai-anat__fig { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; margin: 0 10px; }
+  .ai-anat__hud { position: relative; left: auto; bottom: auto; margin-top: 20px; gap: 5px; font-size: 11px; letter-spacing: 0.14em; }
+  .ai-anat__svg .ai-anat__name { display: none; }
+  .ai-anat__svg .ai-anat__name--verify { display: inline; }
+}
+
+/* ── reduced motion: no pin; the die at 14x, the walk lit end to end ── */
 @media (prefers-reduced-motion: reduce) {
-  .ai-anat__blockfill, .ai-anat__blocklabel { transition: none; }
+  .ai-anat__stage {
+    height: auto; display: flex; flex-direction: column;
+    padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  }
+  .ai-anat__head { position: relative; top: auto; left: auto; max-width: 62ch; margin-bottom: 28px; }
+  .ai-anat__fig { position: relative; inset: auto; flex: none; height: min(72svh, 760px); margin: 10px; }
+  .ai-anat__hud { position: relative; left: auto; bottom: auto; margin-top: 22px; }
+  .ai-anat__cap { position: relative; right: auto; bottom: auto; margin-top: 10px; justify-content: flex-start; }
+  .ai-anat [data-mark], .ai-anat__packet, .ai-anat__wash, .ai-anat__blocklabel--hot,
+  .ai-anat__ring--lock, .ai-anat__hud-swap > * { transition-duration: 1ms; }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 767px) {
+  .ai-anat__stage { padding: calc(var(--fade-top-solid) + 28px) var(--gutter) calc(var(--fade-bottom-solid) + 8px); }
+  .ai-anat__fig { height: min(56svh, 420px); }
 }

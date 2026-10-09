@@ -68,7 +68,8 @@
   touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   opacity: 0; transition: opacity 600ms linear;
 }
-.ai-merc__stage[data-ready] { opacity: 1; }
+/* the reserve before the first measure; once laid out the stage is exactly layout.H tall, so the canvas is never stretched */
+.ai-merc__stage[data-ready] { opacity: 1; min-height: 0; }
 /* touch-action: none only while a drag is armed; a vertical pan still scrolls the page otherwise */
 .ai-merc__stage[data-drag] { touch-action: none; }
 @media (hover: hover) and (pointer: fine) {
@@ -114,14 +115,20 @@
   position: absolute; left: 0; top: 0; white-space: nowrap; pointer-events: none; will-change: transform, opacity;
   font-family: var(--font-geist-mono), monospace; font-size: 11px; line-height: 1.3; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2);
 }
-.ai-merc__tag > span, .ai-merc__agent > span { display: block; transform: translate3d(0, -50%, 0); }
+.ai-merc__tag > span { display: block; transform: translate3d(0, -50%, 0); }
 .ai-merc__tags[data-tags="below"] .ai-merc__tag > span,
-.ai-merc__tags[data-tags="below"] .ai-merc__agent > span { transform: translate3d(-50%, 0, 0); }
+.ai-merc__agent > span { display: block; transform: translate3d(-50%, 0, 0); }
+.ai-merc__tags[data-tags="below"] .ai-merc__tag > span {
+  width: max-content; max-width: var(--cell, 140px); white-space: normal; text-align: center; text-wrap: balance;
+}
 .ai-merc__tag b { font-weight: 500; color: var(--signal-ink); margin-right: 0.6em; }
 .ai-merc__agent { opacity: 0; color: var(--ink-3); }
 .ai-merc__agent b { font-weight: 500; color: var(--ink); }
 .ai-merc__agent i { font-style: normal; margin-inline: 0.5em; }
 .ai-merc__agent em { font-style: normal; font-variant-numeric: tabular-nums; }
+/* a phone's two columns are too narrow for "Reconcile · absorbed 2" on one line */
+.ai-merc__tags[data-narrow] .ai-merc__agent > span { display: grid; justify-items: center; row-gap: 3px; }
+.ai-merc__tags[data-narrow] .ai-merc__agent i { display: none; }
 
 /* the square hairline a tap sends out over the sheet (page convention) */
 .ai-merc__ring {
@@ -157,7 +164,7 @@
 
 @media (max-width: 767px) {
   .ai-merc__panel { margin-top: 24px; }
-  .ai-merc__stage { min-height: 420px; }
+  .ai-merc__stage:not([data-ready]) { min-height: 420px; }
   .ai-merc__tag, .ai-merc__agent, .ai-merc__ftag { font-size: 10.5px; letter-spacing: 0.1em; }
   .ai-merc .ai-merc__btn { width: 100%; }
   .ai-merc__hint { margin-left: 0; }

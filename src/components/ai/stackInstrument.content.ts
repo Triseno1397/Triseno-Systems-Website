@@ -96,7 +96,7 @@ export const STACK_COPY = {
     flagText: (ms: string) => `${ms} ms budget`,
     logsPlaceholder: "filter logs",
     hint: "drag the axis to zoom . W A S D",
-    hintTouch: "tap the axis to zoom the last range",
+    hintTouch: "tap the axis to zoom the longest span . tap again to fit",
     total: "total",
     replay: "Replay",
     axisLabel: "Time axis. Drag to zoom a range.",

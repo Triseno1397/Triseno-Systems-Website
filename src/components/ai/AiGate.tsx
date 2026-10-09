@@ -22,6 +22,8 @@ import Ticket from "./Ticket";
  * visitor did on the way down, printed on paper, with a stub to tear. The
  * tear fires the identical travel as the button (DIAGNOSTIC_HREF), and while
  * the stub is pulled the glyph plays the same morph it plays for the button.
+ * The section clips only horizontally, so a torn stub can fall past its
+ * foot over the credits below.
  *
  * The two cross-division links are the only place on this page another
  * division may be named (D3), and they are set in the same Unbounded
@@ -103,7 +105,7 @@ export default function AiGate() {
       data-rail-next="Contact"
       data-ch="12"
       aria-labelledby="ai-gate-title"
-      className="ai-gate ai-gate--ticket relative z-10 min-h-[100svh] overflow-hidden"
+      className="ai-gate ai-gate--ticket relative z-10 min-h-[100svh] overflow-x-clip"
     >
       <div className="ai-wrap ai-gate__inner">
         <svg ref={figureRef} aria-hidden="true" className="ai-gate__figure" viewBox="-1.8 -2 3.6 3.6">

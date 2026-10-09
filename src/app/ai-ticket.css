@@ -5,8 +5,10 @@
    Paper on the dark arrival plate: background var(--paper), ink type,
    1px hairlines, radius 0, no shadow. The body and the stub are two
    clip-path polygons bitten by eleven notches along their shared edge;
-   ten 1px fibres straddle that edge and are stretched to the gap by
-   transform during a pull. Only transform, opacity and clip-path move.
+   ten 1px paper fibres straddle that edge and are stretched across the
+   gap by transform during a pull (they are paper, so they read against
+   the dark showing through the gap). Only transform, opacity and
+   clip-path move.
    ═══════════════════════════════════════════════════════════════════ */
 
 .ai-ticket {
@@ -55,7 +57,7 @@
 /* ── the perforation ── */
 .ai-ticket__fibres { position: absolute; left: 0; right: 0; height: 0; z-index: 2; pointer-events: none; }
 .ai-ticket__fibre {
-  position: absolute; top: 0; width: 1px; height: 6px; background: var(--ink);
+  position: absolute; top: 0; width: 1px; height: 6px; background: var(--paper);
   transform-origin: 0 0; transform: scaleY(0);
 }
 .ai-ticket__fibre[data-snap] { transition: transform 120ms var(--ease-power3); }
@@ -86,9 +88,14 @@
   40% { transform: rotate(var(--tug, 6deg)); }
   100% { transform: rotate(0deg); }
 }
+/* hover: the stub gives 3px at the perforation and the ten bridges show,
+   stretched across the gap it opens; the fold line darkens to ink */
 @media (hover: hover) and (pointer: fine) {
-  .ai-ticket:not([data-drag]):not([data-detached]) .ai-ticket__stub:hover {
-    transform: translate3d(0, -2px, 0); transition: transform 400ms var(--ease-expo);
+  .ai-ticket:not([data-drag]):not([data-detached]):not([data-torn]) .ai-ticket__stub:hover {
+    transform: translate3d(0, 3px, 0); transition: transform 420ms var(--ease-expo);
+  }
+  .ai-ticket:not([data-drag]):not([data-detached]):not([data-torn]):has(.ai-ticket__stub:hover) .ai-ticket__fibre:not([data-snap]) {
+    transform: scaleY(0.5); transition: transform 420ms var(--ease-expo);
   }
   .ai-ticket__stub:hover::before { background: var(--ink); }
 }

@@ -102,7 +102,7 @@
 .ai-read__rhead b { font-weight: 500; color: var(--ink); }
 .ai-read__record { margin: 0; display: grid; }
 .ai-read__row {
-  position: relative; display: grid; grid-template-columns: 12px 9.5em minmax(0, 1fr); column-gap: 16px; align-items: baseline;
+  position: relative; display: grid; grid-template-columns: 12px 6.75rem minmax(0, 1fr); column-gap: 16px; align-items: baseline;
   min-height: 54px; padding: 15px 12px; border-bottom: 1px solid var(--rule-2);
 }
 .ai-read__row[data-derived] { border-bottom: 1px solid var(--ink); }
@@ -112,15 +112,23 @@
   transition: opacity 320ms var(--ease-expo);
 }
 .ai-read__row[data-lit]::before, .ai-read__row:focus-visible::before { opacity: 1; }
+@media (min-width: 1280px) { .ai-read__row { grid-template-columns: 12px 8.5rem minmax(0, 1fr); } }
 @media (hover: hover) and (pointer: fine) {
   .ai-read__row:not([data-derived]) { cursor: default; }
   .ai-read__row:not([data-derived]):hover::before { opacity: 1; }
 }
 .ai-read__row:focus-visible { outline-offset: -1px; }
 
+/* the write tick: a cyan hairline under the row, drawn and faded by the timeline */
+.ai-read__tick {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--signal);
+  transform: scaleX(0); transform-origin: left center; opacity: 0; pointer-events: none;
+}
+.ai-read:not([data-armed]) .ai-read__tick { display: none; }
+
 /* the dot: a hairline ring while the field is empty, filled ink once a value
    lands, a hollow cyan ring when two readings disagree */
-.ai-read__dot { position: relative; align-self: center; width: 12px; height: 12px; border: 1px solid var(--rule-2); border-radius: 50%; }
+.ai-read__dot { position: relative; align-self: start; margin-top: 4px; width: 12px; height: 12px; border: 1px solid var(--rule-2); border-radius: 50%; }
 .ai-read__dot i { position: absolute; inset: -1px; border-radius: 50%; }
 .ai-read__dot-fill { background: var(--ink); }
 .ai-read__dot-ring { border: 1px solid var(--signal); background: var(--paper); }
@@ -140,17 +148,20 @@
 /* an empty field prints a dash until its value lands */
 .ai-read__blank { position: absolute; left: 0; top: 0; color: var(--ink-3); }
 .ai-read:not([data-armed]) .ai-read__blank { opacity: 0; }
-.ai-read__val { display: inline-block; white-space: pre; vertical-align: top; }
+.ai-read__val { display: inline-block; max-width: 100%; vertical-align: top; }
+/* a second reading on the same row: one mono space, kept off the start of a wrapped line */
+.ai-read__val + .ai-read__val { margin-left: 1ch; }
 .ai-read[data-armed] .ai-read__val { clip-path: inset(0% 100% 0% 0%); }
 .ai-read__val[data-signal] { color: var(--signal-ink); }
-.ai-read__note {
-  display: block; margin-top: 5px;
-  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--signal-ink);
+/* the conflict note: a second <dd> spanning label and value, so it sets on one line */
+.ai-read__row .ai-read__note {
+  grid-column: 2 / -1; margin-top: 7px;
+  font-size: 11px; letter-spacing: 0.16em; line-height: 1.4; text-transform: uppercase; color: var(--signal-ink);
 }
 .ai-read[data-armed] .ai-read__note { clip-path: inset(0% 100% 0% 0%); }
 
 .ai-read__hint {
-  margin: 12px 12px 0; font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+  margin: 12px 12px 14px; text-wrap: balance; font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
 }
 .ai-read__hint-touch { display: none; }
 @media (hover: none) {

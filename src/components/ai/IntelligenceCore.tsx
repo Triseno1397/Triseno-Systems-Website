@@ -120,12 +120,20 @@ const hash = (n: number) => {
 
 /** held shorter than this is a tap: a half-second peek */
 const TAP_MS = 220;
+/** how far a tap's peek goes: far enough that the room glints through the skin */
+const PEEK = 0.34;
 /** a touch must stay put this long before it arms (a scroll start never becomes a press) */
 const TOUCH_ARM_MS = 230;
 /** and move less than this */
 const TOUCH_SLOP = 8;
 /** the dive releases once less than this much of the figure is on screen */
 const IO_RELEASE = 0.6;
+/**
+ * The cut is taken on the core's smallest silhouette, not its largest: the
+ * noise can sink the skin to ~0.87 R, and the room must already cover every
+ * corner of the frame through the skin when the screen switches to it.
+ */
+const R_CUT = R_CORE * 0.86;
 
 export default function IntelligenceCore({ className, label }: { className?: string; label: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -311,10 +319,14 @@ export default function IntelligenceCore({ className, label }: { className?: str
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       tiltT.set(ndc.x, ndc.y);
       over = true;
+      // pointer devices: over the core, the ring waits under the cursor as an
+      // empty hairline (this is the thing you hold)
+      if (e.pointerType !== "touch" && !pressing) hover(hitCore(e, r));
     };
     const onLeave = () => {
       over = false;
       tiltT.set(0, 0);
+      if (!pressing) hover(null);
     };
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
@@ -367,6 +379,8 @@ export default function IntelligenceCore({ className, label }: { className?: str
     let aspect = 1;
     /** the frame's half-diagonal angle: the core has filled the frame once its angular radius exceeds it */
     let hAngle = 0;
+    let dCut = 1.5;
+    let zEnd = 1.15;
     const size = () => {
       const w = host.clientWidth;
       const h = host.clientHeight;
@@ -379,6 +393,11 @@ export default function IntelligenceCore({ className, label }: { className?: str
       camera.position.z = zHome;
       camera.updateProjectionMatrix();
       hAngle = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * Math.sqrt(1 + aspect * aspect));
+      // the distance at which the core's smallest silhouette covers the frame's
+      // corners, and where the push ends: always past the cut, whatever the
+      // figure's shape (1.15 on the 5:4 and 4:5 figures the plan was tuned on)
+      dCut = R_CUT / Math.sin(hAngle);
+      zEnd = Math.sqrt(Math.max(0.0025, Math.min(1.15, dCut * 0.9) ** 2 - CAM_Y * CAM_Y));
       renderer.getDrawingBufferSize(res);
       coreU.uRes.value.copy(res);
       nucleus?.resize(aspect);
@@ -390,12 +409,40 @@ export default function IntelligenceCore({ className, label }: { className?: str
       nucleus = buildNucleus(renderer, pmrem, {
         weak,
         aspect,
-        arcVert: ARC_VERT,
-        arcFrag: ARC_FRAG,
         exposure: renderer.toneMappingExposure,
         aces: renderer.toneMapping === THREE.ACESFilmicToneMapping,
       });
     };
+    /**
+     * Build the room and compile its programs while the visitor reads the
+     * headline, so the first press never waits on a shader link. Once, in an
+     * idle slice after the hero has been on screen a moment; never on "low".
+     */
+    let idleId = 0;
+    let warmed = false;
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const warm = () => {
+      idleId = 0;
+      if (warmed || low || !visible) return;
+      warmed = true;
+      ensureNucleus();
+      ensureRT();
+      nucleus?.warm(rt);
+    };
+    const scheduleWarm = () => {
+      if (warmed || low || idleId) return;
+      idleId = w.requestIdleCallback ? w.requestIdleCallback(warm, { timeout: 2500 }) : window.setTimeout(warm, 1200);
+    };
+    const cancelIdle = () => {
+      if (!idleId) return;
+      if (w.cancelIdleCallback) w.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId);
+      idleId = 0;
+    };
+
     const ensureRT = () => {
       renderer.getDrawingBufferSize(res);
       const w = Math.max(1, Math.round(res.x * rtScale));
@@ -432,7 +479,15 @@ export default function IntelligenceCore({ className, label }: { className?: str
     const tap = () => {
       // under reduced motion the press already toggled the state
       if (reduced) return;
-      gsap.to(dive, { v: 0.25, duration: 0.3, ease: "power2.out", yoyo: true, repeat: 1, overwrite: true });
+      // a half-second peek: the mercury bulges, the room glints through the
+      // skin, and it settles back to rest (always to 0, wherever it started)
+      gsap.to(dive, {
+        keyframes: [
+          { v: Math.max(PEEK, dive.v), duration: 0.34, ease: "power2.out" },
+          { v: 0, duration: 0.46, ease: "power2.inOut" },
+        ],
+        overwrite: true,
+      });
     };
     const lowPress = () => {
       lowHold = true;
@@ -441,24 +496,42 @@ export default function IntelligenceCore({ className, label }: { className?: str
     };
     const lowRelease = () => {
       lowHold = false;
-      capT = -1;
+      capForce = true;
       gsap.to(swell, { v: 0, duration: 0.5, ease: "power2.out", overwrite: true, onUpdate: reduced ? requestFrame : undefined });
     };
 
     let ringOn = false;
+    let hovering = false;
+    const placeRing = (x: number, y: number) => {
+      ring.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+    };
     const showRing = (x: number, y: number) => {
       ringOn = true;
-      ring.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      placeRing(x, y);
       ring.setAttribute("data-on", "");
     };
     const hideRing = () => {
       ringOn = false;
       ring.removeAttribute("data-on");
     };
+    const hover = (hit: { x: number; y: number } | null) => {
+      if (hit && dive.v < 0.001 && !crossed) {
+        placeRing(hit.x, hit.y);
+        if (!hovering) {
+          hovering = true;
+          ring.setAttribute("data-hover", "");
+          host.setAttribute("data-hot", "");
+        }
+      } else if (hovering) {
+        hovering = false;
+        ring.removeAttribute("data-hover");
+        host.removeAttribute("data-hot");
+      }
+    };
 
     /** is this press on the core? Its projected disc, 1.25x for a forgiving thumb */
-    const hitCore = (e: PointerEvent) => {
-      const r = host.getBoundingClientRect();
+    const hitCore = (e: PointerEvent, rect?: DOMRect) => {
+      const r = rect ?? host.getBoundingClientRect();
       const px = e.clientX - r.left;
       const py = e.clientY - r.top;
       tmp.set(0, 0, 0).project(camera);
@@ -571,6 +644,13 @@ export default function IntelligenceCore({ className, label }: { className?: str
     const onBlur = () => {
       if (pressing) endPress();
     };
+    // once a touch has armed, the finger owns the core: small drifts of the
+    // thumb must not start a scroll (the touch-action change only applies to
+    // the next gesture, so the live one is held here)
+    const onTouchMove = (e: TouchEvent) => {
+      if (armed && pressType === "touch" && e.cancelable) e.preventDefault();
+    };
+    host.addEventListener("touchmove", onTouchMove, { passive: false });
     host.addEventListener("pointerdown", onDown);
     host.addEventListener("pointermove", onPointerMove);
     host.addEventListener("pointerup", onUp);
@@ -649,6 +729,8 @@ export default function IntelligenceCore({ className, label }: { className?: str
     let t = 0;
     let visible = true;
     let capT = 0;
+    /** print the live caption on the next frame regardless of the once-a-second clock */
+    let capForce = true;
     let frameIx = 0;
     // last written values, so the DOM is touched only on change
     let heroDiving = false;
@@ -665,7 +747,8 @@ export default function IntelligenceCore({ className, label }: { className?: str
     };
 
     const draw = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      // a rAF timestamp can precede the performance.now() taken just before it
+      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
       t += dt;
       frameIx++;
@@ -673,7 +756,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
 
       /* ── the camera, in on the core as the hold deepens ── */
       const u = easeInCubic(sat(v / 0.7));
-      camera.position.set(0, CAM_Y, lerp(zHome, 1.15, u));
+      camera.position.set(0, CAM_Y, lerp(zHome, zEnd, u));
       camera.lookAt(0, 0, 0);
 
       tilt.lerp(tiltT, 1 - Math.exp(-dt * 3));
@@ -724,8 +807,10 @@ export default function IntelligenceCore({ className, label }: { className?: str
 
       /* ── the cut: once the core's disc covers the frame, the room is drawn straight to the screen ── */
       const d = camera.position.length();
-      const a = Math.asin(Math.min(1, (R_CORE * 1.12) / d));
+      const a = Math.asin(Math.min(1, R_CUT / d));
       const crossedNow = !low && a > hAngle;
+      // the last stretch before the cut: the skin stops bending the room
+      coreU.uSeal.value = smooth(dCut * 1.45, dCut, d);
       if (crossedNow !== crossed) {
         crossed = crossedNow;
         root.toggleAttribute("data-crossed", crossed);
@@ -746,7 +831,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
             seenTimer = window.setTimeout(() => hero?.setAttribute("data-dive-seen", ""), 600);
           }
         } else {
-          capT = -1; // the live count prints again on the next frame
+          capForce = true; // the live count prints again this frame
         }
       }
       // the surface closes behind you: the mercury wobbles once
@@ -826,8 +911,9 @@ export default function IntelligenceCore({ className, label }: { className?: str
       }
 
       // the caption counts live routes once a second
-      if (capRef.current && !crossed && !lowHold && t - capT > 1) {
+      if (capRef.current && !crossed && !lowHold && (capForce || t - capT > 1)) {
         capT = t;
+        capForce = false;
         const live = routes.filter((r) => r.wait <= 0).length;
         capRef.current.textContent = `${COUNT || 200} agents · ${live} routes live`;
       }
@@ -843,7 +929,10 @@ export default function IntelligenceCore({ className, label }: { className?: str
     const io = new IntersectionObserver(
       ([e]) => {
         visible = e.isIntersecting && !document.hidden;
-        if (visible) start();
+        if (visible) {
+          start();
+          scheduleWarm();
+        }
         // scrolling away always lets go
         if (pressing && e.intersectionRatio < IO_RELEASE) endPress();
       },
@@ -882,6 +971,8 @@ export default function IntelligenceCore({ className, label }: { className?: str
       host.removeEventListener("contextmenu", onContext);
       host.removeEventListener("keydown", onKeyDown);
       host.removeEventListener("keyup", onKeyUp);
+      host.removeEventListener("touchmove", onTouchMove);
+      cancelIdle();
       cleanDark.leave("dive");
       html.removeAttribute("data-dive-charge");
       if (hero) {
@@ -925,7 +1016,8 @@ export default function IntelligenceCore({ className, label }: { className?: str
         aria-describedby={descId}
       />
       <svg ref={ringRef} className="ai-dive__ring" viewBox="0 0 72 72" aria-hidden="true" focusable="false">
-        <circle ref={circleRef} cx="36" cy="36" r="34" pathLength={1} />
+        <circle className="ai-dive__track" cx="36" cy="36" r="34" />
+        <circle ref={circleRef} className="ai-dive__fill" cx="36" cy="36" r="34" pathLength={1} />
       </svg>
       <span aria-hidden="true" className="ai-core__tick ai-core__tick--tl" />
       <span aria-hidden="true" className="ai-core__tick ai-core__tick--br" />

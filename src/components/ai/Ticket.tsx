@@ -51,6 +51,10 @@ const TUMBLE_MAX = 260; // deg/s: a fast rip does not spin like a coin
 const FALL_MS = 700;
 const FADE_AT = 160;
 const KEY_STAGGER = 30;
+/** the stub is seen to come free before the warp's veil starts to rise */
+const TRAVEL_AFTER = 180;
+/** the release's ease-back (ai-ticket.css: 320ms) */
+const RETURN_MS = 320;
 
 const STUB_H = 56;
 
@@ -220,6 +224,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       hy: 0,
       W: 0,
       a: 0, // the stub's angle from the perforation, deg, 0..MAX_DEG
+      a0: 0, // the angle from the hinge to where the pointer took hold: the stub follows the grip, not the ray
       target: 0,
       omega: 0, // deg/s
       lastT: 0,
@@ -236,6 +241,9 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
     const timers: number[] = [];
     let fired = false;
     let pullOn = false;
+    /** after the ease-back, the fibres hand their transform back to the stylesheet (the hover gap) */
+    let returnTimer = 0;
+    const clearReturn = () => window.clearTimeout(returnTimer);
 
     const pull = (on: boolean) => {
       if (on === pullOn) return;
@@ -251,7 +259,11 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       travelRef.current(DIAGNOSTIC_HREF);
     };
 
-    /** hingeLeft: the stub pivots on its top-left corner (the pointer is on the right half) */
+    /**
+     * hingeLeft: the stub pivots on its top-left corner (the pointer is on the
+     * right half). `r` is the perforation line (the fibres' zero-height strip),
+     * which no hover offset or tug on the stub ever moves.
+     */
     const setup = (hingeLeft: boolean, r: DOMRect) => {
       d.s = hingeLeft ? 1 : -1;
       d.hx = hingeLeft ? r.left : r.right;
@@ -273,6 +285,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       stub.style.transformOrigin = hingeLeft ? "0 0" : "100% 0";
       stub.style.setProperty("--tug", `${d.s * 6}deg`);
       body.style.transformOrigin = hingeLeft ? "0 100%" : "100% 100%";
+      clearReturn();
       stub.removeAttribute("data-return");
       stub.removeAttribute("data-tug");
       body.removeAttribute("data-settle");
@@ -323,6 +336,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
 
     const detach = (t: number) => {
       d.detached = true;
+      clearReturn();
       d.at = t;
       d.y = 0;
       d.vy = 0;
@@ -333,7 +347,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       body.setAttribute("data-settle", "");
       body.style.transform = "";
       pull(true);
-      fire();
+      timers.push(window.setTimeout(fire, TRAVEL_AFTER));
     };
 
     const step = (t: number) => {
@@ -383,6 +397,11 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       body.style.transform = "";
       wrap.setAttribute("data-return", "");
       for (const f of d.fib) if (!f.snapped) f.el.style.transform = `rotate(0deg) scaleY(0)`;
+      clearReturn();
+      returnTimer = window.setTimeout(() => {
+        for (const f of d.fib) if (!f.snapped) f.el.style.transform = "";
+        wrap.removeAttribute("data-return");
+      }, RETURN_MS + 40);
       pull(false);
     };
 
@@ -399,7 +418,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
         tearInstantly();
         return;
       }
-      setup(true, stub.getBoundingClientRect());
+      setup(true, wrap.getBoundingClientRect());
       d.a = d.target = 6;
       paint();
       const order = [...d.fib].filter((f) => !f.snapped).sort((p, q) => q.dist - p.dist);
@@ -418,12 +437,13 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
         return;
       }
       e.preventDefault();
-      const r = stub.getBoundingClientRect();
+      const r = wrap.getBoundingClientRect();
       // the stub pivots on the corner across from the finger: the tear starts
       // under the pointer and runs to the far corner, which lets go last
       setup(e.clientX - r.left >= r.width / 2, r);
       d.x0 = e.clientX;
       d.y0 = e.clientY;
+      d.a0 = Math.max(0, (Math.atan2(d.y0 - d.hy, d.s * (d.x0 - d.hx)) * 180) / Math.PI);
       try {
         stub.setPointerCapture(e.pointerId);
       } catch {
@@ -437,8 +457,10 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
       const dx = e.clientX - d.hx;
       const dy = e.clientY - d.hy;
       // the signed angle from the hinge to the pointer, measured off the
-      // perforation: a lever the width of the stub, so a thumb pulls ~150 px to tear
-      const raw = (Math.atan2(dy, d.s * dx) * 180) / Math.PI;
+      // perforation and less the angle at which the pointer took hold, so the
+      // stub never jumps on the first pixel: a lever at least half the stub
+      // wide, so a thumb pulls ~120-160 px to tear
+      const raw = (Math.atan2(dy, d.s * dx) * 180) / Math.PI - d.a0;
       d.target = Math.min(MAX_DEG, Math.max(0, raw)) * FOLLOW;
     };
     const onUp = () => release();
@@ -466,6 +488,7 @@ export default function Ticket({ className = "", onPull }: TicketProps) {
     document.addEventListener("visibilitychange", onHide);
     return () => {
       cancelAnimationFrame(raf);
+      clearReturn();
       timers.forEach((id) => window.clearTimeout(id));
       stub.removeEventListener("pointerdown", onDown);
       stub.removeEventListener("pointermove", onMove);

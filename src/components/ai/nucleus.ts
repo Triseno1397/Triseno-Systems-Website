@@ -60,6 +60,8 @@ export interface ChromeUniforms {
   uLiftK: { value: number };
   uPortal: { value: THREE.Texture | null };
   uInside: { value: number };
+  /** 0..1: as the camera reaches the cut, the skin stops bending the room and the last chrome goes, so the cut has nothing to jump */
+  uSeal: { value: number };
   uRes: { value: THREE.Vector2 };
 }
 
@@ -108,6 +110,7 @@ export function chromeMaterial(env: THREE.Texture, opts: ChromeOptions = {}): { 
     uLiftK: { value: opts.liftK ?? 1 },
     uPortal: { value: null },
     uInside: { value: 0 },
+    uSeal: { value: 0 },
     uRes: { value: new THREE.Vector2(1, 1) },
   };
   const R = radius.toFixed(3);
@@ -154,6 +157,7 @@ vec3 objectTangent = vec3(tangent.xyz);
           `#include <common>
 uniform sampler2D uPortal;
 uniform float uInside;
+uniform float uSeal;
 uniform vec2 uRes;`,
         )
         .replace(
@@ -161,10 +165,13 @@ uniform vec2 uRes;`,
           `#include <opaque_fragment>
 {
   // the room inside, seen through the skin: the render target at this
-  // pixel, bent a little by the surface; 8% of chrome stays so it reads as glass
+  // pixel, bent a little by the surface; 8% of chrome stays so it reads as
+  // glass. Both go to zero as the camera reaches the cut (uSeal), so the
+  // last frame through the skin is the first frame inside.
   vec2 suv = gl_FragCoord.xy / uRes;
-  vec3 inner = texture2D(uPortal, suv + normalize(vNormal).xy * 0.06 * uInside).rgb;
-  gl_FragColor.rgb = mix(gl_FragColor.rgb, inner, uInside * 0.92);
+  vec2 bend = normalize(vNormal).xy * 0.06 * uInside * (1.0 - uSeal);
+  vec3 inner = texture2D(uPortal, clamp(suv + bend, 0.0, 1.0)).rgb;
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, inner, uInside * mix(0.92, 1.0, uSeal));
 }`,
         );
     }
@@ -223,9 +230,22 @@ float hair(float x) {
   return line * (1.0 - smoothstep(0.3, 0.6, w));
 }`;
 
+/**
+ * The canvas is only the hero's figure; outside it the viewport is the flat
+ * ink of the fixed dark layer. Every ruled or lit thing in the room fades out
+ * toward the frame's edges (screen space, from the clip position), so the
+ * figure's rectangle never shows and the room reads as the whole screen.
+ */
+const EDGE_GLSL = /* glsl */ `
+float frameEdge(vec4 clip) {
+  vec2 q = abs(clip.xy / clip.w);
+  return (1.0 - smoothstep(0.58, 0.97, q.x)) * (1.0 - smoothstep(0.58, 0.97, q.y));
+}`;
+
 const DOME_VERT = /* glsl */ `
 varying vec3 vDir;
-void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+varying vec4 vClip;
+void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); vClip = gl_Position; }`;
 
 const DOME_FRAG = /* glsl */ `
 #include <common>
@@ -234,17 +254,20 @@ uniform vec3 uLine;
 uniform vec3 uSignal;
 uniform float uGlow;
 varying vec3 vDir;
+varying vec4 vClip;
 ${HAIR_GLSL}
+${EDGE_GLSL}
 void main() {
   vec3 d = normalize(vDir);
+  float edge = frameEdge(vClip);
   float lat = asin(clamp(d.y, -1.0, 1.0));
   float lon = atan(d.z, d.x);
   float k = 18.0 / PI;
   float lines = max(hair(lat * k), hair(lon * k));
   // the rules are strongest at the horizon and thin out toward both poles
   float fade = (1.0 - smoothstep(0.0, 0.85, d.y)) * (1.0 - smoothstep(0.55, 0.98, -d.y));
-  float glow = pow(max(dot(d, vec3(0.0, 0.0, -1.0)), 0.0), 6.0) * uGlow;
-  vec3 col = mix(uInk, uLine, lines * fade) + uSignal * glow;
+  float glow = pow(max(dot(d, vec3(0.0, 0.0, -1.0)), 0.0), 9.0) * uGlow;
+  vec3 col = mix(uInk, uLine, lines * fade * edge) + uSignal * glow * edge * edge;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -252,20 +275,49 @@ void main() {
 
 const FLOOR_VERT = /* glsl */ `
 varying vec2 vXZ;
-void main() { vec4 w = modelMatrix * vec4(position, 1.0); vXZ = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+varying vec4 vClip;
+void main() { vec4 w = modelMatrix * vec4(position, 1.0); vXZ = w.xz; gl_Position = projectionMatrix * viewMatrix * w; vClip = gl_Position; }`;
 
 const FLOOR_FRAG = /* glsl */ `
 uniform vec3 uLine;
 uniform float uAlpha;
 varying vec2 vXZ;
+varying vec4 vClip;
 ${HAIR_GLSL}
+${EDGE_GLSL}
 void main() {
   vec2 g = vXZ / 0.25;
   float lines = max(hair(g.x), hair(g.y));
   float fall = max(0.0, 1.0 - dot(vXZ, vXZ) / 36.0);
-  float a = lines * fall * uAlpha;
+  float a = lines * fall * uAlpha * frameEdge(vClip);
   if (a < 0.002) discard;
   gl_FragColor = vec4(uLine, a);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+/* ── the two orbits: a ring drawn by its own travelling head ───────────
+   The hero's route recipe (a head, a tail that fades behind it) on a closed
+   circle, so the tail wraps; faded toward the frame's edges like the rules. */
+const ORBIT_VERT = /* glsl */ `
+attribute float u;
+varying float vU;
+varying vec4 vClip;
+void main() { vU = u; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); vClip = gl_Position; }`;
+
+const ORBIT_FRAG = /* glsl */ `
+uniform vec3 uColor;
+uniform float uHead;
+uniform float uTail;
+uniform float uFade;
+varying float vU;
+varying vec4 vClip;
+${EDGE_GLSL}
+void main() {
+  float behind = fract(uHead - vU);
+  if (behind > uTail) discard;
+  float a = 1.0 - behind / uTail;
+  gl_FragColor = vec4(uColor, a * a * 0.95 * uFade * frameEdge(vClip));
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
@@ -277,9 +329,6 @@ export interface NucleusOptions {
   weak: boolean;
   /** the hero canvas's aspect at build time */
   aspect: number;
-  /** the hero's route shaders (ARC_VERT / ARC_FRAG), reused for the two orbits */
-  arcVert: string;
-  arcFrag: string;
   /** renderer.toneMappingExposure, and whether the renderer tone-maps with ACES */
   exposure: number;
   aces: boolean;
@@ -298,6 +347,12 @@ export interface Nucleus {
   resize(aspect: number): void;
   /** t seconds; v the dive scalar 0..1; tilt the hero pointer, -1..1 */
   update(t: number, v: number, tiltX: number, tiltY: number): void;
+  /**
+   * Compile every program the room needs before the first press: once for the
+   * render target (no tone mapping there) and once for the screen, so neither
+   * the first glimpse through the skin nor the cut waits on a shader link.
+   */
+  warm(target: THREE.WebGLRenderTarget | null): void;
   dispose(): void;
 }
 
@@ -350,9 +405,23 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
   const backLight = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9aa3a6) }));
   backLight.position.set(2.8, 1.2, -2.2);
   backLight.lookAt(0, 0, 0);
-  envScene.add(black, sheet, cyan, floorLight, backLight);
+  // behind the viewer: a wide softbox over a dark horizon and one thin strip
+  // under it. The emblem's faces look straight back at the camera, so this is
+  // what they mirror: a bright upper field, a dark band, a line of light; as
+  // the mark turns, the band slides across the faces like mercury
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(PAPER_HEX).multiplyScalar(0.9) }));
+  front.position.set(0.6, 1.9, 4.2);
+  front.lookAt(0, 0, 0);
+  const strip = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(PAPER_HEX).multiplyScalar(1.4) }));
+  strip.position.set(0, -0.55, 4.4);
+  strip.lookAt(0, 0, 0);
+  const frontCyan = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 3.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(SIGNAL_HEX).multiplyScalar(1.3) }));
+  frontCyan.position.set(-3.6, 0.2, 3.0);
+  frontCyan.lookAt(0, 0, 0);
+  const envMeshes = [black, sheet, cyan, floorLight, backLight, front, strip, frontCyan];
+  envScene.add(...envMeshes);
   const envDark = keep(pmrem.fromScene(envScene, 0.04).texture);
-  for (const m of [black, sheet, cyan, floorLight, backLight]) {
+  for (const m of envMeshes) {
     m.geometry.dispose();
     (m.material as THREE.Material).dispose();
   }
@@ -368,7 +437,7 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
     new THREE.ShaderMaterial({
       vertexShader: DOME_VERT,
       fragmentShader: DOME_FRAG,
-      uniforms: { uInk: { value: ink }, uLine: { value: domeLine }, uSignal: { value: signal }, uGlow: { value: 0.35 } },
+      uniforms: { uInk: { value: ink }, uLine: { value: domeLine }, uSignal: { value: signal }, uGlow: { value: 0.11 } },
       side: THREE.BackSide,
       depthWrite: true,
     }),
@@ -415,10 +484,7 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
   scene.add(group);
 
   // (v) two routes orbiting the emblem, each drawn by its own travelling head
-  // (the hero's arc shaders; the tail wraps so the circle never breaks)
-  const circleFrag = opts.arcFrag
-    .replace("float behind = uHead - vU;", "float behind = fract(uHead - vU);")
-    .replace(/}\s*$/, "  #include <tonemapping_fragment>\n  #include <colorspace_fragment>\n}");
+  // (the hero's route recipe; the tail wraps so the circle never breaks)
   const orbits: THREE.ShaderMaterial[] = [];
   const makeOrbit = (tiltX: number, tiltZ: number) => {
     const pts: THREE.Vector3[] = [];
@@ -432,8 +498,8 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
     geo.setAttribute("u", new THREE.Float32BufferAttribute(us, 1));
     const m = keep(
       new THREE.ShaderMaterial({
-        vertexShader: opts.arcVert,
-        fragmentShader: circleFrag,
+        vertexShader: ORBIT_VERT,
+        fragmentShader: ORBIT_FRAG,
         uniforms: { uColor: { value: signal }, uHead: { value: 0 }, uTail: { value: 0.55 }, uFade: { value: 1 } },
         transparent: true,
         depthWrite: false,
@@ -454,7 +520,7 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
   scene.add(light);
 
   // fit: the whole mark in frame with air round it, whatever the canvas shape
-  const FIT = 0.86;
+  const FIT = 0.72;
   let restDistance = 4;
   let baseScale = 1;
   const resize = (aspect: number) => {
@@ -482,6 +548,21 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
     orbits[1].uniforms.uHead.value = (t * 0.18 + 0.5) % 1;
   };
 
+  const warm = (target: THREE.WebGLRenderTarget | null) => {
+    const prev = renderer.getRenderTarget();
+    update(0, 1, 0, 0);
+    try {
+      if (target) {
+        renderer.setRenderTarget(target);
+        renderer.compile(scene, camera);
+      }
+      renderer.setRenderTarget(null);
+      renderer.compile(scene, camera);
+    } finally {
+      renderer.setRenderTarget(prev);
+    }
+  };
+
   const dispose = () => {
     disposables.forEach((d) => d.dispose());
     scene.clear();
@@ -498,6 +579,7 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
     },
     resize,
     update,
+    warm,
     dispose,
   };
 }

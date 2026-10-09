@@ -29,7 +29,7 @@ export default function Descent({ children }: { children: ReactNode }) {
       const st = ScrollTrigger.create({
         trigger: root,
         start: "top 12%",
-        end: "bottom top",
+        end: "max", // the page ends inside the descent: hold the dark to the last pixel
         onToggle: (t) => cleanDark("descent", t.isActive),
       });
       return () => {
@@ -60,7 +60,7 @@ export default function Descent({ children }: { children: ReactNode }) {
       ScrollTrigger.create({
         trigger: root,
         start: "top 12%",
-        end: "bottom top",
+        end: "max", // the page ends inside the descent: hold the dark to the last pixel
         onToggle: (st) => cleanDark("descent", st.isActive),
       });
     }, root);

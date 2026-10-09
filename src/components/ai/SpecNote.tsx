@@ -8,8 +8,8 @@ import { useSpec } from "./OperatorKeys";
 /* ─────────────────────────────────────────────────────────────────────────
    SPEC NOTE — a figure showing its working. A cyan hairline box in Geist
    Mono with a 1px leader back to one corner of the figure, written by
-   whoever built it and read from CREDITS (projection.content.ts), the same
-   table the credits roll prints, so the two can never disagree.
+   whoever built it and read from CREDITS (exit.content.ts, via creditFor in
+   projection.content.ts), the same table the credits roll prints, so the two can never disagree.
 
    Hidden until html[data-spec] (the slate's SPEC button, or x); then it
    fades up 8px with a 40 ms stagger by note index. At most two notes per
@@ -49,8 +49,10 @@ export default function SpecNote({ fig, n = 0, at = "tr", dx = 24, dy = 24, tone
   const id = useId();
   const spec = useSpec();
   const [open, setOpen] = useState(false);
-  const body = text ?? creditFor(fig)?.notes[n];
+  const credit = creditFor(fig);
+  const body = text ?? credit?.notes[n];
   if (!body) return null;
+  const label = credit?.fig ?? `Fig. ${fig}`;
 
   // the leader: anchored at the corner, pointing along the figure's top or
   // bottom edge, rotated toward the note's nearest corner. CSS rotate is
@@ -83,13 +85,13 @@ export default function SpecNote({ fig, n = 0, at = "tr", dx = 24, dy = 24, tone
         className="ai-spec__chip"
         aria-expanded={open}
         aria-controls={id}
-        aria-label={`Spec note, figure ${fig}`}
+        aria-label={`Spec note, ${label}`}
         onClick={() => setOpen((o) => !o)}
       >
         +
       </button>
       <p id={id} className="ai-spec__note">
-        <b>Fig. {fig}</b>
+        <b>{label}</b>
         {body}
       </p>
     </div>

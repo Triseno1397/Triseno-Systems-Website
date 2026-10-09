@@ -23,24 +23,41 @@
   -webkit-user-select: none; user-select: none;
 }
 .ai-core__stage:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: -1px; }
+/* while a dive runs, the canvas feathers into the dark at its edges: the core
+   grows past the figure before it fills it, and the frame must never cut it hard */
+.ai-hero[data-diving] .ai-core__stage canvas {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(180deg, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(180deg, transparent, #000 9%, #000 91%, transparent);
+  mask-composite: intersect;
+}
 
-/* the hairline ring that fills under the fingertip; its stroke flips to paper once inside */
+/* the hairline ring that fills under the fingertip; its stroke flips to paper once inside.
+   On pointer devices it waits under the cursor while it is over the core, as an empty
+   track at low opacity: the thing you hold. */
 .ai-dive__ring {
   position: absolute; left: 0; top: 0; width: 72px; height: 72px; margin: -36px 0 0 -36px;
-  overflow: visible; pointer-events: none; opacity: 0; transition: opacity 160ms linear;
+  overflow: visible; pointer-events: none; opacity: 0; transition: opacity 400ms var(--ease-expo);
 }
-.ai-dive__ring[data-on] { opacity: 1; }
+.ai-dive__ring[data-hover] { opacity: 0.55; }
+.ai-dive__ring[data-on] { opacity: 1; transition-duration: 160ms; }
 .ai-dive__ring circle {
-  fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1; stroke-dashoffset: 1;
-  transform: rotate(-90deg); transform-origin: center; transition: stroke 300ms linear;
+  fill: none; stroke-width: 1; vector-effect: non-scaling-stroke;
+  transition: stroke 300ms linear;
 }
-.ai-core[data-crossed] .ai-dive__ring circle { stroke: var(--paper); }
+.ai-dive__track { stroke: var(--rule-2); }
+.ai-dive__fill {
+  stroke: var(--ink);
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  transform: rotate(-90deg); transform-origin: center;
+}
+.ai-core[data-crossed] .ai-dive__track { stroke: rgba(230, 233, 232, 0.28); }
+.ai-core[data-crossed] .ai-dive__fill { stroke: var(--paper); }
 @media (pointer: coarse) {
   .ai-dive__ring { width: 88px; height: 88px; margin: -44px 0 0 -44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ai-dive__ring circle { stroke-dashoffset: 0 !important; }
+  .ai-dive__fill { stroke-dashoffset: 0 !important; }
 }
 
 /* the caption and crop ticks on the figure: ink on paper, paper once inside */

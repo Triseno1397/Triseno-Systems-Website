@@ -39,6 +39,7 @@
   position: fixed; left: 0; right: 0; top: -160px; bottom: -160px; z-index: -1; pointer-events: none;
 }
 .ai-paper__rules {
+  will-change: opacity;
   background-image:
     linear-gradient(rgba(11, 14, 15, 0.075) 1px, transparent 1px),
     linear-gradient(rgba(11, 14, 15, 0.03) 1px, transparent 1px);
@@ -104,6 +105,14 @@ html[data-portal-capture] .ai-slate { opacity: 0; pointer-events: none; }
 .ai-slate__f b { font-weight: 500; }
 .ai-slate__f em { font-style: normal; }
 .ai-slate[data-unnumbered] .ai-slate__f--ch b { display: none; }
+/* a cut: the chapter that just took the frame wipes in, left to right */
+.ai-slate__f--ch { position: relative; }
+.ai-slate__f--ch :is(b, em) { display: inline-block; }
+.ai-slate[data-cut="a"] .ai-slate__f--ch :is(b, em) { animation: ai-slate-cut-a 600ms var(--ease-expo) both; }
+.ai-slate[data-cut="b"] .ai-slate__f--ch :is(b, em) { animation: ai-slate-cut-b 600ms var(--ease-expo) both; }
+.ai-slate[data-cut] .ai-slate__f--ch em { animation-delay: 70ms; }
+@keyframes ai-slate-cut-a { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes ai-slate-cut-b { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .ai-slate__sep { flex: none; width: 1px; height: 10px; background: currentColor; opacity: 0.3; }
 
 /* a chord is armed: the key lights in the reel slot until its partner lands */
@@ -143,6 +152,7 @@ html[data-portal-capture] .ai-slate { opacity: 0; pointer-events: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ai-slate, .ai-slate__run, .ai-slate__g, .ai-slate__btn, .ai-slate__btn::after { transition-duration: 1ms !important; }
+  .ai-slate .ai-slate__f--ch :is(b, em) { animation: none !important; }
 }
 
 /* ── chapter frames ──────────────────────────────────────────────────
