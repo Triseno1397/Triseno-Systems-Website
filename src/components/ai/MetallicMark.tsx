@@ -190,6 +190,28 @@ export default function MetallicMark({ className, label }: { className?: string;
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    // the program is built when the mark is near, not at mount: compiling
+    // on the main thread was part of what blocked the page's first
+    // interaction, and this sits most of a page down
+    let cleanup: void | (() => void);
+    let booted = false;
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting || booted) return;
+        booted = true;
+        near.disconnect();
+        cleanup = boot();
+      },
+      { rootMargin: "140% 0px 140% 0px" },
+    );
+    near.observe(el);
+    return () => {
+      near.disconnect();
+      cleanup?.();
+    };
+    function boot(): void | (() => void) {
     const host = hostRef.current;
     if (!host) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -339,6 +361,7 @@ export default function MetallicMark({ className, label }: { className?: string;
       canvas.remove();
       delete host.dataset.gl;
     };
+    }
   }, []);
 
   return (

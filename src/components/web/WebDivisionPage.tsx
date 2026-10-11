@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties } from "react";
 import { DIVISIONS } from "@/lib/divisions";
 import WebWorld from "./WebWorld";
 import ShutterHero from "./ShutterHero";
@@ -28,12 +28,24 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
       <WebWorld />
 
       <ShutterHero />
-      <DemoFrame />
-      <CompareReveal />
-      <PrismDeliverables />
-      <RangeGallery />
-      <FaqSection division="web" />
-      <WebGate />
+      <Suspense>
+        <DemoFrame />
+      </Suspense>
+      <Suspense>
+        <CompareReveal />
+      </Suspense>
+      <Suspense>
+        <PrismDeliverables />
+      </Suspense>
+      <Suspense>
+        <RangeGallery />
+      </Suspense>
+      <Suspense>
+        <FaqSection division="web" />
+      </Suspense>
+      <Suspense>
+        <WebGate />
+      </Suspense>
       <SignOff />
     </main>
   );

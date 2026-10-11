@@ -192,6 +192,8 @@ export default function DemoFrame() {
     const s = {
       w: 0,
       h: 0,
+      /** the tilt layer's last written transform */
+      lastTf: "",
       // the pointer, anywhere on the page (the card can arrive under a
       // pointer that never moved: the page scrolled it there)
       px: -1e4,
@@ -456,6 +458,10 @@ export default function DemoFrame() {
         const k = 1 - Math.exp(-dt * (idle ? 1.4 : 5));
         s.tx += (gx - s.tx) * k;
         s.ty += (gy - s.ty) * k;
+        // settle: an ease that never quite arrives rewrote the transform every
+        // frame for seconds after the pointer stopped
+        if (Math.abs(gx - s.tx) < 0.002) s.tx = gx;
+        if (Math.abs(gy - s.ty) < 0.002) s.ty = gy;
         // Held still on the card long enough, it comes forward and the camera
         // eases into a slow push. From then on the pointer may move freely
         // inside the card; leaving it (its edge as it stands, grown or not)
@@ -514,10 +520,17 @@ export default function DemoFrame() {
         const sc = 1 + (S - 1) * e;
         // grown, it still leans with the pointer, a little less
         const lean = 1 - 0.4 * e;
-        if (drop !== "notilt")
-          tiltEl.style.transform =
+        if (drop !== "notilt") {
+          const tf =
             (e > 0.0005 ? `translate3d(${cx.toFixed(1)}px, ${cy.toFixed(1)}px, 0) scale(${sc.toFixed(4)}) ` : "") +
             `rotateY(${(s.tx * LEAN_Y * lean).toFixed(3)}deg) rotateX(${(-s.ty * LEAN_X * lean).toFixed(3)}deg)`;
+          // written only when it changes: a settled card wrote the same transform
+          // every frame and kept the renderer's style pass busy at rest
+          if (tf !== s.lastTf) {
+            s.lastTf = tf;
+            tiltEl.style.transform = tf;
+          }
+        }
         // On a display faster than 60 the scene is drawn every other frame:
         // the lean above still moves every frame (it is only a transform), and
         // the flight is slow enough that 60 new pictures a second is smooth.

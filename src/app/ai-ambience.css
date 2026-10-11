@@ -1,22 +1,13 @@
 /* ── the clean room's air (AiAmbience) ── */
 
-/* grain: an oversized noise sheet jumping between offsets, never repainted */
+/* grain: one still noise sheet over the paper */
 .ai-grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .ai-grain i {
-  position: absolute; inset: -50%; opacity: 0.55; mix-blend-mode: multiply;
+  /* still, and blended normally: a boiling multiply layer re-composited under
+     every scrolled frame was the single biggest cost on the page, and at
+     this opacity the grain reads the same */
+  position: absolute; inset: 0; opacity: 0.42;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.34  0 0 0 0.22 0'/></filter><rect width='220' height='220' filter='url(%23g)'/></svg>");
-  animation: ai-grain 0.9s steps(1) infinite;
-  will-change: transform;
-}
-@keyframes ai-grain {
-  0% { transform: translate3d(0, 0, 0); }
-  12% { transform: translate3d(-7%, 4%, 0); }
-  25% { transform: translate3d(5%, -6%, 0); }
-  37% { transform: translate3d(-3%, 8%, 0); }
-  50% { transform: translate3d(8%, 2%, 0); }
-  62% { transform: translate3d(-9%, -4%, 0); }
-  75% { transform: translate3d(2%, 7%, 0); }
-  87% { transform: translate3d(6%, -8%, 0); }
 }
 
 /* glow: a lens of cyan grid, registered with the sheet's grid, under the pointer */

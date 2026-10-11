@@ -144,6 +144,23 @@ export default function IntelligenceCore({ className, label }: { className?: str
   const descId = useId();
 
   useEffect(() => {
+    // The page paints first. Everything below (renderer, environment map,
+    // shader programs) runs two frames after mount, so the headline and
+    // chrome are on screen before the GPU work begins.
+    let cleanup: void | (() => void);
+    let rafA = 0;
+    let rafB = 0;
+    rafA = requestAnimationFrame(() => {
+      rafB = requestAnimationFrame(() => {
+        cleanup = body();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(rafA);
+      cancelAnimationFrame(rafB);
+      cleanup?.();
+    };
+    function body(): void | (() => void) {
     const root = rootRef.current;
     const host = hostRef.current;
     const ring = ringRef.current;
@@ -424,16 +441,19 @@ export default function IntelligenceCore({ className, label }: { className?: str
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // Only a strong machine builds the room ahead of time: on a phone the
+    // build was one 1.4 s task in the middle of the page's first seconds. A
+    // weaker device builds it on the first press instead.
     const warm = () => {
       idleId = 0;
-      if (warmed || low || !visible) return;
+      if (warmed || weak || !visible) return;
       warmed = true;
       ensureNucleus();
       ensureRT();
       nucleus?.warm(rt);
     };
     const scheduleWarm = () => {
-      if (warmed || low || idleId) return;
+      if (warmed || weak || idleId) return;
       idleId = w.requestIdleCallback ? w.requestIdleCallback(warm, { timeout: 2500 }) : window.setTimeout(warm, 1200);
     };
     const cancelIdle = () => {
@@ -746,7 +766,16 @@ export default function IntelligenceCore({ className, label }: { className?: str
       else renderer.setClearColor(0x000000, 0);
     };
 
+    // phones and weaker machines draw the resting hero at ~36 fps: the globe,
+    // routes and chrome read the same, and the main thread gets half its
+    // frames back for the page around it. A press or dive runs at full rate.
+    let lastShown = 0;
     const draw = (now: number) => {
+      if (weak && !pressing && dive.v < 0.001 && now - lastShown < 27) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      lastShown = now;
       // a rAF timestamp can precede the performance.now() taken just before it
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
@@ -920,7 +949,11 @@ export default function IntelligenceCore({ className, label }: { className?: str
       if (!reduced && visible) raf = requestAnimationFrame(draw);
     };
 
+    // programs link in parallel (KHR_parallel_shader_compile) before the first
+    // frame is asked for; until then start() is a no-op
+    let compiled = false;
     const start = () => {
+      if (!compiled) return;
       cancelAnimationFrame(raf);
       pending = false;
       last = performance.now();
@@ -949,9 +982,18 @@ export default function IntelligenceCore({ className, label }: { className?: str
       // one settled frame: routes resting mid-flight
       for (const r of routes) { r.wait = 0; r.t = 0.35; }
     }
-    start();
+    let alive = true;
+    renderer
+      .compileAsync(scene, camera)
+      .catch(() => {})
+      .finally(() => {
+        if (!alive) return;
+        compiled = true;
+        start();
+      });
 
     return () => {
+      alive = false;
       cancelAnimationFrame(raf);
       window.clearTimeout(armTimer);
       window.clearTimeout(seenTimer);
@@ -1002,6 +1044,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
       renderer.dispose();
       renderer.domElement.remove();
     };
+    }
   }, [label]);
 
   return (

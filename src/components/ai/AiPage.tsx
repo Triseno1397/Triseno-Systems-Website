@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 
 import { useEffect } from "react";
 import { DIVISIONS } from "@/lib/divisions";
@@ -66,14 +67,30 @@ export default function AiPage() {
       <AiHero />
       <SignalTicker />
       <FerroTools />
-      <MercuryCompression />
-      <ExpandInterlude />
-      <StackFilm />
-      <AgentConsole />
-      <ProcessRail />
-      <BuiltBy />
-      <WhyFlip />
-      <FaqSection division="ai" />
+      <Suspense>
+        <MercuryCompression />
+      </Suspense>
+      <Suspense>
+        <ExpandInterlude />
+      </Suspense>
+      <Suspense>
+        <StackFilm />
+      </Suspense>
+      <Suspense>
+        <AgentConsole />
+      </Suspense>
+      <Suspense>
+        <ProcessRail />
+      </Suspense>
+      <Suspense>
+        <BuiltBy />
+      </Suspense>
+      <Suspense>
+        <WhyFlip />
+      </Suspense>
+      <Suspense>
+        <FaqSection division="ai" />
+      </Suspense>
       <Descent>
         <AiGate />
         <SignOff />

@@ -25,8 +25,9 @@ gsap.registerPlugin(ScrollTrigger);
  * - the far portal's violet light, breathing — drawn in a layer that follows
  *   the plate's pose exactly, so it stays locked to the portal as the camera
  *   pushes in;
- * - two violet haze banks drifting and dust hanging in the light;
- * - a soft violet key light that follows the pointer;
+ * (the shared plate already carries drifting haze, dust and a pointer
+ * light; this layer adds none of its own: every extra full-screen layer is
+ * one more composite under every scrolled frame)
  * - station light: every section registers a station and the key haze moves
  *   to the far side of the object on stage.
  *
@@ -36,7 +37,6 @@ gsap.registerPlugin(ScrollTrigger);
 export default function WebWorld() {
   const layerRef = useRef<HTMLDivElement>(null);
   const fxRef = useRef<HTMLDivElement>(null);
-  const lightRef = useRef<HTMLSpanElement>(null);
 
   /* stations */
   useGSAP(
@@ -61,10 +61,9 @@ export default function WebWorld() {
     { scope: layerRef },
   );
 
-  /* overlays ride the plate's own pose; the key light follows the pointer */
+  /* the overlay rides the plate's own pose */
   useEffect(() => {
     const fx = fxRef.current;
-    const light = lightRef.current;
     if (!fx) return;
     const pose: PlatePose = { tx: 0, ty: 0, s: 1 };
     let last = "";
@@ -84,16 +83,10 @@ export default function WebWorld() {
         fx.style.opacity = o;
       }
     };
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch" || !light) return;
-      light.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-    };
     tick();
     gsap.ticker.add(tick);
-    window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
       gsap.ticker.remove(tick);
-      window.removeEventListener("pointermove", onMove);
     };
   }, []);
 
@@ -111,11 +104,7 @@ export default function WebWorld() {
         {/* the far portal's light, locked to the plate's pose */}
         <span className="web-plate__shaft" />
       </div>
-      <span className="web-plate__haze web-plate__haze--a" />
-      <span className="web-plate__haze web-plate__haze--b" />
-      <span className="web-plate__dust" />
       <span className="web-scene__haze" />
-      <span ref={lightRef} className="web-plate__light" />
     </div>
   );
 }

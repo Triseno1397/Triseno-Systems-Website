@@ -124,6 +124,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       maxUp: 1e9,
       maxDown: 1e9,
       visible: true,
+      odd: false,
       last: -1,
       z: [] as number[],
       // what each card was last given: a style is written only when it changes
@@ -396,6 +397,14 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         const gap = st.p - st.pv;
         st.pv = Math.abs(gap) < 1e-4 ? st.p : st.pv + gap * (1 - Math.exp(-dt * 8));
         if (!reduced && st.intro >= 1 && hold === null) st.spin += DRIFT * st.speed * dt;
+        // The resting orbit is slow: drawn every other frame it reads the same,
+        // and the page keeps half the style work (thirteen cards re-styled per
+        // frame kept the renderer busy while nothing else moved). Anything
+        // faster than the drift (the entrance, the scroll bend, a hold) draws
+        // every frame.
+        st.odd = !st.odd;
+        const ambient = st.intro >= 1 && Math.abs(st.p - st.pv) < 1e-3 && Math.abs(st.speed - (st.hold ? 0 : 1)) < 0.01;
+        if (ambient && st.odd) return;
         place();
       },
     });

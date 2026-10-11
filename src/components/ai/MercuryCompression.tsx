@@ -286,15 +286,41 @@ export default function MercuryCompression() {
     if (!stage || !canvas) return;
     const ctl = ctlRef.current;
     const dc = deviceClass();
-    const api = buildGl(canvas, dc === "high" ? 40 : dc === "mid" ? 32 : 24);
-    glRef.current = api;
     const fallback = () => {
       glRef.current = null;
       ctl.fallback = true;
       stage.setAttribute("data-fallback", "");
       sectionRef.current?.setAttribute("data-nodrag", "");
     };
-    if (!api) fallback();
+    // the program is built when the section is near, not at mount: linking a
+    // raymarch shader on the main thread was part of what blocked the page's
+    // first interaction. Until then the loop draws the DOM discs (never seen:
+    // the boot lands well before the stage is on screen).
+    let booted = false;
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      glRef.current?.dispose();
+      fallback();
+      ctl.wake();
+    };
+    const boot = () => {
+      if (booted) return;
+      booted = true;
+      const api = buildGl(canvas, dc === "high" ? 40 : dc === "mid" ? 32 : 24);
+      glRef.current = api;
+      if (!api) fallback();
+      canvas.addEventListener("webglcontextlost", onLost);
+      if (ctl.visible) ctl.wake();
+    };
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        boot();
+        near.disconnect();
+      },
+      { rootMargin: "140% 0px 140% 0px" },
+    );
+    near.observe(stage);
 
     let seen = false;
     const sync = () => {
@@ -311,15 +337,8 @@ export default function MercuryCompression() {
     });
     io.observe(stage);
     document.addEventListener("visibilitychange", sync);
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      api?.dispose();
-      fallback();
-      ctl.wake();
-    };
-    canvas.addEventListener("webglcontextlost", onLost);
-
     return () => {
+      near.disconnect();
       io.disconnect();
       document.removeEventListener("visibilitychange", sync);
       canvas.removeEventListener("webglcontextlost", onLost);
@@ -359,7 +378,7 @@ export default function MercuryCompression() {
     const { r0, tagBeside } = frame;
     const dc = deviceClass();
     const phone = layout.narrow || window.matchMedia("(max-width: 767px)").matches;
-    const weak = !!glRef.current?.weak;
+    const weak = !!glRef.current?.weak || deviceClass() === "low";
     const dpr = Math.min(window.devicePixelRatio || 1, 1) * (phone ? 0.45 : dc === "high" && !weak ? 0.75 : 0.55);
     const cw = Math.max(1, Math.round(W * dpr));
     const ch = Math.max(1, Math.round(H * dpr));

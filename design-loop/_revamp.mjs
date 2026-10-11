@@ -7,7 +7,7 @@ const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor
 const errs = [];
 p.on('pageerror', e => errs.push(String(e).slice(0, 300)));
 p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 300)); });
-await p.goto('http://localhost:3300/ai-infrastructure', { waitUntil: 'load' }); await p.waitForTimeout(4500);
+await p.goto('http://localhost:3300' + (process.env.PAGE || '/ai-infrastructure'), { waitUntil: 'load' }); await p.waitForTimeout(4500);
 const total = await p.evaluate(() => document.documentElement.scrollHeight);
 let i = 0;
 for (let y = 0; y < total; y += H * 0.85) {

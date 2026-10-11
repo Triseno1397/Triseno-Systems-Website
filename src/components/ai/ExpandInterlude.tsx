@@ -228,7 +228,11 @@ export default function ExpandInterlude() {
     };
 
     /* ── the shader ── */
-    const gl = canvas.getContext("webgl", { antialias: false, alpha: false, premultipliedAlpha: false });
+    // the program is built when the section is near (a second observer
+    // below), not at mount: shader compiles on the main thread were part
+    // of what blocked the page's first interaction
+    let gl: WebGLRenderingContext | null = null;
+    let glBooted = false;
     let draw: () => void = () => {};
     let disposeGl = () => {};
     const st = {
@@ -250,30 +254,35 @@ export default function ExpandInterlude() {
     };
     let ready = false;
 
+    const bootGl = () => {
+      if (glBooted) return;
+      glBooted = true;
+      gl = canvas.getContext("webgl", { antialias: false, alpha: false, premultipliedAlpha: false });
     if (gl) {
+      const g = gl;
       const sh = (type: number, code: string) => {
-        const s = gl.createShader(type)!;
-        gl.shaderSource(s, code);
-        gl.compileShader(s);
+        const s = g.createShader(type)!;
+        g.shaderSource(s, code);
+        g.compileShader(s);
         return s;
       };
-      const vs = sh(gl.VERTEX_SHADER, VERT);
-      const fs = sh(gl.FRAGMENT_SHADER, FRAG);
-      const prog = gl.createProgram()!;
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
-      gl.linkProgram(prog);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      const vs = sh(g.VERTEX_SHADER, VERT);
+      const fs = sh(g.FRAGMENT_SHADER, FRAG);
+      const prog = g.createProgram()!;
+      g.attachShader(prog, vs);
+      g.attachShader(prog, fs);
+      g.linkProgram(prog);
+      if (!g.getProgramParameter(prog, g.LINK_STATUS)) {
         media.setAttribute("data-fallback", "");
       } else {
-        gl.useProgram(prog);
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-        const loc = gl.getAttribLocation(prog, "p");
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        const u = (name: string) => gl.getUniformLocation(prog, name);
+        g.useProgram(prog);
+        const buf = g.createBuffer();
+        g.bindBuffer(g.ARRAY_BUFFER, buf);
+        g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), g.STATIC_DRAW);
+        const loc = g.getAttribLocation(prog, "p");
+        g.enableVertexAttribArray(loc);
+        g.vertexAttribPointer(loc, 2, g.FLOAT, false, 0, 0);
+        const u = (name: string) => g.getUniformLocation(prog, name);
         const U = {
           res: u("res"),
           imgAsp: u("imgAsp"),
@@ -291,16 +300,16 @@ export default function ExpandInterlude() {
           signal: u("signal"),
         };
         const cs = getComputedStyle(stage);
-        gl.uniform3fv(U.paper, hex(cs.getPropertyValue("--paper").trim() || "#e6e9e8"));
-        gl.uniform3fv(U.ink, hex(cs.getPropertyValue("--ink").trim() || "#0b0e0f"));
-        gl.uniform3fv(U.signal, hex(cs.getPropertyValue("--signal").trim() || "#00b4d8"));
+        g.uniform3fv(U.paper, hex(cs.getPropertyValue("--paper").trim() || "#e6e9e8"));
+        g.uniform3fv(U.ink, hex(cs.getPropertyValue("--ink").trim() || "#0b0e0f"));
+        g.uniform3fv(U.signal, hex(cs.getPropertyValue("--signal").trim() || "#00b4d8"));
 
-        const tex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const tex = g.createTexture();
+        g.bindTexture(g.TEXTURE_2D, tex);
+        g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR);
+        g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+        g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+        g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
         let imgW = 16;
         let imgH = 9;
 
@@ -311,22 +320,22 @@ export default function ExpandInterlude() {
           const res = clamp01((p - 0.06) / 0.86);
           const ca = st.w / st.h;
           const ia = imgW / imgH;
-          gl.uniform2f(U.res, st.w, st.h);
-          gl.uniform2f(U.imgAsp, ca > ia ? 1 : ca / ia, ca > ia ? ia / ca : 1);
-          gl.uniform1f(U.zoom, 1.2 - 0.2 * e);
-          gl.uniform1f(U.prog, res);
-          gl.uniform1f(U.cellD, Math.max(2, Math.round(2 * st.dpr)));
+          g.uniform2f(U.res, st.w, st.h);
+          g.uniform2f(U.imgAsp, ca > ia ? 1 : ca / ia, ca > ia ? ia / ca : 1);
+          g.uniform1f(U.zoom, 1.2 - 0.2 * e);
+          g.uniform1f(U.prog, res);
+          g.uniform1f(U.cellD, Math.max(2, Math.round(2 * st.dpr)));
           // the screen opens (4 -> 13 px) through the halftone stage, then
           // tightens again (-> 7 px) as the dots swell into the photograph
           const s1 = expoOut(clamp01((res - 0.12) / 0.45));
           const s2 = inOut(clamp01((res - 0.6) / 0.36));
-          gl.uniform1f(U.cellH, (4 + 9 * s1 - 6 * s2) * st.dpr);
-          gl.uniform2f(U.ptr, st.x * st.w, (1 - st.y) * st.h);
-          gl.uniform1f(U.ptrR, Math.min(st.w, st.h) * (phone ? 0.3 : 0.2));
-          gl.uniform1f(U.ptrK, st.k);
-          gl.uniform1f(U.time, reduced ? 0 : (performance.now() - st.t0) / 1000);
-          gl.uniform1f(U.dpr, st.dpr);
-          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          g.uniform1f(U.cellH, (4 + 9 * s1 - 6 * s2) * st.dpr);
+          g.uniform2f(U.ptr, st.x * st.w, (1 - st.y) * st.h);
+          g.uniform1f(U.ptrR, Math.min(st.w, st.h) * (phone ? 0.3 : 0.2));
+          g.uniform1f(U.ptrK, st.k);
+          g.uniform1f(U.time, reduced ? 0 : (performance.now() - st.t0) / 1000);
+          g.uniform1f(U.dpr, st.dpr);
+          g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
         };
 
         const img = new Image();
@@ -335,8 +344,8 @@ export default function ExpandInterlude() {
         img.onload = () => {
           imgW = img.naturalWidth;
           imgH = img.naturalHeight;
-          gl.bindTexture(gl.TEXTURE_2D, tex);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+          g.bindTexture(g.TEXTURE_2D, tex);
+          g.texImage2D(g.TEXTURE_2D, 0, g.RGB, g.RGB, g.UNSIGNED_BYTE, img);
           ready = true;
           media.setAttribute("data-ready", "");
           st.dirty = true;
@@ -345,17 +354,18 @@ export default function ExpandInterlude() {
 
         disposeGl = () => {
           img.onload = null;
-          gl.deleteTexture(tex);
-          gl.deleteBuffer(buf);
-          gl.deleteProgram(prog);
-          gl.deleteShader(vs);
-          gl.deleteShader(fs);
-          gl.getExtension("WEBGL_lose_context")?.loseContext();
+          g.deleteTexture(tex);
+          g.deleteBuffer(buf);
+          g.deleteProgram(prog);
+          g.deleteShader(vs);
+          g.deleteShader(fs);
+          g.getExtension("WEBGL_lose_context")?.loseContext();
         };
       }
     } else {
       media.setAttribute("data-fallback", "");
     }
+    };
 
     const size = () => {
       const r = media.getBoundingClientRect();
@@ -453,6 +463,16 @@ export default function ExpandInterlude() {
       stage.addEventListener("pointerleave", onLeave);
     }
 
+    const near = new IntersectionObserver(
+      ([en]) => {
+        if (!en.isIntersecting) return;
+        bootGl();
+        near.disconnect();
+      },
+      { rootMargin: "140% 0px 140% 0px" },
+    );
+    near.observe(stage);
+
     const io = new IntersectionObserver(
       ([en]) => {
         st.visible = en.isIntersecting;
@@ -503,6 +523,7 @@ export default function ExpandInterlude() {
     return () => {
       tween?.scrollTrigger?.kill();
       tween?.kill();
+      near.disconnect();
       io.disconnect();
       ro.disconnect();
       stage.removeEventListener("pointermove", onMove);
@@ -521,8 +542,10 @@ export default function ExpandInterlude() {
           role="img"
           aria-label="A dark nave of pillars strung with cyan light filaments, developing from a one-bit print through a halftone screen into the full-colour photograph"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="ai-xp__fallback" src={SRC} alt="" aria-hidden="true" decoding="async" loading="lazy" />
+          <picture>
+            <source media="(max-width: 767px)" srcSet={SRC_MOBILE} />
+            <img className="ai-xp__fallback" src={SRC} alt="" aria-hidden="true" decoding="async" loading="lazy" />
+          </picture>
           <canvas ref={canvasRef} className="ai-xp__canvas" aria-hidden="true" />
         </div>
         <span aria-hidden="true" className="ai-xp__crop" data-c="tl" />

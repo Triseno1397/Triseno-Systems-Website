@@ -50,6 +50,22 @@ export interface FrameScrubber {
 const CONCURRENCY = 6;
 const MAX_DPR = 2;
 
+/* AVIF frames are about half the bytes of WebP at the same look; each set
+   ships both and the browser that can decode AVIF gets it. One probe per
+   page, a 1x1 AVIF decoded off a data URL. */
+let avifProbe: Promise<boolean> | null = null;
+function supportsAvif(): Promise<boolean> {
+  if (avifProbe) return avifProbe;
+  avifProbe = new Promise<boolean>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.width > 0);
+    img.onerror = () => resolve(false);
+    img.src =
+      "data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+ErK42A=";
+  });
+  return avifProbe;
+}
+
 function progressiveOrder(count: number): number[] {
   const seen = new Set<number>();
   const out: number[] = [];
@@ -83,7 +99,8 @@ export function createFrameScrubber(
   let cssW = 0;
   let cssH = 0;
 
-  const name = (i: number) => `${set.dir}/${String(i + 1).padStart(3, "0")}.webp`;
+  let ext = "webp";
+  const name = (i: number, e = ext) => `${set.dir}/${String(i + 1).padStart(3, "0")}.${e}`;
 
   function measure() {
     const box = canvas.parentElement ?? canvas;
@@ -142,7 +159,8 @@ export function createFrameScrubber(
   async function fetchFrame(i: number) {
     try {
       if ("createImageBitmap" in window) {
-        const res = await fetch(name(i));
+        let res = await fetch(name(i));
+        if (!res.ok && ext !== "webp") res = await fetch(name(i, "webp"));
         if (!res.ok) return;
         const blob = await res.blob();
         if (disposed) return;
@@ -170,6 +188,14 @@ export function createFrameScrubber(
   function load() {
     if (loading || disposed) return;
     loading = true;
+    void supportsAvif().then((ok) => {
+      if (ok) ext = "avif";
+      startFetching();
+    });
+  }
+
+  function startFetching() {
+    if (disposed) return;
     const order = progressiveOrder(set.count);
     let cursor = 0;
     const worker = async () => {

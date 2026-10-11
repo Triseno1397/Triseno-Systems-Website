@@ -548,19 +548,11 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
     orbits[1].uniforms.uHead.value = (t * 0.18 + 0.5) % 1;
   };
 
-  const warm = (target: THREE.WebGLRenderTarget | null) => {
-    const prev = renderer.getRenderTarget();
+  // programs link in parallel (KHR_parallel_shader_compile): the synchronous
+  // compile here was a 200 ms stall on a phone while the visitor read the hero
+  const warm = (_target: THREE.WebGLRenderTarget | null) => {
     update(0, 1, 0, 0);
-    try {
-      if (target) {
-        renderer.setRenderTarget(target);
-        renderer.compile(scene, camera);
-      }
-      renderer.setRenderTarget(null);
-      renderer.compile(scene, camera);
-    } finally {
-      renderer.setRenderTarget(prev);
-    }
+    void renderer.compileAsync(scene, camera).catch(() => {});
   };
 
   const dispose = () => {
