@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Fig. 02 — Scale (FerroScale.tsx)
+   A window on the sheet opens to full bleed; the ferrofluid film inside is
+   played by the scroll. Scoped to .ai-fs; tokens from .ai-world (ai.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-fs { position: relative; }
+.ai-fs__stage {
+  position: relative; width: 100%; height: 100svh; min-height: 100svh; overflow: hidden;
+}
+
+/* the plate: full stage size, shown through a clip-path window (JS sets it) */
+.ai-fs__media {
+  position: absolute; inset: 0; background: #000; overflow: hidden;
+  clip-path: inset(24svh 31vw 24svh 31vw);
+  will-change: clip-path;
+}
+.ai-fs__canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  opacity: 0; transition: opacity 700ms linear;
+}
+.ai-fs__media[data-ready] .ai-fs__canvas { opacity: 1; }
+
+/* crop marks: each sits on its stage corner and is carried in to the
+   window's corner (JS), 10px outside it */
+.ai-fs__crop {
+  position: absolute; width: 18px; height: 18px; z-index: 2; pointer-events: none;
+  border: 0 solid var(--ink); will-change: transform;
+}
+.ai-fs__crop[data-c="tl"] { top: -10px; left: -10px; border-top-width: 1px; border-left-width: 1px; }
+.ai-fs__crop[data-c="tr"] { top: -10px; right: -10px; border-top-width: 1px; border-right-width: 1px; }
+.ai-fs__crop[data-c="bl"] { bottom: -10px; left: -10px; border-bottom-width: 1px; border-left-width: 1px; }
+.ai-fs__crop[data-c="br"] { bottom: -10px; right: -10px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* where the two halves of the headline land once parted (measured by JS) */
+.ai-fs__anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; visibility: hidden; }
+.ai-fs__anchor[data-a="a"] { top: calc(var(--lane-top) + 2svh); left: var(--gutter); }
+.ai-fs__anchor[data-a="b"] { bottom: calc(var(--lane-bottom) + 2svh); right: calc(var(--gutter) + var(--lane-right, 0px)); }
+
+/* the type, set twice: ink on the paper, paper on the plate */
+.ai-fs__layer {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  color: var(--ink);
+}
+@media (min-width: 1200px) { .ai-fs__layer { padding-right: calc(var(--gutter) + var(--lane-right, 0px)); } }
+.ai-fs__layer--paper {
+  z-index: 4; color: var(--paper);
+  clip-path: inset(24svh 31vw 24svh 31vw);
+  will-change: clip-path;
+}
+
+.ai-fs__title {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: grid; justify-items: center; margin: 0;
+  font-size: clamp(40px, 8.2vw, 150px); font-weight: 600; line-height: 0.95;
+  letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
+.ai-fs__half { display: block; will-change: transform; }
+
+.ai-fs__foot {
+  position: absolute; left: var(--gutter); bottom: calc(var(--lane-bottom) + 2svh);
+  margin: 0; display: grid; gap: 6px; max-width: 34ch;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1.6;
+  opacity: 0; will-change: transform, opacity;
+}
+.ai-fs__foot b { font-weight: 500; }
+.ai-fs__layer--paper .ai-fs__foot b { color: var(--signal); }
+.ai-fs__layer--ink .ai-fs__foot b { color: var(--signal-ink); }
+
+@media (max-width: 767px) {
+  .ai-fs__media, .ai-fs__layer--paper { clip-path: inset(30svh 8vw 30svh 8vw); }
+  .ai-fs__title { font-size: 12.4vw; letter-spacing: 0.04em; }
+  /* phone: both halves sit left; the caption moves up under the first line */
+  .ai-fs__anchor[data-a="b"] { right: auto; left: var(--gutter); bottom: calc(var(--lane-bottom) + 2svh); transform: translate(0, -100%); }
+  .ai-fs__foot { top: calc(var(--lane-top) + 2svh + 14vw); bottom: auto; max-width: 28ch; }
+}
+
+/* reduced motion: no pin, the open plate at its final frame, headline parted */
+.ai-fs__stage[data-static] .ai-fs__media,
+.ai-fs__stage[data-static] .ai-fs__layer--paper { clip-path: inset(0); }
+.ai-fs__stage[data-static] .ai-fs__crop { display: none; }
+.ai-fs__stage[data-static] .ai-fs__title { position: static; transform: none; display: block; }
+.ai-fs__stage[data-static] .ai-fs__half[data-h="b"] { position: absolute; right: var(--gutter); bottom: calc(var(--lane-bottom) + 2svh); }
+.ai-fs__stage[data-static] .ai-fs__foot { opacity: 1; }

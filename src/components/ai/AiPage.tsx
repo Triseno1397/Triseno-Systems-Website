@@ -7,7 +7,7 @@ import SignalTicker from "./SignalTicker";
 import FlowingCapabilities from "./FlowingCapabilities";
 import MercuryCompression from "./MercuryCompression";
 import { cleanDark } from "./cleanDark";
-import ExpandInterlude from "./ExpandInterlude";
+import FerroScale from "./FerroScale";
 import StackFilm from "./StackFilm";
 import AgentConsole from "./AgentConsole";
 import ProcessRail from "./ProcessRail";
@@ -67,7 +67,7 @@ export default function AiPage() {
       <SignalTicker />
       <FlowingCapabilities />
       <MercuryCompression />
-      <ExpandInterlude />
+      <FerroScale />
       <StackFilm />
       <AgentConsole />
       <ProcessRail />

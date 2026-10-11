@@ -4,7 +4,7 @@ import WebWorld from "./WebWorld";
 import ShutterHero from "./ShutterHero";
 import DemoFrame from "./DemoFrame";
 import CompareReveal from "./CompareReveal";
-import StackCards from "./StackCards";
+import PrismDeliverables from "./PrismDeliverables";
 import RangeGallery from "./RangeGallery";
 import WebGate from "./WebGate";
 import FaqSection from "@/components/world/FaqSection";
@@ -30,7 +30,7 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
       <ShutterHero />
       <DemoFrame />
       <CompareReveal />
-      <StackCards />
+      <PrismDeliverables />
       <RangeGallery />
       <FaqSection division="web" />
       <WebGate />

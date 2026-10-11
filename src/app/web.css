@@ -109,14 +109,13 @@
    aligned with the world behind it, so the glass survives the content fade.
    - .web-bezel: a GlassPanel wrapped round a concept site / the demo device /
      the before/after stage / a style tile — the glass is its bezel;
-   - .web-stack__inner: each deliverable card IS a GlassPanel.
+   - .web-prism__card: each deliverable card is smoked GlassPanel (web-prism.css).
    Around the glass this division adds the light: a light-catching hairline,
    the violet glow and the spill onto the floor (box-shadow, so no layout moves
    and the panel's own overflow never clips it). Glow is allowed on scene
    objects (design-system §2); the concept sites inside stay fully legible. */
 .glass-panel.web-bezel { padding: 8px; border-color: rgba(255, 255, 255, 0.82); }
-.glass-panel.web-bezel,
-.glass-panel.web-stack__inner {
+.glass-panel.web-bezel {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--hue) 22%, transparent),
     0 0 46px 2px color-mix(in srgb, var(--hue) 38%, transparent),
@@ -131,11 +130,11 @@
    "the scene sits behind content, always"). Neutral black, blurred edges,
    no hard edge, no rule line. */
 .web-hero__copy, .web-demo__head, .web-compare__head, .web-compare__side,
-.web-stack__aside, .web-range__head, .web-range__list, .web-gate__copy {
+.web-range__head, .web-range__list, .web-gate__copy {
   position: relative; isolation: isolate;
 }
 .web-hero__copy::before, .web-demo__head::before, .web-compare__head::before, .web-compare__side::before,
-.web-stack__aside::before, .web-range__head::before, .web-range__list::before, .web-gate__copy::before {
+.web-range__head::before, .web-range__list::before, .web-gate__copy::before {
   content: ""; position: absolute; inset: -28px -40px; z-index: -1; pointer-events: none;
   /* soft-edged by the gradient itself — a blur(30px) filter here was re-rasterised on every scroll frame */
   background: radial-gradient(farthest-side, rgba(0, 0, 0, 0.66) 55%, rgba(0, 0, 0, 0.36) 78%, rgba(0, 0, 0, 0) 100%);
@@ -143,7 +142,7 @@
 /* Mid-page sections do not carry a bottom lane: the next section's top lane
    already clears the chrome, and two lanes back to back left ~280px of bare
    world between sections. */
-.web-compare, .web-stack, .web-range { padding-top: clamp(72px, 10svh, 104px); padding-bottom: 48px; }
+.web-compare, .web-range { padding-top: clamp(72px, 10svh, 104px); padding-bottom: 48px; }
 
 /* Sections sit above the world (z 10) and inside the chrome lanes, so no
    fixed chrome element lands on their content (design-loop/division-world.md). */
@@ -821,131 +820,6 @@
 }
 
 /* ═══ 4 · WHAT YOU GET — sticky stacking cards ═══ */
-.web-stack { display: grid; gap: 36px; align-items: start; max-width: calc(1400px + var(--gutter) * 2 + var(--rail)); margin: 0 auto; }
-.web-stack__aside { display: grid; gap: 18px; }
-.web-stack__aside .web-eyebrow { margin-bottom: 4px; }
-.web-stack__count {
-  display: flex; align-items: baseline; gap: 10px; margin: 8px 0 0;
-  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em; color: #ffffff;
-}
-/* the counter is a readout: chrome-size mono, never a fourth type size */
-.web-stack__count > span:first-child { font-weight: 500; }
-.web-stack__list { display: grid; gap: 5svh; margin: 0; padding: 0 0 3svh; list-style: none; }
-.web-stack__card { position: sticky; top: calc(var(--lane-top) + var(--i) * 9px); }
-.web-stack__inner {
-  position: relative; /* offsetParent for the per-row fade in StackCards */
-  display: flex; flex-direction: column; min-height: clamp(300px, 46svh, 440px);
-  padding: clamp(20px, 2.2vw, 32px); border: 1px solid #ffffff;
-  transform-origin: 50% 0; will-change: transform;
-}
-/* The handover edge. --v is the sheet's visible height, scrubbed by
-   StackCards to track the incoming sheet's edge; at rest it is huge, so the
-   sheet is whole. The mask box overhangs the sheet by 120px on every side
-   (no-clip) so its glow and floor spill are never cut at rest. */
-.web-stack__inner {
-  --v: 100000px;
-  --stack-mask: linear-gradient(180deg, #000 calc(var(--v) + 120px - 56px), transparent calc(var(--v) + 120px));
-  -webkit-mask-image: var(--stack-mask); mask-image: var(--stack-mask);
-  -webkit-mask-size: calc(100% + 240px) calc(100% + 240px); mask-size: calc(100% + 240px) calc(100% + 240px);
-  -webkit-mask-position: -120px -120px; mask-position: -120px -120px;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  -webkit-mask-clip: no-clip; mask-clip: no-clip;
-}
-/* GlassPanel wraps its children in a body: let it fill the sheet */
-.web-stack__inner > .glass-panel__body { flex: 1 1 auto; display: flex; flex-direction: column; }
-.web-stack__content { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; }
-
-/* the illustrations — hairline white, one violet accent, chrome-size mono */
-.web-stack__viz {
-  display: flex; min-height: clamp(96px, 13svh, 118px); padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3); overflow: hidden;
-}
-.dv {
-  display: flex; width: 100%; font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label);
-  line-height: 1.4; letter-spacing: 0.06em; text-transform: uppercase; color: #ffffff;
-}
-.dv span, .dv i, .dv b { display: block; font-style: normal; font-weight: 400; }
-.dv [data-hot] { border-color: var(--hue) !important; color: var(--hue); }
-
-.dv-map { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
-.dv-map__root { position: relative; padding: 5px 12px; border: 1px solid #ffffff; }
-.dv-map__root::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 14px; background: #ffffff; }
-.dv-map__kids {
-  display: grid !important; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%;
-  padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, 0.6);
-}
-.dv-map__kids > span { position: relative; padding: 5px 0; border: 1px solid rgba(255, 255, 255, 0.55); text-align: center; }
-.dv-map__kids > span::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 9px; background: rgba(255, 255, 255, 0.6); }
-
-.dv-spec { align-items: center; gap: clamp(14px, 2vw, 26px); }
-.dv-spec__aa { font-family: var(--font-unbounded), sans-serif; font-weight: 700; font-size: var(--web-h2); letter-spacing: var(--web-track); line-height: 1; text-transform: none; }
-.dv-spec__meta { flex: 1 1 auto; color: var(--ink-muted); }
-.dv-spec__sw { display: grid !important; grid-template-columns: repeat(2, 20px); gap: 6px; }
-.dv-spec__sw i { width: 20px; height: 20px; border: 1px solid #ffffff; }
-.dv-spec__sw i:nth-child(1) { background: #ffffff; }
-.dv-spec__sw i:nth-child(2) { background: #cfcfcf; }
-.dv-spec__sw i:nth-child(3) { background: #111111; }
-.dv-spec__sw i:nth-child(4) { background: var(--hue); border-color: var(--hue); }
-
-.dv-code { flex-direction: column; justify-content: center; text-transform: none; letter-spacing: 0.02em; white-space: pre; color: var(--ink-muted); }
-.dv-code b { display: inline !important; color: var(--hue); }
-.dv-code__ok { margin-top: 6px; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em; }
-
-.dv-perf { flex-direction: column; justify-content: center; gap: 6px; }
-.dv-perf__row { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 30px; align-items: center; gap: 10px; }
-.dv-perf__row i { position: relative; height: 3px; background: rgba(255, 255, 255, 0.18); }
-.dv-perf__row i::after { content: ""; position: absolute; inset: 0; background: #ffffff; transform: scaleX(var(--v)); transform-origin: left center; }
-.dv-perf__row[data-hot] i::after { background: var(--hue); }
-.dv-perf__row b { text-align: right; }
-.dv-perf__note { color: var(--ink-muted); }
-
-.dv-serp { flex-direction: column; justify-content: center; gap: 4px; }
-.dv-serp__url { color: var(--ink-muted); text-transform: none; }
-.dv-serp__t { font-family: var(--font-geist-sans), sans-serif; font-size: var(--fs-body); line-height: 1.3; letter-spacing: 0; text-transform: none; color: #ffffff; text-decoration: underline; text-decoration-color: var(--hue); text-underline-offset: 4px; }
-.dv-serp__d { color: var(--ink-muted); text-transform: none; }
-
-.dv-flow { align-items: center; }
-.dv-flow > span { flex: none; padding: 5px 8px; border: 1px solid rgba(255, 255, 255, 0.6); }
-.dv-flow > span[data-hot] { background: var(--hue); color: #000000; }
-.dv-flow > i { flex: 1 1 auto; min-width: 8px; height: 1px; background: #ffffff; }
-/* narrow: the pipeline wraps onto two lines rather than dropping a node */
-@media (max-width: 520px) {
-  .dv-flow { flex-wrap: wrap; row-gap: 8px; }
-  .dv-flow > span { padding: 4px 6px; letter-spacing: 0.03em; }
-  .dv-flow > i { flex: 0 0 10px; }
-}
-
-.dv-bars { flex-direction: column; gap: 6px; }
-.dv-bars__plot { flex: 1 1 auto; display: flex !important; align-items: flex-end; gap: 4px; min-height: 56px; }
-.dv-bars__plot i { flex: 1 1 0; height: 100%; background: rgba(255, 255, 255, 0.55); transform: scaleY(var(--h)); transform-origin: 50% 100%; }
-.dv-bars__plot i[data-hot] { background: var(--hue); }
-.dv-bars__axis { display: flex !important; justify-content: space-between; color: var(--ink-muted); }
-.web-stack__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.web-stack__n { font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.2em; color: #ffffff; }
-.web-stack__frame { display: inline-flex; gap: 5px; }
-.web-stack__frame i { display: block; width: 9px; height: 9px; border: 1px solid #ffffff; }
-.web-stack__frame i:last-child { border-color: var(--hue); background: var(--hue); filter: drop-shadow(0 0 6px var(--hue)); }
-.web-stack__title {
-  margin: 0; max-width: 16ch; font-family: var(--font-unbounded), sans-serif; font-weight: 600;
-  font-size: var(--web-h2); line-height: 1.16; letter-spacing: var(--web-track); text-transform: uppercase;
-  color: #ffffff;
-}
-.web-stack__body { margin: 0; max-width: 56ch; font-weight: 400; font-size: var(--fs-body); line-height: 1.5; color: var(--ink-secondary); }
-.web-stack__spec { display: grid; gap: 10px; margin: auto 0 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.3); }
-.web-stack__spec > div { display: grid; grid-template-columns: minmax(96px, 0.34fr) 1fr; gap: 14px; }
-.web-stack__spec dt,
-.web-stack__spec dd { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); line-height: 1.5; letter-spacing: 0.1em; text-transform: uppercase; }
-.web-stack__spec dt { color: var(--ink-muted); }
-.web-stack__spec dd { color: #ffffff; }
-@media (min-width: 900px) {
-  .web-stack { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); column-gap: 4vw; }
-  .web-stack__aside { position: sticky; top: var(--lane-top); }
-  .web-stack__card { top: calc(var(--lane-top) + var(--i) * 12px); }
-  .web-stack__spec { grid-template-columns: 1fr 1fr; column-gap: 28px; }
-  .web-stack__spec > div { grid-template-columns: 1fr; gap: 2px; }
-}
-
-/* ═══ 5 · RANGE — hover-swap gallery ═══ */
 .web-range { max-width: calc(1400px + var(--gutter) * 2 + var(--rail)); margin: 0 auto; }
 .web-range__head { display: grid; gap: 16px; margin-bottom: 30px; }
 .web-range__head .web-eyebrow { margin-bottom: 14px; }
@@ -1249,8 +1123,6 @@
   .web-scene__haze { transition: none; }
   .web-plate__shaft, .web-plate__haze, .web-plate__dust { animation: none; }
 
-  /* no stacking: every sheet is whole and readable in a plain column */
-  .web-stack__card { position: relative; top: auto !important; }
   .web-demo { height: auto; }
   .web-demo__stage { position: relative; height: auto; min-height: 100svh; }
   .web-demo__head { position: relative; top: auto; left: auto; right: auto; width: 100%; margin-bottom: 20px; }

@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════════════
+   04 — What you get (PrismDeliverables.tsx)
+   A pinned film of light splitting inside a crystal; the seven deliverables
+   step through as the beam opens. Scoped to .web-prism; tokens from
+   .web-world (web.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.web-section.web-prism { padding: 0; }
+.web-prism__stage {
+  position: relative; width: 100%; height: 100svh; min-height: 100svh; overflow: hidden;
+  background: #000;
+}
+
+/* the film */
+.web-prism__film { position: absolute; inset: 0; background: #000; }
+.web-prism__canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  opacity: 0; transition: opacity 700ms linear;
+}
+.web-prism__film[data-ready] .web-prism__canvas { opacity: 1; }
+
+/* a soft dark edge where the copy sits, so type never fights the light */
+.web-prism__scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.34) 32%, rgba(0, 0, 0, 0) 56%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 32%);
+}
+
+/* the lanes */
+.web-prism__grid {
+  position: absolute; inset: 0; z-index: 2;
+  display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 48px;
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  align-items: stretch;
+}
+.web-prism__aside { display: grid; gap: 18px; align-content: start; max-width: 520px; }
+.web-prism__aside .web-eyebrow { margin-bottom: 4px; }
+.web-prism__lead { transition: opacity 500ms ease, transform 700ms cubic-bezier(0.16, 1, 0.3, 1); will-change: opacity, transform; }
+.web-prism__lead[data-hide] { opacity: 0; transform: translate3d(0, -8px, 0); }
+
+/* the index: seven bands, lit one at a time */
+.web-prism__bands { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 2px; }
+.web-prism__bandbtn {
+  appearance: none; background: none; border: 0; padding: 8px 0; margin: 0; cursor: pointer;
+  display: grid; grid-template-columns: 26px 36px auto; align-items: center; gap: 12px;
+  color: rgba(255, 255, 255, 0.5); font: inherit; text-align: left;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  transition: color 400ms ease;
+}
+.web-prism__bandbtn i {
+  display: block; height: 2px; width: 26px; background: var(--band);
+  opacity: 0.22; transform: scaleX(0.6); transform-origin: left center;
+  transition: opacity 400ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 400ms ease;
+}
+.web-prism__band[data-done] .web-prism__bandbtn i { opacity: 0.6; transform: none; }
+.web-prism__band[data-on] .web-prism__bandbtn { color: #ffffff; }
+.web-prism__band[data-on] .web-prism__bandbtn i { opacity: 1; transform: none; box-shadow: 0 0 14px var(--band); }
+.web-prism__band[data-on] .web-prism__bandn { color: var(--band); }
+@media (hover: hover) { .web-prism__bandbtn:hover { color: #ffffff; } .web-prism__bandbtn:hover i { opacity: 0.85; transform: none; } }
+.web-prism__bandbtn:focus-visible { outline: 1px solid #ffffff; outline-offset: 4px; }
+
+.web-prism__count {
+  display: flex; gap: 8px; margin: 6px 0 0;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.55);
+}
+.web-prism__count > span:first-child { font-weight: 500; }
+
+/* the cards: one stack, one visible */
+.web-prism__cards { position: relative; align-self: end; justify-self: end; width: min(100%, 540px); min-height: 320px; }
+.glass-panel.web-prism__card {
+  position: absolute; left: 0; right: 0; bottom: 0; margin: 0;
+  padding: 26px 28px 28px;
+  opacity: 0; transform: translate3d(0, 28px, 0); pointer-events: none;
+  transition: opacity 450ms ease, transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--band) 24%, transparent),
+    0 0 46px 2px color-mix(in srgb, var(--band) 26%, transparent),
+    0 44px 64px -30px color-mix(in srgb, var(--band) 60%, transparent);
+}
+.glass-panel.web-prism__card::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: var(--band); box-shadow: 0 0 18px var(--band);
+}
+.glass-panel.web-prism__card[data-active] { opacity: 1; transform: none; pointer-events: auto; }
+.web-prism__n {
+  display: block; margin-bottom: 14px;
+  font-family: var(--font-geist-mono), monospace; font-size: 12px; letter-spacing: 0.2em; color: var(--band);
+}
+.web-prism__title {
+  margin: 0; font-family: var(--font-unbounded), sans-serif; font-weight: 600;
+  font-size: clamp(20px, 2.1vw, 30px); line-height: 1.1; letter-spacing: -0.005em; color: #ffffff;
+}
+.web-prism__body { margin: 14px 0 0; font-size: var(--fs-body, 16px); line-height: 1.55; color: rgba(255, 255, 255, 0.82); }
+.web-prism__spec {
+  display: grid; gap: 8px; margin: 20px 0 0; padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.web-prism__spec > div { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr); gap: 12px; }
+.web-prism__spec dt { color: rgba(255, 255, 255, 0.5); }
+.web-prism__spec dd { margin: 0; color: #ffffff; }
+
+.web-prism__cap {
+  position: absolute; z-index: 2; right: calc(var(--gutter) + var(--rail, 0px)); top: calc(var(--lane-top) + 4px);
+  margin: 0; display: grid; justify-items: end; gap: 4px;
+  font-family: var(--font-geist-mono), monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.web-prism__cap b { font-weight: 500; color: #ffffff; }
+
+/* phone: index as a strip, card low over the film, cap hidden */
+@media (max-width: 767px) {
+  .web-prism__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: space-between; }
+  .web-prism__aside { gap: 12px; }
+  .web-prism__lead { display: none; }
+  .web-prism__bands { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  .web-prism__bandbtn { grid-template-columns: 1fr; gap: 6px; padding: 6px 0; }
+  .web-prism__bandbtn i { width: 100%; transform: scaleX(1); opacity: 0.25; }
+  .web-prism__bandn, .web-prism__bandname { display: none; }
+  .web-prism__count { display: none; }
+  .web-prism__cards { width: 100%; min-height: 0; }
+  .glass-panel.web-prism__card { padding: 20px 20px 22px; }
+  .web-prism__body { font-size: 14px; }
+  .web-prism__spec { display: none; }
+  .web-prism__cap { display: none; }
+  .web-prism__scrim {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0) 34%),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.3) 40%, rgba(0, 0, 0, 0) 60%);
+  }
+}
+
+/* reduced motion: no pin; the final frame, then the seven cards in a column */
+.web-prism[data-static] .web-prism__grid { position: relative; inset: auto; padding-top: var(--lane-top); }
+.web-prism[data-static] .web-prism__stage { height: auto; min-height: 100svh; }
+.web-prism[data-static] .web-prism__film { height: 100svh; }
+.web-prism[data-static] .web-prism__cards { display: grid; gap: 16px; align-self: start; }
+.web-prism[data-static] .glass-panel.web-prism__card { position: relative; opacity: 1; transform: none; pointer-events: auto; }
+.web-prism[data-static] .web-prism__lead[data-hide] { opacity: 1; transform: none; }
