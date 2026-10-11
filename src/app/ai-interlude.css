@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Fig. 02 — the expanding interlude (ExpandInterlude.tsx)
+   A window on the sheet opens to full bleed while the plate inside develops
+   from a 1-bit print to a halftone to the photograph. Everything here is
+   scoped to .ai-xp; the shared tokens come from .ai-world (ai.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-xp { position: relative; }
+.ai-xp__stage {
+  position: relative; width: 100%; height: 100svh; min-height: 100svh; overflow: hidden;
+}
+
+/* the plate: full stage size, shown through a clip-path window */
+.ai-xp__media {
+  position: absolute; inset: 0; background: var(--ink); overflow: hidden;
+  clip-path: inset(24svh 31vw 24svh 31vw);
+  will-change: clip-path;
+}
+.ai-xp__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 600ms linear; }
+.ai-xp__media[data-ready] .ai-xp__canvas { opacity: 1; }
+.ai-xp__fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.ai-xp__media[data-fallback] .ai-xp__fallback { opacity: 1; }
+.ai-xp__media[data-fallback] .ai-xp__canvas { display: none; }
+
+/* crop marks: each sits on its stage corner and is carried in to the
+   window's corner (JS), 10px outside it */
+.ai-xp__crop {
+  position: absolute; width: 18px; height: 18px; z-index: 2; pointer-events: none;
+  border: 0 solid var(--ink); will-change: transform;
+}
+.ai-xp__crop[data-c="tl"] { top: -10px; left: -10px; border-top-width: 1px; border-left-width: 1px; }
+.ai-xp__crop[data-c="tr"] { top: -10px; right: -10px; border-top-width: 1px; border-right-width: 1px; }
+.ai-xp__crop[data-c="bl"] { bottom: -10px; left: -10px; border-bottom-width: 1px; border-left-width: 1px; }
+.ai-xp__crop[data-c="br"] { bottom: -10px; right: -10px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* the type, set twice: ink on the paper, paper on the plate */
+.ai-xp__layer {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  padding: var(--lane-top) var(--gutter) var(--lane-bottom);
+  color: var(--ink);
+}
+@media (min-width: 1200px) { .ai-xp__layer { padding-right: calc(var(--gutter) + var(--lane-right, 0px)); } }
+.ai-xp__layer--paper {
+  z-index: 4; color: var(--paper);
+  clip-path: inset(24svh 31vw 24svh 31vw);
+  will-change: clip-path;
+}
+
+.ai-xp__title {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: grid; justify-items: center; margin: 0;
+  font-size: clamp(40px, 8.2vw, 150px); font-weight: 600; line-height: 0.95;
+  letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
+.ai-xp__half { display: block; will-change: transform; }
+@media (max-width: 767px) {
+  .ai-xp__title { font-size: 12.4vw; letter-spacing: 0.04em; }
+}
+
+.ai-xp__foot {
+  position: absolute; left: var(--gutter); right: var(--gutter); bottom: var(--lane-bottom);
+  display: flex; justify-content: space-between; align-items: end; gap: 16px 24px; flex-wrap: wrap;
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label, 12px);
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+@media (min-width: 1200px) { .ai-xp__foot { right: calc(var(--gutter) + var(--lane-right, 0px)); } }
+.ai-xp__cap { margin: 0; display: flex; gap: 0.9em; }
+.ai-xp__cap b { font-weight: 500; }
+.ai-xp__layer--ink .ai-xp__cap b { color: var(--signal-ink); }
+.ai-xp__layer--paper .ai-xp__cap b { color: var(--signal); }
+.ai-xp__read { margin: 0; display: flex; gap: 18px; font-variant-numeric: tabular-nums; }
+.ai-xp__step, .ai-xp__pct { position: relative; }
+.ai-xp__read .ai-xp__step { opacity: 0.42; transition: opacity 500ms linear; padding-bottom: 5px; }
+.ai-xp__read .ai-xp__step::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: currentColor;
+  transform: scaleX(0); transform-origin: left center; transition: transform 700ms var(--ease-expo);
+}
+.ai-xp__read .ai-xp__step[data-on] { opacity: 1; }
+.ai-xp__read .ai-xp__step[data-on]::after { transform: scaleX(1); }
+.ai-xp__layer--ink .ai-xp__pct { color: var(--signal-ink); }
+.ai-xp__layer--paper .ai-xp__pct { color: var(--signal); }
+@media (max-width: 767px) {
+  .ai-xp__read { gap: 12px; }
+  .ai-xp__read .ai-xp__step:not([data-on]) { display: none; }
+}
+
+/* reduced motion: no pin, the open plate (JS sets the final state too) */
+@media (prefers-reduced-motion: reduce) {
+  .ai-xp__media, .ai-xp__layer--paper { clip-path: none; }
+  .ai-xp__crop { display: none; }
+}

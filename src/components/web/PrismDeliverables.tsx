@@ -26,8 +26,8 @@ gsap.registerPlugin(ScrollTrigger);
  */
 
 const FILM: FrameFilm = {
-  landscape: { dir: "/frames/prism-d", count: 96, width: 1440, height: 810 },
-  portrait: { dir: "/frames/prism-m", count: 96, width: 640, height: 1138 },
+  landscape: { dir: "/frames/prism-d", count: 96, width: 1280, height: 720 },
+  portrait: { dir: "/frames/prism-m", count: 96, width: 600, height: 1067 },
 };
 
 /** red to violet, one per deliverable; the last is the division's own hue */

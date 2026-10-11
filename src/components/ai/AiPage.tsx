@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { DIVISIONS } from "@/lib/divisions";
 import AiHero from "./AiHero";
 import SignalTicker from "./SignalTicker";
-import FlowingCapabilities from "./FlowingCapabilities";
+import FerroTools from "./FerroTools";
 import MercuryCompression from "./MercuryCompression";
 import { cleanDark } from "./cleanDark";
-import FerroScale from "./FerroScale";
+import ExpandInterlude from "./ExpandInterlude";
 import StackFilm from "./StackFilm";
 import AgentConsole from "./AgentConsole";
 import ProcessRail from "./ProcessRail";
@@ -65,9 +65,9 @@ export default function AiPage() {
       <AiAmbience />
       <AiHero />
       <SignalTicker />
-      <FlowingCapabilities />
+      <FerroTools />
       <MercuryCompression />
-      <FerroScale />
+      <ExpandInterlude />
       <StackFilm />
       <AgentConsole />
       <ProcessRail />
