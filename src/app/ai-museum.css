@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════════
+   04 — Who it is for: the museum (AgentConsole.tsx)
+   A dark gallery of four glass cases; the camera goes into one, its
+   miniature alive, a cyan line through it, the exhibit label beside it.
+   Scoped to .ai-mus; tokens from .ai-world (ai.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-world .ai-mus__head {
+  display: grid; gap: 18px; align-items: end; margin-bottom: clamp(24px, 3.4vw, 44px);
+}
+@media (min-width: 1024px) {
+  .ai-world .ai-mus__head { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(40px, 5vw, 88px); }
+}
+.ai-world .ai-mus__body { max-width: 46ch; animation: ai-in 700ms var(--ease-expo) both; }
+
+/* ── the room: stage + label; the label floats over the stage on wide screens ── */
+.ai-world .ai-mus__room { position: relative; }
+
+.ai-world .ai-mus__stage {
+  position: relative; overflow: hidden; isolation: isolate;
+  aspect-ratio: 16 / 9; background: #040506;
+  border: 1px solid var(--ink);
+  /* the whole stage fits on one screen: shorter than 16:9 on short windows,
+     with the layers cropped top and bottom like a cover image */
+  max-height: calc(100svh - var(--lane-top, 80px) - var(--lane-bottom, 64px) - 8px);
+  width: 100%;
+  container-type: size;
+}
+
+/* every layer is a 16:9 frame sized like object-fit: cover against the stage
+   (container units), centred: on a 16:9 stage it fills it exactly; on any
+   other shape it is cropped evenly, so the line and the hit areas stay on
+   the pixels they were placed on */
+.ai-world .ai-mus__frame {
+  position: absolute; top: 50%; left: 50%;
+  width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw);
+  transform: translate(-50%, -50%);
+}
+.ai-world .ai-mus__frame img,
+.ai-world .ai-mus__film {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  user-select: none; -webkit-user-drag: none;
+}
+
+/* the gallery plate: the camera. Out: the whole gallery. In: the case's centre
+   brought to the stage's centre and pushed in (one transform, about the case). */
+.ai-world .ai-mus__gallery {
+  --sx: 0%;
+  transform-origin: var(--gx) var(--gy);
+  transition: transform 760ms cubic-bezier(0.5, 0, 0.2, 1), filter 760ms linear;
+  will-change: transform;
+}
+.ai-world .ai-mus__room[data-inside] .ai-mus__gallery {
+  transform: translate(-50%, -50%) translate(calc(50% - var(--gx) + var(--sx)), calc(50% - var(--gy))) scale(var(--z));
+  transition: transform 1300ms cubic-bezier(0.6, 0, 0.15, 1), filter 1300ms linear;
+  filter: blur(2px);
+}
+
+/* the lights: each case sits in its own pool of dark until its lamp comes on */
+.ai-world .ai-mus__lamp {
+  position: absolute; top: -2%; height: 74%; left: calc(var(--x) - 14%); width: 28%;
+  background: radial-gradient(closest-side, rgba(2, 3, 4, 0.94) 58%, rgba(2, 3, 4, 0.7) 78%, rgba(2, 3, 4, 0) 100%);
+  pointer-events: none;
+}
+.ai-world .ai-mus__room[data-lit] .ai-mus__lamp {
+  opacity: 0;
+  transition: opacity 900ms cubic-bezier(0.2, 0.7, 0.2, 1) calc(300ms + var(--i) * 380ms);
+}
+
+/* in the gallery view the cases are buttons */
+.ai-world .ai-mus__hit {
+  position: absolute; top: 24%; height: 42%; left: calc(var(--x) - 10%); width: 20%;
+  background: transparent; border: 1px solid transparent; cursor: pointer; pointer-events: none;
+  transition: border-color 400ms var(--ease-expo), background-color 400ms var(--ease-expo);
+}
+.ai-world .ai-mus__room[data-lit]:not([data-inside]) .ai-mus__hit { pointer-events: auto; }
+@media (hover: hover) {
+  .ai-world .ai-mus__hit:hover { border-color: rgba(0, 180, 216, 0.6); background: rgba(0, 180, 216, 0.06); }
+}
+
+/* the case films: the selected case fades up as the camera arrives, settling in */
+.ai-world .ai-mus__case {
+  --sx: 0%;
+  opacity: 0; pointer-events: none;
+  transform: translate(calc(-50% + var(--sx)), -50%) scale(1.05);
+  transition: opacity 280ms linear, transform 600ms linear;
+}
+.ai-world .ai-mus__room[data-inside] .ai-mus__case[data-on] {
+  opacity: 1;
+  transform: translate(calc(-50% + var(--sx)), -50%) scale(1);
+  transition: opacity 620ms linear 720ms, transform 1700ms cubic-bezier(0.16, 1, 0.3, 1) 720ms;
+}
+.ai-world .ai-mus__still { z-index: 0; }
+.ai-world .ai-mus__film { z-index: 1; }
+
+/* the line through the miniature: segments draw as their step arrives, stops
+   glow while their step runs, settle once it is done, pulse white on a halt */
+.ai-world .ai-mus__path {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(0, 200, 240, 0.85));
+}
+.ai-world .ai-mus__seg {
+  stroke: #5fe8ff; stroke-width: 2; stroke-linecap: round; fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  transition: stroke-dashoffset 760ms cubic-bezier(0.5, 0, 0.2, 1);
+}
+.ai-world .ai-mus__seg[data-on] { stroke-dashoffset: 0; }
+.ai-world .ai-mus__node .ai-mus__dot { fill: #5fe8ff; opacity: 0; transition: opacity 300ms linear; }
+.ai-world .ai-mus__node .ai-mus__halo {
+  fill: rgba(0, 200, 240, 0.22); stroke: rgba(95, 232, 255, 0.7); stroke-width: 1; vector-effect: non-scaling-stroke;
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+}
+.ai-world .ai-mus__node:not([data-state="off"]) .ai-mus__dot { opacity: 1; }
+.ai-world .ai-mus__node[data-state="run"] .ai-mus__halo { animation: ai-mus-ping 1.15s cubic-bezier(0.2, 0.7, 0.2, 1) infinite; }
+.ai-world .ai-mus__node[data-state="done"] .ai-mus__halo { opacity: 0.45; transform: scale(0.55); transition: opacity 400ms linear, transform 400ms var(--ease-expo); }
+.ai-world .ai-mus__node[data-state="halt"] .ai-mus__dot { fill: #ffffff; }
+.ai-world .ai-mus__node[data-state="halt"] .ai-mus__halo {
+  fill: rgba(255, 255, 255, 0.16); stroke: rgba(255, 255, 255, 0.85);
+  animation: ai-mus-ping 1.6s ease-in-out infinite;
+}
+@keyframes ai-mus-ping {
+  0% { opacity: 0.9; transform: scale(0.35); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+.ai-world .ai-mus__vignette {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(130% 110% at 50% 45%, transparent 58%, rgba(0, 0, 0, 0.55) 100%);
+}
+.ai-world .ai-mus__hud {
+  position: absolute; z-index: 4; top: 16px; left: 18px; margin: 0;
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(232, 241, 243, 0.72);
+}
+.ai-world .ai-mus__hud i { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+
+/* ── the exhibit label: the console as a backlit panel beside the case ── */
+.ai-world .ai-mus__label { position: relative; z-index: 5; margin-top: 18px; }
+.ai-world .ai-mus .ai-console {
+  background: rgba(6, 10, 12, 0.94); border-color: rgba(0, 180, 216, 0.45);
+  box-shadow: 0 0 0 1px rgba(0, 180, 216, 0.08), 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+.ai-world .ai-mus .ai-console__note { color: rgba(217, 226, 227, 0.45); }
+
+/* wide screens: the label stands inside the stage, right of the case, and the
+   case is shifted left so the two never overlap */
+@media (min-width: 1200px) {
+  .ai-world .ai-mus__gallery, .ai-world .ai-mus__case { --sx: -11%; }
+  .ai-world .ai-mus__label {
+    position: absolute; margin: 0; top: clamp(44px, 6%, 64px); right: 2%;
+    width: min(35%, 500px);
+  }
+  .ai-world .ai-mus .ai-console {
+    background: rgba(6, 10, 12, 0.72);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(0, 180, 216, 0.08), 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(0, 180, 216, 0.12);
+  }
+  .ai-world .ai-mus .ai-trace > li { grid-template-columns: 74px 1fr; }
+  .ai-world .ai-mus .ai-trace__row { grid-template-columns: 74px 84px minmax(0, 1fr) 62px !important; }
+  /* on the case that can halt, the slip prints out under the label and hangs
+     below the stage: the room makes space for it from the pick, so nothing
+     moves at the halt itself */
+  .ai-world .ai-mus__room[data-bay] { padding-bottom: 250px; transition: padding-bottom 600ms var(--ease-expo); }
+  /* while the camera is out in the gallery, the label steps back */
+  .ai-world .ai-mus__room:not([data-inside]) .ai-mus__label { opacity: 0.0; transform: translate3d(12px, 0, 0); pointer-events: none; }
+  .ai-world .ai-mus__label { transition: opacity 500ms linear 500ms, transform 900ms var(--ease-expo) 500ms; }
+  .ai-world .ai-mus__room:not([data-inside]) .ai-mus__label { transition: opacity 260ms linear, transform 400ms var(--ease-expo); }
+}
+
+/* ── the room list ── */
+.ai-world .ai-mus__rooms {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 20px; border-top: 1px solid var(--rule-2);
+}
+.ai-world .ai-mus__roombtn {
+  position: relative; display: grid; gap: 6px; align-content: start; text-align: left;
+  padding: 16px 16px 4px 0; background: none; border: 0; cursor: pointer; color: var(--ink-2);
+  transition: color 400ms var(--ease-expo);
+}
+.ai-world .ai-mus__roombtn::before {
+  content: ""; position: absolute; left: 0; right: 16px; top: -1px; height: 2px; background: var(--signal);
+  transform: scaleX(0); transform-origin: left center; transition: transform 700ms var(--ease-expo);
+}
+.ai-world .ai-mus__roombtn[data-on] { color: var(--ink); }
+.ai-world .ai-mus__roombtn[data-on]::before { transform: scaleX(1); }
+.ai-world .ai-mus__roomn { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3, var(--ink-2)); }
+.ai-world .ai-mus__roombtn[data-on] .ai-mus__roomn { color: var(--signal-ink); }
+.ai-world .ai-mus__roomname { font-size: clamp(14px, 1.2vw, 17px); font-weight: 600; text-transform: uppercase; line-height: 1.15; }
+.ai-world .ai-mus__roommeta { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-2); opacity: 0.75; }
+@media (hover: hover) { .ai-world .ai-mus__roombtn:hover { color: var(--ink); } }
+.ai-world .ai-mus__roombtn:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 4px; }
+
+/* ── phone: a taller stage, the rooms two by two ── */
+@media (max-width: 767px) {
+  .ai-world .ai-mus__stage { aspect-ratio: 4 / 3; }
+  .ai-world .ai-mus__hud { top: 12px; left: 12px; font-size: 10px; }
+  .ai-world .ai-mus__rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-world .ai-mus__roombtn { padding: 14px 10px 10px 0; }
+  .ai-world .ai-mus__roommeta { display: none; }
+  .ai-world .ai-mus__lamp { left: calc(var(--x) - 16%); width: 32%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-world .ai-mus__gallery,
+  .ai-world .ai-mus__room[data-inside] .ai-mus__gallery,
+  .ai-world .ai-mus__case,
+  .ai-world .ai-mus__room[data-inside] .ai-mus__case[data-on],
+  .ai-world .ai-mus__room[data-lit] .ai-mus__lamp,
+  .ai-world .ai-mus__seg,
+  .ai-world .ai-mus__label { transition: none !important; }
+  .ai-world .ai-mus__node .ai-mus__halo { animation: none !important; }
+  .ai-world .ai-mus__film { display: none; }
+}
