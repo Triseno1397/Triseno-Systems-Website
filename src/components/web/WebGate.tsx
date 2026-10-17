@@ -7,15 +7,10 @@ import { useGSAP } from "@gsap/react";
 import GhostButton from "@/components/ui/GhostButton";
 import { WarpLink } from "@/components/world/WarpProvider";
 import { DIVISIONS } from "@/lib/divisions";
-import CycleWord from "./CycleWord";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const FRAMES = 6;
-
-/* "Let's build the page that fills your ___": one per kind of client we build for
-   (bookings, salons and barbers, restaurants, auto shops, leads, event vendors). */
-const FILLS = ["calendar", "chairs", "tables", "bays", "inbox", "weekends"];
 
 /**
  * Gate — the square glyph as a nest of frames standing on the floor. The
@@ -95,10 +90,7 @@ export default function WebGate() {
           <span className="web-sq" aria-hidden="true" />
           Next — Contact
         </p>
-        <h2 className="web-gate__title" aria-label="Let's build the page that fills your calendar">
-          <span aria-hidden="true">Let&apos;s build the page that fills your</span>{" "}
-          <CycleWord words={FILLS} hold={1.4} className="web-gate__cycle" />
-        </h2>
+        <h2 className="web-gate__title">Let&apos;s build the page that sells it.</h2>
         <p className="web-body">
           Tell us what the site has to do. You get a plan, a fixed scope and a date — before any design work
           starts.

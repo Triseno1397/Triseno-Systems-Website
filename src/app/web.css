@@ -1078,12 +1078,6 @@
   line-height: 1.14; letter-spacing: var(--web-track); text-transform: uppercase; color: #ffffff;
   overflow-wrap: break-word;
 }
-/* the word that keeps changing: its own line, so the sentence above never reflows */
-.web-gate__cycle {
-  display: block; color: color-mix(in srgb, var(--hue) 42%, #ffffff);
-  text-shadow: 0 0 34px color-mix(in srgb, var(--hue) 62%, transparent);
-}
-.cycle-word__ch { display: inline-block; white-space: pre; }
 .web-gate__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 0; margin-top: 6px; }
 .web-gate__cross {
   display: flex; flex-wrap: wrap; gap: 12px 28px; margin-top: 18px; padding-top: 18px; width: 100%;
