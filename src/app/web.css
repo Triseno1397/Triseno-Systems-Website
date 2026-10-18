@@ -1283,14 +1283,27 @@
 }
 .web-rewrite__line { display: block; }
 .rw-slot {
-  position: relative; display: inline-block; white-space: nowrap; font-family: var(--font-concept-serif), serif; font-style: italic;
-  font-weight: 400; text-transform: none; letter-spacing: -0.005em; font-size: 1.22em; line-height: 1;
-  color: color-mix(in srgb, var(--hue) 38%, #ffffff);
+  position: relative; display: inline-grid; vertical-align: baseline; white-space: nowrap; font-family: var(--font-concept-serif), serif;
+  font-style: italic; font-weight: 400; text-transform: none; letter-spacing: -0.005em; font-size: 1.22em; line-height: 1;
 }
-.rw-word { display: inline-block; padding-right: 0.04em; }
-.rw-strike { position: absolute; left: -5%; right: -5%; top: 54%; height: 0.07em; border-radius: 999px; background: #ffffff;
-  transform: rotate(-4deg) scaleX(0); transform-origin: 0 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.6); }
-.rw-swash { position: absolute; left: 0; right: 4%; bottom: -0.04em; height: 0.045em; border-radius: 999px; background: var(--hue);
-  box-shadow: 0 0 16px var(--hue); transform-origin: 0 50%; }
-.rw-dot { color: #ffffff; }
+/* every word stacked in the same cell: the cell is as wide as the longest one */
+.rw-word { grid-area: 1 / 1; justify-self: stretch; text-align: left; }
+.rw-ink {
+  position: relative; display: inline-block; padding-right: 0.03em;
+  background: linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, var(--hue) 30%, #ffffff) 55%, color-mix(in srgb, var(--hue) 55%, #ffffff) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.rw-ink::after {
+  content: ""; position: absolute; left: 0; right: 0.04em; bottom: -0.05em; height: 0.045em; border-radius: 999px;
+  background: linear-gradient(90deg, var(--hue), color-mix(in srgb, var(--hue) 40%, #ffffff));
+  box-shadow: 0 0 16px var(--hue);
+}
+.rw-dot { font-family: var(--font-unbounded), sans-serif; font-style: normal; font-weight: 700; font-size: 0.82em; color: #ffffff; }
+/* the light that changes the word */
+.rw-beam {
+  position: absolute; left: 0; top: -0.28em; bottom: -0.32em; width: 0.08em; border-radius: 999px; opacity: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent, #ffffff 22%, #ffffff 78%, transparent);
+  box-shadow: 0 0 0.12em 0.04em #ffffff, 0 0 0.5em 0.16em color-mix(in srgb, var(--hue) 80%, #ffffff), 0 0 1.4em 0.45em color-mix(in srgb, var(--hue) 45%, transparent);
+  transform: skewX(-14deg);
+}
 .web-rewrite__body { max-width: 46ch; }
