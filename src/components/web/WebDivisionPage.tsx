@@ -7,6 +7,7 @@ import CompareReveal from "./CompareReveal";
 import PrismDeliverables from "./PrismDeliverables";
 import RangeGallery from "./RangeGallery";
 import WebGate from "./WebGate";
+import Rewrite from "./Rewrite";
 import FaqSection from "@/components/world/FaqSection";
 
 import SignOff from "@/components/world/SignOff";
@@ -28,6 +29,7 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
       <WebWorld />
 
       <ShutterHero />
+      <Rewrite />
       <Suspense>
         <DemoFrame />
       </Suspense>

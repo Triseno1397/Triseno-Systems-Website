@@ -1272,3 +1272,25 @@
   font-size: calc(var(--u) * 1.15); letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243, 237, 230, 0.6);
 }
 .cf-specs b { display: block; font-family: var(--font-unbounded), sans-serif; font-weight: 600; font-size: calc(var(--u) * 2.4); letter-spacing: 0; color: var(--ink); }
+
+/* ── option B: "Your website isn't a brochure. It's your ___." ── */
+.web-rewrite { min-height: 86svh; display: grid; align-items: center; }
+.web-rewrite__inner { width: 100%; max-width: 1400px; margin: 0 auto; display: grid; gap: 26px; justify-items: start; }
+.web-rewrite__inner .web-eyebrow { margin: 0; }
+.web-rewrite__title {
+  margin: 0; display: grid; gap: 0.12em; font-family: var(--font-unbounded), sans-serif; font-weight: 700;
+  font-size: calc(var(--web-display) * 0.8); line-height: 1.12; letter-spacing: var(--web-track); text-transform: uppercase; color: #ffffff;
+}
+.web-rewrite__line { display: block; }
+.rw-slot {
+  position: relative; display: inline-block; white-space: nowrap; font-family: var(--font-concept-serif), serif; font-style: italic;
+  font-weight: 400; text-transform: none; letter-spacing: -0.005em; font-size: 1.22em; line-height: 1;
+  color: color-mix(in srgb, var(--hue) 38%, #ffffff);
+}
+.rw-word { display: inline-block; padding-right: 0.04em; }
+.rw-strike { position: absolute; left: -5%; right: -5%; top: 54%; height: 0.07em; border-radius: 999px; background: #ffffff;
+  transform: rotate(-4deg) scaleX(0); transform-origin: 0 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.6); }
+.rw-swash { position: absolute; left: 0; right: 4%; bottom: -0.04em; height: 0.045em; border-radius: 999px; background: var(--hue);
+  box-shadow: 0 0 16px var(--hue); transform-origin: 0 50%; }
+.rw-dot { color: #ffffff; }
+.web-rewrite__body { max-width: 46ch; }
