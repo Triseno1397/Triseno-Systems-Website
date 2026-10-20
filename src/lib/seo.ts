@@ -262,7 +262,7 @@ export const PAGES: Record<PageKey, PageSeo> = {
     path: "/contact",
     title: "Contact Triseno Systems | Start a Conversation",
     description:
-      "Talk to Triseno Systems about ad creative, a conversion-built website or AI infrastructure. Based in Los Angeles, working with brands anywhere. We reply within one business day.",
+      "Talk to Triseno Systems about ad creative, a conversion-built website or AI infrastructure. Based in Los Angeles, serving LA, Ventura and Orange County.",
     keywords: [
       ...CORE_KEYWORDS,
       "hire ad creative agency",
