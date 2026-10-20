@@ -40,6 +40,13 @@ export const SITE = {
   region: "CA",
   country: "US",
   /**
+   * The service area, exactly as listed on the Google Business Profile. Keep
+   * it to places within a drive of the studio: a nationwide area on a
+   * service-area profile is read as misleading and gets the profile suspended.
+   */
+  serviceAreas: ["Los Angeles County", "Ventura County", "Orange County"],
+  serviceAreaLine: "Los Angeles / Ventura / Orange County",
+  /**
    * Google Search Console, "HTML tag" method: the content value of the
    * <meta name="google-site-verification"> it hands out. Paste it here (or
    * set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION); empty means no tag is emitted.
@@ -331,10 +338,7 @@ export function pageJsonLd(key: PageKey): Record<string, unknown> {
       serviceType: p.service.serviceType,
       description: p.service.description,
       provider: { "@id": ORG_ID },
-      areaServed: [
-        { "@type": "City", name: "Los Angeles" },
-        { "@type": "Country", name: "United States" },
-      ],
+      areaServed: SITE.serviceAreas.map((name) => ({ "@type": "AdministrativeArea", name })),
       url,
     });
   }
@@ -369,11 +373,7 @@ export const ORGANIZATION_JSON_LD = {
         addressRegion: SITE.region,
         addressCountry: SITE.country,
       },
-      areaServed: [
-        { "@type": "City", name: "Los Angeles" },
-        { "@type": "AdministrativeArea", name: "California" },
-        { "@type": "Country", name: "United States" },
-      ],
+      areaServed: SITE.serviceAreas.map((name) => ({ "@type": "AdministrativeArea", name })),
       contactPoint: [
         {
           "@type": "ContactPoint",

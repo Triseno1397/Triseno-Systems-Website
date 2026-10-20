@@ -28,7 +28,7 @@ Triseno Systems designs and builds three things, and keeps them separate because
 - **Web Design** is custom, conversion-built websites — strategy, design, build and launch, with a performance target of 90 or higher, SEO-ready structure, the integrations a business needs, and iteration after launch. No templates, no page builders.
 - **AI Infrastructure** is consulting, architecture and implementation for the operational layer a business runs on: multi-agent orchestration, workflow automation and compression, catalog and revenue operations, and decision-layer systems. We design them and we deploy them.
 
-Based in Los Angeles, California; working with brands anywhere.
+Based in Los Angeles, California; meeting clients in person across ${SITE.serviceAreas.join(", ")}.
 
 Contact: ${SITE.email} · ${SITE.phone} · ${SITE.url}/contact · replies within one business day.
 
