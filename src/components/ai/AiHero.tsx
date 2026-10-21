@@ -20,7 +20,7 @@ import "@/app/ai-dive.css";
  */
 export default function AiHero() {
   return (
-    <section data-rail="Layer" data-ch="01" aria-labelledby="ai-hero-title" className="ai-hero relative z-10">
+    <section data-rail="Layer" data-ch="02" aria-labelledby="ai-hero-title" className="ai-hero relative z-10">
       <div className="ai-wrap">
         <div className="ai-hero__grid">
           <div className="ai-hero__copy">

@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    04 — Who it is for: the museum (AgentConsole.tsx)
-   A dark gallery of four glass cases; the camera goes into one, its
-   miniature alive, a cyan line through it, the exhibit label beside it.
+   A dark gallery of four glass cases, all in view with their placards; a
+   click takes the camera into one, its miniature alive, a cyan line through
+   it, the exhibit label beside it, and a placard of its own back out.
    Scoped to .ai-mus; tokens from .ai-world (ai.css).
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -67,16 +68,90 @@
   transition: opacity 900ms cubic-bezier(0.2, 0.7, 0.2, 1) calc(300ms + var(--i) * 380ms);
 }
 
-/* in the gallery view the cases are buttons */
+/* the floor plays under the lamps once they are up */
+.ai-world .ai-mus__film.ai-mus__floorfilm { z-index: 0; opacity: 0; pointer-events: none; transition: opacity 900ms linear; }
+.ai-world .ai-mus__film.ai-mus__floorfilm[data-playing] { opacity: 1; }
+
+/* on the floor the cases are buttons: the glass box and its plinth */
 .ai-world .ai-mus__hit {
-  position: absolute; top: 24%; height: 42%; left: calc(var(--x) - 10%); width: 20%;
-  background: transparent; border: 1px solid transparent; cursor: pointer; pointer-events: none;
-  transition: border-color 400ms var(--ease-expo), background-color 400ms var(--ease-expo);
+  position: absolute; top: 26%; height: 38%; left: calc(var(--x) - 9.5%); width: 19%;
+  background: transparent; border: 0; padding: 0; cursor: pointer; pointer-events: none;
+  outline: none;
 }
 .ai-world .ai-mus__room[data-lit]:not([data-inside]) .ai-mus__hit { pointer-events: auto; }
-@media (hover: hover) {
-  .ai-world .ai-mus__hit:hover { border-color: rgba(0, 180, 216, 0.6); background: rgba(0, 180, 216, 0.06); }
+/* the glass catches the light under the pointer: a cyan rim traced round the case */
+.ai-world .ai-mus__hit::before {
+  content: ""; position: absolute; left: 4%; right: 4%; top: 2%; height: 52%;
+  border: 1px solid rgba(95, 232, 255, 0); box-shadow: 0 0 0 rgba(0, 200, 240, 0);
+  transition: border-color 450ms var(--ease-expo), box-shadow 450ms var(--ease-expo);
 }
+@media (hover: hover) {
+  .ai-world .ai-mus__hit:hover::before { border-color: rgba(95, 232, 255, 0.75); box-shadow: 0 0 34px rgba(0, 200, 240, 0.28), inset 0 0 30px rgba(0, 200, 240, 0.12); }
+}
+.ai-world .ai-mus__hit:focus-visible::before { border-color: rgba(95, 232, 255, 0.9); box-shadow: 0 0 34px rgba(0, 200, 240, 0.32); }
+
+/* the placard on the plinth's face: brass-on-black, lit with its lamp */
+.ai-world .ai-mus__plaque {
+  position: absolute; left: 50%; bottom: 9%; transform: translate3d(-50%, 6px, 0);
+  display: grid; justify-items: center; gap: 4px; padding: 0.7cqw 1.1cqw 0.8cqw;
+  min-width: 62%; text-align: center; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(18, 20, 22, 0.92), rgba(8, 9, 10, 0.92));
+  border: 1px solid rgba(214, 188, 132, 0.42);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 236, 196, 0.12);
+  opacity: 0;
+  transition: opacity 700ms linear, transform 900ms var(--ease-expo), border-color 400ms var(--ease-expo);
+}
+.ai-world .ai-mus__room[data-lit]:not([data-inside]) .ai-mus__plaque {
+  opacity: 1; transform: translate3d(-50%, 0, 0);
+  transition-delay: calc(700ms + var(--i) * 380ms), calc(700ms + var(--i) * 380ms), 0ms;
+}
+.ai-world .ai-mus__plaquen { font-size: max(8px, 0.62cqw); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(214, 188, 132, 0.85); }
+.ai-world .ai-mus__plaquename { font-size: max(10px, 0.95cqw); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #f1ece2; }
+.ai-world .ai-mus__plaquego {
+  font-size: max(8px, 0.58cqw); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(95, 232, 255, 0);
+  max-height: 0; overflow: hidden; transition: color 400ms linear, max-height 500ms var(--ease-expo);
+}
+@media (hover: hover) {
+  .ai-world .ai-mus__hit:hover .ai-mus__plaque { border-color: rgba(95, 232, 255, 0.7); }
+  .ai-world .ai-mus__hit:hover .ai-mus__plaquego { color: #5fe8ff; max-height: 2em; }
+}
+.ai-world .ai-mus__hit:focus-visible .ai-mus__plaquego { color: #5fe8ff; max-height: 2em; }
+
+/* the way out: a placard in the case's corner, the floor plan with this case lit */
+.ai-world .ai-mus__back {
+  position: absolute; z-index: 6; left: 18px; bottom: 18px;
+  display: inline-flex; align-items: center; gap: 14px; padding: 10px 12px 10px 12px;
+  background: rgba(6, 10, 12, 0.72); color: #e8f1f3; cursor: pointer;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(95, 232, 255, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0; transform: translate3d(0, 12px, 0); pointer-events: none;
+  transition: opacity 260ms linear, transform 400ms var(--ease-expo), border-color 300ms linear;
+}
+.ai-world .ai-mus__room[data-inside] .ai-mus__back {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity 500ms linear 1100ms, transform 900ms var(--ease-expo) 1100ms, border-color 300ms linear;
+}
+.ai-world .ai-mus__plan {
+  display: grid; grid-template-columns: repeat(4, 9px); gap: 4px; padding: 6px;
+  border: 1px solid rgba(232, 241, 243, 0.22);
+  transition: gap 500ms var(--ease-expo);
+}
+.ai-world .ai-mus__plan i { display: block; width: 9px; height: 7px; border: 1px solid rgba(232, 241, 243, 0.45); }
+.ai-world .ai-mus__plan i[data-on] { background: var(--signal); border-color: var(--signal); box-shadow: 0 0 8px var(--signal); }
+.ai-world .ai-mus__backtext { display: grid; gap: 3px; text-align: left; }
+.ai-world .ai-mus__backlead { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(232, 241, 243, 0.55); }
+.ai-world .ai-mus__backgo { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.ai-world .ai-mus__esc {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(232, 241, 243, 0.6);
+  padding: 3px 6px; border: 1px solid rgba(232, 241, 243, 0.25); border-bottom-width: 2px;
+}
+@media (hover: hover) {
+  .ai-world .ai-mus__back:hover { border-color: rgba(95, 232, 255, 0.85); }
+  .ai-world .ai-mus__back:hover .ai-mus__plan { gap: 7px; }
+}
+.ai-world .ai-mus__back:focus-visible { outline: 1px solid #5fe8ff; outline-offset: 3px; }
+@media (hover: none) { .ai-world .ai-mus__esc { display: none; } }
 
 /* the case films: the selected case fades up as the camera arrives, settling in */
 .ai-world .ai-mus__case {
@@ -137,6 +212,10 @@
 
 /* ── the exhibit label: the console as a backlit panel beside the case ── */
 .ai-world .ai-mus__label { position: relative; z-index: 5; margin-top: 18px; }
+/* out on the floor there is no exhibit label: the label belongs to a case */
+@media (max-width: 1199px) {
+  .ai-world .ai-mus__room:not([data-inside]) .ai-mus__label { display: none; }
+}
 .ai-world .ai-mus .ai-console {
   background: rgba(6, 10, 12, 0.94); border-color: rgba(0, 180, 216, 0.45);
   box-shadow: 0 0 0 1px rgba(0, 180, 216, 0.08), 0 30px 80px rgba(0, 0, 0, 0.35);
@@ -168,37 +247,16 @@
   .ai-world .ai-mus__room:not([data-inside]) .ai-mus__label { transition: opacity 260ms linear, transform 400ms var(--ease-expo); }
 }
 
-/* ── the room list ── */
-.ai-world .ai-mus__rooms {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 20px; border-top: 1px solid var(--rule-2);
-}
-.ai-world .ai-mus__roombtn {
-  position: relative; display: grid; gap: 6px; align-content: start; text-align: left;
-  padding: 16px 16px 4px 0; background: none; border: 0; cursor: pointer; color: var(--ink-2);
-  transition: color 400ms var(--ease-expo);
-}
-.ai-world .ai-mus__roombtn::before {
-  content: ""; position: absolute; left: 0; right: 16px; top: -1px; height: 2px; background: var(--signal);
-  transform: scaleX(0); transform-origin: left center; transition: transform 700ms var(--ease-expo);
-}
-.ai-world .ai-mus__roombtn[data-on] { color: var(--ink); }
-.ai-world .ai-mus__roombtn[data-on]::before { transform: scaleX(1); }
-.ai-world .ai-mus__roomn { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3, var(--ink-2)); }
-.ai-world .ai-mus__roombtn[data-on] .ai-mus__roomn { color: var(--signal-ink); }
-.ai-world .ai-mus__roomname { font-size: clamp(14px, 1.2vw, 17px); font-weight: 600; text-transform: uppercase; line-height: 1.15; }
-.ai-world .ai-mus__roommeta { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-2); opacity: 0.75; }
-@media (hover: hover) { .ai-world .ai-mus__roombtn:hover { color: var(--ink); } }
-.ai-world .ai-mus__roombtn:focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 4px; }
-
-/* ── phone: a taller stage, the rooms two by two ── */
+/* ── phone: a taller stage; the placards carry only their number ── */
 @media (max-width: 767px) {
   .ai-world .ai-mus__stage { aspect-ratio: 4 / 3; }
   .ai-world .ai-mus__hud { top: 12px; left: 12px; font-size: 10px; }
-  .ai-world .ai-mus__rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ai-world .ai-mus__roombtn { padding: 14px 10px 10px 0; }
-  .ai-world .ai-mus__roommeta { display: none; }
   .ai-world .ai-mus__lamp { left: calc(var(--x) - 16%); width: 32%; }
+  .ai-world .ai-mus__plaque { min-width: 0; padding: 3px 6px; }
+  .ai-world .ai-mus__plaquename, .ai-world .ai-mus__plaquego { display: none; }
+  .ai-world .ai-mus__back { left: 10px; bottom: 10px; gap: 10px; padding: 8px 10px; }
+  .ai-world .ai-mus__backlead { display: none; }
+  .ai-world .ai-mus__backgo { font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -208,6 +266,8 @@
   .ai-world .ai-mus__room[data-inside] .ai-mus__case[data-on],
   .ai-world .ai-mus__room[data-lit] .ai-mus__lamp,
   .ai-world .ai-mus__seg,
+  .ai-world .ai-mus__plaque,
+  .ai-world .ai-mus__back,
   .ai-world .ai-mus__label { transition: none !important; }
   .ai-world .ai-mus__node .ai-mus__halo { animation: none !important; }
   .ai-world .ai-mus__film { display: none; }

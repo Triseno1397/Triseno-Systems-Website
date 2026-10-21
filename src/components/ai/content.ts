@@ -140,6 +140,8 @@ export interface Industry {
 
 export const INDUSTRIES_INTRO = {
   title: "Built for Businesses Like Yours",
+  /** shown while the camera is out on the floor, before a case is picked */
+  floor: "Four businesses, four ordinary days. Step into a case to watch the tool run one.",
 };
 
 export const INDUSTRIES: Industry[] = [

@@ -1,20 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════
-   02 — Capabilities (FerroTools.tsx)
-   A window on the sheet opens to full bleed; the ferrofluid film inside is
-   played by the scroll while the six tools step through beside it.
+   01 — The landing (FerroTools.tsx)
+   Full bleed and dark: the ferrofluid splash plays itself on arrival, the
+   headline slams onto the crown, then the scroll pins it and the six tools
+   step through beside it.
    Scoped to .ai-ft; tokens from .ai-world (ai.css).
    ═══════════════════════════════════════════════════════════════════ */
 
 .ai-ft { position: relative; }
 .ai-ft__stage {
   position: relative; width: 100%; height: 100svh; min-height: 100svh; overflow: hidden;
+  background: #000;
 }
 
-/* the plate: full stage size, shown through a clip-path window (JS sets it) */
+/* the plate: full bleed from the first frame; the splash jolts and settles it */
 .ai-ft__media {
-  position: absolute; inset: 0; background: #000; overflow: hidden;
-  clip-path: inset(24svh 31vw 24svh 31vw);
-  will-change: clip-path;
+  position: absolute; inset: -2%; background: #000; overflow: hidden;
+  will-change: transform;
 }
 .ai-ft__canvas {
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
@@ -22,33 +23,46 @@
 }
 .ai-ft__media[data-ready] .ai-ft__canvas { opacity: 1; }
 
-/* crop marks: each sits on its stage corner and is carried in to the
-   window's corner (JS), 10px outside it */
-.ai-ft__crop {
-  position: absolute; width: 18px; height: 18px; z-index: 2; pointer-events: none;
-  border: 0 solid var(--ink); will-change: transform;
+/* the flash at the moment of impact */
+.ai-ft__flash {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+  background: radial-gradient(70% 60% at 50% 62%, #ffffff 0%, rgba(160, 235, 255, 0.6) 40%, rgba(0, 0, 0, 0) 75%);
+  mix-blend-mode: screen;
 }
-.ai-ft__crop[data-c="tl"] { top: -10px; left: -10px; border-top-width: 1px; border-left-width: 1px; }
-.ai-ft__crop[data-c="tr"] { top: -10px; right: -10px; border-top-width: 1px; border-right-width: 1px; }
-.ai-ft__crop[data-c="bl"] { bottom: -10px; left: -10px; border-bottom-width: 1px; border-left-width: 1px; }
-.ai-ft__crop[data-c="br"] { bottom: -10px; right: -10px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* once the headline docks, a shade on the left keeps the index readable over the spikes */
+.ai-ft__shade {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.55) 30%, rgba(0, 0, 0, 0) 52%);
+}
+@media (max-width: 767px) {
+  .ai-ft__shade { background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.3) 34%, rgba(0, 0, 0, 0) 50%); }
+}
+
+/* the scroll cue, once the crown has landed */
+.ai-ft__cue {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(var(--lane-bottom) - 6px); transform: translateX(-50%);
+  margin: 0; display: grid; justify-items: center; gap: 10px; pointer-events: none;
+  font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: rgba(230, 233, 232, 0.7);
+}
+.ai-ft__cue i {
+  display: block; width: 1px; height: 38px; transform-origin: top;
+  background: linear-gradient(rgba(230, 233, 232, 0.8), rgba(230, 233, 232, 0));
+  animation: ai-ft-cue 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes ai-ft-cue { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(0); transform-origin: bottom; } }
 
 /* where the headline docks (measured by JS): the top lane, left gutter */
 .ai-ft__anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; visibility: hidden; top: calc(var(--lane-top) + 1svh); left: var(--gutter); }
 
-/* the layers: ink on the paper, paper on the plate */
+/* the copy over the plate */
 .ai-ft__layer {
   position: absolute; inset: 0; z-index: 3; pointer-events: none;
   padding: var(--lane-top) var(--gutter) var(--lane-bottom);
-  color: var(--ink);
+  color: var(--paper);
 }
+.ai-ft__layer button { pointer-events: auto; }
 @media (min-width: 1200px) { .ai-ft__layer { padding-right: calc(var(--gutter) + var(--lane-right, 0px)); } }
-.ai-ft__layer--paper {
-  z-index: 4; color: var(--paper); pointer-events: none;
-  clip-path: inset(24svh 31vw 24svh 31vw);
-  will-change: clip-path;
-}
-.ai-ft__layer--paper button { pointer-events: auto; }
 
 .ai-ft__title {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transform-origin: 0 0;
@@ -56,6 +70,11 @@
   font-size: clamp(34px, 6.4vw, 118px); font-weight: 600; line-height: 0.98;
   letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; text-align: center;
   will-change: transform;
+}
+.ai-ft__slam {
+  display: grid; justify-items: center; transform-origin: 50% 55%; will-change: transform, opacity, filter;
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.55);
+  opacity: 0; /* it arrives with the splash; the static plate shows it at once */
 }
 
 /* the index + intro, under the docked headline */
@@ -113,7 +132,6 @@
 
 /* phone: window taller, headline docks small, index as a strip, card low */
 @media (max-width: 767px) {
-  .ai-ft__media, .ai-ft__layer--paper { clip-path: inset(30svh 8vw 30svh 8vw); }
   .ai-ft__title { font-size: 6.1vw; letter-spacing: 0.02em; }
   .ai-ft__aside { top: calc(var(--lane-top) + 1svh + 11.5vw); width: calc(100% - var(--gutter) * 2); gap: 12px; }
   .ai-ft__intro { display: none; }
@@ -129,13 +147,14 @@
   .ai-ft__cap { display: none; }
 }
 
-/* reduced motion: no pin; the open plate at its final frame, every card */
+/* reduced motion: no splash, no pin; the crown at its final frame, every card */
 .ai-ft__stage[data-static] { height: auto; }
-.ai-ft__stage[data-static] .ai-ft__media { position: relative; height: 100svh; clip-path: inset(0); }
-.ai-ft__stage[data-static] .ai-ft__layer--paper { clip-path: inset(0); position: relative; inset: auto; color: var(--ink); }
-.ai-ft__stage[data-static] .ai-ft__layer--ink, .ai-ft__stage[data-static] .ai-ft__crop, .ai-ft__stage[data-static] .ai-ft__cap { display: none; }
+.ai-ft__stage[data-static] .ai-ft__media { position: relative; inset: auto; height: 100svh; }
+.ai-ft__stage[data-static] .ai-ft__layer { position: relative; inset: auto; }
+.ai-ft__stage[data-static] .ai-ft__cap, .ai-ft__stage[data-static] .ai-ft__cue, .ai-ft__stage[data-static] .ai-ft__flash { display: none; }
 .ai-ft__stage[data-static] .ai-ft__title { position: static; transform: none; justify-items: start; text-align: left; white-space: normal; }
+.ai-ft__stage[data-static] .ai-ft__slam { justify-items: start; opacity: 1; }
 .ai-ft__stage[data-static] .ai-ft__aside { position: static; opacity: 1; width: auto; margin-top: 20px; }
-.ai-ft__stage[data-static] .ai-ft__intro, .ai-ft__stage[data-static] .ai-ft__itembtn { color: var(--ink); }
 .ai-ft__stage[data-static] .ai-ft__cards { position: static; display: grid; gap: 12px; width: auto; margin-top: 24px; }
-.ai-ft__stage[data-static] .ai-ft__card { position: relative; opacity: 1; transform: none; border: 1px solid var(--rule-2); border-top: 2px solid var(--signal); }
+.ai-ft__stage[data-static] .ai-ft__card { position: relative; opacity: 1; transform: none; border-top: 2px solid var(--signal); }
+@media (prefers-reduced-motion: reduce) { .ai-ft__cue i { animation: none; } }

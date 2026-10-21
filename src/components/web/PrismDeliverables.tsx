@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlassPanel from "@/components/world/GlassPanel";
 import { createFrameScrubber, type FrameFilm } from "@/lib/frameScrub";
+import { createPrismLens, type PrismLens } from "./prismLens";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,6 +20,13 @@ gsap.registerPlugin(ScrollTrigger);
  * the card on the right swaps to that deliverable, and the counter keeps
  * the place. Scroll back and the light folds into one beam again.
  *
+ * On desktop the film is seen through prismLens, a shader you stand inside:
+ * the camera dollies down the corridor, the room swings with the pointer,
+ * bright edges split into spectra (wider the faster you scroll) and every
+ * deliverable that lands rolls a ripple of its own colour out of the
+ * vanishing point. The card tilts toward the hand like a pane of the crystal.
+ * Phones get the plain film with a CSS dolly (no extra GPU layer on iOS).
+ *
  * The film is a generated clip cut into frames (public/frames/prism-*),
  * drawn by lib/frameScrub, fetched only when the section is near. Clicking a
  * band in the index scrolls to that deliverable's place in the film.
@@ -26,7 +34,7 @@ gsap.registerPlugin(ScrollTrigger);
  */
 
 const FILM: FrameFilm = {
-  landscape: { dir: "/frames/prism-d", count: 96, width: 1280, height: 720 },
+  landscape: { dir: "/frames/prism-d", count: 120, width: 1920, height: 1080 },
   portrait: { dir: "/frames/prism-m", count: 96, width: 600, height: 1067 },
 };
 
@@ -116,6 +124,7 @@ export default function PrismDeliverables() {
   const stageRef = useRef<HTMLDivElement>(null);
   const filmRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lensRef = useRef<HTMLCanvasElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
   const stRef = useRef<ScrollTrigger | null>(null);
 
@@ -127,7 +136,17 @@ export default function PrismDeliverables() {
     if (!root || !stage || !film || !canvas) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const scrub = createFrameScrubber(canvas, FILM, () => film.setAttribute("data-ready", ""));
+    const desktop = window.matchMedia("(min-width: 1024px) and (hover: hover) and (pointer: fine)").matches;
+    let lens: PrismLens | null = null;
+    const scrub = createFrameScrubber(canvas, FILM, () => film.setAttribute("data-ready", ""), {
+      onDraw: () => lens?.dirty(),
+    });
+    if (desktop && !reduce && lensRef.current) {
+      lens = createPrismLens(lensRef.current, canvas);
+      if (lens) film.setAttribute("data-lens", "");
+    }
+    const vis = new IntersectionObserver(([e]) => lens?.setActive(e.isIntersecting));
+    vis.observe(stage);
 
     const io = new IntersectionObserver(
       ([e]) => {
@@ -138,7 +157,10 @@ export default function PrismDeliverables() {
       { rootMargin: "120% 0px 120% 0px" },
     );
     io.observe(stage);
-    const ro = new ResizeObserver(() => scrub.resize());
+    const ro = new ResizeObserver(() => {
+      scrub.resize();
+      lens?.resize();
+    });
     ro.observe(stage);
 
     const cards = Array.from(root.querySelectorAll<HTMLElement>(".web-prism__card"));
@@ -151,14 +173,29 @@ export default function PrismDeliverables() {
       scrub.setProgress(1);
       return () => {
         io.disconnect();
+        vis.disconnect();
         ro.disconnect();
         scrub.dispose();
+        lens?.dispose();
       };
     }
+
+    // the card leans toward the hand, like a pane of the crystal
+    const cardsBox = root.querySelector<HTMLElement>(".web-prism__cards");
+    const onMove = (e: PointerEvent) => {
+      if (!cardsBox) return;
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      cardsBox.style.setProperty("--ry", `${(x * 7).toFixed(2)}deg`);
+      cardsBox.style.setProperty("--rx", `${(-y * 5).toFixed(2)}deg`);
+    };
+    if (desktop) window.addEventListener("pointermove", onMove, { passive: true });
 
     let active = -2;
     const apply = (p: number) => {
       scrub.setProgress(p);
+      if (lens) lens.setProgress(p);
+      else film.style.transform = `scale(${(1 + p * 0.14).toFixed(4)})`;
       const idx = p < CARDS_FROM ? -1 : Math.min(N - 1, Math.floor(((p - CARDS_FROM) / (1 - CARDS_FROM)) * N));
       if (idx === active) return;
       active = idx;
@@ -169,6 +206,7 @@ export default function PrismDeliverables() {
       });
       if (countRef.current) countRef.current.textContent = String(Math.max(0, idx) + 1).padStart(2, "0");
       stage.toggleAttribute("data-cards", idx >= 0);
+      if (idx >= 0) lens?.pulse(BANDS[idx]);
       if (lead) lead.toggleAttribute("data-hide", idx >= 0);
     };
 
@@ -181,7 +219,10 @@ export default function PrismDeliverables() {
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => apply(self.progress),
-      onUpdate: (self) => apply(self.progress),
+      onUpdate: (self) => {
+        apply(self.progress);
+        lens?.setVelocity(self.getVelocity());
+      },
     });
     stRef.current = st;
     apply(0);
@@ -189,9 +230,12 @@ export default function PrismDeliverables() {
     return () => {
       st.kill();
       stRef.current = null;
+      window.removeEventListener("pointermove", onMove);
       io.disconnect();
+      vis.disconnect();
       ro.disconnect();
       scrub.dispose();
+      lens?.dispose();
     };
   }, []);
 
@@ -209,6 +253,7 @@ export default function PrismDeliverables() {
       ref={rootRef}
       data-rail="Deliverables"
       data-station="stack"
+      data-no-fade=""
       aria-labelledby="web-prism-title"
       className="web-section web-prism"
     >
@@ -220,6 +265,7 @@ export default function PrismDeliverables() {
           aria-label="Inside a block of optical crystal, one white beam splits into seven threads of colour"
         >
           <canvas ref={canvasRef} className="web-prism__canvas" aria-hidden="true" />
+          <canvas ref={lensRef} className="web-prism__lens" aria-hidden="true" />
         </div>
         <div className="web-prism__scrim" aria-hidden="true" />
 

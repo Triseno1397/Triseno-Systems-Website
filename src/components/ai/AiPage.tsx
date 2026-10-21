@@ -31,9 +31,10 @@ import SignOff from "@/components/world/SignOff";
  * onto that dark world in full colour, and the gate stands in it, so leaving
  * the page returns you to the site's dark.
  *
- *   01 hero (chrome core in a dotted globe, agent swarm; hold the core to dive
- *   through its skin into the nucleus and the liquid-chrome TS) · ticker
- *   02 capabilities (flowing menu) · 03 intake (the letter read into a record)
+ *   01 the landing (the ferrofluid splash plays itself; the headline slams onto
+ *   the crown; scroll steps through the six tools) · 02 hero (chrome core in a
+ *   dotted globe, agent swarm; hold the core to dive through its skin into the
+ *   nucleus and the liquid-chrome TS) · ticker · 03 intake (the letter read into a record)
  *   04 compression (twelve mercury beads press into five agents; pull one)
  *   05 anatomy (push-in to one agent's floorplan) · 06 scale (scroll expand)
  *   07 stack (film + inspector, send request, trace waterfall) · 08 industries
@@ -64,9 +65,9 @@ export default function AiPage() {
       <span aria-hidden="true" data-world-layer="" className="ai-paper" />
       <span aria-hidden="true" data-world-layer="" className="ai-dive__dark" />
       <AiAmbience />
+      <FerroTools />
       <AiHero />
       <SignalTicker />
-      <FerroTools />
       <Suspense>
         <MercuryCompression />
       </Suspense>

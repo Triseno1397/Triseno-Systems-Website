@@ -6,29 +6,36 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { createFrameScrubber, type FrameFilm } from "@/lib/frameScrub";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
+import { cleanDark } from "./cleanDark";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * 02, Capabilities: "If it eats your day, we can build it", as a film the
- * scroll bar plays.
+ * The landing: "If it eats your day, we can build it", as a splash that
+ * plays itself the moment the page arrives.
  *
- * A window on the paper opens to full bleed (a clip-path, so nothing
- * reflows), crop marks riding its corners, the headline set twice, ink on
- * the paper and paper on the plate, so each letter changes colour exactly
- * where it crosses the edge. Once open, the headline docks small in the top
- * lane and the film runs under the scroll: a flat mirror of ferrofluid lifts
- * at the centre and climbs into a crown of spikes, and the six tools we
- * build most step through beside it, one card at a time, with an index that
- * doubles as a table of contents. Scroll back and the crown sinks.
+ * Full bleed and dark from the first frame. As soon as the film has loaded
+ * it runs on its own clock, not the scroll bar's: the flat mirror of
+ * ferrofluid shoots up into a crown of spikes in under a second, the
+ * headline slams down onto it with a flash and a jolt of the camera, and
+ * the clock eases out so the last of the crown forming plays in slow
+ * motion. Then it never quite stops: the final frames drift back and forth
+ * very slowly, so the crown shimmers while you read.
+ *
+ * Scrolling pins the crown and docks the headline in the top lane; the six
+ * tools we build most step through beside it, one card at a time, with an
+ * index that doubles as a table of contents.
+ *
+ * While the landing is under the nav it owns the page's dark (cleanDark), so
+ * the chrome is white line-work over the film instead of ink.
  *
  * The film is a generated clip cut into frames (public/frames/ferro-*),
- * drawn by lib/frameScrub, fetched only when the section is near.
- * Reduced motion: no pin; the open plate at its final frame, every card.
+ * drawn by lib/frameScrub. Reduced motion: no splash, no pin; the crown at
+ * its final frame and every card.
  */
 
 const FILM: FrameFilm = {
-  landscape: { dir: "/frames/ferro-d", count: 121, width: 1600, height: 900 },
+  landscape: { dir: "/frames/ferro-d", count: 180, width: 1920, height: 1080 },
   portrait: { dir: "/frames/ferro-m", count: 121, width: 720, height: 1280 },
 };
 
@@ -43,104 +50,150 @@ const PHRASES: Record<string, string> = {
 };
 
 const N = CAPABILITIES.length;
-/** the window is open by here; the cards begin once the fluid has lifted */
-const OPEN_BY = 0.16;
-const CARDS_FROM = 0.3;
+/** the headline is docked by here; the cards follow */
+const CARDS_FROM = 0.18;
+/** where in the film the crown erupts; the headline lands on it */
+const IMPACT = 0.8;
+/** the splash's own length, and the longest it waits for every frame */
+const SPLASH_S = 3.8;
+const WAIT_MS = 4000;
+/** expo.out reaches progress p at t = -T log2(1 - p) / 10 */
+const IMPACT_AT = (-SPLASH_S * Math.log2(1 - IMPACT)) / 10;
+const SLAM_S = 0.4;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export default function FerroTools() {
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
-  const paperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const flashRef = useRef<HTMLSpanElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
   const stRef = useRef<ScrollTrigger | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
+    if (!root) return;
+    const dark = ScrollTrigger.create({
+      trigger: root,
+      start: "top top+=1",
+      end: "bottom top+=72",
+      // measured after the pin below has added its length to the section
+      refreshPriority: -1,
+      onToggle: (self) => (self.isActive ? cleanDark.enter("landing") : cleanDark.leave("landing")),
+    });
+    if (dark.isActive || window.scrollY < 2) cleanDark.enter("landing");
+    return () => {
+      dark.kill();
+      cleanDark.leave("landing");
+    };
+  }, []);
+
+  useEffect(() => {
     const stage = stageRef.current;
     const media = mediaRef.current;
-    const paper = paperRef.current;
     const canvas = canvasRef.current;
-    if (!root || !stage || !media || !paper || !canvas) return;
+    const flash = flashRef.current;
+    if (!stage || !media || !canvas || !flash) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const scrub = createFrameScrubber(canvas, FILM, () => media.setAttribute("data-ready", ""));
-
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        scrub.load();
-        io.disconnect();
-      },
-      { rootMargin: "120% 0px 120% 0px" },
-    );
-    io.observe(stage);
+    let start: (() => void) | null = null;
+    const scrub = createFrameScrubber(canvas, FILM, () => media.setAttribute("data-ready", ""), {
+      onLoaded: () => start?.(),
+    });
+    scrub.load();
     const ro = new ResizeObserver(() => scrub.resize());
     ro.observe(stage);
 
-    const crops = Array.from(stage.querySelectorAll<HTMLElement>(".ai-ft__crop"));
-    const titles = Array.from(stage.querySelectorAll<HTMLElement>(".ai-ft__title"));
+    const title = stage.querySelector<HTMLElement>(".ai-ft__title");
+    const slam = stage.querySelector<HTMLElement>(".ai-ft__slam");
     const anchor = stage.querySelector<HTMLElement>(".ai-ft__anchor");
     const aside = stage.querySelector<HTMLElement>(".ai-ft__aside");
+    const cue = stage.querySelector<HTMLElement>(".ai-ft__cue");
+    const shade = stage.querySelector<HTMLElement>(".ai-ft__shade");
     const cards = Array.from(stage.querySelectorAll<HTMLElement>(".ai-ft__card"));
     const items = Array.from(stage.querySelectorAll<HTMLElement>(".ai-ft__item"));
 
     if (reduce) {
       stage.setAttribute("data-static", "");
-      scrub.load();
       scrub.setProgress(1);
       return () => {
-        io.disconnect();
         ro.disconnect();
         scrub.dispose();
       };
     }
 
-    const easeOpen = gsap.parseEase("power2.inOut");
+    /* ── the splash: the film on its own clock ── */
+    const clock = { p: 0 };
+    const draw = () => scrub.setProgress(clock.p);
+    scrub.setProgress(0);
+    gsap.set(slam, { opacity: 0, scale: 2.6, filter: "blur(16px)" });
+    gsap.set(cue, { opacity: 0 });
+
+    const splash = gsap.timeline({ paused: true });
+    splash
+      // fast out of the gate, then a long ease so the crown lands in slow motion
+      .to(clock, { p: 1, duration: SPLASH_S, ease: "expo.out", onUpdate: draw }, 0)
+      // the headline falls onto the screen and lands with the eruption
+      .to(slam, { opacity: 1, scale: 1, filter: "blur(0px)", duration: SLAM_S, ease: "power4.in" }, IMPACT_AT - SLAM_S)
+      .fromTo(flash, { opacity: 0 }, { opacity: 0.55, duration: 0.04, ease: "none" }, IMPACT_AT)
+      .to(flash, { opacity: 0, duration: 0.8, ease: "power2.out" }, IMPACT_AT + 0.04)
+      .fromTo(
+        media,
+        { x: 0, y: 0 },
+        {
+          keyframes: [
+            { x: -16, y: 10, duration: 0.045 },
+            { x: 12, y: -8, duration: 0.05 },
+            { x: -8, y: 5, duration: 0.055 },
+            { x: 4, y: -3, duration: 0.07 },
+            { x: 0, y: 0, duration: 0.1 },
+          ],
+        },
+        IMPACT_AT,
+      )
+      // the camera settles back from the jolt as the slow motion takes over
+      .fromTo(media, { scale: 1.08 }, { scale: 1, duration: SPLASH_S, ease: "power2.out" }, IMPACT_AT)
+      .to(cue, { opacity: 1, duration: 0.9, ease: "power2.out" }, IMPACT_AT + 1.4)
+      // and the crown never quite stops: the last frames drift, slowly
+      .add(() => {
+        gsap.fromTo(clock, { p: 1 }, { p: 0.95, duration: 3.4, ease: "sine.inOut", yoyo: true, repeat: -1, onUpdate: draw });
+      });
+
+    let started = false;
+    start = () => {
+      if (started) return;
+      started = true;
+      stage.setAttribute("data-played", "");
+      splash.play(0);
+    };
+    // a slow connection still gets the splash, with the nearest frames standing in
+    const fallback = window.setTimeout(() => start?.(), WAIT_MS);
+
+    /* ── the scroll: dock the headline, step through the tools ── */
     const easeDock = gsap.parseEase("power3.inOut");
-    let W = 1;
-    let H = 1;
-    let phone = false;
     let dock = { x: 0, y: 0, s: 0.5 };
 
     const measure = () => {
-      const r = stage.getBoundingClientRect();
-      W = r.width;
-      H = r.height;
-      phone = W < 768;
-      // the headline docks with its top-left on the anchor, scaled down
-      titles.forEach((t) => (t.style.transform = ""));
-      const t = titles[0]?.getBoundingClientRect();
+      if (!title) return;
+      const phone = stage.getBoundingClientRect().width < 768;
+      title.style.transform = "";
+      const t = title.getBoundingClientRect();
       const a = anchor?.getBoundingClientRect();
-      if (t && a) dock = { x: a.left - t.left, y: a.top - t.top, s: phone ? 0.78 : 0.42 };
+      if (a) dock = { x: a.left - t.left, y: a.top - t.top, s: phone ? 0.78 : 0.42 };
     };
 
     let active = -2;
     const apply = (p: number) => {
-      const o = easeOpen(clamp01(p / OPEN_BY));
-      const ix = (1 - o) * (phone ? 0.08 : 0.31) * W;
-      const iy = (1 - o) * (phone ? 0.3 : 0.24) * H;
-      const clip = `inset(${iy}px ${ix}px ${iy}px ${ix}px)`;
-      media.style.clipPath = clip;
-      paper.style.clipPath = clip;
-      crops.forEach((c) => {
-        const sx = c.dataset.c === "tl" || c.dataset.c === "bl" ? ix : -ix;
-        const sy = c.dataset.c === "tl" || c.dataset.c === "tr" ? iy : -iy;
-        c.style.transform = `translate3d(${sx}px, ${sy}px, 0)`;
-      });
-
-      scrub.setProgress(clamp01((p - 0.12) / 0.85));
-
-      const k = easeDock(clamp01((p - OPEN_BY) / (CARDS_FROM - OPEN_BY)));
+      const k = easeDock(clamp01(p / CARDS_FROM));
       const s = 1 - (1 - dock.s) * k;
-      const tr = `translate(-50%, -50%) translate3d(${dock.x * k}px, ${dock.y * k}px, 0) scale(${s})`;
-      titles.forEach((t) => (t.style.transform = tr));
+      if (title) title.style.transform = `translate(-50%, -50%) translate3d(${dock.x * k}px, ${dock.y * k}px, 0) scale(${s})`;
       if (aside) {
         aside.style.opacity = String(k);
         aside.style.transform = `translate3d(0, ${(1 - k) * 12}px, 0)`;
       }
+      if (cue) cue.style.visibility = k > 0.05 ? "hidden" : "";
+      if (shade) shade.style.opacity = String(k);
 
       const idx = p < CARDS_FROM ? -1 : Math.min(N - 1, Math.floor(((p - CARDS_FROM) / (1 - CARDS_FROM)) * N));
       if (idx === active) return;
@@ -156,7 +209,7 @@ export default function FerroTools() {
     const st = ScrollTrigger.create({
       trigger: stage,
       start: "top top",
-      end: `+=${N * 65 + 90}%`,
+      end: `+=${N * 60 + 40}%`,
       pin: true,
       scrub: 0.5,
       anticipatePin: 1,
@@ -172,9 +225,11 @@ export default function FerroTools() {
     apply(0);
 
     return () => {
+      window.clearTimeout(fallback);
+      splash.kill();
+      gsap.killTweensOf(clock);
       st.kill();
       stRef.current = null;
-      io.disconnect();
       ro.disconnect();
       scrub.dispose();
     };
@@ -193,7 +248,8 @@ export default function FerroTools() {
       ref={rootRef}
       id="capabilities"
       data-rail="Capabilities"
-      data-ch="02"
+      data-ch="01"
+      data-no-fade=""
       aria-labelledby="ai-cap-title"
       className="ai-ft relative z-10"
     >
@@ -202,29 +258,20 @@ export default function FerroTools() {
           ref={mediaRef}
           className="ai-ft__media"
           role="img"
-          aria-label="A pool of liquid metal on a dark steel plate rising into a crown of mirror-bright spikes"
+          aria-label="A pool of liquid metal on a dark steel plate shooting up into a crown of mirror-bright spikes"
         >
           <canvas ref={canvasRef} className="ai-ft__canvas" aria-hidden="true" />
         </div>
-        <span aria-hidden="true" className="ai-ft__crop" data-c="tl" />
-        <span aria-hidden="true" className="ai-ft__crop" data-c="tr" />
-        <span aria-hidden="true" className="ai-ft__crop" data-c="bl" />
-        <span aria-hidden="true" className="ai-ft__crop" data-c="br" />
+        <span ref={flashRef} aria-hidden="true" className="ai-ft__flash" />
+        <span aria-hidden="true" className="ai-ft__shade" />
         <span aria-hidden="true" className="ai-ft__anchor" />
 
-        {/* ink on the paper: the headline only, for the moment it crosses the edge */}
-        <div className="ai-ft__layer ai-ft__layer--ink" aria-hidden="true">
-          <p className="ai-ft__title font-display">
-            <span>If It Eats Your Day,</span>
-            <span>We Can Build It</span>
-          </p>
-        </div>
-
-        {/* paper on the plate: the headline, the index and the cards */}
-        <div ref={paperRef} className="ai-ft__layer ai-ft__layer--paper">
+        <div className="ai-ft__layer">
           <h2 id="ai-cap-title" className="ai-ft__title font-display">
-            <span>If It Eats Your Day,</span>
-            <span>We Can Build It</span>
+            <span className="ai-ft__slam">
+              <span>If It Eats Your Day,</span>
+              <span>We Can Build It</span>
+            </span>
           </h2>
 
           <div className="ai-ft__aside">
@@ -260,9 +307,14 @@ export default function FerroTools() {
           </div>
 
           <p className="ai-ft__cap font-mono" aria-hidden="true">
-            <b>02</b> / Capabilities
+            <b>01</b> / Capabilities
           </p>
         </div>
+
+        <p className="ai-ft__cue font-mono" aria-hidden="true">
+          <span>Scroll</span>
+          <i />
+        </p>
       </div>
     </section>
   );

@@ -14,9 +14,11 @@ import { CONSOLE_SLIP } from "./console-slip.content";
  * A dark gallery after hours. Four glass cases stand on marble plinths, each
  * holding a tilt-shift miniature of a kind of business (a production studio,
  * a stock room, a machine shop, a clinic front desk). As the section arrives
- * the spotlights come on one by one; then the camera glides into the case of
- * the selected industry, where the miniature is alive (a silent Kling loop
- * that starts and ends on the same frame, so it loops without a seam).
+ * the spotlights come on one by one, and the camera stays out on the floor:
+ * all four cases in view at once, each with its brass placard on the plinth.
+ * Click a case (or focus it and press Enter) and the camera glides into it,
+ * where the miniature is alive (a silent Kling loop that starts and ends on
+ * the same frame, so it loops without a seam).
  *
  * Beside the case stands its exhibit label: the dark, backlit console that
  * prints that business's day, step by step. Each step lights one stop of a
@@ -24,10 +26,14 @@ import { CONSOLE_SLIP } from "./console-slip.content";
  * the film's own coordinates), so the tool is seen doing the job inside the
  * model while the label says what it did.
  *
- * Picking another industry (the room list under the stage, or a case in the
- * gallery view) pulls the camera back out to the gallery and in to the next
- * case. Everything else the console did before stays: Replay, the halted step
- * on Trades & Industrial and its routing slip, the session memory.
+ * The way out is a placard of its own in the corner of the case: a tiny floor
+ * plan of the four cases with this one lit, "Back to the floor", and the Esc
+ * key does the same. Everything else the console did before stays: Replay,
+ * the halted step on Trades & Industrial and its routing slip, the session
+ * memory.
+ *
+ * GALLERY_FILM, when set, is a loop of the whole floor with all four
+ * miniatures moving at once, laid over the gallery still.
  *
  * The camera is CSS (transform on the gallery plate about the case's centre,
  * opacity for the hand-off to the case film), so it follows clicks instead of
@@ -93,15 +99,16 @@ const CASES = [
   },
 ] as const;
 
+/** a loop of the whole floor, every miniature moving at once (Kling, start and
+ *  end on the gallery still, the seam crossfaded) */
+const GALLERY_FILM: string | null = "/videos/ai-mus-gallery.mp4";
+
 /** the gallery plate's case row: vertical centre, and the zoom that fills the stage with one case */
 const GY = 37.8;
 const ZOOM = 2.55;
 
 const STEP_MS = 1150;
-/** the lights come on one after another, then the camera goes in */
-const LAMP_MS = 380;
-const INTRO_MS = 400 + LAMP_MS * CASES.length;
-/** a pick: out to the gallery, then in to the next case */
+/** a pick from inside another case: out to the gallery, then in to the next */
 const TRAVEL_MS = 650;
 
 function fakeMs(seed: number, i: number) {
@@ -144,7 +151,7 @@ function HaltClock() {
 
 /** the case's film: silent, looping, playing only while on screen; reduced
  *  motion and data-saver keep the still */
-function CaseFilm({ src, poster }: { src: string; poster: string }) {
+function CaseFilm({ src, poster, className = "ai-mus__film" }: { src: string; poster: string; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
@@ -158,7 +165,19 @@ function CaseFilm({ src, poster }: { src: string; poster: string }) {
     io.observe(v);
     return () => io.disconnect();
   }, []);
-  return <video ref={ref} className="ai-mus__film" src={src} poster={poster} muted loop playsInline preload="metadata" />;
+  return (
+    <video
+      ref={ref}
+      className={className}
+      src={src}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      onPlaying={(e) => e.currentTarget.setAttribute("data-playing", "")}
+    />
+  );
 }
 
 export default function AgentConsole() {
@@ -185,7 +204,8 @@ export default function AgentConsole() {
   const [bay, setBay] = useState(false);
   const haltStart = useRef(0);
   const replayRef = useRef<HTMLButtonElement>(null);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const hitRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const lastTrace = useSession((s) => s.lastTrace);
 
   const industry = INDUSTRIES[active];
@@ -226,7 +246,7 @@ export default function AgentConsole() {
     return list;
   }, [industry, active, review]);
 
-  /* first arrival: the lights come on, then the camera goes into the first case */
+  /* first arrival: the lights come on; the camera waits on the floor */
   useEffect(() => {
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     try {
@@ -243,17 +263,6 @@ export default function AgentConsole() {
         seen.current = true;
         session.figure("industries");
         setLit(true);
-        if (reduced.current) {
-          setInside(true);
-          setRun((r) => r + 1);
-          return;
-        }
-        T.push(
-          window.setTimeout(() => {
-            setInside(true);
-            setRun((r) => r + 1);
-          }, INTRO_MS),
-        );
       },
       { threshold: 0.3 },
     );
@@ -347,46 +356,57 @@ export default function AgentConsole() {
     [total],
   );
 
-  /* a pick: the camera backs out to the gallery, the next case is chosen, and
-     it goes in again; the run starts as it arrives */
-  const pick = (i: number) => {
-    if (i === active && inside) return;
+  const stopAll = () => {
     const T = travel.current;
     T.forEach((t) => window.clearTimeout(t));
     T.length = 0;
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current.length = 0;
+  };
+
+  /* a pick: from the floor the camera goes straight in; from inside another
+     case it backs out first. The run starts as it arrives. */
+  const pick = (i: number) => {
+    if (i === active && inside) return;
+    stopAll();
     seen.current = true;
     setLit(true);
-    if (reduced.current) {
+    const goIn = () => {
       setActive(i);
       setInside(true);
       setRun((r) => r + 1);
+      window.setTimeout(() => backRef.current?.focus({ preventScroll: true }), reduced.current ? 0 : 900);
+    };
+    if (reduced.current || !inside) {
+      goIn();
       return;
     }
     setInside(false);
     setStep(-1);
-    T.push(
-      window.setTimeout(() => {
-        setActive(i);
-        setInside(true);
-        setRun((r) => r + 1);
-      }, TRAVEL_MS),
-    );
+    travel.current.push(window.setTimeout(goIn, TRAVEL_MS));
   };
 
-  const onTabKey = (e: React.KeyboardEvent) => {
-    const n = INDUSTRIES.length;
-    let next = -1;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (active + 1) % n;
-    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = (active - 1 + n) % n;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = n - 1;
-    if (next < 0) return;
-    e.preventDefault();
-    pick(next);
-    tabRefs.current[next]?.focus();
-  };
+  /* the way out: back to the floor, the run stopped, focus on the case we left */
+  const leave = useCallback(() => {
+    if (!inside) return;
+    stopAll();
+    setInside(false);
+    setStep(-1);
+    haltRef.current = "none";
+    setHalt("none");
+    setBay(false);
+    const from = active;
+    window.setTimeout(() => hitRefs.current[from]?.focus({ preventScroll: true }), 60);
+  }, [inside, active]);
+
+  useEffect(() => {
+    if (!inside) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && haltRef.current !== "slip") leave();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inside, leave]);
 
   const sum = rows.reduce((a, r) => a + r.ms, 0);
   const closed = step >= rows.length;
@@ -419,8 +439,8 @@ export default function AgentConsole() {
               {INDUSTRIES_INTRO.title}
             </h2>
           </div>
-          <p key={active} className="ai-body ai-mus__body">
-            {industry.body}
+          <p key={inside ? active : "floor"} className="ai-body ai-mus__body">
+            {inside ? industry.body : INDUSTRIES_INTRO.floor}
           </p>
         </header>
 
@@ -435,20 +455,30 @@ export default function AgentConsole() {
                 <source media="(max-width: 767px)" srcSet="/worlds/ai-mus-gallery-m.webp" />
                 <img src="/worlds/ai-mus-gallery.webp" alt="" decoding="async" loading="lazy" draggable={false} />
               </picture>
+              {GALLERY_FILM ? <CaseFilm src={GALLERY_FILM} poster="/worlds/ai-mus-gallery.webp" className="ai-mus__film ai-mus__floorfilm" /> : null}
               {CASES.map((c, i) => (
                 <span key={c.key} aria-hidden="true" className="ai-mus__lamp" style={{ ["--x" as string]: `${c.gx}%`, ["--i" as string]: i }} />
               ))}
-              {/* in the gallery view, the cases themselves are the picker */}
+              {/* on the floor, the cases themselves are the way in; each wears its placard */}
               {CASES.map((c, i) => (
                 <button
                   key={c.key}
+                  ref={(el) => {
+                    hitRefs.current[i] = el;
+                  }}
                   type="button"
-                  tabIndex={-1}
-                  aria-hidden="true"
+                  tabIndex={inside ? -1 : 0}
+                  aria-label={`Step into case ${i + 1}: ${INDUSTRIES[i].title}`}
                   className="ai-mus__hit"
-                  style={{ ["--x" as string]: `${c.gx}%` }}
+                  style={{ ["--x" as string]: `${c.gx}%`, ["--i" as string]: i }}
                   onClick={() => pick(i)}
-                />
+                >
+                  <span className="ai-mus__plaque" aria-hidden="true">
+                    <span className="ai-mus__plaquen font-mono">Case {String(i + 1).padStart(2, "0")}</span>
+                    <span className="ai-mus__plaquename font-display">{INDUSTRIES[i].title}</span>
+                    <span className="ai-mus__plaquego font-mono">Step inside</span>
+                  </span>
+                </button>
               ))}
             </div>
 
@@ -491,13 +521,36 @@ export default function AgentConsole() {
 
             <span aria-hidden="true" className="ai-mus__vignette" />
             <p aria-hidden="true" className="ai-mus__hud font-mono">
-              <i /> {inside ? <>Case {String(active + 1).padStart(2, "0")} · live</> : "Gallery · four businesses"}
+              <i /> {inside ? <>Case {String(active + 1).padStart(2, "0")} · live</> : "The floor · pick a case"}
             </p>
+
+            {/* the way out: a placard with the floor plan, this case lit */}
+            <button
+              ref={backRef}
+              type="button"
+              className="ai-mus__back"
+              tabIndex={inside ? 0 : -1}
+              aria-hidden={!inside}
+              onClick={leave}
+            >
+              <span className="ai-mus__plan" aria-hidden="true">
+                {CASES.map((c, i) => (
+                  <i key={c.key} data-on={i === active ? "" : undefined} />
+                ))}
+              </span>
+              <span className="ai-mus__backtext">
+                <span className="ai-mus__backlead font-mono">Case {String(active + 1).padStart(2, "0")} of 04</span>
+                <span className="ai-mus__backgo font-display">Back to the floor</span>
+              </span>
+              <kbd className="ai-mus__esc font-mono" aria-hidden="true">
+                Esc
+              </kbd>
+            </button>
           </div>
 
           {/* the exhibit label: the case's day, printed as it happens */}
           <div className="ai-mus__label">
-            <div id="ai-console" role="tabpanel" aria-label={`${industry.full}: example day`} className="ai-console">
+            <div id="ai-console" role="region" aria-label={`${industry.full}: example day`} className="ai-console">
               <div className="ai-console__bar">
                 <span className="ai-console__lights" aria-hidden="true">
                   <i />
@@ -602,34 +655,6 @@ export default function AgentConsole() {
           </div>
         </div>
 
-        {/* the room list: the four cases by name */}
-        <div role="tablist" aria-label="Industries" className="ai-mus__rooms" onKeyDown={onTabKey}>
-          {INDUSTRIES.map((ind, i) => {
-            const on = i === active;
-            return (
-              <button
-                key={ind.title}
-                ref={(el) => {
-                  tabRefs.current[i] = el;
-                }}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                aria-controls="ai-console"
-                tabIndex={on ? 0 : -1}
-                className="ai-mus__roombtn"
-                data-on={on ? "" : undefined}
-                onClick={() => pick(i)}
-              >
-                <span className="ai-mus__roomn font-mono">Case {String(i + 1).padStart(2, "0")}</span>
-                <span className="ai-mus__roomname font-display">{ind.title}</span>
-                <span className="ai-mus__roommeta font-mono">
-                  {ind.log.length} jobs / {CASES[i % CASES.length].meta}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </section>
   );

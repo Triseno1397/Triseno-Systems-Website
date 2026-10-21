@@ -81,10 +81,18 @@ function progressiveOrder(count: number): number[] {
   return out;
 }
 
+export interface FrameHooks {
+  /** after every frame drawn to the canvas (a shader stage re-uploads it) */
+  onDraw?: () => void;
+  /** once every frame has been fetched (or skipped) */
+  onLoaded?: () => void;
+}
+
 export function createFrameScrubber(
   canvas: HTMLCanvasElement,
   film: FrameFilm,
   onFirstFrame?: () => void,
+  hooks: FrameHooks = {},
 ): FrameScrubber {
   const portrait = window.matchMedia("(orientation: portrait)").matches;
   const set = portrait ? film.portrait : film.landscape;
@@ -146,6 +154,7 @@ export function createFrameScrubber(
     const dh = ih * s;
     ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
     drawnIndex = idx;
+    hooks.onDraw?.();
     if (!ready) {
       ready = true;
       onFirstFrame?.();
@@ -204,7 +213,9 @@ export function createFrameScrubber(
         await fetchFrame(i);
       }
     };
-    for (let k = 0; k < CONCURRENCY; k++) void worker();
+    void Promise.all(Array.from({ length: CONCURRENCY }, worker)).then(() => {
+      if (!disposed) hooks.onLoaded?.();
+    });
   }
 
   measure();
