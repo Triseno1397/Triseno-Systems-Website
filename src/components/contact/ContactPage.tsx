@@ -85,7 +85,7 @@ export default function ContactPage() {
             </li>
           </ul>
           <p className="contact-body">
-            Los Angeles, California — working with brands anywhere. We reply within one business day, often sooner.
+            Los Angeles, California — meeting clients across LA, Ventura and Orange County. We reply within one business day, often sooner.
           </p>
         </GlassPanel>
         <div className="contact-direct__seal">
