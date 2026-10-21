@@ -7,6 +7,7 @@ import WarpProvider from "./WarpProvider";
 import Chrome from "./Chrome";
 import OrbCursor from "./OrbCursor";
 import SmoothScroll from "./SmoothScroll";
+import Discovery from "./Discovery";
 
 /**
  * Global foundation. The warp transition wraps every route so travel works in
@@ -25,6 +26,7 @@ export default function WorldShell({ children }: { children: ReactNode }) {
         <>
           <SmoothScroll />
           <Chrome />
+          <Discovery />
           <OrbCursor />
         </>
       ) : null}

@@ -10,6 +10,7 @@ import { CONSOLE_SLIP } from "./console-slip.content";
 import { cleanDark } from "./cleanDark";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { discover } from "@/lib/discover";
 
 /**
  * 4. Who it is for: a small museum of businesses.
@@ -377,6 +378,7 @@ export default function AgentConsole() {
         // storage blocked: slipDone still holds for this page
       }
       const ms = Math.max(1, Math.round(decisionMs));
+      discover("ai-slip");
       setReview({ kind, value, ms });
       haltRef.current = "done";
       setHalt("done");
@@ -416,6 +418,7 @@ export default function AgentConsole() {
     seen.current = true;
     setLit(true);
     const goIn = () => {
+      discover("ai-case");
       setActive(i);
       setInside(true);
       setRun((r) => r + 1);

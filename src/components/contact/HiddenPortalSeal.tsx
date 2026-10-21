@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import Image from "next/image";
 import PortalBlast from "@/components/contact/PortalBlast";
+import { discover } from "@/lib/discover";
 
 const HOLD_DURATION_MS = 750;
 const HIT_PADDING = 36;
@@ -63,6 +64,7 @@ export default function HiddenPortalSeal() {
       setBlastOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
     }
     setUnlocking(true);
+    discover("contact-seal");
     cancelHold();
     // Navigation is fired from PortalBlast's timeline, once the bloom has the
     // screen fully covered — so the warp plays out before the page swaps.

@@ -18,6 +18,7 @@ import PauseOffscreen from "./PauseOffscreen";
 import { WarpLink, useWarp } from "./WarpProvider";
 import { lockScroll, scrollToTop } from "./SmoothScroll";
 import { addFrameJob } from "./frameLoop";
+import { discover } from "@/lib/discover";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Persistent chrome — exactly five elements (design-system §4):
@@ -90,7 +91,12 @@ export default function Chrome() {
         division={division}
         compact={compact && !menuOpen}
         menuOpen={menuOpen}
-        onToggle={() => setMenuOpen((v) => !v)}
+        onToggle={() =>
+          setMenuOpen((v) => {
+            if (!v) discover("menu");
+            return !v;
+          })
+        }
       />
       <MenuOverlay open={menuOpen} current={division.key} onClose={() => setMenuOpen(false)} />
       <BackChevron division={division} scrolled={compact} />

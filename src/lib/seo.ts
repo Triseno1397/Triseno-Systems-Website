@@ -88,9 +88,9 @@ const CORE_KEYWORDS = [
 export const PAGES: Record<PageKey, PageSeo> = {
   home: {
     path: "/",
-    title: "Triseno Systems | Ad Creative, Web Design & AI Infrastructure",
+    title: "Triseno Systems | Web Design Studio in Los Angeles",
     description:
-      "A Los Angeles studio in three divisions: paid-social ad creative, custom conversion-built websites, and AI infrastructure for business operations.",
+      "A Los Angeles web design studio building custom, conversion-built websites, with paid-social ad creative and AI systems from the same team.",
     keywords: [
       ...CORE_KEYWORDS,
       "paid social creative",

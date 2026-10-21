@@ -427,6 +427,41 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 /* menu: the three divisions carry their glyph; WORK and CONTACT sit apart, below a hairline */
 .portal-menu__group { display: flex; flex-direction: column; gap: 0.3em; }
 .portal-menu__rule { display: block; width: 56px; height: 1px; background: #ffffff; margin: 20px 0 18px; }
+/* the studio's craft leads: Web Design is the big word, Creative and AI sit
+   under it, smaller, as what the studio also makes */
+.portal-menu__group--lead .portal-word { font-size: 1.32em; opacity: 0.9; }
+.portal-menu__also { margin: 16px 0 8px; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); }
+.portal-menu__group--also { font-size: 0.9em; }
+
+/* the legend: Websites first and brightest, then "also" and the other two */
+.portal-legend__item:first-of-type { font-weight: 600; }
+.portal-legend__item:not(:first-of-type) { color: rgba(255, 255, 255, 0.62); }
+.portal-legend__also { display: inline-flex; align-items: center; margin-left: 2px; color: rgba(255, 255, 255, 0.5); font-weight: 400; }
+.portal-legend__also .portal-legend__rule { width: 28px; margin: 0 12px 0 16px; }
+
+/* the hunt's invitation, under the legend (and on phones, where the legend goes) */
+.portal-explore {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  font-size: 15px; line-height: 1.4; color: rgba(255, 255, 255, 0.82);
+  animation: legend-in 1000ms var(--ease-expo) 1100ms both;
+}
+.portal-explore__btn {
+  appearance: none; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.04);
+  color: #ffffff; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+  transition: border-color 300ms linear, background-color 300ms linear;
+}
+.portal-explore__btn i { display: block; width: 7px; height: 7px; border: 1px solid currentColor; transform: rotate(45deg); }
+@media (hover: hover) { .portal-explore__btn:hover { border-color: #ffffff; background: rgba(255, 255, 255, 0.1); } }
+.portal-explore__btn:focus-visible { outline: 1px solid #ffffff; outline-offset: 3px; }
+.portal-explore { position: relative; z-index: 5; }
+.portal-explore__btn { background: rgba(8, 9, 12, 0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+@media (max-width: 767px) {
+  .portal-explore { font-size: 13px; }
+  /* the Operator stands right here on a phone: only the button, above him */
+  .portal-explore > span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .portal-explore { animation: none; } }
 /* Short screens and phones: the sub line goes so the headline and the menu both
    stay clear of the edge fade bands (and, on a phone, so the hero frame has no
    body text competing with the display line). */

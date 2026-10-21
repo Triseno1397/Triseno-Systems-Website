@@ -12,6 +12,7 @@ import { cleanDark } from "./cleanDark";
 import { coreReady } from "./coreReady";
 import { DIVE } from "./hero-dive.content";
 import "@/app/ai-dive.css";
+import { discover } from "@/lib/discover";
 
 /**
  * The AI hero's object: the intelligence layer as one thing you can touch.
@@ -877,6 +878,7 @@ export default function IntelligenceCore({ className, label }: { className?: str
         if (crossed) {
           ensureNucleus();
           wasInside = true;
+          discover("ai-dive");
           session.bump("dives");
           const req = session.mint();
           if (capRef.current) capRef.current.textContent = DIVE.captionInside(req.id, req.local, req.tz);

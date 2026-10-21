@@ -4,6 +4,7 @@ import "@/app/web-prism.css";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import GlassPanel from "@/components/world/GlassPanel";
 import { createCrystalTunnel, type CrystalTunnel } from "./crystalTunnel";
+import { discover } from "@/lib/discover";
 
 /**
  * What you get, section 04: one beam of light, seven deliverables.
@@ -167,7 +168,10 @@ export default function PrismDeliverables() {
     return () => window.clearTimeout(id);
   }, [running, paused, staticMode, active]);
 
-  const pick = useCallback((i: number) => setActive(i), []);
+  const pick = useCallback((i: number) => {
+    setActive(i);
+    discover("web-crystal-pick");
+  }, []);
   const hold = { onPointerEnter: () => setPaused(true), onPointerLeave: () => setPaused(false) };
 
   return (

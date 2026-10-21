@@ -16,8 +16,9 @@ import SceneGuard from "@/components/world/SceneGuard";
 import { prefersLite } from "@/lib/device";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
+import { TOTAL, openMap } from "@/lib/discover";
 
-/** the portal's division legend, in menu order (Web, Creative, AI) */
+/** the portal's legend: the studio's craft first, then what else it makes */
 const LEGEND = ["Websites", "Ad creative", "AI infrastructure"];
 import {
   DOOR_ITEMS,
@@ -28,7 +29,6 @@ import {
   doorSide,
   portalState,
 } from "./portalState";
-import { statue } from "./statue";
 
 import SignOff from "@/components/world/SignOff";
 gsap.registerPlugin(ScrollTrigger);
@@ -71,9 +71,12 @@ const WHITE = "#ffffff";
 
 // Headline, per menu word. The three divisions read WE BUILD […]; WORK and
 // CONTACT get their own neutral line so headline, glyph, counter and object
-// always say the same thing.
-const LINE_ONE = ["WE BUILD", "WE BUILD", "WE BUILD", "SEE", "OPEN A"];
-const LINE_TWO = ["WEBSITES", "AD CREATIVE", "AI SYSTEMS", "THE WORK", "CHANNEL"];
+// always say the same thing. At rest (REST, nothing hovered) it says what the
+// studio is: a web design studio. It no longer cycles through the divisions;
+// the other two are named under it as what the studio also makes.
+const LINE_ONE = ["WE BUILD", "WE BUILD", "WE BUILD", "SEE", "OPEN A", "A WEB DESIGN"];
+const LINE_TWO = ["WEBSITES", "AD CREATIVE", "AI SYSTEMS", "THE WORK", "CHANNEL", "STUDIO"];
+const REST = 5;
 
 const DOOR_COPY = [
   {
@@ -238,31 +241,18 @@ export default function PortalPage() {
   );
   const release = useCallback(() => {
     window.clearTimeout(resumeTimer.current);
-    // back to rest: achromatic. WORK/CONTACT are not part of the resting rotation.
-    show(portalState.active < 3 ? portalState.active : 0, false);
+    // back to rest: achromatic, the object on the studio's own glyph (Web)
+    show(0, false);
     resumeTimer.current = window.setTimeout(() => (interacting.current = false), 2500);
   }, [show]);
 
-  // Rest: the headline rotates through the three divisions and the object morphs
-  // with it — in white. Nothing is preselected and nothing is coloured.
+  // Rest: the headline says what the studio is and the object holds the web
+  // glyph, in white. ?glyph=0..4 still holds one glyph (and the Operator's
+  // pose on it) for a look.
   useEffect(() => {
     if (mode === "pending" || !ready || capture) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // ?glyph=0..4 — hold one glyph (and the Operator's pose on it) for a look
     const held = new URLSearchParams(window.location.search).get("glyph");
-    if (held !== null) {
-      show(Number(held), false);
-      return;
-    }
-    const id = window.setInterval(() => {
-      // and not while he is mid-move: the object morphing behind a spin read
-      // as the whole scene glitching
-      // nor once the page moves: the Operator is on his way off the statue
-      // nor while he leans on the statue or hangs from it
-      if (interacting.current || document.hidden || portalState.hero > 0.01 || portalState.warpAt || portalState.performing || statue.hold) return;
-      show((portalState.active + 1) % 3, false);
-    }, 3600);
-    return () => window.clearInterval(id);
+    if (held !== null) show(Number(held), false);
   }, [mode, ready, capture, show]);
 
   useEffect(() => () => window.clearTimeout(resumeTimer.current), []);
@@ -412,9 +402,16 @@ export default function PortalPage() {
   const hue = hot ? current.hue : WHITE;
   const lineOne = useMemo<RotateWord[]>(() => LINE_ONE.map((text) => ({ text, glyph: "circle", hue: WHITE })), []);
   const lineTwo = useMemo<RotateWord[]>(
-    () => LINE_TWO.map((text, i) => ({ text, glyph: MENU_ITEMS[i].glyph, hue: i === active ? hue : WHITE })),
+    () =>
+      LINE_TWO.map((text, i) => ({
+        text,
+        glyph: MENU_ITEMS[i]?.glyph ?? MENU_ITEMS[0].glyph,
+        hue: i === active ? hue : WHITE,
+      })),
     [active, hue],
   );
+  /** the headline's word: the hovered item, or the studio at rest */
+  const head = hot ? active : REST;
   const getFloor = useCallback(() => portalState.gateFloorY, []);
   const toLite = useCallback(() => {
     setHasGL(false);
@@ -513,14 +510,13 @@ export default function PortalPage() {
           <div className="pointer-events-none">
             <h1 className="portal-headline font-display font-bold uppercase">
               <span className="sr-only">
-                We build websites, ad creative and AI systems. Three divisions: Web Design, Creative, AI
-                Infrastructure.
+                Triseno, a web design studio. We also make ad creative and AI systems.
               </span>
               <span aria-hidden="true" className="block">
-                <HeadlineRotate words={lineOne} index={active} showGlyph={false} showRule={false} />
+                <HeadlineRotate words={lineOne} index={head} showGlyph={false} showRule={false} />
               </span>
               <span aria-hidden="true" className="block">
-                <HeadlineRotate words={lineTwo} index={active} />
+                <HeadlineRotate words={lineTwo} index={head} />
               </span>
             </h1>
             {/* the three divisions as a legend: each in its own glyph and hue,
@@ -529,12 +525,8 @@ export default function PortalPage() {
             <p
               className="portal-sub portal-legend mt-7"
               data-hot={hot ? "" : undefined}
-              aria-label="Three divisions: websites, ad creative, AI infrastructure."
+              aria-label="Websites first. Also from the studio: ad creative and AI infrastructure."
             >
-              <span aria-hidden="true" className="portal-legend__count font-mono">
-                <b>03</b> Divisions
-              </span>
-              <span aria-hidden="true" className="portal-legend__rule" />
               {LEGEND.map((label, i) => (
                 <span
                   key={label}
@@ -545,12 +537,26 @@ export default function PortalPage() {
                 >
                   <Glyph kind={MENU_ITEMS[i].glyph} size={11} color={MENU_ITEMS[i].hue} strokeWidth={1.4} />
                   <span>{label}</span>
+                  {i === 0 ? (
+                    <span aria-hidden="true" className="portal-legend__also">
+                      <i className="portal-legend__rule" />
+                      Also
+                    </span>
+                  ) : null}
                 </span>
               ))}
             </p>
+            {/* the hunt: the site is the portfolio, and it says so */}
+            <p className="portal-explore pointer-events-auto mt-6">
+              <span>This whole site is the portfolio.</span>{" "}
+              <button type="button" className="portal-explore__btn font-mono" onClick={openMap}>
+                {TOTAL} pieces to find
+                <i aria-hidden="true" />
+              </button>
+            </p>
           </div>
 
-          {mode === "lite" && !hasGL ? <LiteSignature active={active} /> : null}
+          {mode === "lite" && !hasGL ? <LiteSignature active={hot ? active : 0} /> : null}
 
           {/* the Operator stands in the hall: beside the division list on a
               desktop, above it in the column on a phone */}
@@ -564,9 +570,11 @@ export default function PortalPage() {
 
           <nav aria-label="Divisions" className="portal-menu pointer-events-auto mt-8 w-fit max-w-full" onMouseLeave={release}>
             <p className="chrome-label mb-5 font-mono text-white" aria-live="off">
-              {hot ? `${active + 1}/${MENU_ITEMS.length} — ${current.name}` : `0/${MENU_ITEMS.length} — Three divisions`}
+              {hot ? `${active + 1}/${MENU_ITEMS.length} — ${current.name}` : "The studio"}
             </p>
-            <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[0, 1, 2].map(menuLink)}</ul>
+            <ul className="portal-menu__group portal-menu__group--lead text-[length:var(--fs-mid)]">{[0].map(menuLink)}</ul>
+            <p className="portal-menu__also chrome-label font-mono">Also from the studio</p>
+            <ul className="portal-menu__group portal-menu__group--also text-[length:var(--fs-mid)]">{[1, 2].map(menuLink)}</ul>
             <span aria-hidden="true" className="portal-menu__rule" />
             <div className="relative w-fit">
               <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[3, 4].map(menuLink)}</ul>
@@ -656,10 +664,10 @@ export default function PortalPage() {
         ) : null}
         <div className="portal-gate__copy relative flex flex-col items-start">
           <p className="chrome-label mb-7 font-mono text-white">Next — Contact</p>
-          <h2 className="gate-title font-display font-bold uppercase">Tell us what you need built</h2>
+          <h2 className="gate-title font-display font-bold uppercase">Tell us about your website</h2>
           <p className="mt-7 max-w-[44ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
-            One conversation to work out which division fits: a website, ad creative, or AI infrastructure. You
-            talk to the person who builds it.
+            One conversation with the person who builds it. Ad creative and AI systems from the same studio, when
+            you need them too.
           </p>
           <GhostButton href="/contact" className="mt-10">
             Start a Conversation
@@ -678,9 +686,7 @@ function DoorCardBody({ index }: { index: number }) {
     <>
       <p className="chrome-label mb-6 flex items-center gap-3 font-mono text-white">
         <Glyph kind={door.glyph} size={14} color={door.hue} strokeWidth={1.25} glow />
-        <span>
-          0{index + 1}/03 — {door.name}
-        </span>
+        <span>{index === 0 ? `The studio — ${door.name}` : `Also from the studio — ${door.name}`}</span>
       </p>
       <h2 className="door-card__title font-display text-[length:var(--fs-mid)] font-semibold uppercase">{copy.title}</h2>
       <p className="mt-5 max-w-[62ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">

@@ -44,6 +44,7 @@ import Mechanisms from "./Mechanisms";
 import { plate } from "@/components/world/plates";
 import { PlateBackdrop } from "@/components/world/scene/plate";
 import { DOOR_ITEMS, DOOR_Z, MENU_ITEMS, dollyZ, doorLit, framing, portalState } from "./portalState";
+import { discover } from "@/lib/discover";
 
 /* ─────────────────────────────────────────────────────────────────────────
    The portal world — a place, not a void. One fixed canvas behind the page.
@@ -979,7 +980,10 @@ function OperatorInWorld({ state }: { state: OperatorState }) {
         onClick={(e) => {
           e.stopPropagation();
           // not in the air
-          if (P.flight === "here") state.strike += 1;
+          if (P.flight === "here") {
+            state.strike += 1;
+            discover("home-operator");
+          }
         }}
         onPointerOver={() => document.documentElement.setAttribute("data-cursor-hot", "")}
         onPointerOut={() => document.documentElement.removeAttribute("data-cursor-hot")}

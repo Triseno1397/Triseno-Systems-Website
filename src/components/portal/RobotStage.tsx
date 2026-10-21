@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { OperatorState } from "./RobotScene";
 import { addFrameJob } from "@/components/world/frameLoop";
+import { discover } from "@/lib/discover";
 
 const RobotScene = dynamic(() => import("./RobotScene"), { ssr: false });
 
@@ -63,6 +64,7 @@ export default function RobotStage({ active = true, hue }: { active?: boolean; h
 
   const strike = () => {
     state.current.strike += 1;
+    discover("home-operator");
   };
 
   return (
