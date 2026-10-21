@@ -7,6 +7,9 @@ import { INDUSTRIES, INDUSTRIES_INTRO } from "./content";
 import { session, useSession } from "./session";
 import RoutingSlip, { type SlipOutcome } from "./RoutingSlip";
 import { CONSOLE_SLIP } from "./console-slip.content";
+import { cleanDark } from "./cleanDark";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 /**
  * 4. Who it is for: a small museum of businesses.
@@ -32,6 +35,12 @@ import { CONSOLE_SLIP } from "./console-slip.content";
  * the halted step on Trades & Industrial and its routing slip, the session
  * memory.
  *
+ * On a landscape screen the gallery is the whole screen: the stage fills the
+ * viewport edge to edge and the title stands in the dark above the cases, so
+ * all four are in view without scrolling; while it is under the nav the
+ * section owns the page's dark (cleanDark), so the chrome stays white. Phones
+ * keep a framed 4:3 stage, where a full-height crop would show one case.
+ *
  * GALLERY_FILM, when set, is a loop of the whole floor with all four
  * miniatures moving at once, laid over the gallery still.
  *
@@ -40,6 +49,8 @@ import { CONSOLE_SLIP } from "./console-slip.content";
  * a baked move. Reduced motion: lights on, no camera travel, the trace settled,
  * the full line drawn, the stills instead of the films.
  */
+
+gsap.registerPlugin(ScrollTrigger);
 
 /** the tab and step that halt: the cycle whose fourth step hands off to a person */
 const HALT_TAB = INDUSTRIES.findIndex((ind) => ind.log.some(([agent]) => agent === "fallback"));
@@ -107,6 +118,9 @@ const GALLERY_FILM: string | null = "/videos/ai-mus-gallery.mp4";
 const GY = 37.8;
 const ZOOM = 2.55;
 
+/** the floor fills the screen on landscape screens (ai-museum.css carries the same query) */
+const FULL_MQ = "(min-aspect-ratio: 1/1) and (min-width: 768px)";
+
 const STEP_MS = 1150;
 /** a pick from inside another case: out to the gallery, then in to the next */
 const TRAVEL_MS = 650;
@@ -158,12 +172,24 @@ function CaseFilm({ src, poster, className = "ai-mus__film" }: { src: string; po
     if (!v) return;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || conn?.saveData) return;
+    // nothing is fetched at page load: half a screen ahead the film starts
+    // loading, on screen it plays, off screen it pauses
+    const ahead = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      ahead.disconnect();
+      v.preload = "auto";
+      v.load();
+    }, { rootMargin: "60% 0px 60% 0px" });
+    ahead.observe(v);
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) v.play().catch(() => {});
       else v.pause();
     });
     io.observe(v);
-    return () => io.disconnect();
+    return () => {
+      ahead.disconnect();
+      io.disconnect();
+    };
   }, []);
   return (
     <video
@@ -174,7 +200,7 @@ function CaseFilm({ src, poster, className = "ai-mus__film" }: { src: string; po
       muted
       loop
       playsInline
-      preload="metadata"
+      preload="none"
       onPlaying={(e) => e.currentTarget.setAttribute("data-playing", "")}
     />
   );
@@ -245,6 +271,24 @@ export default function AgentConsole() {
     }
     return list;
   }, [industry, active, review]);
+
+  /* full screen (landscape): the floor owns the page's dark while it is under the nav */
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const mq = window.matchMedia(FULL_MQ);
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: "top top+=72",
+      end: "bottom top+=72",
+      refreshPriority: -1,
+      onToggle: (self) => (self.isActive && mq.matches ? cleanDark.enter("museum") : cleanDark.leave("museum")),
+    });
+    return () => {
+      st.kill();
+      cleanDark.leave("museum");
+    };
+  }, []);
 
   /* first arrival: the lights come on; the camera waits on the floor */
   useEffect(() => {
@@ -426,6 +470,7 @@ export default function AgentConsole() {
       data-rail="Industries"
       data-ch="04"
       data-fig="industries"
+      data-no-fade=""
       aria-labelledby="ai-ind-title"
       className="ai-section ai-mus relative z-10"
     >

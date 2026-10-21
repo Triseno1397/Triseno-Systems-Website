@@ -259,7 +259,48 @@
   .ai-world .ai-mus__backgo { font-size: 11px; }
 }
 
+/* ── landscape screens: the floor is the whole screen ──
+   The section loses its sheet padding and the wrap its width cap; the stage
+   is the viewport; the title and line stand in the dark above the cases,
+   and step back once the camera is inside a case. */
+@media (min-aspect-ratio: 1/1) and (min-width: 768px) {
+  .ai-world .ai-section.ai-mus { padding: 0; }
+  .ai-world .ai-section.ai-mus::before { display: none; }
+  .ai-world .ai-mus > .ai-wrap { position: relative; max-width: none; padding: 0; }
+  .ai-world .ai-mus__stage {
+    aspect-ratio: auto; height: 100svh; max-height: none; border: 0;
+  }
+  .ai-world .ai-mus__head {
+    position: absolute; z-index: 7; left: 0; right: 0; top: 0; margin: 0;
+    padding: var(--lane-top) calc(var(--gutter) + var(--lane-right, 0px)) 0 var(--gutter);
+    pointer-events: none;
+    transition: opacity 500ms linear, transform 900ms var(--ease-expo);
+  }
+  .ai-world .ai-mus__head .ai-label { color: rgba(232, 241, 243, 0.62); }
+  .ai-world .ai-mus__head .ai-label b { color: #5fe8ff; }
+  .ai-world .ai-mus__head .ai-h2 {
+    color: #f1ece2; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
+    font-size: clamp(26px, 2.5vw, 44px); line-height: 1.02;
+  }
+  .ai-world .ai-mus__head { align-items: start; }
+  .ai-world .ai-mus__head .ai-mus__body { font-size: 15px; max-width: 42ch; margin-top: 22px; }
+  /* the gallery shows its whole width: on screens squarer than 16:9 the dark
+     ceiling and floor run on into the stage's black, and the title stands in
+     the dark above the cases instead of over them */
+  .ai-world .ai-mus__gallery { width: max(100cqw, 100cqh * 1.4); height: max(56.25cqw, 78.75cqh); }
+  .ai-world .ai-mus__head .ai-mus__body { color: rgba(232, 241, 243, 0.78); }
+  .ai-world .ai-mus:has(.ai-mus__room[data-inside]) .ai-mus__head { opacity: 0; transform: translate3d(0, -12px, 0); }
+  /* the floor's own HUD line is the title now; inside a case it returns */
+  .ai-world .ai-mus__room:not([data-inside]) .ai-mus__hud { opacity: 0; }
+  .ai-world .ai-mus__hud { top: calc(var(--lane-top) + 4px); left: var(--gutter); transition: opacity 400ms linear; }
+  .ai-world .ai-mus__back { left: var(--gutter); bottom: calc(var(--lane-bottom) + 4px); }
+}
+@media (min-aspect-ratio: 1/1) and (min-width: 1200px) {
+  .ai-world .ai-mus__label { top: calc(var(--lane-top) + 8px); right: calc(var(--gutter) + var(--lane-right, 0px)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ai-world .ai-mus__head,
   .ai-world .ai-mus__gallery,
   .ai-world .ai-mus__room[data-inside] .ai-mus__gallery,
   .ai-world .ai-mus__case,

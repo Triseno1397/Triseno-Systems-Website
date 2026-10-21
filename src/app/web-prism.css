@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    04 — What you get (PrismDeliverables.tsx)
-   A pinned film of light splitting inside a crystal; the seven deliverables
-   step through as the beam opens. Scoped to .web-prism; tokens from
-   .web-world (web.css).
+   A live hall of crystal (crystalTunnel) you fly through; the seven
+   deliverables step on by themselves, each lighting its thread of the beam.
+   Scoped to .web-prism; tokens from .web-world (web.css).
    ═══════════════════════════════════════════════════════════════════ */
 
 .web-section.web-prism { padding: 0; }
@@ -11,21 +11,13 @@
   background: #000;
 }
 
-/* the film */
-.web-prism__film { position: absolute; inset: 0; background: #000; transform-origin: 50% 56%; will-change: transform; }
+/* the hall: a small canvas the browser scales up to the stage */
+.web-prism__film { position: absolute; inset: 0; background: #000; }
 .web-prism__canvas {
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
-  opacity: 0; transition: opacity 700ms linear;
+  opacity: 0; transition: opacity 900ms linear;
 }
-.web-prism__film[data-ready] .web-prism__canvas { opacity: 1; }
-
-/* desktop: the film is seen through the lens shader; the 2D canvas stays
-   as its source, out of sight */
-.web-prism__lens { position: absolute; inset: 0; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 900ms linear; }
-.web-prism__film[data-lens] { will-change: auto; }
-.web-prism__film[data-lens] .web-prism__lens { display: block; }
-.web-prism__film[data-lens][data-ready] .web-prism__lens { opacity: 1; }
-.web-prism__film[data-lens] .web-prism__canvas { visibility: hidden; }
+.web-prism[data-live] .web-prism__canvas { opacity: 1; }
 
 /* a soft dark edge where the copy sits, so type never fights the light */
 .web-prism__scrim {
@@ -63,6 +55,12 @@
   transition: opacity 400ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 400ms ease;
 }
 .web-prism__band[data-done] .web-prism__bandbtn i { opacity: 0.6; transform: none; }
+.web-prism__bandbtn i { position: relative; overflow: hidden; }
+.web-prism__bandbtn i b {
+  position: absolute; inset: 0; background: #ffffff; transform-origin: left center;
+  animation: web-prism-hold var(--hold, 5s) linear both;
+}
+@keyframes web-prism-hold { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .web-prism__band[data-on] .web-prism__bandbtn { color: #ffffff; }
 .web-prism__band[data-on] .web-prism__bandbtn i { opacity: 1; transform: none; box-shadow: 0 0 14px var(--band); }
 .web-prism__band[data-on] .web-prism__bandn { color: var(--band); }
@@ -98,7 +96,7 @@
   content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
   background: var(--band); box-shadow: 0 0 18px var(--band);
 }
-.glass-panel.web-prism__card[data-active] {
+.glass-panel.web-prism__card.is-active {
   opacity: 1; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); pointer-events: auto;
   transition: opacity 450ms ease, transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -143,7 +141,8 @@
   .web-prism__aside { gap: 12px; }
   .web-prism__lead { display: none; }
   .web-prism__bands { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
-  .web-prism__bandbtn { grid-template-columns: 1fr; gap: 6px; padding: 6px 0; }
+  .web-prism__bandbtn { width: 100%; grid-template-columns: 1fr; gap: 6px; padding: 12px 0; }
+  .web-prism__bandbtn i { height: 3px; }
   .web-prism__bandbtn i { width: 100%; transform: scaleX(1); opacity: 0.25; }
   .web-prism__bandn, .web-prism__bandname { display: none; }
   .web-prism__count { display: none; }

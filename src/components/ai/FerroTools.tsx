@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { createFrameScrubber, type FrameFilm } from "@/lib/frameScrub";
 import { CAPABILITIES, CAPABILITIES_INTRO } from "./content";
 import { cleanDark } from "./cleanDark";
+import { coreReady } from "./coreReady";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,8 +15,10 @@ gsap.registerPlugin(ScrollTrigger);
  * The landing: "If it eats your day, we can build it", as a splash that
  * plays itself the moment the page arrives.
  *
- * Full bleed and dark from the first frame. As soon as the film has loaded
- * it runs on its own clock, not the scroll bar's: the flat mirror of
+ * Full bleed and dark from the first frame. As soon as half the film has
+ * loaded, and the hero's core below has finished its one heavy build (it
+ * runs while this frame is still, coreReady, so it never lands mid-splash;
+ * never waited on for more than a few seconds), it runs on its own clock, not the scroll bar's: the flat mirror of
  * ferrofluid shoots up into a crown of spikes in under a second, the
  * headline slams down onto it with a flash and a jolt of the camera, and
  * the clock eases out so the last of the crown forming plays in slow
@@ -57,6 +60,7 @@ const IMPACT = 0.8;
 /** the splash's own length, and the longest it waits for every frame */
 const SPLASH_S = 3.8;
 const WAIT_MS = 4000;
+const CORE_WAIT_MS = 4500;
 /** expo.out reaches progress p at t = -T log2(1 - p) / 10 */
 const IMPACT_AT = (-SPLASH_S * Math.log2(1 - IMPACT)) / 10;
 const SLAM_S = 0.4;
@@ -99,6 +103,10 @@ export default function FerroTools() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let start: (() => void) | null = null;
     const scrub = createFrameScrubber(canvas, FILM, () => media.setAttribute("data-ready", ""), {
+      // the frames arrive spread across the film (every 16th, 8th, 4th...), so
+      // with half of them in every gap is one frame wide and the rest fill
+      // in while it plays
+      onFetched: (n, total) => n >= total * 0.5 && start?.(),
       onLoaded: () => start?.(),
     });
     scrub.load();
@@ -127,7 +135,7 @@ export default function FerroTools() {
     const clock = { p: 0 };
     const draw = () => scrub.setProgress(clock.p);
     scrub.setProgress(0);
-    gsap.set(slam, { opacity: 0, scale: 2.6, filter: "blur(16px)" });
+    gsap.set(slam, { opacity: 0, scale: 2.6 });
     gsap.set(cue, { opacity: 0 });
 
     const splash = gsap.timeline({ paused: true });
@@ -135,7 +143,7 @@ export default function FerroTools() {
       // fast out of the gate, then a long ease so the crown lands in slow motion
       .to(clock, { p: 1, duration: SPLASH_S, ease: "expo.out", onUpdate: draw }, 0)
       // the headline falls onto the screen and lands with the eruption
-      .to(slam, { opacity: 1, scale: 1, filter: "blur(0px)", duration: SLAM_S, ease: "power4.in" }, IMPACT_AT - SLAM_S)
+      .to(slam, { opacity: 1, scale: 1, duration: SLAM_S, ease: "power4.in" }, IMPACT_AT - SLAM_S)
       .fromTo(flash, { opacity: 0 }, { opacity: 0.55, duration: 0.04, ease: "none" }, IMPACT_AT)
       .to(flash, { opacity: 0, duration: 0.8, ease: "power2.out" }, IMPACT_AT + 0.04)
       .fromTo(
@@ -161,14 +169,29 @@ export default function FerroTools() {
       });
 
     let started = false;
-    start = () => {
-      if (started) return;
+    let filmIn = false;
+    let coreIn = false;
+    const go = () => {
+      if (started || !filmIn || !coreIn) return;
       started = true;
       stage.setAttribute("data-played", "");
       splash.play(0);
     };
-    // a slow connection still gets the splash, with the nearest frames standing in
+    start = () => {
+      filmIn = true;
+      go();
+    };
+    const offCore = coreReady.then(() => {
+      coreIn = true;
+      go();
+    });
+    // a slow connection still gets the splash, with the nearest frames standing
+    // in; a core that never reports in never holds it either
     const fallback = window.setTimeout(() => start?.(), WAIT_MS);
+    const coreCeiling = window.setTimeout(() => {
+      coreIn = true;
+      go();
+    }, CORE_WAIT_MS);
 
     /* ── the scroll: dock the headline, step through the tools ── */
     const easeDock = gsap.parseEase("power3.inOut");
@@ -226,6 +249,8 @@ export default function FerroTools() {
 
     return () => {
       window.clearTimeout(fallback);
+      window.clearTimeout(coreCeiling);
+      offCore();
       splash.kill();
       gsap.killTweensOf(clock);
       st.kill();

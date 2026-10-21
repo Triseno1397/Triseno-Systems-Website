@@ -9,6 +9,7 @@ import { LAND_DOTS } from "./landDots";
 import { buildNucleus, chromeMaterial, type Nucleus } from "./nucleus";
 import { session } from "./session";
 import { cleanDark } from "./cleanDark";
+import { coreReady } from "./coreReady";
 import { DIVE } from "./hero-dive.content";
 import "@/app/ai-dive.css";
 
@@ -32,7 +33,9 @@ import "@/app/ai-dive.css";
  * the sections), the chrome flips to white (cleanDark) and you stand inside
  * the nucleus: the TS cast in the same chrome, two routes orbiting it. The
  * caption prints the request this visit minted, stamped with the visitor's
- * own clock. Let go and the shot runs backwards, faster; a tap gives a
+ * own clock. As the camera goes in, the world around the core drops into
+ * slow motion (globe, routes and swarm run at a fifth of their speed) while
+ * the push glides on. Let go and the shot runs backwards, faster; a tap gives a
  * half-second peek. Everything is a pure function of one scalar, dive.v.
  *
  * Plain three.js on one canvas. It draws only while on screen and the tab is
@@ -144,21 +147,34 @@ export default function IntelligenceCore({ className, label }: { className?: str
   const descId = useId();
 
   useEffect(() => {
-    // The page paints first. Everything below (renderer, environment map,
-    // shader programs) runs two frames after mount, so the headline and
-    // chrome are on screen before the GPU work begins.
+    // The build's heavy part (the environment map's programs compile on the
+    // main thread, most of a second on a laptop) runs at page load, in the
+    // first idle slice, while the landing above still holds its first still
+    // frame and its film downloads; the landing's splash waits for it
+    // (coreReady), so the two never share a frame.
     let cleanup: void | (() => void);
     let rafA = 0;
-    let rafB = 0;
+    let idle = 0;
+    const iw = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const build = () => {
+      idle = 0;
+      cleanup = body();
+      coreReady.done();
+    };
     rafA = requestAnimationFrame(() => {
-      rafB = requestAnimationFrame(() => {
-        cleanup = body();
-      });
+      idle = iw.requestIdleCallback ? iw.requestIdleCallback(build, { timeout: 600 }) : window.setTimeout(build, 0);
     });
     return () => {
       cancelAnimationFrame(rafA);
-      cancelAnimationFrame(rafB);
+      if (idle) {
+        if (iw.cancelIdleCallback) iw.cancelIdleCallback(idle);
+        else window.clearTimeout(idle);
+      }
       cleanup?.();
+      coreReady.reset();
     };
     function body(): void | (() => void) {
     const root = rootRef.current;
@@ -441,19 +457,29 @@ export default function IntelligenceCore({ className, label }: { className?: str
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
-    // Only a strong machine builds the room ahead of time: on a phone the
-    // build was one 1.4 s task in the middle of the page's first seconds. A
-    // weaker device builds it on the first press instead.
+    // Every desktop or laptop builds the room ahead of time, in an idle slice
+    // while the hero is near: built on the first press, it was a 300 ms
+    // freeze in the middle of the dive. Phones still build it on the press
+    // (there the build is one 1.4 s task), and "low" devices never dive.
+    const prebuild = !low && !phone;
+    // not before the landing's splash has played out above
+    const warmAfter = performance.now() + 7000;
+    let warmLater = 0;
     const warm = () => {
       idleId = 0;
-      if (warmed || weak || !visible) return;
+      if (warmed || !prebuild) return;
+      if (performance.now() < warmAfter) {
+        window.clearTimeout(warmLater);
+        warmLater = window.setTimeout(scheduleWarm, warmAfter - performance.now());
+        return;
+      }
       warmed = true;
       ensureNucleus();
       ensureRT();
       nucleus?.warm(rt);
     };
     const scheduleWarm = () => {
-      if (warmed || weak || idleId) return;
+      if (warmed || !prebuild || idleId) return;
       idleId = w.requestIdleCallback ? w.requestIdleCallback(warm, { timeout: 2500 }) : window.setTimeout(warm, 1200);
     };
     const cancelIdle = () => {
@@ -490,11 +516,12 @@ export default function IntelligenceCore({ className, label }: { className?: str
         requestFrame();
         return;
       }
-      toV(1, Math.max(0.25, 1.0 * (1 - dive.v)), "none");
+      // a long, eased push: it gathers, then glides through the skin
+      toV(1, Math.max(0.4, 1.9 * (1 - dive.v)), "sine.inOut");
     };
     const release = () => {
       if (reduced) return;
-      toV(0, Math.max(0.25, 0.75 * dive.v), "power2.out");
+      toV(0, Math.max(0.35, 1.1 * dive.v), "power2.inOut");
     };
     const tap = () => {
       // under reduced motion the press already toggled the state
@@ -777,11 +804,14 @@ export default function IntelligenceCore({ className, label }: { className?: str
       }
       lastShown = now;
       // a rAF timestamp can precede the performance.now() taken just before it
-      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+      const v = low ? 0 : dive.v;
+      // bullet time: as the camera goes in, the world around the core slows
+      // to a fifth of its speed (the push itself keeps real time)
+      const slow = 1 - 0.8 * smooth(0.04, 0.55, v);
+      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)) * slow;
       last = now;
       t += dt;
       frameIx++;
-      const v = low ? 0 : dive.v;
 
       /* ── the camera, in on the core as the hold deepens ── */
       const u = easeInCubic(sat(v / 0.7));
@@ -990,10 +1020,12 @@ export default function IntelligenceCore({ className, label }: { className?: str
         if (!alive) return;
         compiled = true;
         start();
+        scheduleWarm();
       });
 
     return () => {
       alive = false;
+      window.clearTimeout(warmLater);
       cancelAnimationFrame(raf);
       window.clearTimeout(armTimer);
       window.clearTimeout(seenTimer);

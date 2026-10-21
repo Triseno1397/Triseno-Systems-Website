@@ -101,12 +101,24 @@ export default function StackFilm() {
     if (!v) return;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || conn?.saveData) return;
+    // nothing is fetched at page load: a screen ahead the film starts loading,
+    // on screen it plays, off screen it pauses
+    const ahead = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      ahead.disconnect();
+      v.preload = "auto";
+      v.load();
+    }, { rootMargin: "100% 0px 100% 0px" });
+    ahead.observe(v);
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) v.play().catch(() => {});
       else v.pause();
     });
     io.observe(v);
-    return () => io.disconnect();
+    return () => {
+      ahead.disconnect();
+      io.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -142,7 +154,7 @@ export default function StackFilm() {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           aria-hidden="true"
         />
         <span aria-hidden="true" className="ai-sf__veil" />

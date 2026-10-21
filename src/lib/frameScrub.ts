@@ -86,6 +86,8 @@ export interface FrameHooks {
   onDraw?: () => void;
   /** once every frame has been fetched (or skipped) */
   onLoaded?: () => void;
+  /** after each frame arrives: how many are in, out of how many */
+  onFetched?: (count: number, total: number) => void;
 }
 
 export function createFrameScrubber(
@@ -99,6 +101,7 @@ export function createFrameScrubber(
   const frames: Array<Frame | null> = new Array(set.count).fill(null);
   const ctx = canvas.getContext("2d", { alpha: false });
   let loading = false;
+  let fetched = 0;
   let disposed = false;
   let ready = false;
   let progress = 0;
@@ -189,6 +192,8 @@ export function createFrameScrubber(
     } catch {
       /* a missing frame is skipped; its neighbours stand in */
     }
+    fetched++;
+    hooks.onFetched?.(fetched, set.count);
     // redraw if the frame that just arrived is closer to the wanted one
     const want = Math.round(progress * (set.count - 1));
     if (nearest(want) !== drawnIndex) schedule();

@@ -1,48 +1,30 @@
 "use client";
 
 import "@/app/web-prism.css";
-import { useEffect, useRef, type CSSProperties } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import GlassPanel from "@/components/world/GlassPanel";
-import { createFrameScrubber, type FrameFilm } from "@/lib/frameScrub";
-import { createPrismLens, type PrismLens } from "./prismLens";
-
-gsap.registerPlugin(ScrollTrigger);
+import { createCrystalTunnel, type CrystalTunnel } from "./crystalTunnel";
 
 /**
  * What you get, section 04: one beam of light, seven deliverables.
  *
- * A pinned film the scroll bar plays: the camera stands inside a block of
- * optical crystal where a single white beam runs down the floor. As the
- * visitor scrolls the beam splits into seven spectral threads, and each
- * thread is a deliverable. The index on the left lights one band at a time,
- * the card on the right swaps to that deliverable, and the counter keeps
- * the place. Scroll back and the light folds into one beam again.
+ * You stand inside a hall of crystal, drawn live (crystalTunnel): the
+ * camera flies on through rows of faceted crystal folded eight ways round
+ * you, the pointer turns your head, and a white beam low along the floor
+ * fans out ahead into seven threads of colour, one per deliverable.
  *
- * On desktop the film is seen through prismLens, a shader you stand inside:
- * the camera dollies down the corridor, the room swings with the pointer,
- * bright edges split into spectra (wider the faster you scroll) and every
- * deliverable that lands rolls a ripple of its own colour out of the
- * vanishing point. The card tilts toward the hand like a pane of the crystal.
- * Phones get the plain film with a CSS dolly (no extra GPU layer on iOS).
- *
- * The film is a generated clip cut into frames (public/frames/prism-*),
- * drawn by lib/frameScrub, fetched only when the section is near. Clicking a
- * band in the index scrolls to that deliverable's place in the film.
- * Reduced motion: no pin; the final frame with the seven cards in a column.
+ * Nothing is scroll-driven. The deliverables step on by themselves, each one
+ * lighting its thread, tinting the hall and rolling a ring of its colour down
+ * the tunnel while the camera surges forward; the index on the left jumps to
+ * any of them, and the run pauses while the pointer is on the card or the
+ * index. Reduced motion: one still frame, every card in a column.
  */
-
-const FILM: FrameFilm = {
-  landscape: { dir: "/frames/prism-d", count: 120, width: 1920, height: 1080 },
-  portrait: { dir: "/frames/prism-m", count: 96, width: 600, height: 1067 },
-};
 
 /** red to violet, one per deliverable; the last is the division's own hue */
 const BANDS = ["#ff4b4b", "#ff9a30", "#ffd84a", "#4df08c", "#2ee8ff", "#4d80ff", "#9d5cff"];
 
-/** the film plays across the whole pin; the cards begin once the beam has split */
-const CARDS_FROM = 0.26;
+/** how long each deliverable holds before the next */
+const HOLD_MS = 5200;
 
 interface Deliverable {
   title: string;
@@ -121,132 +103,72 @@ const N = DELIVERABLES.length;
 
 export default function PrismDeliverables() {
   const rootRef = useRef<HTMLElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const filmRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lensRef = useRef<HTMLCanvasElement>(null);
-  const countRef = useRef<HTMLSpanElement>(null);
-  const stRef = useRef<ScrollTrigger | null>(null);
+  const tunnelRef = useRef<CrystalTunnel | null>(null);
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [staticMode, setStaticMode] = useState(false);
+  /** the deliverable in view, for a hall built after the first pick */
+  const active0 = useRef(0);
 
   useEffect(() => {
     const root = rootRef.current;
-    const stage = stageRef.current;
-    const film = filmRef.current;
     const canvas = canvasRef.current;
-    if (!root || !stage || !film || !canvas) return;
-
+    if (!root || !canvas) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const desktop = window.matchMedia("(min-width: 1024px) and (hover: hover) and (pointer: fine)").matches;
-    let lens: PrismLens | null = null;
-    const scrub = createFrameScrubber(canvas, FILM, () => film.setAttribute("data-ready", ""), {
-      onDraw: () => lens?.dirty(),
-    });
-    if (desktop && !reduce && lensRef.current) {
-      lens = createPrismLens(lensRef.current, canvas);
-      if (lens) film.setAttribute("data-lens", "");
-    }
-    const vis = new IntersectionObserver(([e]) => lens?.setActive(e.isIntersecting));
-    vis.observe(stage);
-
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        scrub.load();
-        io.disconnect();
-      },
-      { rootMargin: "120% 0px 120% 0px" },
-    );
-    io.observe(stage);
-    const ro = new ResizeObserver(() => {
-      scrub.resize();
-      lens?.resize();
-    });
-    ro.observe(stage);
-
-    const cards = Array.from(root.querySelectorAll<HTMLElement>(".web-prism__card"));
-    const bands = Array.from(root.querySelectorAll<HTMLElement>(".web-prism__band"));
-    const lead = root.querySelector<HTMLElement>(".web-prism__lead");
-
-    if (reduce) {
-      root.setAttribute("data-static", "");
-      scrub.load();
-      scrub.setProgress(1);
-      return () => {
-        io.disconnect();
-        vis.disconnect();
-        ro.disconnect();
-        scrub.dispose();
-        lens?.dispose();
-      };
-    }
-
-    // the card leans toward the hand, like a pane of the crystal
-    const cardsBox = root.querySelector<HTMLElement>(".web-prism__cards");
-    const onMove = (e: PointerEvent) => {
-      if (!cardsBox) return;
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = (e.clientY / window.innerHeight) * 2 - 1;
-      cardsBox.style.setProperty("--ry", `${(x * 7).toFixed(2)}deg`);
-      cardsBox.style.setProperty("--rx", `${(-y * 5).toFixed(2)}deg`);
+    const phone = window.matchMedia("(max-width: 767px)").matches;
+    if (reduce) setStaticMode(true);
+    let onScreen = false;
+    // the hall is built a screen ahead (its program links in the background),
+    // never at page load
+    const build = () => {
+      if (tunnelRef.current) return;
+      const tunnel = createCrystalTunnel(canvas, { phone }, () => root.setAttribute("data-live", ""));
+      tunnelRef.current = tunnel;
+      tunnel?.select(active0.current, BANDS[active0.current]);
+      if (reduce) tunnel?.still();
+      else tunnel?.setActive(onScreen);
     };
-    if (desktop) window.addEventListener("pointermove", onMove, { passive: true });
-
-    let active = -2;
-    const apply = (p: number) => {
-      scrub.setProgress(p);
-      if (lens) lens.setProgress(p);
-      else film.style.transform = `scale(${(1 + p * 0.14).toFixed(4)})`;
-      const idx = p < CARDS_FROM ? -1 : Math.min(N - 1, Math.floor(((p - CARDS_FROM) / (1 - CARDS_FROM)) * N));
-      if (idx === active) return;
-      active = idx;
-      cards.forEach((c, i) => c.toggleAttribute("data-active", i === idx));
-      bands.forEach((b, i) => {
-        b.toggleAttribute("data-on", i === idx);
-        b.toggleAttribute("data-done", i < idx);
-      });
-      if (countRef.current) countRef.current.textContent = String(Math.max(0, idx) + 1).padStart(2, "0");
-      stage.toggleAttribute("data-cards", idx >= 0);
-      if (idx >= 0) lens?.pulse(BANDS[idx]);
-      if (lead) lead.toggleAttribute("data-hide", idx >= 0);
-    };
-
-    const st = ScrollTrigger.create({
-      trigger: stage,
-      start: "top top",
-      end: `+=${N * 70 + 90}%`,
-      pin: true,
-      scrub: 0.4,
-      anticipatePin: 1,
-      invalidateOnRefresh: true,
-      onRefresh: (self) => apply(self.progress),
-      onUpdate: (self) => {
-        apply(self.progress);
-        lens?.setVelocity(self.getVelocity());
-      },
+    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && build(), { rootMargin: "100% 0px 100% 0px" });
+    ahead.observe(root);
+    const io = new IntersectionObserver(([e]) => {
+      onScreen = e.isIntersecting && !document.hidden;
+      setRunning(onScreen && !reduce);
+      if (!reduce) tunnelRef.current?.setActive(onScreen);
     });
-    stRef.current = st;
-    apply(0);
-
+    io.observe(root);
+    const onVis = () => {
+      if (document.hidden) tunnelRef.current?.setActive(false);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    const ro = new ResizeObserver(() => tunnelRef.current?.resize());
+    ro.observe(canvas);
     return () => {
-      st.kill();
-      stRef.current = null;
-      window.removeEventListener("pointermove", onMove);
+      ahead.disconnect();
       io.disconnect();
-      vis.disconnect();
       ro.disconnect();
-      scrub.dispose();
-      lens?.dispose();
+      document.removeEventListener("visibilitychange", onVis);
+      tunnelRef.current?.dispose();
+      tunnelRef.current = null;
     };
   }, []);
 
-  /** the index is a table of contents: a band scrolls to its deliverable */
-  const jump = (i: number) => {
-    const st = stRef.current;
-    if (!st) return;
-    const p = CARDS_FROM + ((i + 0.5) / N) * (1 - CARDS_FROM);
-    const y = st.start + (st.end - st.start) * p;
-    window.scrollTo({ top: y, behavior: "smooth" });
-  };
+  // each deliverable lights its thread and rolls its colour down the hall
+  useEffect(() => {
+    active0.current = active;
+    tunnelRef.current?.select(active, BANDS[active]);
+  }, [active]);
+
+  // the run: step on while the section is on screen and nobody is reading
+  useEffect(() => {
+    if (!running || paused || staticMode) return;
+    const id = window.setTimeout(() => setActive((i) => (i + 1) % N), HOLD_MS);
+    return () => window.clearTimeout(id);
+  }, [running, paused, staticMode, active]);
+
+  const pick = useCallback((i: number) => setActive(i), []);
+  const hold = { onPointerEnter: () => setPaused(true), onPointerLeave: () => setPaused(false) };
 
   return (
     <section
@@ -254,23 +176,23 @@ export default function PrismDeliverables() {
       data-rail="Deliverables"
       data-station="stack"
       data-no-fade=""
+      data-static={staticMode ? "" : undefined}
       aria-labelledby="web-prism-title"
       className="web-section web-prism"
+      style={{ "--hold": `${HOLD_MS}ms` } as CSSProperties}
     >
-      <div ref={stageRef} className="web-prism__stage">
+      <div className="web-prism__stage">
         <div
-          ref={filmRef}
           className="web-prism__film"
           role="img"
-          aria-label="Inside a block of optical crystal, one white beam splits into seven threads of colour"
+          aria-label="Inside a hall of faceted crystal, one white beam splits into seven threads of colour"
         >
           <canvas ref={canvasRef} className="web-prism__canvas" aria-hidden="true" />
-          <canvas ref={lensRef} className="web-prism__lens" aria-hidden="true" />
         </div>
         <div className="web-prism__scrim" aria-hidden="true" />
 
         <div className="web-prism__grid">
-          <div className="web-prism__aside">
+          <div className="web-prism__aside" {...hold}>
             <p className="web-eyebrow">
               <span className="web-sq" aria-hidden="true" />
               04 — What you get
@@ -285,9 +207,15 @@ export default function PrismDeliverables() {
 
             <ol className="web-prism__bands" aria-label="The seven deliverables">
               {DELIVERABLES.map((d, i) => (
-                <li key={d.title} className="web-prism__band" style={{ "--band": BANDS[i] } as CSSProperties}>
-                  <button type="button" className="web-prism__bandbtn" onClick={() => jump(i)}>
-                    <i aria-hidden="true" />
+                <li
+                  key={d.title}
+                  className="web-prism__band"
+                  style={{ "--band": BANDS[i] } as CSSProperties}
+                  data-on={i === active ? "" : undefined}
+                  data-done={i < active ? "" : undefined}
+                >
+                  <button type="button" className="web-prism__bandbtn" aria-pressed={i === active} onClick={() => pick(i)}>
+                    <i aria-hidden="true">{i === active && running && !paused ? <b key={`run-${active}`} /> : null}</i>
                     <span className="web-prism__bandn">{String(i + 1).padStart(2, "0")}</span>
                     <span className="web-prism__bandname">{d.short}</span>
                   </button>
@@ -296,14 +224,12 @@ export default function PrismDeliverables() {
             </ol>
 
             <p className="web-prism__count" aria-hidden="true">
-              <span ref={countRef} className="web-readout-hue">
-                01
-              </span>
+              <span className="web-readout-hue">{String(active + 1).padStart(2, "0")}</span>
               <span>/ {String(N).padStart(2, "0")}</span>
             </p>
           </div>
 
-          <div className="web-prism__cards" aria-live="polite">
+          <div className="web-prism__cards" aria-live="polite" {...hold}>
             {DELIVERABLES.map((d, i) => (
               <GlassPanel
                 key={d.title}
@@ -311,7 +237,7 @@ export default function PrismDeliverables() {
                 as="article"
                 smoked
                 veil={0.58}
-                className="web-prism__card"
+                className={`web-prism__card${staticMode || i === active ? " is-active" : ""}`}
                 style={{ "--band": BANDS[i] } as CSSProperties}
               >
                 <span className="web-prism__n">{String(i + 1).padStart(2, "0")}</span>

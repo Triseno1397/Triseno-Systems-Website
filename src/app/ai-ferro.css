@@ -72,7 +72,7 @@
   will-change: transform;
 }
 .ai-ft__slam {
-  display: grid; justify-items: center; transform-origin: 50% 55%; will-change: transform, opacity, filter;
+  display: grid; justify-items: center; transform-origin: 50% 55%; will-change: transform, opacity;
   text-shadow: 0 0 40px rgba(0, 0, 0, 0.55);
   opacity: 0; /* it arrives with the splash; the static plate shows it at once */
 }

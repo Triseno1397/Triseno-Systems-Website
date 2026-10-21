@@ -550,9 +550,21 @@ export function buildNucleus(renderer: THREE.WebGLRenderer, pmrem: THREE.PMREMGe
 
   // programs link in parallel (KHR_parallel_shader_compile): the synchronous
   // compile here was a 200 ms stall on a phone while the visitor read the hero
-  const warm = (_target: THREE.WebGLRenderTarget | null) => {
+  // Once linked, one draw into the target off screen, so the geometry,
+  // textures and the target itself are on the GPU before the first crossing
+  // (compiling alone left that upload as a 300 ms stall mid-dive).
+  const warm = (target: THREE.WebGLRenderTarget | null) => {
     update(0, 1, 0, 0);
-    void renderer.compileAsync(scene, camera).catch(() => {});
+    void renderer
+      .compileAsync(scene, camera)
+      .then(() => {
+        if (!target) return;
+        const prev = renderer.getRenderTarget();
+        renderer.setRenderTarget(target);
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(prev);
+      })
+      .catch(() => {});
   };
 
   const dispose = () => {
