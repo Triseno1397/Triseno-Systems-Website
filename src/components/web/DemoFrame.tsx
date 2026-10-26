@@ -344,6 +344,10 @@ export default function DemoFrame() {
     };
     const near = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && startWhenQuiet(), { rootMargin: "100% 0px" });
     near.observe(root);
+    // and, sooner, in the page's first quiet moment after it arrives: built
+    // while the visitor is still reading the hero, the setup (a phone's
+    // longest task on this page) never lands in the middle of a scroll
+    const settle = window.setTimeout(startWhenQuiet, 2500);
     const seen = new IntersectionObserver((e) => {
       inView = e[e.length - 1].isIntersecting;
       if (!inView) s.held = false;
@@ -558,6 +562,7 @@ export default function DemoFrame() {
       stop();
       ro.disconnect();
       near.disconnect();
+      window.clearTimeout(settle);
       seen.disconnect();
       window.clearTimeout(resizeT);
       window.clearTimeout(startWait);

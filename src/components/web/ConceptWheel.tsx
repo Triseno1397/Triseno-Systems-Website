@@ -101,6 +101,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
     const section = sectionRef.current;
     if (!el || !section) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const touch = window.matchMedia("(pointer: coarse)").matches;
 
     const st = {
       intro: reduced ? 1 : 0, // 0 hidden behind the browser · 1 all in orbit
@@ -125,6 +126,7 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
       maxDown: 1e9,
       visible: true,
       odd: false,
+      tick: 0,
       last: -1,
       z: [] as number[],
       // what each card was last given: a style is written only when it changes
@@ -401,10 +403,12 @@ export default function ConceptWheel({ templates, sectionRef, onPick, children }
         // and the page keeps half the style work (thirteen cards re-styled per
         // frame kept the renderer busy while nothing else moved). Anything
         // faster than the drift (the entrance, the scroll bend, a hold) draws
-        // every frame.
+        // every frame. On a touch screen the resting drift is drawn every
+        // third frame.
         st.odd = !st.odd;
+        st.tick = (st.tick + 1) % 3;
         const ambient = st.intro >= 1 && Math.abs(st.p - st.pv) < 1e-3 && Math.abs(st.speed - (st.hold ? 0 : 1)) < 0.01;
-        if (ambient && st.odd) return;
+        if (ambient && (touch ? st.tick !== 0 : st.odd)) return;
         place();
       },
     });

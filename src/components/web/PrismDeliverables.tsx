@@ -181,6 +181,7 @@ export default function PrismDeliverables() {
       data-station="stack"
       data-no-fade=""
       data-static={staticMode ? "" : undefined}
+      data-run={running ? "" : undefined}
       aria-labelledby="web-prism-title"
       className="web-section web-prism"
       style={{ "--hold": `${HOLD_MS}ms` } as CSSProperties}

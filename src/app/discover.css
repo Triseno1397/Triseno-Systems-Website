@@ -107,3 +107,56 @@ a.discover__pagename { border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
 @media (prefers-reduced-motion: reduce) {
   .discover__toast, .discover__panel { animation: none; }
 }
+
+/* the roll call: the pill opens to say what the page holds */
+.discover__roll {
+  display: grid; grid-template-columns: 0fr; overflow: hidden; white-space: nowrap;
+  color: rgba(255, 255, 255, 0.86); font-size: 10.5px; letter-spacing: 0.14em;
+  transition: grid-template-columns 700ms cubic-bezier(0.16, 1, 0.3, 1), margin 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.discover__roll > span { min-width: 0; overflow: hidden; }
+.discover__roll[data-on] { grid-template-columns: 1fr; margin-left: 4px; }
+.discover__roll[data-on]::before { content: ""; }
+@media (max-width: 767px) { .discover__roll { font-size: 9.5px; letter-spacing: 0.1em; } }
+
+/* the cue on a piece you can play with: a pulsing dot and what to do */
+.try-cue {
+  position: absolute; z-index: 30; pointer-events: none;
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 9px 15px 9px 11px; border-radius: 999px;
+  color: #ffffff; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; white-space: nowrap;
+  background: rgba(8, 9, 12, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  opacity: 0; transform: translate3d(var(--cx, 0), var(--cy, 0), 0) scale(0.92);
+  transition: opacity 500ms linear, transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.try-cue b { font-weight: 500; }
+.try-cue i {
+  position: relative; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; flex: none;
+}
+.try-cue i::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid #ffffff;
+  animation: try-ping 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+@keyframes try-ping { 0% { opacity: 0.9; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.9); } }
+.try-cue[data-on] { opacity: 1; transform: translate3d(var(--cx, 0), var(--cy, 0), 0) scale(1); transition-delay: 600ms; }
+.try-cue[data-done] { opacity: 0; transform: translate3d(var(--cx, 0), var(--cy, 0), 0) scale(1.08); transition-delay: 0ms; }
+.try-cue:not([data-on]) i::after { animation: none; }
+/* left/top are the anchor point (Discovery); each placement hangs off it */
+.try-cue[data-pos="corner"] { --cx: -100%; }
+.try-cue[data-pos="center"] { --cx: -50%; --cy: -50%; }
+.try-cue[data-pos="above"] { --cx: -50%; --cy: -100%; }
+.try-cue[data-pos="foot"] { --cx: -50%; --cy: -100%; }
+@media (max-width: 767px) { .try-cue { font-size: 9.5px; letter-spacing: 0.14em; padding: 6px 10px 6px 8px; } }
+@media (prefers-reduced-motion: reduce) { .try-cue i::after { animation: none; } .try-cue { transition: opacity 300ms linear; } }
+
+/* the cursor's words over a piece you can play with (OrbCursor) */
+.orb-say {
+  position: fixed; top: 0; left: 0; z-index: 1100; pointer-events: none;
+  padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  color: #0b0e0f; background: #ffffff; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  opacity: 0; transition: opacity 250ms linear; will-change: transform;
+}
+.orb-say[data-on] { opacity: 1; }
+html[data-warping] .orb-say { opacity: 0 !important; }

@@ -14,6 +14,8 @@ import { useEffect, useRef, useState } from "react";
  *   never stale (a per-frame hit test forced a full layout every frame).
  * - No backdrop-filter: a live blur on a moving element re-rasterises the page
  *   behind it every frame. Pointer devices only; touch keeps the native cursor.
+ * - Over a piece you can play with (data-try-say, set by Discovery's cues)
+ *   it carries the words beside it: "Drag the split", "Press and hold".
  */
 
 const SIZE = 40;
@@ -21,6 +23,7 @@ const INTERACTIVE = "a, button, [role='button'], input, textarea, select, label,
 
 export default function OrbCursor() {
   const orbRef = useRef<HTMLDivElement>(null);
+  const sayRef = useRef<HTMLSpanElement>(null);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
@@ -35,7 +38,8 @@ export default function OrbCursor() {
     if (!enabled) return;
     const root = document.documentElement;
     const orb = orbRef.current;
-    if (!orb) return;
+    const say = sayRef.current;
+    if (!orb || !say) return;
     root.classList.add("has-orb");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -50,14 +54,22 @@ export default function OrbCursor() {
     let recheck = false;
     let prev = performance.now();
 
+    let words = "";
     const setHot = (el: Element | null) => {
-      const next = !!el?.closest?.(INTERACTIVE) || root.hasAttribute("data-cursor-hot");
+      const w = el?.closest?.("[data-try-say]")?.getAttribute("data-try-say") ?? "";
+      if (w !== words) {
+        words = w;
+        if (w) say.textContent = w;
+        say.toggleAttribute("data-on", !!w);
+      }
+      const next = !!el?.closest?.(INTERACTIVE) || root.hasAttribute("data-cursor-hot") || !!w;
       if (next === hot) return;
       hot = next;
       orb.toggleAttribute("data-hot", hot);
     };
     const place = () => {
       orb.style.transform = `translate3d(${x - SIZE / 2}px, ${y - SIZE / 2}px, 0) scale(${scale.toFixed(3)})`;
+      if (words) say.style.transform = `translate3d(${x + 34}px, ${y - 9}px, 0)`;
     };
 
     const onMove = (e: PointerEvent) => {
@@ -93,6 +105,8 @@ export default function OrbCursor() {
     const onLeave = () => {
       visible = false;
       orb.style.opacity = "0";
+      say.removeAttribute("data-on");
+      words = "";
     };
     const onDown = () => {
       pressed = true;
@@ -148,9 +162,12 @@ export default function OrbCursor() {
   if (!enabled) return null;
 
   return (
-    <div ref={orbRef} aria-hidden="true" className="orb-cursor" style={{ opacity: 0 }}>
-      <span className="orb-cursor__glass" />
-      <span className="orb-cursor__spec" />
-    </div>
+    <>
+      <div ref={orbRef} aria-hidden="true" className="orb-cursor" style={{ opacity: 0 }}>
+        <span className="orb-cursor__glass" />
+        <span className="orb-cursor__spec" />
+      </div>
+      <span ref={sayRef} aria-hidden="true" className="orb-say font-mono" />
+    </>
   );
 }

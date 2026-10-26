@@ -63,26 +63,6 @@ html.has-orb * { cursor: none !important; }
 .orb-cursor[data-hot] .orb-cursor__spec { opacity: 0; }
 html[data-warping] .orb-cursor { opacity: 0 !important; }
 
-/* ── loader ── */
-.world-loader {
-  clip-path: inset(0 0 0 0);
-  /* the leave fits inside the 600ms the Loader gives it before it unmounts */
-  transition: opacity 520ms var(--ease-expo), clip-path 580ms var(--ease-expo);
-}
-.world-loader[data-leaving] { opacity: 0; clip-path: inset(0 0 100% 0); pointer-events: none; }
-/* the TS mark sits inside the morphing ring: a ghost of it, and a solid copy
-   revealed from the foot up by the same progress as the bar */
-.world-loader__mark {
-  position: absolute; left: 50%; top: 50%; height: 50px; aspect-ratio: 866 / 816;
-  transform: translate(-50%, -50%); color: #ffffff; will-change: transform;
-}
-.world-loader__mark { transform-style: preserve-3d; --unfilled: 100%; }
-.world-loader__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.world-loader__face--back { transform: rotateY(180deg); }
-.world-loader__mark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.world-loader__ghost { opacity: 0.16; }
-.world-loader__fill { position: absolute; inset: 0; clip-path: inset(var(--unfilled) 0 0 0); }
-
 /* ── chrome floats on the scene: no bar, no box. It leaves during a warp and
       arrives last on the other side. ── */
 .morph-nav,
@@ -935,7 +915,6 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   .sign-off__giant svg { animation: none; }
   .hrotate__char, .hrotate__rule, .hrotate__glyph, .hrotate__out { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .lite-signature__halo, .lite-signature__glyph[data-on] { animation: none; }
-  .world-loader[data-leaving] { clip-path: inset(0 0 0 0); }
   .morph-nav__mark, .morph-nav__word, .morph-nav__division, .morph-nav__trigger, .morph-nav__rule,
   .world-menu, .world-menu__link, .world-menu__glyph, .portal-word, .ghost-btn__fill,
   .division-world__canvas, .warp-title__mark {

@@ -8,7 +8,6 @@ import HeadlineRotate, { type RotateWord } from "@/components/world/HeadlineRota
 import GhostButton from "@/components/ui/GhostButton";
 import BeamsCollision from "@/components/ui/BeamsCollision";
 import Glyph from "@/components/world/Glyph";
-import Loader from "@/components/world/Loader";
 import WorldPlate from "@/components/world/WorldPlate";
 import GlassPanel from "@/components/world/GlassPanel";
 import RobotStage from "./RobotStage";
@@ -460,7 +459,6 @@ export default function PortalPage() {
       data-hot={hot ? "" : undefined}
       data-capture={capture ? "" : undefined}
     >
-      {viaWarp || capture ? null : <Loader ready={ready} />}
 
       {/* The plate, asked for at parse time. (His body is asked for by the
           scene chunk, which is itself requested the moment this page's code

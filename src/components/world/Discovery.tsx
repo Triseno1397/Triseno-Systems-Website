@@ -16,6 +16,15 @@ import { WarpLink } from "./WarpProvider";
  * to know about the hunt: every [data-rail] section on the page is watched,
  * and one that holds a third of the screen for a moment (seen) or takes a
  * press inside it (touch) is marked.
+ *
+ * And it says out loud that the site is alive:
+ *   - a roll call: arriving on a page, the pill opens for a few seconds to
+ *     say how many pieces the page holds and how many you can play with
+ *     (once per page per visit);
+ *   - cues: each piece you can play with wears a small pulsing chip saying
+ *     what to do ("Drag the split", "Press and hold") while it is on screen,
+ *     until it has been found; on a desktop the cursor carries the same words
+ *     over it (data-try-say, read by OrbCursor).
  */
 
 const SEEN_MS = 1200;
@@ -30,6 +39,7 @@ export default function Discovery() {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<{ key: number; find: Find; n: number } | null>(null);
   const [, bump] = useState(0);
+  const [roll, setRoll] = useState<string | null>(null);
   const pillRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +116,125 @@ export default function Discovery() {
       timers.forEach((t) => window.clearTimeout(t));
       document.removeEventListener("pointerdown", onPress, { capture: true });
       document.removeEventListener("keydown", onKey, { capture: true });
+    };
+  }, [pathname]);
+
+  // the roll call: what this page holds, once per page per visit
+  useEffect(() => {
+    const here = FINDS.filter((f) => f.page === pathname);
+    if (!here.length) return;
+    const key = `triseno:roll:${pathname}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {
+      // storage blocked: the roll call plays on every arrival instead
+    }
+    const play = here.filter((f) => f.mode !== "seen").length;
+    const t1 = window.setTimeout(() => setRoll(`${here.length} pieces on this page · ${play} to play with`), 1400);
+    const t2 = window.setTimeout(() => setRoll(null), 7400);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      setRoll(null);
+    };
+  }, [pathname]);
+
+  // the cues: a chip on each piece you can play with, until it is found
+  useEffect(() => {
+    const here = FINDS.filter((f) => f.cue && f.page === pathname);
+    if (!here.length) return;
+    type Pinned = { target: HTMLElement; host: HTMLElement; chip: HTMLElement; io: IntersectionObserver; pos: string };
+    const pinned = new Map<string, Pinned>();
+    const unpin = (id: string, fade: boolean) => {
+      const p = pinned.get(id);
+      if (!p) return;
+      pinned.delete(id);
+      p.io.disconnect();
+      p.target.removeAttribute("data-try-say");
+      if (!fade) {
+        p.chip.remove();
+        return;
+      }
+      p.chip.setAttribute("data-done", "");
+      window.setTimeout(() => p.chip.remove(), 600);
+    };
+    // the chip lives in the target's nearest positioned box (no section's
+    // layout is touched), placed over the target's own rectangle
+    const place = ({ target, host, chip, pos }: Pinned) => {
+      const t = target.getBoundingClientRect();
+      const h = host.getBoundingClientRect();
+      const x = t.left - h.left + host.scrollLeft;
+      const y = t.top - h.top + host.scrollTop;
+      const at =
+        pos === "center"
+          ? [x + t.width / 2, y + t.height / 2]
+          : pos === "above"
+            ? [x + t.width / 2, y - 10]
+            : pos === "foot"
+              ? [x + t.width / 2, y + t.height * 0.84]
+              : [x + t.width - 14, y + 14];
+      chip.style.left = `${Math.round(at[0])}px`;
+      chip.style.top = `${Math.round(at[1])}px`;
+    };
+    const pin = () => {
+      for (const f of here) {
+        const cue = f.cue!;
+        const had = pinned.get(f.id);
+        if (had && had.chip.isConnected && had.target.isConnected) continue;
+        if (had) unpin(f.id, false);
+        if (isFound(f.id)) continue;
+        const el = document.querySelector(cue.at);
+        // an SVG figure carries its chip by the element that holds it
+        const target = el instanceof HTMLElement ? el : (el?.parentElement ?? null);
+        if (!target) continue;
+        const host = getComputedStyle(target).position !== "static" ? target : (target.offsetParent as HTMLElement | null);
+        if (!host) continue;
+        target.setAttribute("data-try-say", cue.say);
+        const chip = document.createElement("span");
+        chip.className = "try-cue font-mono";
+        chip.dataset.pos = cue.pos ?? "corner";
+        chip.setAttribute("aria-hidden", "true");
+        const word = document.createElement("b");
+        word.textContent = cue.say;
+        chip.append(document.createElement("i"), word);
+        host.appendChild(chip);
+        // placed again each time its piece comes into view (one read, then),
+        // never on a timer: a timed read forced a layout in the middle of a scroll
+        const p: Pinned = { target, host, chip, io: null as unknown as IntersectionObserver, pos: cue.pos ?? "corner" };
+        p.io = new IntersectionObserver(
+          ([e]) => {
+            const on = e.intersectionRatio >= 0.35;
+            if (on && !chip.hasAttribute("data-on")) place(p);
+            chip.toggleAttribute("data-on", on);
+          },
+          { threshold: [0, 0.35, 0.7] },
+        );
+        p.io.observe(target);
+        place(p);
+        pinned.set(f.id, p);
+      }
+    };
+    // never before the page has hydrated (a node added to a section React is
+    // still hydrating breaks it); then a few more looks, as sections mount
+    // late and a re-render can replace a target, and done
+    let again = 0;
+    let looks = 0;
+    const first = window.setTimeout(() => {
+      pin();
+      again = window.setInterval(() => {
+        pin();
+        if (++looks >= 6) window.clearInterval(again);
+      }, 3000);
+    }, 3000);
+    const off = onDiscover((id) => {
+      if (id) unpin(id, true);
+    });
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(again);
+      off();
+      [...pinned.keys()].forEach((id) => unpin(id, false));
     };
   }, [pathname]);
 
@@ -227,6 +356,9 @@ export default function Discovery() {
           <b>{pad(count)}</b>/{TOTAL}
         </span>
         <span className="discover__pilllabel font-mono">found</span>
+        <span className="discover__roll font-mono" data-on={roll ? "" : undefined} aria-live="polite">
+          {roll ? <span>{roll}</span> : null}
+        </span>
       </button>
     </div>
   );
