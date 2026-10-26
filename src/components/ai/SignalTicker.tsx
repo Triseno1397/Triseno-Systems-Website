@@ -103,7 +103,7 @@ export default function SignalTicker() {
     </span>
   );
   return (
-    <div ref={bandRef} className="ai-ticker relative z-10" role="note" aria-label={RUN.join(", ")}>
+    <div ref={bandRef} className="ai-ticker relative z-10" data-pause="" role="note" aria-label={RUN.join(", ")}>
       <canvas ref={canvasRef} aria-hidden="true" className="ai-ticker__trail" />
       <div className="ai-ticker__belt" aria-hidden="true">
         {run(true)}

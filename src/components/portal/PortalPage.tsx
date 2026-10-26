@@ -34,10 +34,16 @@ gsap.registerPlugin(ScrollTrigger);
 
 // 3D is never in the server HTML or the first bundle: the LCP element is the headline.
 const PortalScene = dynamic(() => import("./PortalScene"), { ssr: false });
-// …but its chunk is asked for the moment this one runs, not after hydration:
-// on a desktop that had it arriving 2.4s in, with the loader waiting on it.
+// …its chunk (three, the fiber, the Operator's rig: a megabyte of script to
+// parse) is asked for in the page's first idle moment, so the headline, the
+// menu and the plate are painted and the page answers a touch before the
+// parser takes the thread. Nothing waits on it: the world fades in over the
+// plate when it is ready.
 if (typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  void import("./PortalScene");
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  const ask = () => void import("./PortalScene");
+  if (w.requestIdleCallback) w.requestIdleCallback(ask, { timeout: 900 });
+  else window.setTimeout(ask, 300);
 }
 
 

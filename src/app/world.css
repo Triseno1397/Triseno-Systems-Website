@@ -1227,7 +1227,9 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
    still recalculates style every frame, which is what the AI diagrams were
    doing on every other section of their page. */
 html[data-pause-offscreen] main [data-rail]:not([data-inview]),
-html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
+html[data-pause-offscreen] main [data-rail]:not([data-inview]) *,
+html[data-pause-offscreen] main [data-pause]:not([data-inview]),
+html[data-pause-offscreen] main [data-pause]:not([data-inview]) * {
   animation-play-state: paused;
 }
 

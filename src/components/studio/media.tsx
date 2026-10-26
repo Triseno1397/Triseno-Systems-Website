@@ -89,7 +89,9 @@ export function LazyVideo({
           arm.disconnect();
         }
       },
-      { rootMargin: "80% 40%" },
+      // a third of a screen ahead: at 80% the filmstrip's cells armed at page
+      // load, and their seek to a mid-clip frame fetched the showreel twice
+      { rootMargin: "35% 20%" },
     );
     const see = new IntersectionObserver((entries) => setOnScreen(entries.some((e) => e.isIntersecting)), {
       threshold: 0.05,

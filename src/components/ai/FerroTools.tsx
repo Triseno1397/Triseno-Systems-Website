@@ -215,7 +215,7 @@ export default function FerroTools() {
         aside.style.opacity = String(k);
         aside.style.transform = `translate3d(0, ${(1 - k) * 12}px, 0)`;
       }
-      if (cue) cue.style.visibility = k > 0.05 ? "hidden" : "";
+      if (cue) cue.toggleAttribute("data-off", k > 0.05);
       if (shade) shade.style.opacity = String(k);
 
       const idx = p < CARDS_FROM ? -1 : Math.min(N - 1, Math.floor(((p - CARDS_FROM) / (1 - CARDS_FROM)) * N));

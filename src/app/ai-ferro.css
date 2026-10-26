@@ -51,6 +51,9 @@
   animation: ai-ft-cue 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 @keyframes ai-ft-cue { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(0); transform-origin: bottom; } }
+/* once the headline has docked the cue is gone, and its loop stops with it */
+.ai-ft__cue[data-off] { visibility: hidden; }
+.ai-ft__cue[data-off] i { animation-play-state: paused; }
 
 /* where the headline docks (measured by JS): the top lane, left gutter */
 .ai-ft__anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; visibility: hidden; top: calc(var(--lane-top) + 1svh); left: var(--gutter); }

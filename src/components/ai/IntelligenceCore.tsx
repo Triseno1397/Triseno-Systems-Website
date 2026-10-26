@@ -3,13 +3,13 @@
 import { useEffect, useId, useRef } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { deviceClass } from "@/lib/device";
 import { LAND_DOTS } from "./landDots";
 import { buildNucleus, chromeMaterial, type Nucleus } from "./nucleus";
 import { session } from "./session";
 import { cleanDark } from "./cleanDark";
 import { coreReady } from "./coreReady";
+import { paintStudioEnv } from "./studioEnv";
 import { DIVE } from "./hero-dive.content";
 import "@/app/ai-dive.css";
 import { discover } from "@/lib/discover";
@@ -208,7 +208,9 @@ export default function IntelligenceCore({ className, label }: { className?: str
         hero?.removeAttribute("data-fallback");
       };
     }
-    const pix = Math.min(window.devicePixelRatio || 1, weak ? 1.25 : 2);
+    // a phone draws the figure at 1x: at 1.25x its frame ran past 33 ms on a
+    // mid-range chip, and the globe's dots and the chrome read the same
+    const pix = Math.min(window.devicePixelRatio || 1, phone ? 1 : weak ? 1.25 : 2);
     renderer.setPixelRatio(pix);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -236,13 +238,11 @@ export default function IntelligenceCore({ className, label }: { className?: str
     camera.lookAt(0, 0, 0);
 
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const room = new RoomEnvironment();
-    // a cyan panel in the room so the chrome carries the division's light
-    const panel = new THREE.Mesh(new THREE.PlaneGeometry(4, 1.2), new THREE.MeshBasicMaterial({ color: new THREE.Color("#00b4d8").multiplyScalar(6) }));
-    panel.position.set(-4.5, 1.5, 2.5);
-    panel.lookAt(0, 0, 0);
-    room.add(panel);
-    const env = pmrem.fromScene(room, 0.03).texture;
+    // the lit room the chrome mirrors, painted (studioEnv): rendering a room
+    // here compiled its materials on the main thread, most of a second
+    const studio = paintStudioEnv(256, 128);
+    const env = pmrem.fromEquirectangular(studio).texture;
+    studio.dispose();
 
     const world = new THREE.Group();
     world.rotation.x = 0.32;
