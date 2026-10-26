@@ -160,3 +160,18 @@ a.discover__pagename { border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
 }
 .orb-say[data-on] { opacity: 1; }
 html[data-warping] .orb-say { opacity: 0 !important; }
+
+/* ?perf=1: the frame-rate readout (world/PerfOverlay.tsx) */
+.perf-overlay {
+  position: fixed; z-index: 1200; top: calc(var(--lane-top, 72px) + 4px); left: var(--gutter, 16px);
+  display: grid; gap: 6px; padding: 10px 12px; border-radius: 6px; text-align: left; cursor: pointer;
+  color: #ffffff; font-size: 11px; line-height: 1.45; letter-spacing: 0.04em; white-space: pre-line;
+  background: rgba(8, 9, 12, 0.86); border: 1px solid rgba(255, 255, 255, 0.35);
+  border-left: 4px solid #9aa3a6;
+}
+.perf-overlay i { font-style: normal; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); }
+.perf-overlay[data-grade="good"] { border-left-color: #4df08c; }
+.perf-overlay[data-grade="ok"] { border-left-color: #ffd84a; }
+.perf-overlay[data-grade="bad"] { border-left-color: #ff4b4b; }
+.perf-overlay[data-copied] i { color: #4df08c; }
+.perf-overlay[data-copied] i::after { content: " · copied"; }

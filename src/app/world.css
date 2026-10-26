@@ -1232,6 +1232,15 @@ html[data-pause-offscreen] main [data-pause]:not([data-inview]),
 html[data-pause-offscreen] main [data-pause]:not([data-inview]) * {
   animation-play-state: paused;
 }
+/* Nor do they hold compositor layers. A will-change hint promotes its element
+   to its own layer for as long as it is set, and the compositor walks every
+   layer in the document on every frame: with seventy hints across a page,
+   sections a screen and a half away were most of a phone's "Layerize" time.
+   Off screen, the hints are dropped; a section is marked in view a quarter
+   of a screen before it arrives, so its layers are back before it is seen. */
+html[data-pause-offscreen] main [data-rail]:not([data-inview]) * {
+  will-change: auto !important;
+}
 
 /* ═══ QUESTIONS — the FAQ block that closes each division page ═════════
    One shared section across Creative, Web Design and AI Infrastructure: each
