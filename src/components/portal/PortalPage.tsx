@@ -19,6 +19,8 @@ import { TOTAL, openMap } from "@/lib/discover";
 
 /** the portal's legend: the studio's craft first, then what else it makes */
 const LEGEND = ["Websites", "Ad creative", "AI infrastructure"];
+/** under each division's door word: what is behind it, in a few words */
+const DOOR_WHAT = ["Custom websites", "Ads for paid social", "Consulting and build"];
 import {
   DOOR_ITEMS,
   DOOR_Z,
@@ -427,12 +429,15 @@ export default function PortalPage() {
   const menuLink = (i: number) => {
     const item = MENU_ITEMS[i];
     const lit = hot && i === active;
+    const door = i < 3;
     return (
       <li key={item.key}>
         <a
           href={item.route}
           className="portal-word font-display font-semibold uppercase"
           data-lit={lit ? "" : undefined}
+          data-door={door ? "" : undefined}
+          style={door ? { ["--c" as string]: item.hue } : undefined}
           onMouseEnter={() => hold(i)}
           onFocus={() => hold(i)}
           onBlur={release}
@@ -447,12 +452,27 @@ export default function PortalPage() {
             travel(item.route);
           }}
         >
-          {i < 3 ? (
+          {door ? (
             <span aria-hidden="true" className="portal-word__glyph">
-              <Glyph kind={item.glyph} size="100%" color={lit ? item.hue : WHITE} strokeWidth={1.5} glow={lit} />
+              <Glyph kind={item.glyph} size="100%" color={item.hue} strokeWidth={1.5} glow={lit} />
             </span>
           ) : null}
-          {MENU_LABEL[item.key]}
+          {door ? (
+            <span className="portal-word__text">
+              {MENU_LABEL[item.key]}
+              <small className="portal-word__what font-mono">{DOOR_WHAT[i]}</small>
+            </span>
+          ) : (
+            MENU_LABEL[item.key]
+          )}
+          {door ? (
+            <span aria-hidden="true" className="portal-word__go font-mono">
+              <span>Enter</span>
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <path d="M3 1.5 7.5 6 3 10.5" />
+              </svg>
+            </span>
+          ) : null}
         </a>
       </li>
     );

@@ -13,11 +13,15 @@
    select(i) brightens thread i, tints the hall toward its colour and rolls
    a ring of light down the tunnel. Nothing is scroll-driven.
 
-   Cost control: the scene draws into a small canvas (a fraction of the
-   CSS pixels, scaled up by the browser) and the fraction adapts — if frames
-   run long it steps down, if there is headroom it steps back up. It only
-   draws while on screen and the tab is visible.
+   Cost control: the scene draws into a canvas at (nearly) its CSS size and
+   that fraction adapts — if frames run long it steps down, if there is
+   headroom it steps back up. The beam is integrated in its own pass of 22
+   samples rather than at every march step, which is what makes the full
+   size affordable on a phone. It only draws while on screen and the tab is
+   visible.
    ───────────────────────────────────────────────────────────────────────── */
+
+import { deviceClass } from "@/lib/device";
 
 const VERT = `
 attribute vec2 aPos;
@@ -110,29 +114,39 @@ void main() {
 
   float t = 0.0;
   float id = 0.0;
-  vec3 glow = vec3(0.0);
   float hit = 0.0;
   for (int i = 0; i < 90; i++) {
     if (float(i) >= uSteps) break;
-    vec3 p = ro + rd * t;
-    float d = map(p, id);
+    float d = map(ro + rd * t, id);
+    if (d < 0.0015 * t) { hit = 1.0; break; }
+    t += d * 0.8;
+    if (t > 28.0) break;
+  }
 
-    // the beam: low on the axis, splitting into seven threads ahead of you
-    float ahead = p.z - uZ;
-    float split = smoothstep(1.0, 16.0, ahead);
+  // the beam, integrated along the ray up to whatever it hit: low on the
+  // axis, splitting into seven threads ahead of you. Samples sit densely near
+  // you (where a thread crosses the view fastest) and spread out far off,
+  // jittered per pixel so the spacing never shows as bands.
+  vec3 glow = vec3(0.0);
+  float tEnd = min(t, 28.0);
+  float jit = hash(dot(gl_FragCoord.xy, vec2(0.1031, 0.2971)) + fract(uTime * 0.37) * 7.0);
+  float prev = 0.0;
+  for (int s = 1; s <= 22; s++) {
+    float f = (float(s) - jit) / 22.0;
+    float ts = tEnd * f * f;
+    float w = (ts - prev) * 2.4;
+    prev = ts;
+    vec3 p = ro + rd * ts;
+    float split = smoothstep(1.0, 16.0, p.z - uZ);
     for (int b = 0; b < 7; b++) {
       float fb = float(b);
       vec2 c = vec2((fb - 3.0) * 0.17 * split, -1.05 + abs(fb - 3.0) * 0.02 * split);
       float dd = length(p.xy - c);
       float on = fb == uActive ? 2.6 : 1.0;
-      glow += band(b) * on * (0.002 / (dd * dd + 0.002)) * 0.11 * split;
+      glow += band(b) * on * (0.002 / (dd * dd + 0.002)) * 0.11 * split * w;
     }
     float core = length(p.xy - vec2(0.0, -1.05));
-    glow += vec3(1.0) * (0.003 / (core * core + 0.003)) * 0.16 * (1.0 - split);
-
-    if (d < 0.0015 * t) { hit = 1.0; break; }
-    t += d * 0.8;
-    if (t > 28.0) break;
+    glow += vec3(1.0) * (0.003 / (core * core + 0.003)) * 0.16 * (1.0 - split) * w;
   }
 
   vec3 col = vec3(0.0);
@@ -253,11 +267,17 @@ export function createCrystalTunnel(
     return true;
   };
 
-  // internal resolution: a fraction of the CSS pixels, adapted to the frame time
-  let scale = opts.phone ? 0.4 : 0.55;
-  const MIN = opts.phone ? 0.28 : 0.34;
-  const MAX = opts.phone ? 0.55 : 0.8;
-  const steps = opts.phone ? 52 : 66;
+  // internal resolution, as a fraction of the CSS pixels: sharp by default,
+  // stepping down only if frames run long (and back up when there is room).
+  // A phone draws at (nearly) its CSS size, so the hall reads crisp on a
+  // 3x screen instead of the smear a quarter-size canvas gave it.
+  // (A phone's CSS pixel is 2-3 device pixels, so its fraction may pass 1.)
+  const low = deviceClass() === "low";
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  let scale = opts.phone ? Math.min(dpr, low ? 0.8 : 1.3) : low ? 0.6 : 0.85;
+  const MIN = opts.phone ? 0.6 : 0.4;
+  const MAX = opts.phone ? Math.min(dpr, 1.8) : 1.0;
+  const steps = opts.phone ? 48 : 66;
   let active = false;
   let disposed = false;
   let raf = 0;
@@ -271,8 +291,15 @@ export function createCrystalTunnel(
   const hueT: [number, number, number] = [0.62, 0.36, 1.0];
   let pulseAt = -1e9;
   const look = { x: 0, y: 0, tx: 0, ty: 0 };
-  let slowRun = 0;
-  let fastRun = 0;
+  let win = 0;
+  let winSlow = 0;
+  let max = MAX;
+  /** the display's refresh period: the median frame of the first second */
+  let period = 1000 / 30;
+  const first: number[] = [];
+  let scrollAt = 0;
+  const onScroll = () => { scrollAt = performance.now(); };
+  window.addEventListener("scroll", onScroll, { passive: true });
 
   const onMove = (e: PointerEvent) => {
     look.tx = (e.clientX / window.innerWidth) * 2 - 1;
@@ -294,12 +321,37 @@ export function createCrystalTunnel(
   function render(now: number) {
     if (!prepare()) return;
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016;
-    // adapt the internal resolution to the frame time (after the first second)
-    if (last && clock > 1) {
+    // adapt the internal resolution to the frame time, judged against the
+    // display's own refresh period (a frame of 1.6 periods is a dropped one,
+    // whatever the refresh rate) over windows of 45 frames. The first second
+    // only measures that period; frames during a scroll are not judged, since
+    // the page's own scroll work makes those slow, not the hall. A size that
+    // dropped frames is never tried again this visit.
+    if (last && clock <= 1) {
+      // the median frame of the first second is the period (capped at 50 Hz:
+      // a slower median means the start size itself is too slow, and the
+      // windows after will say so)
+      first.push(now - last);
+      if (first.length >= 24) {
+        const sorted = [...first].sort((x, y) => x - y);
+        period = Math.min(20, Math.max(4, sorted[sorted.length >> 1]));
+      }
+    } else if (last && now - scrollAt > 250) {
       const ms = now - last;
-      if (ms > 19) { slowRun++; fastRun = 0; } else if (ms < 15) { fastRun++; slowRun = 0; } else { slowRun = 0; fastRun = 0; }
-      if (slowRun > 12 && scale > MIN) { scale = Math.max(MIN, scale - 0.08); slowRun = 0; resize(); }
-      if (fastRun > 120 && scale < MAX) { scale = Math.min(MAX, scale + 0.05); fastRun = 0; resize(); }
+      win++;
+      if (ms > period * 1.6) winSlow++;
+      if (win >= 45) {
+        if (winSlow >= 5 && scale > MIN) {
+          max = Math.min(max, scale - 0.05);
+          scale = Math.max(MIN, scale - 0.15);
+          resize();
+        } else if (winSlow === 0 && scale < max) {
+          scale = Math.min(max, scale + 0.1);
+          resize();
+        }
+        win = 0;
+        winSlow = 0;
+      }
     }
     last = now;
     clock += dt;
@@ -365,6 +417,7 @@ export function createCrystalTunnel(
       disposed = true;
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", onScroll);
       gl.deleteBuffer(buf);
       gl.deleteProgram(prog);
       gl.getExtension("WEBGL_lose_context")?.loseContext();

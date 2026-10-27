@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const BASE = process.env.BASE || 'http://localhost:3302';
+const b = await chromium.launch({ headless: false, args: ['--ignore-gpu-blocklist', '--window-position=-2400,0'] });
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+await p.goto(BASE + '/', { waitUntil: 'load' });
+await p.waitForTimeout(6000);
+const r = await p.locator('.portal-word[data-door]').nth(1).boundingBox();
+await p.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+await p.waitForTimeout(1200);
+await p.screenshot({ path: 'design-loop/shots/v4-desk-home-hover.png', clip: { x: 0, y: 380, width: 720, height: 420 } });
+await b.close();

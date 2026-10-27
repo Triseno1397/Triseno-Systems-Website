@@ -458,6 +458,52 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 .portal-world[data-hot] .portal-word { opacity: 0.35; }
 .portal-world[data-hot] .portal-word[data-lit] { opacity: 1; transform: translate3d(14px, 0, 0); }
 
+/* the three division doors in the menu: each row is a door in its own hue
+   (the one frame where the three hues may share the screen, design-system
+   D2) — glyph, word, what is behind it, and an Enter mark at the edge — so a
+   visitor knows at a glance there are three places to go and each is a click */
+.portal-word[data-door] {
+  --c: #ffffff;
+  display: flex; align-items: center; gap: 0.6em; width: 100%; box-sizing: border-box;
+  padding: 0.5em 0.75em 0.5em 0.7em; opacity: 1;
+  border: 1px solid color-mix(in srgb, var(--c) 48%, transparent);
+  box-shadow: inset 3px 0 0 var(--c);
+  background: color-mix(in srgb, var(--c) 6%, rgba(0, 0, 0, 0.42));
+  transition: opacity 600ms var(--ease-expo), transform 700ms var(--ease-expo), border-color 400ms linear, background-color 400ms linear;
+}
+.portal-word[data-door] .portal-word__glyph { width: 0.62em; height: 0.62em; margin-right: 0.1em; filter: drop-shadow(0 0 6px var(--c)); }
+.portal-word__text { display: flex; flex-direction: column; gap: 0.18em; min-width: 0; }
+.portal-word__what { display: block; font-size: 10px; font-weight: 400; letter-spacing: 0.2em; line-height: 1; color: var(--c); }
+.portal-word__go {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; padding-left: 1.2em;
+  font-size: 9.5px; font-weight: 400; letter-spacing: 0.22em; color: var(--c);
+  transition: transform 500ms var(--ease-expo);
+}
+.portal-word__go svg { transition: transform 500ms var(--ease-expo); }
+.portal-menu__group--lead .portal-word[data-door] { padding: 0.55em 0.8em 0.55em 0.75em; }
+.portal-menu__group--lead .portal-word__what, .portal-menu__group--lead .portal-word__go { font-size: 10.5px; }
+.portal-menu__group:has(.portal-word[data-door]) { gap: 8px; }
+/* lit (hovered, focused): the door fills a little with its hue and the mark leads on */
+.portal-world[data-hot] .portal-word[data-door] { opacity: 0.5; }
+.portal-world[data-hot] .portal-word[data-door][data-lit] {
+  opacity: 1; transform: translate3d(6px, 0, 0);
+  border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, rgba(0, 0, 0, 0.42));
+}
+.portal-word[data-door][data-lit] .portal-word__go svg { transform: translate3d(4px, 0, 0); }
+.portal-word[data-door]:focus-visible { outline: 1px solid var(--c); outline-offset: 3px; }
+/* phones: the rows sit over the Operator's legs, so they stay short — the
+   lead word on one line, the Enter mark as its chevron alone */
+@media (max-width: 767px) {
+  .portal-word[data-door] { padding: 0.42em 0.6em 0.42em 0.6em; gap: 0.5em; }
+  .portal-menu__group--lead .portal-word[data-door] { padding: 0.45em 0.65em; }
+  .portal-hero--full .portal-menu__group--lead .portal-word { font-size: 1.16em; }
+  .portal-word__what { font-size: 8.5px; letter-spacing: 0.16em; }
+  .portal-menu__group--lead .portal-word__what { font-size: 9px; }
+  .portal-word__go { padding-left: 0.6em; }
+  .portal-word__go span { display: none; }
+  .portal-menu__group:has(.portal-word[data-door]) { gap: 6px; }
+}
+
 .scroll-tick__line {
   display: block; width: 1px; height: 40px; background: #ffffff; transform-origin: top;
   animation: scroll-tick 2.4s var(--ease-expo) infinite;
@@ -1199,7 +1245,7 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
   .portal-hero--full .portal-menu,
   .portal-hero--full .portal-headline { text-shadow: 0 1px 18px rgba(0, 0, 0, 0.55); }
   .portal-operator-hint {
-    display: block; right: var(--gutter); left: auto; bottom: auto; top: 63svh;
+    display: block; right: var(--gutter); left: auto; bottom: auto; top: 33svh;
     color: rgba(255, 255, 255, 0.6);
   }
   .door-slot {
