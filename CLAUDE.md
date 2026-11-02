@@ -9,11 +9,11 @@ demonstrations of a component, filled with realistic fictional content.
 
 Every section uses a different motion mechanic, inside an immersive, ohzi.io-style world.
 
-Triseno Systems has **three separate divisions**, each with its own page, hue, glyph and client base.
-Never blend them:
-1. **Triseno Studio (Creative)** — `/studio` — ad creative for paid social. Amber.
-2. **Web Design Division** — `/web-design-division` — custom conversion-built websites. Violet.
-3. **AI Infrastructure** — `/ai-infrastructure` — consulting, architecture, implementation. Cyan.
+Triseno Systems has **two separate divisions** (AI Infrastructure was retired 2026-11-02; /ai-infrastructure
+redirects home, its museum now opens the Creative page, its vortex warp now belongs to Web Design).
+Each has its own page, hue, glyph and client base. Never blend them:
+1. **Web Design Division** — `/web-design-division` — custom conversion-built websites. Violet. Leads the site.
+2. **Triseno Studio (Creative)** — `/studio` — ad creative for paid social. Amber.
 Plus the portal (`/`), `/work`, `/contact`, and the CMS at `/edit` (keep it working).
 
 ## Source of truth

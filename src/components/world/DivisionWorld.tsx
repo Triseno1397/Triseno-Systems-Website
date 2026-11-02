@@ -43,7 +43,6 @@ type Mode = "pending" | "full" | "lite";
 const SEED: Partial<Record<DivisionKey, number>> = {
   creative: 7,
   web: 4133,
-  ai: 91027,
   work: 55,
   contact: 611,
 };

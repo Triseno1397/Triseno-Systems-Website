@@ -100,9 +100,9 @@ export default function WorkGate() {
         <div className="work-gate__actions">
           <GhostButton href="/contact">Start a Conversation</GhostButton>
         </div>
-        <nav aria-label="The three divisions" className="work-gate__cross">
+        <nav aria-label="The two divisions" className="work-gate__cross">
           <span className="work-label">Or travel to</span>
-          {(["creative", "web", "ai"] as const).map((k) => (
+          {(["web", "creative"] as const).map((k) => (
             <WarpLink key={k} href={DIVISIONS[k].route} className="world-underline">
               {DIVISIONS[k].name}
             </WarpLink>

@@ -84,7 +84,7 @@ export default function StudioGate() {
     { scope: root },
   );
 
-  const others = [DIVISIONS.web, DIVISIONS.ai];
+  const others = [DIVISIONS.web];
 
   return (
     <section

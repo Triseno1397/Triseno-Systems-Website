@@ -55,7 +55,7 @@ export default function WorkIndex() {
     [filter],
   );
   const counts = useMemo(() => {
-    const c: Record<FilterKey, number> = { all: WORK.length, creative: 0, web: 0, ai: 0 };
+    const c: Record<FilterKey, number> = { all: WORK.length, creative: 0, web: 0 };
     WORK.forEach((w) => (c[w.division] += 1));
     return c;
   }, []);

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { DIVISIONS } from "@/lib/divisions";
 import StudioBackdrop from "./StudioBackdrop";
-import ExpansionHero from "./ExpansionHero";
+import CaseGallery from "./CaseGallery";
 import Filmstrip from "./Filmstrip";
 import BehindReveal from "./BehindReveal";
 import ProofMarquee from "./ProofMarquee";
@@ -19,7 +19,7 @@ import SignOff from "@/components/world/SignOff";
  * background, so there are no flat black bands and no hard cuts between blocks.
  *
  * Five sections, five different motion mechanics (M1, design-loop/site-map.md):
- *   1 Showreel  scroll-expansion hero
+ *   1 Cases     the gallery of four businesses (click a case in)
  *   2 Formats   pinned horizontal filmstrip scrub
  *   3 Behind    split-line mask reveal
  *   4 Proof     counter-scrolling testimonial marquee
@@ -33,7 +33,7 @@ export default function StudioWorld() {
     <main className="studio-world" style={{ ["--hue" as string]: DIVISIONS.creative.hue } as CSSProperties}>
       <StudioBackdrop />
       <div className="studio-world__stations">
-        <ExpansionHero />
+        <CaseGallery />
         <Filmstrip />
         <BehindReveal />
         <ProofMarquee />

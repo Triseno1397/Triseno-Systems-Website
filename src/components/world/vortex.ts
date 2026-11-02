@@ -1,5 +1,6 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   THE AI DIVE: the warp into AI Infrastructure, beat for beat after
+   THE WEB DIVE: the warp into Web Design (it was AI Infrastructure's until
+   that division was retired, 2026-11-02), beat for beat after
    Tristen's reference (a painted storm wormhole, ~5s):
 
      0.00s  still     the painting fades in over the page: the tunnel seen
@@ -76,22 +77,23 @@ vec2 bendAt(float s) {
               sin(s * 0.33 + 1.3) * 1.3 + cos(s * 0.15) * 1.0);
 }
 
-// the painting re-coloured in AI's palette from its brightness alone: navy
-// shadows, blue body, white rims, and cyan wherever it held warm light
-vec3 toCyan(vec3 c) {
+// the painting re-coloured in Web Design's palette from its brightness alone:
+// near-black indigo shadows, a deep violet body, white rims, and the division
+// violet (#9d5cff) wherever it held warm light
+vec3 toHue(vec3 c) {
   float l = dot(c, vec3(0.3, 0.59, 0.11));
   float warmth = smoothstep(0.02, 0.28, (c.r - c.b) / (l + 0.08));
-  vec3 blue = mix(vec3(0.008, 0.02, 0.06), vec3(0.08, 0.2, 0.45), smoothstep(0.0, 0.35, l));
-  blue = mix(blue, vec3(0.45, 0.62, 0.9), smoothstep(0.35, 0.7, l));
-  blue = mix(blue, vec3(0.93, 0.96, 1.0), smoothstep(0.7, 0.95, l));
-  vec3 cyan = mix(vec3(0.0, 0.12, 0.2), vec3(0.62, 0.95, 1.0), smoothstep(0.1, 0.8, l));
-  return mix(blue, cyan, warmth);
+  vec3 body = mix(vec3(0.02, 0.008, 0.05), vec3(0.2, 0.09, 0.42), smoothstep(0.0, 0.35, l));
+  body = mix(body, vec3(0.66, 0.55, 0.95), smoothstep(0.35, 0.7, l));
+  body = mix(body, vec3(0.97, 0.95, 1.0), smoothstep(0.7, 0.95, l));
+  vec3 hue = mix(vec3(0.12, 0.03, 0.22), vec3(0.85, 0.66, 1.0), smoothstep(0.1, 0.8, l));
+  return mix(body, hue, warmth);
 }
 
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
   float r = length(p);
-  vec3 ink = vec3(0.01, 0.014, 0.03);
+  vec3 ink = vec3(0.016, 0.01, 0.03);
 
   // the tunnel: each depth slice sits off-centre on screen by
   // f * (C(s + z) - C(s)) / z as the centre line turns; depth comes from a
@@ -130,16 +132,16 @@ void main() {
   vec2 gx = vec2((abs(dux) < abs(duxB) ? dux : duxB) / (2.0 * PI), dFdx(tuvA.y));
   vec2 gy = vec2((abs(duy) < abs(duyB) ? duy : duyB) / (2.0 * PI), dFdy(tuvA.y));
   vec3 paint = mix(textureGrad(uTex, tuvA, gx, gy).rgb, textureGrad(uTex, tuvB, gx, gy).rgb, smoothstep(0.35, 0.8, seamW));
-  vec3 wall = mix(vec3(0.05, 0.1, 0.22), paint, uTexOn);
+  vec3 wall = mix(vec3(0.12, 0.06, 0.24), paint, uTexOn);
 
-  // colour: the reference's storm in AI's one hue: navy a touch deeper, and
-  // the painting's orange light re-lit as cyan (#00b4d8)
-  wall = toCyan(wall);
+  // colour: the reference's storm in Web Design's one hue, the painting's
+  // orange light re-lit as violet
+  wall = toHue(wall);
 
-  // the cyan flank sweeping round, about once a second
+  // the violet flank sweeping round, about once a second
   float near = smoothstep(4.5, 1.2, z);
   float flank = smoothstep(0.35, 1.0, cos(atan(q.y, q.x) - uSweep)) * near * uWander;
-  wall = mix(wall, wall * vec3(0.7, 1.15, 1.35) + vec3(0.0, 0.1, 0.16), flank * 0.6);
+  wall = mix(wall, wall * vec3(1.1, 0.85, 1.35) + vec3(0.1, 0.03, 0.18), flank * 0.6);
 
   // the walls shade as they recede toward the eye
   wall *= mix(1.0, 0.3, smoothstep(1.3, 4.5, z));
@@ -153,18 +155,18 @@ void main() {
   float imgA = 16.0 / 9.0;
   vec2 fuv = scr > imgA ? vec2(p.x / scr, -p.y * imgA / scr) : vec2(p.x / imgA, -p.y);
   fuv = 0.5 + fuv / (1.0 + 0.05 * uDark);
-  vec3 still = mix(vec3(0.05, 0.1, 0.22), texture(uTex, fuv).rgb, uTexOn);
-  still = toCyan(still);
+  vec3 still = mix(vec3(0.12, 0.06, 0.24), texture(uTex, fuv).rgb, uTexOn);
+  still = toHue(still);
   col = mix(still, col, inside);
   // the centre darkens before the spiral is born
   col *= 1.0 - uDark * 0.7 * smoothstep(0.38, 0.04, dv);
   // the eye: soft-lipped black; at the end it grows over everything
   col = mix(col, ink, smoothstep(uEye + 0.05, uEye, dv));
 
-  // the dark beat: navy, with the page's light glowing softly at the top
-  vec3 navy = vec3(0.05, 0.065, 0.1);
+  // the dark beat: near-black, with the page's violet glowing softly at the top
+  vec3 navy = vec3(0.03, 0.02, 0.05);
   vec2 g = p - vec2(0.0, 0.33);
-  navy += vec3(0.0, 0.26, 0.34) * exp(-(g.x * g.x * 7.0 + g.y * g.y * 16.0)) * 0.8;
+  navy += vec3(0.24, 0.1, 0.42) * exp(-(g.x * g.x * 7.0 + g.y * g.y * 16.0)) * 0.8;
   col = mix(col, navy, uGlow);
 
   frag = vec4(col * uAlpha, uAlpha);

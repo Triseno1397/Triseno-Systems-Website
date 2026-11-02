@@ -342,7 +342,7 @@ function BackChevron({ division, scrolled }: { division: Division; scrolled: boo
 function ContactIcon({ division }: { division: Division }) {
   // from a division page the conversation opens already about that division
   const k = division.key;
-  const href = k === "creative" || k === "web" || k === "ai" ? `/contact?division=${k}` : "/contact";
+  const href = k === "creative" || k === "web" ? `/contact?division=${k}` : "/contact";
   return (
     <WarpLink
       href={href}

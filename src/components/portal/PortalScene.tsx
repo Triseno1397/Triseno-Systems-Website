@@ -345,7 +345,7 @@ function GateObject() {
   const loops = useLoopSet();
   const near = useNear((z) => z < DOOR_Z[2] + 1, false);
   const coreMat = useMemo(() => new THREE.MeshBasicMaterial({ color: WHITE, toneMapped: false }), []);
-  const from = useMemo(() => glyphPoints("triangle", N), []);
+  const from = useMemo(() => glyphPoints(DOOR_ITEMS[2].glyph, N), []);
   const to = useMemo(() => glyphPoints("hexagon", N), []);
   const cur = useMemo(() => new Float32Array(N * 2), []);
   const last = useRef(-1);

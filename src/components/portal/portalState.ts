@@ -38,7 +38,8 @@ export const portalState = {
 
 export const MENU_ITEMS: Division[] = MENU_ORDER.map((k) => DIVISIONS[k]);
 
-export const DOOR_ITEMS: Division[] = [DIVISIONS.web, DIVISIONS.creative, DIVISIONS.ai];
+/** the hall's three doors: the two divisions, then the index of everything they make */
+export const DOOR_ITEMS: Division[] = [DIVISIONS.web, DIVISIONS.creative, DIVISIONS.work];
 
 /* ── Camera dolly maths, shared by the scene (camera) and the DOM (cards) ── */
 

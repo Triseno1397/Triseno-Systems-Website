@@ -69,5 +69,5 @@ export function stationPlates(world: PlateWorld): Plate[] {
 
 /** The plate a surface stands in. Work and Contact are achromatic: the portal's gallery. */
 export function plateForDivision(key: DivisionKey): PlateWorld {
-  return key === "creative" || key === "web" || key === "ai" ? key : "portal";
+  return key === "creative" || key === "web" ? key : "portal";
 }

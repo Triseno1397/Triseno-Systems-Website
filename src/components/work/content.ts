@@ -3,7 +3,7 @@
 // Every entry is a format, a concept site with a fictional brand, or a system
 // concept; each one routes to the division page where the component lives.
 
-export type WorkDivision = "creative" | "web" | "ai";
+export type WorkDivision = "creative" | "web";
 
 export interface WorkMedia {
   kind: "video" | "image";
@@ -61,25 +61,18 @@ export const WORK: WorkItem[] = [
   { id: "fennick-rowe", division: "web", title: "Fennick & Rowe", kind: "Concept rebuild · Home services", line: "A dated trade site rebuilt around the call button.", media: concept("fennick-rowe-van") },
 
   // ── AI: the systems, named as capabilities (system concepts) ──
-  { id: "orchestration", division: "ai", title: "Multi-Agent Orchestration", kind: "System concept", line: "Research, analysis, generation and validation as parallel agents under one orchestrator.", media: plate("/worlds/ai-station3.webp", "50% 56%") },
-  { id: "compression", division: "ai", title: "Workflow Compression", kind: "System concept", line: "A twelve-step manual process redesigned as a two-layer agent system.", media: plate("/worlds/ai-station2.webp", "50% 56%") },
-  { id: "decision-layer", division: "ai", title: "Decision-Layer Automation", kind: "System concept", line: "Routing, approvals and exceptions decided by rules and agents, logged end to end.", media: plate("/worlds/ai-desktop.webp", "50% 56%") },
-  { id: "catalog", division: "ai", title: "Catalog Intelligence", kind: "System concept", line: "A catalog that understands specifications, compatibility and context.", media: plate("/worlds/ai-station2.webp", "18% 60%") },
-  { id: "revenue-ops", division: "ai", title: "Revenue Operations", kind: "System concept", line: "Lead qualification and pipeline work driven by a model of the sales process.", media: plate("/worlds/ai-desktop.webp", "82% 50%") },
-  { id: "broadcast", division: "ai", title: "Broadcast & Production AI", kind: "System concept", line: "Metadata, routing and asset orchestration for a live control room.", media: plate("/worlds/ai-station3.webp", "22% 44%") },
 ];
 
 export const FILTERS: { key: "all" | WorkDivision; label: string }[] = [
   { key: "all", label: "All" },
   { key: "creative", label: "Creative" },
   { key: "web", label: "Web" },
-  { key: "ai", label: "AI" },
 ];
 
 export const INTRO = {
   label: "Index — formats, concept sites, systems",
   title: ["What we", "can build"],
-  body: "One index across the three divisions. Every entry is a demonstration: fictional brands, concept work and system concepts, each one built to show range. Open any entry to travel to its division.",
+  body: "One index across both divisions. Every entry is a demonstration, like this site itself: fictional brands and concept work, each one built to show range. Open any entry to travel to its division.",
 };
 
 export const GATE = {

@@ -86,10 +86,10 @@ function ensureWorker(canvas: HTMLCanvasElement): Worker | null {
   return tunnelWorker;
 }
 
-/* AI Infrastructure's own warp, the vortex (vortex.ts), on a second canvas: WebGL2,
+/* Web Design's own warp, the vortex (vortex.ts), on a second canvas: WebGL2,
    in its own worker where the browser allows, else on this thread. It is set
    up once, ahead of time (on idle), so the studio plate is decoded before the
-   first dive; until it reports ready, a warp to AI takes the tunnel. */
+   first dive; until it reports ready, a warp to Web Design takes the tunnel. */
 interface VortexHost {
   worker: Worker | null;
   main: Vortex | null;
@@ -224,9 +224,9 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       // The tunnel draws in a worker wherever the canvas can be handed to
       // one, so it keeps its frame rate while this thread builds the next
       // page; otherwise here, from the same code.
-      // AI Infrastructure dives down its painted storm instead (when it is
+      // Web Design dives down its painted storm instead (when it is
       // ready); the painting is 4K, so it draws near full resolution
-      const host = target.key === "ai" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
+      const host = target.key === "web" && !reduced && vortexRef.current ? ensureVortex(vortexRef.current) : null;
       const vortex = host && host.ok ? host : null;
       const vdpr = weak ? 0.62 : Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.style.visibility = vortex ? "hidden" : "visible";

@@ -1,0 +1,423 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Creative landing: the gallery of four businesses (studio/CaseGallery.tsx).
+   Moved here from the retired AI page (2026-11-02): four glass cases on one
+   dark floor, all moving; a click takes the camera into one, and its shoot
+   sheet prints beside it while an amber line runs through the miniature.
+   Creative's hue only (#ff8a3d). Scoped to .sxc.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.sxc {
+  --signal: #ff8a3d;
+  --signal-ink: #ffb880;
+  --ink: #ffffff;
+  --ink-2: rgba(255, 255, 255, 0.72);
+  --ink-3: rgba(255, 255, 255, 0.5);
+  --rule-2: rgba(255, 255, 255, 0.3);
+  --paper-3: rgba(255, 138, 61, 0.18);
+  --ai-h2: clamp(30px, 4.2vw, 64px);
+  --ai-body: 17px;
+  color: #ffffff;
+}
+@media (max-width: 767px) { .sxc { --ai-h2: 30px; --ai-body: 15px; } }
+.sxc :focus-visible { outline: 1px solid var(--signal-ink); outline-offset: 5px; }
+
+.sxc-wrap { width: 100%; max-width: 1400px; margin-inline: auto; padding-inline: var(--gutter); }
+@media (min-width: 768px) and (max-width: 1199px) { .sxc-wrap { padding-right: calc(var(--gutter) + 12px); } }
+.sxc-section { position: relative; padding-block: clamp(96px, 14svh, 168px); }
+@media (max-width: 767px) { .sxc-section { padding-block: 72px; } }
+.sxc-label {
+  font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); font-weight: 400;
+  line-height: 1.4; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
+}
+.sxc-label b { font-weight: 500; color: var(--signal-ink); }
+.sxc-h2 { font-size: var(--sxc-h2); line-height: 1.04; letter-spacing: 0.02em; color: var(--ink); }
+.sxc-body {
+  font-family: var(--font-geist-sans), sans-serif; font-size: var(--sxc-body); font-weight: 400;
+  line-height: 1.55; color: var(--ink-2);
+}
+.sxc-in { animation: sxc-in 1100ms var(--ease-expo) both; animation-delay: calc(0.12s + var(--d, 0) * 0.11s); }
+@keyframes sxc-in { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+.sxc-console {
+  background: #0a0d0e; color: #e6e0da; border: 1px solid var(--ink);
+  box-shadow: 18px 18px 0 -1px var(--paper-3), 18px 18px 0 0 var(--ink);
+  font-family: var(--font-geist-mono), monospace;
+}
+.sxc-console__bar {
+  display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11px; letter-spacing: 0.12em; color: rgba(230, 224, 218, 0.6);
+}
+.sxc-console__lights { display: flex; gap: 6px; }
+.sxc-console__lights i { width: 8px; height: 8px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 50%; }
+.sxc-console__lights i:first-child { background: var(--signal); border-color: var(--signal); }
+.sxc-console__path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sxc-console__path b { font-weight: 500; color: var(--signal); }
+.sxc-console__replay {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #ffffff; transition: background-color 300ms linear, color 300ms linear;
+}
+.sxc-console__replay:hover, .sxc-console__replay:focus-visible { background: #ffffff; color: #0a0d0e; }
+.sxc-trace { display: grid; padding: 18px 16px 8px; font-size: 13px; line-height: 1.45; }
+.sxc-trace > li { display: grid; grid-template-columns: 86px 1fr; gap: 12px; padding: 7px 0; }
+.sxc-trace__t { color: rgba(230, 224, 218, 0.38); font-variant-numeric: tabular-nums; }
+.sxc-trace__boot { color: rgba(230, 224, 218, 0.75); }
+.sxc-trace__boot em { font-style: normal; color: var(--signal); }
+.sxc-trace__row { grid-template-columns: 86px 96px minmax(0, 1fr) 76px !important; align-items: baseline; transition: opacity 400ms linear; }
+.sxc-trace__row[data-state="wait"] { opacity: 0.22; }
+.sxc-trace__agent { color: var(--signal); text-transform: lowercase; }
+.sxc-trace__agent::before { content: "["; color: rgba(230, 224, 218, 0.4); }
+.sxc-trace__agent::after { content: "]"; color: rgba(230, 224, 218, 0.4); }
+.sxc-trace__msg { min-width: 0; }
+/* the message types itself out while its step runs: a clip-path that opens
+   one character at a time (steps), a block caret riding its edge */
+.sxc-trace__type { display: inline-block; max-width: 100%; }
+.sxc-trace__row[data-state="run"] .sxc-trace__type { animation: sxc-type 900ms steps(var(--n)) both; }
+.sxc-trace__row[data-state="wait"] .sxc-trace__type { clip-path: inset(0 100% 0 0); }
+@keyframes sxc-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.sxc-trace__state { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; color: rgba(230, 224, 218, 0.55); font-variant-numeric: tabular-nums; font-size: 12px; }
+.sxc-tick { width: 10px; height: 6px; border-left: 1.5px solid var(--signal); border-bottom: 1.5px solid var(--signal); transform: rotate(-45deg) translate(1px, -2px); }
+.sxc-spin { width: 11px; height: 11px; border: 1.5px solid rgba(255, 255, 255, 0.2); border-top-color: var(--signal); border-radius: 50%; animation: sxc-spin 700ms linear infinite; }
+@keyframes sxc-spin { to { transform: rotate(360deg); } }
+.sxc-wait { width: 11px; height: 1.5px; background: rgba(255, 255, 255, 0.25); }
+.sxc-trace__end { margin-top: 8px; padding-top: 12px !important; border-top: 1px dashed rgba(255, 255, 255, 0.16); opacity: 0; transform: translate3d(0, 6px, 0); transition: opacity 500ms linear, transform 700ms var(--ease-expo); }
+.sxc-trace__end[data-on] { opacity: 1; transform: none; }
+.sxc-trace__end b { font-weight: 500; color: var(--signal); }
+.sxc-console__note { padding: 0 16px 14px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(230, 224, 218, 0.32); }
+
+.sxc__head {
+  display: grid; gap: 18px; align-items: end; margin-bottom: clamp(24px, 3.4vw, 44px);
+}
+@media (min-width: 1024px) {
+  .sxc__head { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(40px, 5vw, 88px); }
+}
+.sxc__body { max-width: 46ch; animation: sxc-in 700ms var(--ease-expo) both; }
+
+/* ── the room: stage + label; the label floats over the stage on wide screens ── */
+.sxc__room { position: relative; }
+
+.sxc__stage {
+  position: relative; overflow: hidden; isolation: isolate;
+  aspect-ratio: 16 / 9; background: #040506;
+  border: 1px solid var(--ink);
+  /* the whole stage fits on one screen: shorter than 16:9 on short windows,
+     with the layers cropped top and bottom like a cover image */
+  max-height: calc(100svh - var(--lane-top, 80px) - var(--lane-bottom, 64px) - 8px);
+  width: 100%;
+  container-type: size;
+}
+
+/* every layer is a 16:9 frame sized like object-fit: cover against the stage
+   (container units), centred: on a 16:9 stage it fills it exactly; on any
+   other shape it is cropped evenly, so the line and the hit areas stay on
+   the pixels they were placed on */
+.sxc__frame {
+  position: absolute; top: 50%; left: 50%;
+  width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw);
+  transform: translate(-50%, -50%);
+}
+.sxc__frame img,
+.sxc__film {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  user-select: none; -webkit-user-drag: none;
+}
+
+/* the gallery plate: the camera. Out: the whole gallery. In: the case's centre
+   brought to the stage's centre and pushed in (one transform, about the case). */
+.sxc__gallery {
+  --sx: 0%;
+  --oy: 0px;
+  transform: translate(-50%, calc(-50% + var(--oy)));
+  transform-origin: var(--gx) var(--gy);
+  transition: transform 760ms cubic-bezier(0.5, 0, 0.2, 1), filter 760ms linear;
+  will-change: transform;
+}
+.sxc__room[data-inside] .sxc__gallery {
+  transform: translate(-50%, -50%) translate(calc(50% - var(--gx) + var(--sx)), calc(50% - var(--gy))) scale(var(--z));
+  transition: transform 1300ms cubic-bezier(0.6, 0, 0.15, 1), filter 1300ms linear;
+  filter: blur(2px);
+}
+
+/* the lights: each case sits in its own pool of dark until its lamp comes on */
+.sxc__lamp {
+  position: absolute; top: -2%; height: 74%; left: calc(var(--x) - 14%); width: 28%;
+  background: radial-gradient(closest-side, rgba(2, 3, 4, 0.94) 58%, rgba(2, 3, 4, 0.7) 78%, rgba(2, 3, 4, 0) 100%);
+  pointer-events: none;
+}
+.sxc__room[data-lit] .sxc__lamp {
+  opacity: 0;
+  transition: opacity 900ms cubic-bezier(0.2, 0.7, 0.2, 1) calc(300ms + var(--i) * 380ms);
+}
+
+/* the floor plays under the lamps once they are up */
+.sxc__film.sxc__floorfilm { z-index: 0; opacity: 0; pointer-events: none; transition: opacity 900ms linear; }
+.sxc__film.sxc__floorfilm[data-playing] { opacity: 1; }
+
+/* on the floor the cases are buttons: the glass box and its plinth */
+.sxc__hit {
+  position: absolute; top: 26%; height: 38%; left: calc(var(--x) - 9.5%); width: 19%;
+  background: transparent; border: 0; padding: 0; cursor: pointer; pointer-events: none;
+  outline: none;
+}
+.sxc__room[data-lit]:not([data-inside]) .sxc__hit { pointer-events: auto; }
+/* the glass catches the light under the pointer: a cyan rim traced round the case */
+.sxc__hit::before {
+  content: ""; position: absolute; left: 4%; right: 4%; top: 2%; height: 52%;
+  border: 1px solid rgba(255, 184, 128, 0); box-shadow: 0 0 0 rgba(255, 138, 61, 0);
+  transition: border-color 450ms var(--ease-expo), box-shadow 450ms var(--ease-expo);
+}
+@media (hover: hover) {
+  .sxc__hit:hover::before { border-color: rgba(255, 184, 128, 0.75); box-shadow: 0 0 34px rgba(255, 138, 61, 0.28), inset 0 0 30px rgba(255, 138, 61, 0.12); }
+}
+.sxc__hit:focus-visible::before { border-color: rgba(255, 184, 128, 0.9); box-shadow: 0 0 34px rgba(255, 138, 61, 0.32); }
+
+/* the placard on the plinth's face: brass-on-black, lit with its lamp */
+.sxc__plaque {
+  position: absolute; left: 50%; bottom: 9%; transform: translate3d(-50%, 6px, 0);
+  display: grid; justify-items: center; gap: 4px; padding: 0.7cqw 1.1cqw 0.8cqw;
+  min-width: 62%; text-align: center; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(18, 20, 22, 0.92), rgba(8, 9, 10, 0.92));
+  border: 1px solid rgba(214, 188, 132, 0.42);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 236, 196, 0.12);
+  opacity: 0;
+  transition: opacity 700ms linear, transform 900ms var(--ease-expo), border-color 400ms var(--ease-expo);
+}
+.sxc__room[data-lit]:not([data-inside]) .sxc__plaque {
+  opacity: 1; transform: translate3d(-50%, 0, 0);
+  transition-delay: calc(700ms + var(--i) * 380ms), calc(700ms + var(--i) * 380ms), 0ms;
+}
+.sxc__plaquen { font-size: max(8px, 0.62cqw); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(214, 188, 132, 0.85); }
+.sxc__plaquename { font-size: max(10px, 0.95cqw); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #f1ece2; }
+.sxc__plaquego {
+  font-size: max(8px, 0.58cqw); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(255, 184, 128, 0);
+  max-height: 0; overflow: hidden; transition: color 400ms linear, max-height 500ms var(--ease-expo);
+}
+@media (hover: hover) {
+  .sxc__hit:hover .sxc__plaque { border-color: rgba(255, 184, 128, 0.7); }
+  .sxc__hit:hover .sxc__plaquego { color: #ffb880; max-height: 2em; }
+}
+.sxc__hit:focus-visible .sxc__plaquego { color: #ffb880; max-height: 2em; }
+
+/* the way out: a placard in the case's corner, the floor plan with this case lit */
+.sxc__back {
+  position: absolute; z-index: 6; left: 18px; bottom: 18px;
+  display: inline-flex; align-items: center; gap: 14px; padding: 10px 12px 10px 12px;
+  background: rgba(10, 8, 6, 0.72); color: #f3ece6; cursor: pointer;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 184, 128, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0; transform: translate3d(0, 12px, 0); pointer-events: none;
+  transition: opacity 260ms linear, transform 400ms var(--ease-expo), border-color 300ms linear;
+}
+.sxc__room[data-inside] .sxc__back {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity 500ms linear 1100ms, transform 900ms var(--ease-expo) 1100ms, border-color 300ms linear;
+}
+.sxc__plan {
+  display: grid; grid-template-columns: repeat(4, 9px); gap: 4px; padding: 6px;
+  border: 1px solid rgba(243, 236, 230, 0.22);
+  transition: gap 500ms var(--ease-expo);
+}
+.sxc__plan i { display: block; width: 9px; height: 7px; border: 1px solid rgba(243, 236, 230, 0.45); }
+.sxc__plan i[data-on] { background: var(--signal); border-color: var(--signal); box-shadow: 0 0 8px var(--signal); }
+.sxc__backtext { display: grid; gap: 3px; text-align: left; }
+.sxc__backlead { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(243, 236, 230, 0.55); }
+.sxc__backgo { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.sxc__esc {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(243, 236, 230, 0.6);
+  padding: 3px 6px; border: 1px solid rgba(243, 236, 230, 0.25); border-bottom-width: 2px;
+}
+@media (hover: hover) {
+  .sxc__back:hover { border-color: rgba(255, 184, 128, 0.85); }
+  .sxc__back:hover .sxc__plan { gap: 7px; }
+}
+.sxc__back:focus-visible { outline: 1px solid #ffb880; outline-offset: 3px; }
+@media (hover: none) { .sxc__esc { display: none; } }
+
+/* the case films: the selected case fades up as the camera arrives, settling in */
+.sxc__case {
+  --sx: 0%;
+  opacity: 0; pointer-events: none;
+  transform: translate(calc(-50% + var(--sx)), -50%) scale(1.05);
+  transition: opacity 280ms linear, transform 600ms linear;
+}
+.sxc__room[data-inside] .sxc__case[data-on] {
+  opacity: 1;
+  transform: translate(calc(-50% + var(--sx)), -50%) scale(1);
+  transition: opacity 620ms linear 720ms, transform 1700ms cubic-bezier(0.16, 1, 0.3, 1) 720ms;
+}
+.sxc__still { z-index: 0; }
+.sxc__film { z-index: 1; }
+
+/* the line through the miniature: segments draw as their step arrives, stops
+   glow while their step runs, settle once it is done, pulse white on a halt */
+.sxc__path {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255, 138, 61, 0.85));
+}
+.sxc__seg {
+  stroke: #ffb880; stroke-width: 2; stroke-linecap: round; fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  transition: stroke-dashoffset 760ms cubic-bezier(0.5, 0, 0.2, 1);
+}
+.sxc__seg[data-on] { stroke-dashoffset: 0; }
+.sxc__node .sxc__dot { fill: #ffb880; opacity: 0; transition: opacity 300ms linear; }
+.sxc__node .sxc__halo {
+  fill: rgba(255, 138, 61, 0.22); stroke: rgba(255, 184, 128, 0.7); stroke-width: 1; vector-effect: non-scaling-stroke;
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+}
+.sxc__node:not([data-state="off"]) .sxc__dot { opacity: 1; }
+.sxc__node[data-state="run"] .sxc__halo { animation: sxc-ping 1.15s cubic-bezier(0.2, 0.7, 0.2, 1) infinite; }
+.sxc__node[data-state="done"] .sxc__halo { opacity: 0.45; transform: scale(0.55); transition: opacity 400ms linear, transform 400ms var(--ease-expo); }
+.sxc__node[data-state="halt"] .sxc__dot { fill: #ffffff; }
+.sxc__node[data-state="halt"] .sxc__halo {
+  fill: rgba(255, 255, 255, 0.16); stroke: rgba(255, 255, 255, 0.85);
+  animation: sxc-ping 1.6s ease-in-out infinite;
+}
+@keyframes sxc-ping {
+  0% { opacity: 0.9; transform: scale(0.35); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+.sxc__vignette {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(130% 110% at 50% 45%, transparent 58%, rgba(0, 0, 0, 0.55) 100%);
+}
+.sxc__hud {
+  position: absolute; z-index: 4; top: 16px; left: 18px; margin: 0;
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(243, 236, 230, 0.72);
+}
+.sxc__hud i { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+
+/* ── the exhibit label: the console as a backlit panel beside the case ── */
+.sxc__label { position: relative; z-index: 5; margin-top: 18px; }
+/* out on the floor there is no exhibit label: the label belongs to a case */
+@media (max-width: 1199px) {
+  .sxc__room:not([data-inside]) .sxc__label { display: none; }
+}
+.sxc .sxc-console {
+  background: rgba(10, 8, 6, 0.94); border-color: rgba(255, 138, 61, 0.45);
+  box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.08), 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+.sxc .sxc-console__note { color: rgba(230, 224, 218, 0.45); }
+
+/* wide screens: the label stands inside the stage, right of the case, and the
+   case is shifted left so the two never overlap */
+@media (min-width: 1200px) {
+  .sxc__gallery, .sxc__case { --sx: -11%; }
+  .sxc__label {
+    position: absolute; margin: 0; top: clamp(44px, 6%, 64px); right: 2%;
+    width: min(35%, 500px);
+  }
+  .sxc .sxc-console {
+    background: rgba(10, 8, 6, 0.72);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.08), 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(255, 138, 61, 0.12);
+  }
+  .sxc .sxc-trace > li { grid-template-columns: 74px 1fr; }
+  .sxc .sxc-trace__row { grid-template-columns: 74px 84px minmax(0, 1fr) 62px !important; }
+  /* on the case that can halt, the slip prints out under the label and hangs
+     below the stage: the room makes space for it from the pick, so nothing
+     moves at the halt itself */
+  .sxc__room[data-bay] { padding-bottom: 250px; transition: padding-bottom 600ms var(--ease-expo); }
+  /* while the camera is out in the gallery, the label steps back */
+  .sxc__room:not([data-inside]) .sxc__label { opacity: 0.0; transform: translate3d(12px, 0, 0); pointer-events: none; }
+  .sxc__label { transition: opacity 500ms linear 500ms, transform 900ms var(--ease-expo) 500ms; }
+  .sxc__room:not([data-inside]) .sxc__label { transition: opacity 260ms linear, transform 400ms var(--ease-expo); }
+}
+
+/* ── phone: a taller stage; the placards carry only their number ── */
+@media (max-width: 767px) {
+  .sxc__stage { aspect-ratio: 4 / 3; }
+  .sxc__hud { top: 12px; left: 12px; font-size: 10px; }
+  .sxc__lamp { left: calc(var(--x) - 16%); width: 32%; }
+  .sxc__plaque { min-width: 0; padding: 3px 6px; }
+  .sxc__plaquename, .sxc__plaquego { display: none; }
+  .sxc__back { left: 10px; bottom: 10px; gap: 10px; padding: 8px 10px; }
+  .sxc__backlead { display: none; }
+  .sxc__backgo { font-size: 11px; }
+}
+
+/* ── landscape screens: the floor is the whole screen ──
+   The section loses its sheet padding and the wrap its width cap; the stage
+   is the viewport; the title and line stand in the dark above the cases,
+   and step back once the camera is inside a case. */
+@media (min-aspect-ratio: 1/1) and (min-width: 768px) {
+  .sxc-section.sxc { padding: 0; }
+  .sxc-section.sxc::before { display: none; }
+  .sxc > .sxc-wrap { position: relative; max-width: none; padding: 0; }
+  .sxc__stage {
+    aspect-ratio: auto; height: 100svh; max-height: none; border: 0;
+  }
+  .sxc__head {
+    position: absolute; z-index: 7; left: 0; right: 0; top: 0; margin: 0;
+    padding: var(--lane-top) calc(var(--gutter) + var(--lane-right, 0px)) 0 var(--gutter);
+    pointer-events: none;
+    transition: opacity 500ms linear, transform 900ms var(--ease-expo);
+  }
+  .sxc__head .sxc-label { color: rgba(243, 236, 230, 0.62); }
+  .sxc__head .sxc-label b { color: #ffb880; }
+  .sxc__head .sxc-h2 {
+    color: #f1ece2; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
+    font-size: clamp(26px, 2.5vw, 44px); line-height: 1.02;
+  }
+  .sxc__head { align-items: start; }
+  .sxc__head .sxc__body { font-size: 15px; max-width: 42ch; margin-top: 22px; }
+  /* the gallery shows its whole width: on screens squarer than 16:9 the dark
+     ceiling and floor run on into the stage's black, and the title stands in
+     the dark above the cases instead of over them */
+  .sxc__gallery { width: max(100cqw, 100cqh * 1.4); height: max(56.25cqw, 78.75cqh); }
+  .sxc__head .sxc__body { color: rgba(243, 236, 230, 0.78); }
+  .sxc:has(.sxc__room[data-inside]) .sxc__head { opacity: 0; transform: translate3d(0, -12px, 0); }
+  /* the floor's own HUD line is the title now; inside a case it returns */
+  .sxc__room:not([data-inside]) .sxc__hud { opacity: 0; }
+  .sxc__hud { top: calc(var(--lane-top) + 4px); left: var(--gutter); transition: opacity 400ms linear; }
+  .sxc__back { left: var(--gutter); bottom: calc(var(--lane-bottom) + 4px); }
+}
+@media (min-aspect-ratio: 1/1) and (min-width: 1200px) {
+  .sxc__label { top: calc(var(--lane-top) + 8px); right: calc(var(--gutter) + var(--lane-right, 0px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sxc__head,
+  .sxc__gallery,
+  .sxc__room[data-inside] .sxc__gallery,
+  .sxc__case,
+  .sxc__room[data-inside] .sxc__case[data-on],
+  .sxc__room[data-lit] .sxc__lamp,
+  .sxc__seg,
+  .sxc__plaque,
+  .sxc__back,
+  .sxc__label { transition: none !important; }
+  .sxc__node .sxc__halo { animation: none !important; }
+  .sxc__film { display: none; }
+}
+
+/* ── the landing's own pieces: eyebrow, the side column, the two buttons ── */
+.sxc__eyebrow { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; color: rgba(255, 255, 255, 0.78); }
+.sxc__eyebrow b { font-weight: 400; color: rgba(255, 255, 255, 0.55); }
+.sxc__side { display: grid; gap: 22px; justify-items: start; }
+.sxc__actions { display: flex; flex-wrap: wrap; gap: 12px; pointer-events: auto; }
+/* the first section on the page: it clears the nav itself */
+/* the first section on the page: it clears the nav itself (the landscape
+   full-screen floor below goes edge to edge instead) */
+@media not ((min-aspect-ratio: 1/1) and (min-width: 768px)) {
+  .sxc-section.sxc { padding-top: calc(var(--lane-top, 80px) + 28px); padding-bottom: clamp(48px, 8svh, 96px); }
+}
+.sxc-section.sxc::before { display: none; }
+@media (min-aspect-ratio: 1/1) and (min-width: 768px) {
+  .sxc__head .sxc-h2 { font-size: clamp(28px, 3vw, 54px); max-width: 16ch; }
+  /* the floor drops a little so the headline stands in the dark ceiling,
+     clear of the cases; the bottom of the floor's reflection is what goes */
+  .sxc__gallery { --oy: 9cqh; }
+  .sxc__actions { flex-wrap: nowrap; }
+  .sxc__head .sxc__side { margin-top: 22px; }
+  .sxc__head .sxc__body { margin-top: 0 !important; }
+  .sxc__actions .ghost-btn { background: rgba(0, 0, 0, 0.35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+}
+@media (max-width: 767px) {
+  .sxc-section.sxc { padding-top: calc(var(--lane-top, 72px) + 12px); }
+  .sxc__head { margin-bottom: 20px; }
+  .sxc__eyebrow b { display: none; }
+  .sxc__side { gap: 16px; }
+}

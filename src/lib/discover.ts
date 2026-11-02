@@ -42,7 +42,6 @@ export type CuePos = "corner" | "center" | "above" | "foot";
 export const PAGES: Array<{ path: string; name: string }> = [
   { path: "/", name: "The studio" },
   { path: "/web-design-division", name: "Web design" },
-  { path: "/ai-infrastructure", name: "AI infrastructure" },
   { path: "/studio", name: "Ad creative" },
   { path: "/work", name: "Work" },
   { path: "/contact", name: "Contact" },
@@ -52,9 +51,10 @@ export const FINDS: Find[] = [
   // the studio (home)
   { id: "home-hall", page: "/", rail: "Divisions", mode: "seen", name: "The hall", hint: "Where it all starts" },
   { id: "home-operator", page: "/", mode: "special", name: "The operator", hint: "Someone in the hall wants to be clicked" },
+  { id: "home-demo", page: "/", rail: "The demo", mode: "seen", name: "The confession", hint: "Right after the headline" },
   { id: "home-door-web", page: "/", rail: "Web Design", mode: "seen", name: "The first door", hint: "Scroll down the hall" },
   { id: "home-door-creative", page: "/", rail: "Creative", mode: "seen", name: "The ring door", hint: "Keep walking" },
-  { id: "home-door-ai", page: "/", rail: "AI Infrastructure", mode: "seen", name: "The prism door", hint: "Further still" },
+  { id: "home-door-work", page: "/", rail: "Work", mode: "seen", name: "The index door", hint: "Further still" },
   { id: "home-gate", page: "/", rail: "Gate", mode: "seen", name: "The light rain", hint: "The end of the hall" },
   { id: "menu", page: "*", mode: "special", name: "The world menu", hint: "Top right, on any page" },
 
@@ -68,24 +68,10 @@ export const FINDS: Find[] = [
   { id: "web-range", page: "/web-design-division", rail: "Range", mode: "touch", name: "The range", hint: "Hover and press around the gallery", cue: { at: ".web-range__row", say: "Hover · tap a site", pos: "corner" } },
   { id: "web-gate", page: "/web-design-division", rail: "Gate", mode: "seen", name: "Web gate", hint: "The bottom of the page" },
 
-  // AI infrastructure
-  { id: "ai-splash", page: "/ai-infrastructure", rail: "Capabilities", mode: "seen", name: "Ferrofluid splash", hint: "Arrive and wait" },
-  { id: "ai-core", page: "/ai-infrastructure", rail: "Layer", mode: "seen", name: "The chrome core", hint: "A globe and a swarm" },
-  { id: "ai-dive", page: "/ai-infrastructure", mode: "special", name: "Through the skin", hint: "Hold something down. Do not let go", cue: { at: ".ai-hero__fig", say: "Press and hold", pos: "center" } },
-  { id: "ai-compression", page: "/ai-infrastructure", rail: "Compression", mode: "touch", name: "Mercury beads", hint: "Pull one", cue: { at: ".ai-merc__stage", say: "Pull a bead", pos: "center" } },
-  { id: "ai-scale", page: "/ai-infrastructure", rail: "Scale", mode: "seen", name: "Designed to scale", hint: "Liquid again, further down" },
-  { id: "ai-stack", page: "/ai-infrastructure", rail: "Stack", mode: "touch", name: "Four layers", hint: "Tap a layer", cue: { at: ".ai-sf__stage", say: "Tap a layer", pos: "center" } },
-  { id: "ai-museum", page: "/ai-infrastructure", rail: "Industries", mode: "seen", name: "The museum", hint: "Four glass cases" },
-  { id: "ai-case", page: "/ai-infrastructure", mode: "special", name: "Inside a case", hint: "Step into one", cue: { at: ".ai-mus__stage", say: "Step into a case", pos: "foot" } },
-  { id: "ai-slip", page: "/ai-infrastructure", mode: "special", name: "The routing slip", hint: "One case stops and asks for a person" },
-  { id: "ai-process", page: "/ai-infrastructure", rail: "Process", mode: "touch", name: "Process rail", hint: "Drag the handle", cue: { at: "[data-rail=\"Process\"] [role=\"slider\"]", say: "Drag", pos: "above" } },
-  { id: "ai-built", page: "/ai-infrastructure", rail: "Built by", mode: "seen", name: "Built by", hint: "Who makes it" },
-  { id: "ai-why", page: "/ai-infrastructure", rail: "Why", mode: "touch", name: "The flip", hint: "Turn something over", cue: { at: ".wf-switch", say: "Flip them", pos: "above" } },
-  { id: "ai-questions", page: "/ai-infrastructure", rail: "Questions", mode: "seen", name: "AI questions", hint: "Before you ask" },
-  { id: "ai-gate", page: "/ai-infrastructure", rail: "Gate", mode: "touch", name: "The ticket", hint: "Tear it", cue: { at: ".ai-gate__figure", say: "Tear the ticket", pos: "center" } },
 
   // ad creative
-  { id: "studio-reel", page: "/studio", rail: "Showreel", mode: "seen", name: "The showreel", hint: "It opens up" },
+  { id: "studio-cases", page: "/studio", rail: "Cases", mode: "seen", name: "The gallery", hint: "Four glass cases" },
+  { id: "studio-case", page: "/studio", mode: "special", name: "Inside a case", hint: "Step into one", cue: { at: ".sxc__stage", say: "Step into a case", pos: "foot" } },
   { id: "studio-formats", page: "/studio", rail: "Formats", mode: "touch", name: "The filmstrip", hint: "Play a frame", cue: { at: ".sx-frame__media", say: "Play", pos: "center" } },
   { id: "studio-behind", page: "/studio", rail: "Behind", mode: "seen", name: "Behind the shot", hint: "Look behind it" },
   { id: "studio-proof", page: "/studio", rail: "Proof", mode: "seen", name: "The marquee", hint: "Faces that keep moving" },

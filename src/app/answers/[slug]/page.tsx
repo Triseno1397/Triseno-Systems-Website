@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const a = answerBySlug(slug);
   if (!a) return {};
   const url = `${SITE.url}/answers/${a.slug}`;
-  const og = `/og/${a.division === "creative" ? "studio" : a.division === "web" ? "web-design" : "ai-infrastructure"}.png`;
+  const og = `/og/${a.division === "creative" ? "studio" : "web-design"}.png`;
   return {
     title: `${a.title} | Triseno Systems`,
     description: a.description,

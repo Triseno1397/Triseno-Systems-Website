@@ -103,12 +103,9 @@ export default function WebGate() {
           </span>
         </div>
         <nav aria-label="Other Triseno divisions" className="web-gate__cross">
-          <span>Other divisions</span>
+          <span>The other division</span>
           <WarpLink href={DIVISIONS.creative.route} className="world-underline">
             Creative — ad creative
-          </WarpLink>
-          <WarpLink href={DIVISIONS.ai.route} className="world-underline">
-            AI Infrastructure
           </WarpLink>
         </nav>
       </div>

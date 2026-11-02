@@ -436,10 +436,33 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 .portal-explore__btn:focus-visible { outline: 1px solid #ffffff; outline-offset: 3px; }
 .portal-explore { position: relative; z-index: 5; }
 .portal-explore__btn { background: rgba(8, 9, 12, 0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.portal-explore__line b { font-weight: 600; color: #ffffff; }
 @media (max-width: 767px) {
-  .portal-explore { font-size: 13px; }
-  /* the Operator stands right here on a phone: only the button, above him */
-  .portal-explore > span { display: none; }
+  .portal-explore { font-size: 13px; gap: 8px; }
+  /* the Operator stands right here on a phone: the short line and the button */
+  .portal-explore__more { display: none; }
+  .portal-explore__line { flex-basis: 100%; letter-spacing: 0.02em; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.7); }
+}
+
+/* ── the site is the demo: one glass panel, a full screen of its own ── */
+.portal-demo {
+  display: grid; place-items: center; min-height: 100svh;
+  padding: calc(var(--lane-top, 80px) + 24px) var(--gutter) calc(var(--lane-bottom, 64px) + 24px);
+  pointer-events: none;
+}
+.portal-demo__panel { width: min(760px, 100%); padding: clamp(26px, 4vw, 52px); }
+.portal-demo__label { color: rgba(255, 255, 255, 0.62); }
+.portal-demo__title { margin: 14px 0 0; font-size: clamp(30px, 4.6vw, 64px); line-height: 1.02; letter-spacing: 0.04em; color: #ffffff; }
+.portal-demo__body { margin: 20px 0 0; max-width: 54ch; font-size: clamp(15px, 1.25vw, 18px); line-height: 1.6; color: rgba(255, 255, 255, 0.82); }
+.portal-demo__facts {
+  list-style: none; margin: 26px 0 0; padding: 18px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex; flex-wrap: wrap; gap: 10px 28px;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6);
+}
+.portal-demo__facts b { font-weight: 500; color: #ffffff; margin-right: 0.5em; }
+.portal-demo__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+@media (max-width: 767px) {
+  .portal-demo__facts { gap: 8px 18px; font-size: 10px; letter-spacing: 0.16em; }
 }
 @media (prefers-reduced-motion: reduce) { .portal-explore { animation: none; } }
 /* Short screens and phones: the sub line goes so the headline and the menu both

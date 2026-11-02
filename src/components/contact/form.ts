@@ -2,7 +2,7 @@
 // (optionally) a line about the project. Everything else we need we ask in the
 // reply. The form emails tristen@trisenosystems.com through FormSubmit.
 
-export type ContactDivision = "creative" | "web" | "ai";
+export type ContactDivision = "creative" | "web";
 
 export const EMAIL = "tristen@trisenosystems.com";
 export const INSTAGRAM_URL = "https://instagram.com/trisenosystems";
@@ -30,13 +30,6 @@ export const DIVISION_OPTIONS: {
     line: "Ad creative for paid social.",
     payloadLabel: "Content Studio",
     messagePlaceholder: "What you're selling and where the ads need to run...",
-  },
-  {
-    key: "ai",
-    name: "AI Infrastructure",
-    line: "Consulting, architecture, implementation.",
-    payloadLabel: "AI Infrastructure",
-    messagePlaceholder: "The workflow you want automated and the tools it touches...",
   },
 ];
 

@@ -53,10 +53,10 @@ export const SITE = {
    */
   googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
   description:
-    "Three divisions, one standard: paid-social ad creative, custom conversion-built websites, and AI infrastructure for business operations.",
+    "A web design studio with a creative arm: custom conversion-built websites and paid-social ad creative. The site itself is the demo.",
 } as const;
 
-export type PageKey = "home" | "studio" | "web" | "ai" | "work" | "portfolio" | "contact";
+export type PageKey = "home" | "studio" | "web" | "work" | "portfolio" | "contact";
 
 interface PageSeo {
   path: string;
@@ -82,7 +82,7 @@ const CORE_KEYWORDS = [
   "creative agency Los Angeles",
   "ad creative agency",
   "custom website design",
-  "AI infrastructure consulting",
+  "web design studio Los Angeles",
 ];
 
 export const PAGES: Record<PageKey, PageSeo> = {
@@ -90,17 +90,16 @@ export const PAGES: Record<PageKey, PageSeo> = {
     path: "/",
     title: "Triseno Systems | Web Design Studio in Los Angeles",
     description:
-      "A Los Angeles web design studio building custom, conversion-built websites, with paid-social ad creative and AI systems from the same team.",
+      "A Los Angeles web design studio building custom, conversion-built websites, with paid-social ad creative from the same team. This site is the demo.",
     keywords: [
       ...CORE_KEYWORDS,
       "paid social creative",
       "UGC video ads",
       "conversion-built websites",
-      "AI automation for business",
       "creative agency for DTC brands",
     ],
     og: "/og/default.png",
-    ogAlt: "Triseno Systems — ad creative, web design, AI infrastructure",
+    ogAlt: "Triseno Systems — web design and ad creative",
     crumb: "Home",
     type: "WebPage",
   },
@@ -183,49 +182,11 @@ export const PAGES: Record<PageKey, PageSeo> = {
         "Custom, conversion-built websites: strategy, design and build, 90+ performance scores, SEO-ready structure, integrations and ongoing iteration.",
     },
   },
-  ai: {
-    path: "/ai-infrastructure",
-    title: "AI Infrastructure Consulting & Implementation | Triseno Systems",
-    description:
-      "AI consulting, architecture and implementation for business operations: multi-agent orchestration, workflow automation and decision-layer systems, built to run.",
-    keywords: [
-      "AI infrastructure consulting",
-      "AI implementation partner",
-      "AI systems integration",
-      "multi-agent orchestration",
-      "AI agents for business",
-      "workflow automation with AI",
-      "AI automation consulting",
-      "LLM integration services",
-      "AI architecture consulting",
-      "business process automation AI",
-      "decision automation",
-      "Triseno AI Infrastructure",
-      "AI consultant Los Angeles",
-      "AI automation agency Los Angeles",
-    ],
-    og: "/og/ai-infrastructure.png",
-    ogAlt: "Triseno AI Infrastructure — consulting, architecture, implementation",
-    crumb: "AI Infrastructure",
-    type: "WebPage",
-    service: {
-      name: "AI infrastructure consulting, architecture and implementation",
-      serviceType: [
-        "AI consulting",
-        "AI systems architecture",
-        "AI implementation",
-        "Workflow automation",
-        "Multi-agent orchestration",
-      ],
-      description:
-        "AI infrastructure consulting, architecture and implementation — the operational intelligence layer a business runs on: multi-agent orchestration, workflow compression and decision-layer automation.",
-    },
-  },
   work: {
     path: "/work",
-    title: "Work: Ad Formats, Concept Sites & AI Systems | Triseno Systems",
+    title: "Work: Concept Sites & Ad Formats | Triseno Systems",
     description:
-      "An index of what Triseno Systems builds across its three divisions: paid-social ad formats, concept websites for fictional brands, and AI system concepts.",
+      "An index of what Triseno Systems builds across its two divisions: concept websites for fictional brands and paid-social ad formats.",
     keywords: [
       ...CORE_KEYWORDS,
       "ad creative examples",
@@ -234,7 +195,7 @@ export const PAGES: Record<PageKey, PageSeo> = {
       "creative formats",
     ],
     og: "/og/default.png",
-    ogAlt: "Triseno Systems — work across three divisions",
+    ogAlt: "Triseno Systems — work across web design and ad creative",
     crumb: "Work",
     type: "CollectionPage",
   },
@@ -262,7 +223,7 @@ export const PAGES: Record<PageKey, PageSeo> = {
     path: "/contact",
     title: "Contact Triseno Systems | Start a Conversation",
     description:
-      "Talk to Triseno Systems about ad creative, a conversion-built website or AI infrastructure. Based in Los Angeles, serving LA, Ventura and Orange County.",
+      "Talk to Triseno Systems about a conversion-built website or ad creative. Based in Los Angeles, serving LA, Ventura and Orange County.",
     keywords: [
       ...CORE_KEYWORDS,
       "hire ad creative agency",
@@ -362,7 +323,7 @@ export const ORGANIZATION_JSON_LD = {
       },
       image: `${SITE.url}/og/default.png`,
       description:
-        "Three separate divisions: paid-social ad creative, custom conversion-built websites, and AI infrastructure consulting, architecture and implementation.",
+        "Two divisions: custom conversion-built websites and paid-social ad creative.",
       email: SITE.email,
       telephone: SITE.phoneE164,
       sameAs: [SITE.instagram],
@@ -389,13 +350,10 @@ export const ORGANIZATION_JSON_LD = {
         "Video ad production",
         "Conversion-focused web design",
         "Web development",
-        "AI infrastructure",
-        "Workflow automation",
       ],
       department: [
         { "@type": "Organization", name: "Triseno Studio", url: `${SITE.url}/studio`, parentOrganization: { "@id": ORG_ID } },
         { "@type": "Organization", name: "Triseno Web Design Division", url: `${SITE.url}/web-design-division`, parentOrganization: { "@id": ORG_ID } },
-        { "@type": "Organization", name: "Triseno AI Infrastructure", url: `${SITE.url}/ai-infrastructure`, parentOrganization: { "@id": ORG_ID } },
       ],
     },
     {

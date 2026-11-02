@@ -31,6 +31,15 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.152", "192.168.0.105", "10.5.0.2"],
   // no "X-Powered-By: Next.js" — nothing a visitor needs, one thing a scanner wants
   poweredByHeader: false,
+  // the AI Infrastructure division was retired on 2026-11-02: its page and
+  // its one answer page send visitors to the home page instead of a 404
+  async redirects() {
+    return [
+      { source: "/ai-infrastructure", destination: "/", permanent: true },
+      { source: "/ai-infrastructure/:path*", destination: "/", permanent: true },
+      { source: "/answers/what-ai-automation-can-replace", destination: "/", permanent: true },
+    ];
+  },
   async headers() {
     // The browser-side hardening every page carries. A full script-src CSP is
     // not set: Next's own inline scripts and the parse-time video warm-up

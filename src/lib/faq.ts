@@ -16,7 +16,7 @@
  *     on the site. No invented prices, guarantees, team sizes or timelines.
  */
 /** the three divisions that sell something, and so get asked questions */
-export type FaqDivision = "creative" | "web" | "ai";
+export type FaqDivision = "creative" | "web";
 
 export interface FaqItem {
   q: string;
@@ -74,32 +74,6 @@ export const FAQ: Record<FaqDivision, FaqItem[]> = {
     {
       q: "What happens after launch?",
       a: "Ongoing iteration. A site is a conversion instrument, not a deliverable — the useful work starts once there is real traffic to learn from.",
-    },
-  ],
-  ai: [
-    {
-      q: "What kind of tools do you build?",
-      a: "Whatever is eating your team's day: product finders, inbox and lead handlers, assistants trained on your own documents, reports that build themselves, custom internal tools, and connections between the software you already pay for. If it is repetitive and it lives on a computer, it can usually be built.",
-    },
-    {
-      q: "Is this only for big companies?",
-      a: "No. We build for small local businesses and for larger companies alike. The tool is sized to the problem, not to the logo.",
-    },
-    {
-      q: "How long does it take, and what does it cost?",
-      a: "Most tools take weeks, not months. Every project gets one fixed price before any work starts, so there are no surprises. Book a call and you will leave knowing roughly what yours would take.",
-    },
-    {
-      q: "Do I need to be technical?",
-      a: "Not at all. You tell us the problem in plain words; we handle the rest and show your team how to use it in one short session.",
-    },
-    {
-      q: "Who owns the tool?",
-      a: "You do. No per-seat fees and no lock-in. It runs on accounts you control.",
-    },
-    {
-      q: "What happens after it is built?",
-      a: "We keep it running. If something needs changing as your business grows, you talk to the person who built it, not a ticket queue.",
     },
   ],
 };

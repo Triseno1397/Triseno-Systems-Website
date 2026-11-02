@@ -20,13 +20,12 @@ const line = (key: keyof typeof PAGES) => `- [${PAGES[key].crumb}](${SITE.url}${
 
 const body = `# ${SITE.name}
 
-> ${SITE.description} One studio, three separate divisions, each with its own page and its own client base.
+> ${SITE.description} One studio, two separate divisions, each with its own page and its own client base.
 
-Triseno Systems designs and builds three things, and keeps them separate because they are bought separately:
+Triseno Systems designs and builds two things, and keeps them separate because they are bought separately:
 
 - **Creative** is paid-social ad creative: UGC ads, product demos, ASMR and unboxing, direct-response reels, hyper-motion product spots and cinematic brand films, cut for Instagram, TikTok, YouTube and Meta and delivered as variations built to be tested against each other.
 - **Web Design** is custom, conversion-built websites — strategy, design, build and launch, with a performance target of 90 or higher, SEO-ready structure, the integrations a business needs, and iteration after launch. No templates, no page builders.
-- **AI Infrastructure** is consulting, architecture and implementation for the operational layer a business runs on: multi-agent orchestration, workflow automation and compression, catalog and revenue operations, and decision-layer systems. We design them and we deploy them.
 
 Based in Los Angeles, California; meeting clients in person across ${SITE.serviceAreas.join(", ")}.
 
@@ -36,7 +35,6 @@ Contact: ${SITE.email} · ${SITE.phone} · ${SITE.url}/contact · replies within
 
 ${line("studio")}
 ${line("web")}
-${line("ai")}
 
 ## Everything else
 

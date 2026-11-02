@@ -15,7 +15,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     home: { priority: 1, changeFrequency: "monthly" },
     studio: { priority: 0.9, changeFrequency: "monthly" },
     web: { priority: 0.9, changeFrequency: "monthly" },
-    ai: { priority: 0.9, changeFrequency: "monthly" },
     work: { priority: 0.7, changeFrequency: "monthly" },
     portfolio: { priority: 0.6, changeFrequency: "monthly" },
     contact: { priority: 0.6, changeFrequency: "yearly" },

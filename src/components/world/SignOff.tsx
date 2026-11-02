@@ -15,7 +15,7 @@ export default function SignOff() {
         <TrisenoMark className="sign-off__mark" />
         <div className="sign-off__id">
           <span className="sign-off__name font-display font-bold uppercase">Triseno Systems</span>
-          <span className="sign-off__line font-mono uppercase">Ad creative / Web design / AI infrastructure</span>
+          <span className="sign-off__line font-mono uppercase">Web design / Ad creative</span>
           <span className="sign-off__line font-mono uppercase">{SITE.serviceAreaLine}</span>
         </div>
         <div className="sign-off__meta font-mono uppercase">

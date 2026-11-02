@@ -18,9 +18,9 @@ import { MENU_LABEL } from "@/lib/divisions";
 import { TOTAL, openMap } from "@/lib/discover";
 
 /** the portal's legend: the studio's craft first, then what else it makes */
-const LEGEND = ["Websites", "Ad creative", "AI infrastructure"];
+const LEGEND = ["Websites", "Ad creative"];
 /** under each division's door word: what is behind it, in a few words */
-const DOOR_WHAT = ["Custom websites", "Ads for paid social", "Consulting and build"];
+const DOOR_WHAT = ["Custom websites", "Ads for paid social"];
 import {
   DOOR_ITEMS,
   DOOR_Z,
@@ -76,14 +76,14 @@ function guardSet(on: boolean) {
 
 const WHITE = "#ffffff";
 
-// Headline, per menu word. The three divisions read WE BUILD […]; WORK and
+// Headline, per menu word. The two divisions read WE BUILD […]; WORK and
 // CONTACT get their own neutral line so headline, glyph, counter and object
 // always say the same thing. At rest (REST, nothing hovered) it says what the
 // studio is: a web design studio. It no longer cycles through the divisions;
 // the other two are named under it as what the studio also makes.
-const LINE_ONE = ["WE BUILD", "WE BUILD", "WE BUILD", "SEE", "OPEN A", "A WEB DESIGN"];
-const LINE_TWO = ["WEBSITES", "AD CREATIVE", "AI SYSTEMS", "THE WORK", "CHANNEL", "STUDIO"];
-const REST = 5;
+const LINE_ONE = ["WE BUILD", "WE BUILD", "SEE", "OPEN A", "A WEB DESIGN"];
+const LINE_TWO = ["WEBSITES", "AD CREATIVE", "THE WORK", "CHANNEL", "STUDIO"];
+const REST = 4;
 
 const DOOR_COPY = [
   {
@@ -97,9 +97,9 @@ const DOOR_COPY = [
     cta: "Enter Creative",
   },
   {
-    title: "The intelligence layer",
-    body: "We build the intelligence layer your business runs on. Consulting, architecture and implementation, from diagnosing the workflow to deploying the system.",
-    cta: "Enter AI Infrastructure",
+    title: "Every piece, in one index",
+    body: "The concept sites, campaigns and components from both divisions, side by side. Like this site, every piece is a demo of what we can build for you.",
+    cta: "Open the Work",
   },
 ];
 
@@ -429,7 +429,7 @@ export default function PortalPage() {
   const menuLink = (i: number) => {
     const item = MENU_ITEMS[i];
     const lit = hot && i === active;
-    const door = i < 3;
+    const door = i < 2;
     return (
       <li key={item.key}>
         <a
@@ -549,7 +549,7 @@ export default function PortalPage() {
             <p
               className="portal-sub portal-legend mt-7"
               data-hot={hot ? "" : undefined}
-              aria-label="Websites first. Also from the studio: ad creative and AI infrastructure."
+              aria-label="Websites first. Also from the studio: ad creative."
             >
               {LEGEND.map((label, i) => (
                 <span
@@ -572,7 +572,10 @@ export default function PortalPage() {
             </p>
             {/* the hunt: the site is the portfolio, and it says so */}
             <p className="portal-explore pointer-events-auto mt-6">
-              <span>This whole site is the portfolio.</span>{" "}
+              <span className="portal-explore__line">
+                <b>This site is the demo.</b>
+                <span className="portal-explore__more"> Every section is something we can build for you.</span>
+              </span>{" "}
               <button type="button" className="portal-explore__btn font-mono" onClick={openMap}>
                 {TOTAL} pieces to find
                 <i aria-hidden="true" />
@@ -598,10 +601,10 @@ export default function PortalPage() {
             </p>
             <ul className="portal-menu__group portal-menu__group--lead text-[length:var(--fs-mid)]">{[0].map(menuLink)}</ul>
             <p className="portal-menu__also chrome-label font-mono">Also from the studio</p>
-            <ul className="portal-menu__group portal-menu__group--also text-[length:var(--fs-mid)]">{[1, 2].map(menuLink)}</ul>
+            <ul className="portal-menu__group portal-menu__group--also text-[length:var(--fs-mid)]">{[1].map(menuLink)}</ul>
             <span aria-hidden="true" className="portal-menu__rule" />
             <div className="relative w-fit">
-              <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[3, 4].map(menuLink)}</ul>
+              <ul className="portal-menu__group text-[length:var(--fs-mid)]">{[2, 3].map(menuLink)}</ul>
               {/* in the copy column, beside CONTACT — never on the object */}
               <p
                 aria-hidden="true"
@@ -615,9 +618,47 @@ export default function PortalPage() {
         </div>
       </section>
 
+      {/* ── 1b. The site is the demo ──────────────────────────────────
+          A full screen between the hero and the hall where the world holds
+          still (the hero has flown out, the dolly has not started) and one
+          glass panel says it plainly: what you are scrolling is the sample. */}
+      <section data-rail="The demo" aria-labelledby="portal-demo-title" className="portal-demo relative z-10">
+        <GlassPanel world="portal" className="portal-demo__panel pointer-events-auto">
+          <p className="portal-demo__label chrome-label font-mono">Before you go further</p>
+          <h2 id="portal-demo-title" className="portal-demo__title font-display font-semibold uppercase">
+            You are scrolling the demo.
+          </h2>
+          <p className="portal-demo__body">
+            Nothing here is a template, and nothing is a screenshot of past work. Every section of this site runs its own
+            motion system, built by us, so the page in front of you is the sample. If something here moves the way you
+            want your business to feel, that is something we can build for you.
+          </p>
+          <ul className="portal-demo__facts font-mono" aria-label="The site in numbers">
+            <li>
+              <b>{TOTAL}</b> pieces to find
+            </li>
+            <li>
+              <b>0</b> templates
+            </li>
+            <li>
+              <b>1</b> studio, every line by hand
+            </li>
+          </ul>
+          <div className="portal-demo__actions">
+            <button type="button" className="ghost-btn" onClick={openMap}>
+              <span className="ghost-btn__layer">Open the map</span>
+              <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">
+                Open the map
+              </span>
+            </button>
+            <GhostButton href="/contact">Build mine</GhostButton>
+          </div>
+        </GlassPanel>
+      </section>
+
       {/* ── 2. Three doors ───────────────────────────────────────────── */}
       {full ? (
-        <section ref={doorsRef} aria-label="Three divisions" className="relative z-10 h-[400svh]">
+        <section ref={doorsRef} aria-label="Three doors" className="relative z-10 h-[400svh]">
           {/* one rail stop per door, laid over the stretch of scroll where that
               door's card is up, so the rail names the door actually in view */}
           {DOOR_ITEMS.map((door, i) => (
@@ -653,7 +694,7 @@ export default function PortalPage() {
           </div>
         </section>
       ) : (
-        <section aria-label="Three divisions" className="relative z-10">
+        <section aria-label="Three doors" className="relative z-10">
           {DOOR_ITEMS.map((door) => (
             <div key={door.key} data-lite-door="" data-rail={door.name} className="lite-door relative flex min-h-[100svh] flex-col justify-end overflow-hidden">
               <LiteGlyph kind={door.glyph} hue={door.hue} />
