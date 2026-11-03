@@ -393,31 +393,19 @@
   .sxc__film { display: none; }
 }
 
-/* ── the landing's own pieces: eyebrow, the side column, the two buttons ── */
-.sxc__eyebrow { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; color: rgba(255, 255, 255, 0.78); }
-.sxc__eyebrow b { font-weight: 400; color: rgba(255, 255, 255, 0.55); }
-.sxc__side { display: grid; gap: 22px; justify-items: start; }
-.sxc__actions { display: flex; flex-wrap: wrap; gap: 12px; pointer-events: auto; }
-/* the first section on the page: it clears the nav itself */
-/* the first section on the page: it clears the nav itself (the landscape
-   full-screen floor below goes edge to edge instead) */
-@media not ((min-aspect-ratio: 1/1) and (min-width: 768px)) {
-  .sxc-section.sxc { padding-top: calc(var(--lane-top, 80px) + 28px); padding-bottom: clamp(48px, 8svh, 96px); }
-}
+/* ── the section's own pieces ── */
+.sxc__eyebrow { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; color: rgba(255, 255, 255, 0.72); }
+.sxc__eyebrow b { font-weight: 500; color: var(--signal-ink); }
 .sxc-section.sxc::before { display: none; }
 @media (min-aspect-ratio: 1/1) and (min-width: 768px) {
-  .sxc__head .sxc-h2 { font-size: clamp(28px, 3vw, 54px); max-width: 16ch; }
-  /* the floor drops a little so the headline stands in the dark ceiling,
-     clear of the cases; the bottom of the floor's reflection is what goes */
+  .sxc__head .sxc-h2 { font-size: clamp(26px, 2.6vw, 46px); max-width: 18ch; }
+  /* the floor drops a little so the title stands in the dark ceiling, clear
+     of the cases; the bottom of the floor's reflection is what goes */
   .sxc__gallery { --oy: 9cqh; }
-  .sxc__actions { flex-wrap: nowrap; }
-  .sxc__head .sxc__side { margin-top: 22px; }
-  .sxc__head .sxc__body { margin-top: 0 !important; }
-  .sxc__actions .ghost-btn { background: rgba(0, 0, 0, 0.35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  /* edge to edge: the page keeps a lane for the rail on wide screens; the
+     floor runs under it */
+  .sxc-section.sxc { margin-right: calc(-1 * var(--lane-right, 0px)); }
 }
 @media (max-width: 767px) {
-  .sxc-section.sxc { padding-top: calc(var(--lane-top, 72px) + 12px); }
   .sxc__head { margin-bottom: 20px; }
-  .sxc__eyebrow b { display: none; }
-  .sxc__side { gap: 16px; }
 }

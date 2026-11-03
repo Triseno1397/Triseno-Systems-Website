@@ -70,9 +70,9 @@ export const FINDS: Find[] = [
 
 
   // ad creative
-  { id: "studio-cases", page: "/studio", rail: "Cases", mode: "seen", name: "The gallery", hint: "Four glass cases" },
+  { id: "studio-reel", page: "/studio", rail: "Showreel", mode: "seen", name: "The showreel", hint: "It opens up" },
+  { id: "studio-cases", page: "/studio", rail: "Cases", mode: "seen", name: "The gallery", hint: "Four glass cases, below the reel" },
   { id: "studio-case", page: "/studio", mode: "special", name: "Inside a case", hint: "Step into one", cue: { at: ".sxc__stage", say: "Step into a case", pos: "foot" } },
-  { id: "studio-formats", page: "/studio", rail: "Formats", mode: "touch", name: "The filmstrip", hint: "Play a frame", cue: { at: ".sx-frame__media", say: "Play", pos: "center" } },
   { id: "studio-behind", page: "/studio", rail: "Behind", mode: "seen", name: "Behind the shot", hint: "Look behind it" },
   { id: "studio-proof", page: "/studio", rail: "Proof", mode: "seen", name: "The marquee", hint: "Faces that keep moving" },
   { id: "studio-questions", page: "/studio", rail: "Questions", mode: "seen", name: "Studio questions", hint: "Near the end" },

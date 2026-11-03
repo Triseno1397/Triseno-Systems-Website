@@ -131,6 +131,9 @@ html[data-content-fade] main > [data-fade] {
 }
 /* the warp tunnel and poster captures show the page bare */
 html[data-portal-capture] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
+/* a full-screen section that owns the top of the screen (the Creative gallery)
+   holds the fade off while it is under the nav */
+html[data-fade-hold] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
 
 /* The portal's DOM plate paints first and the opaque canvas covers it once
    its first frame is up — but a covered layer is still composited: seven

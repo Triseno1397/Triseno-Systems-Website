@@ -1,15 +1,17 @@
 "use client";
 
 import "../../app/studio-cases.css";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowClockwise } from "@phosphor-icons/react";
-import GhostButton from "@/components/ui/GhostButton";
-import { getLenis } from "@/components/world/SmoothScroll";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { discover } from "@/lib/discover";
 import Aperture from "./Aperture";
 
 /**
- * /studio §1 — the Creative landing: a gallery of four businesses.
+ * /studio §2 — who we make it for: a gallery of four businesses. It took the
+ * place of the Formats filmstrip (2026-11-02); the showreel hero stays first,
+ * and its "See what we make" button lands here (#formats).
  *
  * (Moved here from the retired AI Infrastructure page on 2026-11-02, where it
  * was the "museum". Same room, same camera; the copy and the hue are
@@ -27,9 +29,8 @@ import Aperture from "./Aperture";
  * The way out is a placard in the corner of the case: a tiny floor plan of
  * the four cases with this one lit, "Back to the floor"; Esc does the same.
  *
- * On a landscape screen the gallery is the whole first screen, the headline
- * standing in the dark above the cases. Phones keep a framed 4:3 stage under
- * the headline. Reduced motion: lights on, no camera travel, the line drawn,
+ * On a landscape screen the gallery fills the screen, the title standing in
+ * the dark above the cases. Phones keep a framed 4:3 stage under the title. Reduced motion: lights on, no camera travel, the line drawn,
  * the stills instead of the films.
  */
 
@@ -127,6 +128,11 @@ const CASES: Case[] = [
   },
 ];
 
+gsap.registerPlugin(ScrollTrigger);
+
+/** the floor fills the screen on landscape screens (studio-cases.css carries the same query) */
+const FULL_MQ = "(min-aspect-ratio: 1/1) and (min-width: 768px)";
+
 /** a loop of the whole floor, every miniature moving at once */
 const GALLERY_FILM = "/videos/ai-mus-gallery.mp4";
 const GALLERY_STILL = "/worlds/ai-mus-gallery.webp";
@@ -195,7 +201,28 @@ export default function CaseGallery() {
   const kase = CASES[active];
   const total = kase.log.length;
 
-  /* the lights come on as the page opens; the camera waits on the floor */
+  /* full screen (landscape): while the floor is under the nav, the page's
+     content fade is off, so the gallery runs to the top edge instead of
+     dissolving into the soundstage behind it (html[data-fade-hold], world.css) */
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const mq = window.matchMedia(FULL_MQ);
+    const root = document.documentElement;
+    const st = ScrollTrigger.create({
+      trigger: el,
+      start: "top top+=72",
+      end: "bottom top+=72",
+      refreshPriority: -1,
+      onToggle: (self) => root.toggleAttribute("data-fade-hold", self.isActive && mq.matches),
+    });
+    return () => {
+      st.kill();
+      root.removeAttribute("data-fade-hold");
+    };
+  }, []);
+
+  /* the lights come on as the gallery arrives; the camera waits on the floor */
   useEffect(() => {
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const el = rootRef.current;
@@ -275,20 +302,10 @@ export default function CaseGallery() {
   const closed = step >= total;
   const nodeState = (n: number): "off" | "run" | "done" => (step < n ? "off" : step === n ? "run" : "done");
 
-  const toFormats = (e: MouseEvent<HTMLAnchorElement>) => {
-    const target = document.getElementById("formats");
-    if (!target) return;
-    e.preventDefault();
-    const lenis = getLenis();
-    if (lenis) lenis.scrollTo(target, { duration: 1.6 });
-    else target.scrollIntoView({ behavior: reduced.current ? "auto" : "smooth", block: "start" });
-  };
-
-  const formatsInner = useMemo(() => <span>See the formats</span>, []);
-
   return (
     <section
       ref={rootRef}
+      id="formats"
       data-rail="Cases"
       data-no-fade=""
       aria-labelledby="sxc-title"
@@ -300,27 +317,16 @@ export default function CaseGallery() {
             <p className="sxc-label sxc__eyebrow">
               <Aperture size={13} strokeWidth={1.25} glow />
               <span>
-                Triseno / Creative <b>· Ad creative for paid social</b>
+                <b>02</b> / Who we make it for
               </span>
             </p>
-            <h1 id="sxc-title" className="sxc-h2 font-display font-semibold uppercase">
-              Video that sells while it scrolls.
-            </h1>
+            <h2 id="sxc-title" className="sxc-h2 font-display font-semibold uppercase">
+              One studio. Every format the feed demands.
+            </h2>
           </div>
-          <div className="sxc__side">
-            <p key={inside ? active : "floor"} className="sxc-body sxc__body">
-              {inside ? kase.body : INTRO.floor}
-            </p>
-            <div className="sxc__actions">
-              <GhostButton href="/contact?division=creative">Start a Conversation</GhostButton>
-              <a href="#formats" onClick={toFormats} className="ghost-btn">
-                <span className="ghost-btn__layer">{formatsInner}</span>
-                <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">
-                  {formatsInner}
-                </span>
-              </a>
-            </div>
-          </div>
+          <p key={inside ? active : "floor"} className="sxc-body sxc__body">
+            {inside ? kase.body : INTRO.floor}
+          </p>
         </header>
 
         <div className="sxc__room" data-lit={lit ? "" : undefined} data-inside={inside ? "" : undefined}>
@@ -332,7 +338,7 @@ export default function CaseGallery() {
               <picture>
                 <source media="(max-width: 767px)" srcSet="/worlds/ai-mus-gallery-m.webp" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={GALLERY_STILL} alt="" decoding="async" fetchPriority="high" draggable={false} />
+                <img src={GALLERY_STILL} alt="" decoding="async" loading="lazy" draggable={false} />
               </picture>
               <CaseFilm src={GALLERY_FILM} poster={GALLERY_STILL} className="sxc__film sxc__floorfilm" eager />
               {CASES.map((c, i) => (
