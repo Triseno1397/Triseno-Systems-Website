@@ -183,7 +183,7 @@ html[data-touring] .orb-say { opacity: 0 !important; pointer-events: none !impor
 }
 
 /* compact pass: the cards stay small enough to leave the page readable */
-.tour-card { width: min(500px, calc(100vw - 2 * var(--gutter, 16px))); padding: 14px 16px 12px; }
+.tour-card { width: min(440px, calc(100vw - 2 * var(--gutter, 16px))); padding: 14px 16px 12px; }
 .tour-card__body { margin-top: 10px; }
 .tour-card__title { font-size: clamp(17px, 1.6vw, 21px); }
 .tour-card__caption { margin-top: 7px; font-size: 13.5px; line-height: 1.5; }

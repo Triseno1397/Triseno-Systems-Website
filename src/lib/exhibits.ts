@@ -31,7 +31,98 @@ export interface Exhibit {
   skipTour?: boolean;
 }
 
-export const TOUR_PAGES = ["/", "/web-design-division", "/studio", "/work"] as const;
+/* ─────────────────────────────────────────────────────────────────────────
+   THE TOUR — only the showpieces, each one played rather than parked on.
+
+   A stop glides to the top of its section, then PLAYS it: the page scrolls
+   slowly from `play[0]` to `play[1]` of the section's scroll travel (pin
+   included) over `ms`, so pinned scenes run in front of the visitor instead
+   of being skipped. `through` plays on to the top of another section (the
+   home doors). `act` lets the tour press the piece's own buttons.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export interface TourStop {
+  page: string;
+  rail: string;
+  title: string;
+  caption: string;
+  /** fractions of the section's scroll travel to play between */
+  play?: [number, number];
+  /** play on until this section's top reaches the top of the screen */
+  through?: string;
+  /** how long the stop lasts, from arrival */
+  ms: number;
+  act?: "prism" | "case";
+}
+
+export const TOUR: TourStop[] = [
+  {
+    page: "/",
+    rail: "Divisions",
+    title: "The hall",
+    caption: "A live 3D world, rendered in your browser as you watch. Nothing here is a video.",
+    ms: 6000,
+  },
+  {
+    page: "/",
+    rail: "Web Design",
+    through: "Gate",
+    title: "The hall of doors",
+    caption: "Your scroll is the camera. It dollies down the hall, slowing at each door.",
+    ms: 12000,
+  },
+  {
+    page: "/web-design-division",
+    rail: "Hero",
+    title: "The shutter",
+    caption: "The headline opens like a camera shutter as the page arrives.",
+    ms: 4500,
+  },
+  {
+    page: "/web-design-division",
+    rail: "Demo",
+    play: [0, 1],
+    title: "A site inside the site",
+    caption: "A complete concept website, live on a 3D card that turns as you scroll.",
+    ms: 9000,
+  },
+  {
+    page: "/web-design-division",
+    rail: "Deliverables",
+    title: "The crystal hall",
+    caption: "Raymarched live, sixty times a second, on your own device. Each colour is a deliverable.",
+    ms: 11000,
+    act: "prism",
+  },
+  {
+    page: "/studio",
+    rail: "Showreel",
+    play: [0, 1],
+    title: "The showreel",
+    caption: "Scroll opens the iris on the reel. The timecode and f-stop count with you.",
+    ms: 8500,
+  },
+  {
+    page: "/studio",
+    rail: "Cases",
+    title: "The gallery",
+    caption: "Four businesses under glass, all moving. The camera flies into one to show its ad.",
+    ms: 12000,
+    act: "case",
+  },
+  {
+    page: "/studio",
+    rail: "Behind",
+    play: [0, 1],
+    title: "Behind the shot",
+    caption: "A story told one print at a time, dealt onto the table as you scroll.",
+    ms: 9500,
+  },
+];
+
+export const TOUR_PAGES = ["/", "/web-design-division", "/studio"] as const;
+export const TOUR_TOTAL = TOUR.length;
+export const tourStops = (page: string) => TOUR.filter((s) => s.page === page);
 
 export const PAGE_NAMES: Record<string, string> = {
   "/": "The studio",
@@ -321,9 +412,6 @@ export const exhibitNo = (e: Exhibit) => EXHIBITS.indexOf(e) + 1;
 export const exhibitFor = (page: string, rail: string | null) =>
   rail ? EXHIBITS.find((e) => e.page === page && e.rail === rail) ?? null : null;
 
-export const tourStops = (page: string) => EXHIBITS.filter((e) => e.page === page && !e.skipTour);
-
-export const TOUR_TOTAL = TOUR_PAGES.reduce((n, p) => n + tourStops(p).length, 0);
 
 /** which concept is showing: the port picks it on localhost (3401 tour, 3402
  *  inspect), ?explore=tour|inspect|off forces one and sticks for the session */
