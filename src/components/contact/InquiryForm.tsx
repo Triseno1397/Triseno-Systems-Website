@@ -27,7 +27,7 @@ const ENDPOINT = `https://formsubmit.co/ajax/${EMAIL}`;
 
 type Status = "idle" | "sending" | "sent" | "error";
 
-const isDivision = (v: string | null): v is ContactDivision => v === "creative" || v === "web" || v === "ai";
+const isDivision = (v: string | null): v is ContactDivision => v === "creative" || v === "web";
 
 /**
  * /contact — the inquiry form, cut to what we need to reply: which division,
@@ -51,11 +51,17 @@ export default function InquiryForm({ onDivision }: { onDivision: (d: ContactDiv
 
   const option = DIVISION_OPTIONS.find((d) => d.key === values.division) ?? null;
 
-  // ?division=creative|web|ai preselects (the division CTAs and the chrome
+  // ?division=creative|web preselects (the division CTAs and the chrome
   // contact icon pass it), so arriving from a division page skips a click
   useLayoutEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("division");
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("division");
     if (isDivision(q)) setValues((v) => ({ ...v, division: q }));
+    // ?build=… is the list a visitor made in inspect mode: it starts the message
+    const build = params.get("build");
+    if (build) setValues((v) => (v.message ? v : { ...v, message: `I'd like these on my site: ${build.slice(0, 600)}.
+
+` }));
   }, []);
 
   useEffect(() => {

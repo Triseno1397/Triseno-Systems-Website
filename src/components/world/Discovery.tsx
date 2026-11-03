@@ -131,7 +131,7 @@ export default function Discovery() {
       // storage blocked: the roll call plays on every arrival instead
     }
     const play = here.filter((f) => f.mode !== "seen").length;
-    const t1 = window.setTimeout(() => setRoll(`${here.length} pieces on this page · ${play} to play with`), 1400);
+    const t1 = window.setTimeout(() => setRoll(`${here.length} exhibits in this room · ${play} hands-on`), 1400);
     const t2 = window.setTimeout(() => setRoll(null), 7400);
     return () => {
       window.clearTimeout(t1);
@@ -278,7 +278,7 @@ export default function Discovery() {
             {pad(toast.n)}/{TOTAL}
           </span>
           <span className="discover__toast-name">
-            <span className="font-mono">Found</span> {toast.find.name}
+            <span className="font-mono">Now viewing</span> {toast.find.name}
           </span>
         </p>
       ) : null}
@@ -289,17 +289,17 @@ export default function Discovery() {
           className="discover__panel"
           role="dialog"
           aria-modal="false"
-          aria-label="Everything there is to find on this site"
+          aria-label="The collection: every exhibit on this site"
           data-lenis-prevent=""
         >
           <header className="discover__head">
-            <p className="discover__kicker font-mono">The whole site is the portfolio</p>
+            <p className="discover__kicker font-mono">The collection</p>
             <h2 className="discover__title font-display">
-              {done ? "You found all of it" : `${pad(count)} of ${TOTAL} found`}
+              {done ? "You have seen the whole collection" : `${pad(count)} of ${TOTAL} exhibits viewed`}
             </h2>
             <p className="discover__lede">
-              Every section runs its own build. Click, drag, hold and scroll everything: the rest are still out
-              there.
+              Every room of this site is an exhibit of what your website could do. Touch, drag, hold and scroll:
+              each one is a component we can build for you.
             </p>
             <span className="discover__bar" aria-hidden="true">
               <i style={{ transform: `scaleX(${count / TOTAL})` }} />
@@ -322,7 +322,7 @@ export default function Discovery() {
                     )}
                     <span className="discover__pagecount font-mono">
                       {got}/{finds.length}
-                      {here ? " · you are here" : ""}
+                      {here ? " · this room" : ""}
                     </span>
                   </p>
                   <ul className="discover__finds">
@@ -348,14 +348,14 @@ export default function Discovery() {
         type="button"
         className="discover__pill"
         aria-expanded={open}
-        aria-label={`${count} of ${TOTAL} pieces found. Open the map of everything to find`}
+        aria-label={`${count} of ${TOTAL} exhibits viewed. Open the collection`}
         onClick={() => setOpen((v) => !v)}
       >
         <span className="discover__ring" aria-hidden="true" style={{ ["--p" as string]: count / TOTAL }} />
         <span className="font-mono">
           <b>{pad(count)}</b>/{TOTAL}
         </span>
-        <span className="discover__pilllabel font-mono">found</span>
+        <span className="discover__pilllabel font-mono">viewed</span>
         <span className="discover__roll font-mono" data-on={roll ? "" : undefined} aria-live="polite">
           {roll ? <span>{roll}</span> : null}
         </span>

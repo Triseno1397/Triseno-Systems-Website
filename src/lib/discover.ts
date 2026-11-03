@@ -51,7 +51,7 @@ export const FINDS: Find[] = [
   // the studio (home)
   { id: "home-hall", page: "/", rail: "Divisions", mode: "seen", name: "The hall", hint: "Where it all starts" },
   { id: "home-operator", page: "/", mode: "special", name: "The operator", hint: "Someone in the hall wants to be clicked" },
-  { id: "home-demo", page: "/", rail: "The demo", mode: "seen", name: "The confession", hint: "Right after the headline" },
+  { id: "home-demo", page: "/", rail: "The demo", mode: "seen", name: "The statement", hint: "Right after the headline" },
   { id: "home-door-web", page: "/", rail: "Web Design", mode: "seen", name: "The first door", hint: "Scroll down the hall" },
   { id: "home-door-creative", page: "/", rail: "Creative", mode: "seen", name: "The ring door", hint: "Keep walking" },
   { id: "home-door-work", page: "/", rail: "Work", mode: "seen", name: "The index door", hint: "Further still" },

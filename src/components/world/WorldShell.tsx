@@ -9,6 +9,10 @@ import OrbCursor from "./OrbCursor";
 import SmoothScroll from "./SmoothScroll";
 import Discovery from "./Discovery";
 import PerfOverlay from "./PerfOverlay";
+import Tour from "./Tour";
+import Inspect from "./Inspect";
+import { exploreVariant, type ExploreVariant } from "@/lib/exhibits";
+import { useEffect, useState } from "react";
 
 /**
  * Global foundation. The warp transition wraps every route so travel works in
@@ -19,6 +23,13 @@ import PerfOverlay from "./PerfOverlay";
 export default function WorldShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const world = isRevampedRoute(pathname);
+  // the two exploring concepts, picked by port on localhost (3401 / 3402)
+  const [explore, setExplore] = useState<ExploreVariant>("none");
+  useEffect(() => {
+    const v = exploreVariant();
+    setExplore(v);
+    document.documentElement.setAttribute("data-explore", v);
+  }, []);
 
   return (
     <WarpProvider>
@@ -29,6 +40,8 @@ export default function WorldShell({ children }: { children: ReactNode }) {
           <Chrome />
           <Discovery />
           <PerfOverlay />
+          {explore === "tour" ? <Tour /> : null}
+          {explore === "inspect" ? <Inspect /> : null}
           <OrbCursor />
         </>
       ) : null}

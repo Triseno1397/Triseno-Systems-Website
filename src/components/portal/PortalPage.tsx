@@ -16,6 +16,8 @@ import { prefersLite } from "@/lib/device";
 import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import { TOTAL, openMap } from "@/lib/discover";
+import { startTour } from "@/components/world/Tour";
+import { exploreVariant, type ExploreVariant } from "@/lib/exhibits";
 
 /** the portal's legend: the studio's craft first, then what else it makes */
 const LEGEND = ["Websites", "Ad creative"];
@@ -118,6 +120,9 @@ function progressForDoor(i: number, ahead: number): number {
 export default function PortalPage() {
   const { travel } = useWarp();
   const [mode, setMode] = useState<Mode>("pending");
+  /** which exploring concept is showing (localhost only): its button joins the hero */
+  const [exploreMode, setExploreMode] = useState<ExploreVariant>("none");
+  useEffect(() => setExploreMode(exploreVariant()), []);
   const [ready, setReady] = useState(false);
   // which glyph/headline is showing (cycles 0..2 at rest) and whether a word is
   // actually hovered/focused. Hue only ever appears while `hot`.
@@ -534,7 +539,7 @@ export default function PortalPage() {
           <div className="pointer-events-none">
             <h1 className="portal-headline font-display font-bold uppercase">
               <span className="sr-only">
-                Triseno, a web design studio. We also make ad creative and AI systems.
+                Triseno, a web design studio. We also make ad creative.
               </span>
               <span aria-hidden="true" className="block">
                 <HeadlineRotate words={lineOne} index={head} showGlyph={false} showRule={false} />
@@ -576,8 +581,24 @@ export default function PortalPage() {
                 <b>This site is the demo.</b>
                 <span className="portal-explore__more"> Every section is something we can build for you.</span>
               </span>{" "}
+              {exploreMode === "tour" ? (
+                <button type="button" className="portal-explore__btn portal-explore__btn--tour font-mono" onClick={startTour}>
+                  Take the guided tour
+                  <i aria-hidden="true" />
+                </button>
+              ) : null}
+              {exploreMode === "inspect" ? (
+                <button
+                  type="button"
+                  className="portal-explore__btn portal-explore__btn--tour font-mono"
+                  onClick={() => document.querySelector<HTMLButtonElement>(".inspect-toggle")?.click()}
+                >
+                  Inspect the site
+                  <i aria-hidden="true" />
+                </button>
+              ) : null}
               <button type="button" className="portal-explore__btn font-mono" onClick={openMap}>
-                {TOTAL} pieces to find
+                {TOTAL} exhibits to explore
                 <i aria-hidden="true" />
               </button>
             </p>
@@ -635,7 +656,7 @@ export default function PortalPage() {
           </p>
           <ul className="portal-demo__facts font-mono" aria-label="The site in numbers">
             <li>
-              <b>{TOTAL}</b> pieces to find
+              <b>{TOTAL}</b> exhibits to explore
             </li>
             <li>
               <b>0</b> templates
@@ -646,9 +667,9 @@ export default function PortalPage() {
           </ul>
           <div className="portal-demo__actions">
             <button type="button" className="ghost-btn" onClick={openMap}>
-              <span className="ghost-btn__layer">Open the map</span>
+              <span className="ghost-btn__layer">See the collection</span>
               <span aria-hidden="true" className="ghost-btn__layer ghost-btn__fill">
-                Open the map
+                See the collection
               </span>
             </button>
             <GhostButton href="/contact">Build mine</GhostButton>
@@ -731,7 +752,7 @@ export default function PortalPage() {
           <p className="chrome-label mb-7 font-mono text-white">Next — Contact</p>
           <h2 className="gate-title font-display font-bold uppercase">Tell us about your website</h2>
           <p className="mt-7 max-w-[44ch] font-sans text-[length:var(--fs-body)] font-light leading-[1.5] text-[color:var(--ink-secondary)]">
-            One conversation with the person who builds it. Ad creative and AI systems from the same studio, when
+            One conversation with the person who builds it. Ad creative from the same studio, when
             you need them too.
           </p>
           <GhostButton href="/contact" className="mt-10">

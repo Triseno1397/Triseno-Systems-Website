@@ -191,7 +191,6 @@ export const PAGES: Record<PageKey, PageSeo> = {
       ...CORE_KEYWORDS,
       "ad creative examples",
       "website design concepts",
-      "AI system concepts",
       "creative formats",
     ],
     og: "/og/default.png",
