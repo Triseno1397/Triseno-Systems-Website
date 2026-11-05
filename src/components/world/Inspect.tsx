@@ -7,7 +7,7 @@ import { WarpLink } from "./WarpProvider";
 import { EXHIBITS, PAGE_NAMES, exhibitFor, exhibitNo, type Exhibit } from "@/lib/exhibits";
 
 /**
- * Inspect mode (localhost concept, port 3402 or ?explore=inspect).
+ * Inspect mode (kept behind ?explore=inspect; the guided tour is the default).
  *
  * One toggle in the corner. Off, the site is untouched. On, the screen
  * becomes a viewfinder (four corner marks, a thin label along the top) and a

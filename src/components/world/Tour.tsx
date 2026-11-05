@@ -9,7 +9,7 @@ import GhostButton from "@/components/ui/GhostButton";
 import { PAGE_NAMES, TOUR, TOUR_TOTAL, type TourStop } from "@/lib/exhibits";
 
 /**
- * The guided tour (localhost concept, port 3401 or ?explore=tour).
+ * The guided tour, on every page of the world (lib/exhibits.ts exploreVariant).
  *
  * For the visitor who will not explore on their own: one button, and the site
  * plays its showpieces for them (lib/exhibits.ts TOUR). At each stop the page

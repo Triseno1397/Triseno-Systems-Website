@@ -413,21 +413,20 @@ export const exhibitFor = (page: string, rail: string | null) =>
   rail ? EXHIBITS.find((e) => e.page === page && e.rail === rail) ?? null : null;
 
 
-/** which concept is showing: the port picks it on localhost (3401 tour, 3402
- *  inspect), ?explore=tour|inspect|off forces one and sticks for the session */
+/** which explore mode is showing: the guided tour by default;
+ *  ?explore=tour|inspect|off forces one and sticks for the session */
 export type ExploreVariant = "tour" | "inspect" | "none";
 export function exploreVariant(): ExploreVariant {
   if (typeof window === "undefined") return "none";
   try {
     const q = new URLSearchParams(window.location.search).get("explore");
-    if (q === "tour" || q === "inspect") window.sessionStorage.setItem("triseno:explore", q);
-    if (q === "off") window.sessionStorage.removeItem("triseno:explore");
+    if (q === "tour" || q === "inspect" || q === "off") window.sessionStorage.setItem("triseno:explore", q);
     const kept = window.sessionStorage.getItem("triseno:explore");
     if (kept === "tour" || kept === "inspect") return kept;
+    if (kept === "off") return "none";
   } catch {
-    // storage blocked: the port decides
+    // storage blocked: the default stands
   }
-  if (window.location.port === "3401") return "tour";
-  if (window.location.port === "3402") return "inspect";
-  return "none";
+  // the guided tour is the site's own; inspect mode stays behind ?explore=inspect
+  return "tour";
 }

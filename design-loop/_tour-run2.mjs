@@ -4,7 +4,7 @@ const b = await chromium.launch({ headless: false, args: ['--ignore-gpu-blocklis
 const ctx = await b.newContext({ viewport: { width: W, height: H }, isMobile: phone, hasTouch: phone, deviceScaleFactor: phone ? 3 : 1 });
 const p = await ctx.newPage(); const errs = [];
 p.on('pageerror', (e) => errs.push(e.message));
-await p.goto('http://localhost:3401/', { waitUntil: 'load' }); await p.waitForTimeout(2000);
+await p.goto('http://localhost:' + (process.env.PORT || 3401) + '/', { waitUntil: 'load' }); await p.waitForTimeout(2000);
 await p.locator('.tour-launch').click();
 const t0 = Date.now(); let last = ''; let n = 0;
 while (Date.now() - t0 < 160000) {
