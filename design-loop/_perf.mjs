@@ -17,7 +17,7 @@ p.on('response', async (r) => {
     const h = r.headers(); const len = +(h['content-length'] || 0);
     const t = (h['content-type'] || '').split(';')[0];
     bytes += len; byType[t] = (byType[t] || 0) + len;
-    if (len > 400_000) big.push([len, r.url().replace('http://localhost:3300', '')]);
+    if (len > 400_000) big.push([len, r.url().replace('http://localhost:' + (process.env.PORT || 3300) + '', '')]);
   } catch {}
 });
 const errs = [];
@@ -30,7 +30,7 @@ await p.addInitScript(() => {
   requestAnimationFrame(tick);
 });
 const t0 = Date.now();
-await p.goto('http://localhost:3300' + page, { waitUntil: 'load' });
+await p.goto('http://localhost:' + (process.env.PORT || 3300) + '' + page, { waitUntil: 'load' });
 const loadMs = Date.now() - t0;
 // experiments: INJECT_CSS adds a stylesheet after load (e.g. to switch a feature off)
 if (process.env.INJECT_CSS) await p.addStyleTag({ content: process.env.INJECT_CSS });

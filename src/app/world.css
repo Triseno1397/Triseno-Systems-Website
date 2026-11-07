@@ -111,12 +111,14 @@ html[data-content-fade] main > [data-fade] {
   );
   -webkit-mask-image: var(--content-mask);
   mask-image: var(--content-mask);
-  /* one viewport tall, three viewports wide (content that overhangs its box
-     sideways is never clipped), pinned to the viewport by --fade-y */
-  -webkit-mask-size: calc(100% + 200vw) var(--fade-vh, 100vh);
-  mask-size: calc(100% + 200vw) var(--fade-vh, 100vh);
-  -webkit-mask-position: -100vw var(--fade-y, 0px);
-  mask-position: -100vw var(--fade-y, 0px);
+  /* one viewport tall, a little wider than the section (a tilted card can
+     overhang its box by a few px), pinned to the viewport by --fade-y. It was
+     three viewports wide: the mask is a texture the GPU fills every frame,
+     and the wide one cost a fifth of the page's GPU time (design-loop/_gpu-exp.mjs) */
+  -webkit-mask-size: calc(100% + 10vw) var(--fade-vh, 100vh);
+  mask-size: calc(100% + 10vw) var(--fade-vh, 100vh);
+  -webkit-mask-position: -5vw var(--fade-y, 0px);
+  mask-position: -5vw var(--fade-y, 0px);
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-clip: no-clip;
@@ -440,6 +442,9 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 .portal-explore { position: relative; z-index: 5; }
 .portal-explore__btn { background: rgba(8, 9, 12, 0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .portal-explore__line b { font-weight: 600; color: #ffffff; }
+/* the hero's tour button: the dock's launcher, inline in the line (explore.css) */
+.portal-explore .tour-launch--hero { position: relative; z-index: auto; margin-top: 4px; }
+.portal-explore .tour-launch--hero .tour-launch__sweep { animation-delay: 1.8s; }
 @media (max-width: 767px) {
   .portal-explore { font-size: 13px; gap: 8px; }
   /* the Operator stands right here on a phone: the short line and the button */
@@ -465,6 +470,9 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 .portal-demo__facts b { font-weight: 500; color: #ffffff; margin-right: 0.5em; }
 .portal-demo__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
 @media (max-width: 767px) {
+  /* the panel meets the visitor at the top of its screen, not after half a
+     screen of empty hall (the phone has no dolly to watch while it waits) */
+  .portal-demo { place-items: start center; padding-top: calc(var(--lane-top, 72px) + 8px); }
   .portal-demo__facts { gap: 8px 18px; font-size: 10px; letter-spacing: 0.16em; }
 }
 @media (prefers-reduced-motion: reduce) { .portal-explore { animation: none; } }
@@ -724,7 +732,7 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   mask-image: repeating-linear-gradient(0deg, #000 0 3px, rgba(0, 0, 0, 0.3) 3px 8px);
 }
 .world-atmos__dust {
-  inset: -22%;
+  inset: 0 0 -180px 0;
   background-image:
     radial-gradient(1.7px 1.7px at 18px 22px, rgba(255, 255, 255, 0.5), transparent 62%),
     radial-gradient(1.2px 1.2px at 96px 64px, rgba(255, 255, 255, 0.34), transparent 62%),
@@ -767,8 +775,10 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   position: absolute; inset: 0;
   transform-origin: 50% var(--plate-h);
   background: var(--st-ph-d) center var(--plate-h) / cover no-repeat;
-  will-change: transform, opacity;
 }
+/* the first station is up from the start; the others are promoted by
+   WorldPlate as the camera nears them */
+.world-plate__station:first-child { will-change: transform, opacity; }
 .world-plate__img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: 50% var(--plate-h);
@@ -779,8 +789,7 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
 .world-plate__shaft {
   position: absolute; left: 50%; top: 0; width: 34%; height: var(--plate-h);
   transform: translateX(-50%);
-  background: radial-gradient(38% 100% at 50% 0%, rgba(255, 255, 255, 0.16), transparent 100%);
-  mix-blend-mode: screen;
+  background: radial-gradient(38% 100% at 50% 0%, rgba(255, 255, 255, 0.2), transparent 100%);
   animation: plate-breathe 7s ease-in-out infinite alternate;
 }
 /* low haze drifting across the floor line */
@@ -805,7 +814,6 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   background:
     radial-gradient(22% 16% at 50% 43%, var(--plate-hue), transparent 100%),
     radial-gradient(60% 40% at 50% 46%, color-mix(in srgb, var(--plate-hue) 45%, transparent), transparent 100%);
-  mix-blend-mode: screen;
   opacity: 0;
   transition: opacity 240ms var(--ease-expo);
 }
@@ -814,13 +822,15 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
 /* a soft light that follows the pointer */
 .world-plate__light {
   position: absolute; left: -260px; top: -260px; width: 520px; height: 520px;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.09), transparent 100%);
-  mix-blend-mode: screen; opacity: 0;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.1), transparent 100%);
+  opacity: 0;
   transition: opacity 900ms var(--ease-expo);
   will-change: transform;
 }
 .world-plate__dust {
-  position: absolute; inset: -22%;
+  /* overhangs only where its drift goes (173px up a cycle): the old -22% on
+     every side was a 1.4-screen layer composited each frame */
+  position: absolute; inset: 0 0 -180px 0;
   background-image:
     radial-gradient(1.6px 1.6px at 18px 22px, rgba(255, 255, 255, 0.55), transparent 62%),
     radial-gradient(1.1px 1.1px at 96px 64px, rgba(255, 255, 255, 0.38), transparent 62%),
@@ -1005,9 +1015,13 @@ html.lenis-scrolling :is(
   .web-plate__shaft, .web-plate__haze, .web-plate__dust,
   .ai-world__glow, .ai-world__core
 ) { animation-play-state: paused; }
-/* faint haze and dust read the same blended normally over the dark plate; the
-   screen blend is kept only where light really adds up (shafts, pointer light) */
-html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .web-plate__dust { mix-blend-mode: normal; }
+/* every light layer composites plainly: over a dark plate a translucent glow
+   reads the same as a screen blend, and each blend layer was one more
+   full-viewport read-back pass on the GPU every frame (six on Web Design;
+   measured 12.5 → 8.4 ms a frame without them, design-loop/_gpu-exp.mjs).
+   The one blend left is the colour grade (.world-plate__tint). */
+html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .web-plate__dust,
+html .world-plate__shaft, html .world-plate__spill, html .world-plate__light, html .web-scene__haze, html .web-plate__shaft { mix-blend-mode: normal; }
 
 /* ── tap targets: small text links get an invisible 44px-tall hit area
    (no layout change — the ::before only widens where a tap lands) */
@@ -1117,92 +1131,6 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
   main.portal-world .portal-hero { padding-bottom: 1svh; }
 }
 
-/* ── SMOOTHNESS: ambience rests while the page moves ─────────────────────
-   The slow ambient drifts (7–46s haze, dust, breathing light) are invisible
-   mid-scroll, but each one keeps a full-viewport blended layer re-compositing
-   every frame. They freeze while Lenis is scrolling and resume on the frame
-   scrolling stops, so the GPU spends a scroll frame on the scroll. */
-html.lenis-scrolling :is(
-  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
-  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
-  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
-  .ai-world__glow, .ai-world__core
-) { animation-play-state: paused; }
-/* faint haze and dust read the same blended normally over the dark plate; the
-   screen blend is kept only where light really adds up (shafts, pointer light) */
-html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .web-plate__dust { mix-blend-mode: normal; }
-
-/* ── tap targets: small text links get an invisible 44px-tall hit area
-   (no layout change — the ::before only widens where a tap lands) */
-.world-underline::before, .web-subaction::before {
-  content: ""; position: absolute; inset: -14px -6px;
-}
-.web-subaction { position: relative; }
-
-/* ── PHONES & TABLETS: memory diet ─────────────────────────────────────────
-   The frosted glass is made of full-viewport copies of the blurred world plate
-   (up to three per panel, one per camera station), each its own GPU layer at
-   the device pixel ratio. On a phone that is ~300 MB for one page and iOS
-   Safari kills the tab ("A problem repeatedly occurred"). On touch devices the
-   panel is smoked glass instead: the same 1px hairline and veil over the lit
-   world, which shows through the veil itself. */
-@media (pointer: coarse), (max-width: 767px) {
-  .glass-panel__world { display: none; }
-  .glass-panel__veil {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.035)),
-      rgba(8, 8, 10, calc(var(--glass-veil, 0.5) + 0.18));
-  }
-}
-
-/* Phones & tablets: the content-only mask is swapped for two soft neutral
-   scrims under the chrome (design-system §2 "chrome scrims"). Masking every
-   page-tall section forces each one onto its own GPU layer — on a phone that
-   is hundreds of MB — so here content dissolves into the scrim instead. */
-@media (pointer: coarse), (max-width: 767px) {
-  html[data-content-fade] main > [data-fade] { -webkit-mask-image: none; mask-image: none; }
-  html[data-content-fade] body::before,
-  html[data-content-fade] body::after {
-    content: ""; position: fixed; left: 0; right: 0; z-index: 790; pointer-events: none;
-  }
-  html[data-content-fade] body::before {
-    /* solid behind the two-line lockup and the menu trigger, then a long
-       soft falloff: copy dissolves before it can reach the chrome */
-    top: 0; height: 168px;
-    background: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.97) 44%, rgba(0, 0, 0, 0.72) 64%, rgba(0, 0, 0, 0.3) 84%, rgba(0, 0, 0, 0) 100%);
-  }
-  html[data-content-fade] body::after {
-    bottom: 0; height: 132px;
-    background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.95) 38%, rgba(0, 0, 0, 0.62) 62%, rgba(0, 0, 0, 0.24) 84%, rgba(0, 0, 0, 0) 100%);
-  }
-}
-
-/* Phones & tablets: the ambient drifts hold still. Each animated full-screen
-   layer is its own GPU surface at 3x pixel density (~12 MB apiece) and costs
-   frame time mid-scroll; held still they flatten into the world plate and the
-   look is the same frame. The pointer lights have no pointer here at all. */
-@media (pointer: coarse), (max-width: 767px) {
-  .world-plate__shaft, .world-plate__haze, .world-plate__dust,
-  .world-atmos__haze, .world-atmos__dust, .lite-signature__halo,
-  .web-plate__shaft, .web-plate__haze, .web-plate__dust,
-  .ai-world__glow, .ai-world__core { animation: none !important; will-change: auto; }
-  .world-plate__light, .web-plate__light, .ai-world__light { display: none; }
-}
-/* Phones: drop standing GPU layers that are only worth it with a mouse or a
-   desktop GPU — one per letter in the rotating headlines, the spotlight
-   fields, the stacked gate frames. They still animate; they simply don't hold
-   a layer while at rest. */
-@media (pointer: coarse), (max-width: 767px) {
-  .text-rotate__char, .hrotate__char, .warp-title, .ai-card__field,
-  .web-gate__frame, .work-gate__part, .work-gate__diamond, .sx-print,
-  .sx-gate__iris, .sx-gate__body { will-change: auto; }
-}
-
-/* The lockup's box is wider and taller than its words on a phone; only the
-   words take a tap, so content passing under the empty part stays tappable. */
-.morph-nav__lockup { pointer-events: none !important; }
-.morph-nav__lockup > * { pointer-events: auto; }
-
 /* ── THE OPERATOR (portal: interactive 3D robot) ─────────────────────── */
 .portal-robot__hint { color: var(--robot-hue, #ffffff); transition: color 700ms var(--ease-expo); }
 /* smoked glass (moving panels): the same hairline and veil, a touch denser */
@@ -1227,12 +1155,12 @@ html .world-plate__haze, html .world-plate__dust, html .web-plate__haze, html .w
 }
 @keyframes content-fade-track {
   from {
-    -webkit-mask-position: -100vw calc(0% - var(--fade-vh, 100vh));
-    mask-position: -100vw calc(0% - var(--fade-vh, 100vh));
+    -webkit-mask-position: -5vw calc(0% - var(--fade-vh, 100vh));
+    mask-position: -5vw calc(0% - var(--fade-vh, 100vh));
   }
   to {
-    -webkit-mask-position: -100vw calc(100% + var(--fade-vh, 100vh));
-    mask-position: -100vw calc(100% + var(--fade-vh, 100vh));
+    -webkit-mask-position: -5vw calc(100% + var(--fade-vh, 100vh));
+    mask-position: -5vw calc(100% + var(--fade-vh, 100vh));
   }
 }
 /* the glass panel's own layers are decoration: they never take a click (their

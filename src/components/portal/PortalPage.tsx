@@ -321,6 +321,11 @@ export default function PortalPage() {
     if (mode !== "full" || capture) return;
     const ctx = gsap.context(() => {
       const heroInner = heroInnerRef.current;
+      // The trigger's progress runs over the hero's height past one screen
+      // (a desktop: one screen; a phone: 30svh, 130svh in all). A phone has
+      // no dolly to hand over to, so the headline fades across the whole of
+      // that travel and the demo panel enters as it finishes.
+      const fadeOver = window.matchMedia("(max-width: 767px)").matches ? 1 : 0.4;
       ScrollTrigger.create({
         trigger: heroRef.current,
         start: "top top",
@@ -328,7 +333,7 @@ export default function PortalPage() {
         onUpdate: (self) => {
           portalState.hero = self.progress;
           if (heroInner) {
-            const o = 1 - Math.min(1, self.progress / 0.4);
+            const o = 1 - Math.min(1, self.progress / fadeOver);
             // the Operator's canvas stops drawing once the hero has faded out
             setHeroUp((up) => (up === o > 0.02 ? up : o > 0.02));
             heroInner.style.opacity = o.toFixed(3);
@@ -526,7 +531,9 @@ export default function PortalPage() {
         ref={heroRef}
         data-rail="Divisions"
         aria-label="Triseno Systems"
-        className={full ? "pointer-events-none relative z-10 h-[200svh]" : "relative z-10 min-h-[100svh] overflow-hidden"}
+        // a phone has no dolly to watch between the hero and the demo: the
+        // hero is shorter there so the panel arrives as the headline fades
+        className={full ? "pointer-events-none relative z-10 h-[200svh] max-md:h-[130svh]" : "relative z-10 min-h-[100svh] overflow-hidden"}
       >
 
         <div
@@ -579,18 +586,27 @@ export default function PortalPage() {
             <p className="portal-explore pointer-events-auto mt-6">
               <span className="portal-explore__line">
                 <b>This site is the demo.</b>
-                <span className="portal-explore__more"> Every section is something we can build for you.</span>
+                <span className="portal-explore__more"> Every section is an exhibit: a component we can build for you.</span>
               </span>{" "}
               {exploreMode === "tour" ? (
-                <button type="button" className="portal-explore__btn portal-explore__btn--tour font-mono" onClick={startTour}>
-                  Take the guided tour
-                  <i aria-hidden="true" />
+                <button type="button" className="tour-launch tour-launch--hero" onClick={startTour}>
+                  <span className="tour-launch__fill" aria-hidden="true" />
+                  <span className="tour-launch__glyph" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                      <path d="M3.5 2.2v11.6L13 8z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <span className="tour-launch__text">
+                    <b className="font-display">Take the guided tour</b>
+                    <small className="font-mono">Hands-free · 90 seconds</small>
+                  </span>
+                  <i className="tour-launch__sweep" aria-hidden="true" />
                 </button>
               ) : null}
               {exploreMode === "inspect" ? (
                 <button
                   type="button"
-                  className="portal-explore__btn portal-explore__btn--tour font-mono"
+                  className="portal-explore__btn font-mono"
                   onClick={() => document.querySelector<HTMLButtonElement>(".inspect-toggle")?.click()}
                 >
                   Inspect the site

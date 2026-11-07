@@ -52,8 +52,8 @@
 /* the far portal breathes */
 .web-plate__shaft {
   position: absolute; left: 50%; top: 57%; width: 30vw; height: 46vh; margin: -23vh 0 0 -15vw;
-  background: radial-gradient(ellipse at center, rgba(222, 204, 255, 0.5) 0%, color-mix(in srgb, var(--hue) 36%, transparent) 34%, transparent 70%);
-  mix-blend-mode: screen; opacity: 0.5; animation: web-breathe 7s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse at center, rgba(222, 204, 255, 0.42) 0%, color-mix(in srgb, var(--hue) 36%, transparent) 34%, transparent 70%);
+  opacity: 0.5; animation: web-breathe 7s ease-in-out infinite alternate;
 }
 @keyframes web-breathe { from { opacity: 0.32; transform: scale(0.94); } to { opacity: 0.72; transform: scale(1.04); } }
 @media (max-width: 767px) {
@@ -62,9 +62,10 @@
 }
 /* station light: the key haze moves to the far side of the object on stage */
 .web-scene__haze {
-  position: absolute; left: 50%; top: 54%; width: 110vmax; height: 66vmax; margin: -33vmax 0 0 -55vmax;
-  mix-blend-mode: screen;
-  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--hue) 18%, transparent) 0%, color-mix(in srgb, var(--hue) 5%, transparent) 38%, transparent 68%);
+  /* sized to the glow, not the screen: the outer third of the old box was
+     transparent, and every pixel of a full-screen layer is drawn each frame */
+  position: absolute; left: 50%; top: 54%; width: 80vmax; height: 48vmax; margin: -24vmax 0 0 -40vmax;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--hue) 18%, transparent) 0%, color-mix(in srgb, var(--hue) 5%, transparent) 52%, transparent 94%);
   transition: transform 1500ms var(--ease-expo), opacity 1500ms var(--ease-expo);
 }
 /* Stations: the light moves to the far side of whatever object is on stage. */

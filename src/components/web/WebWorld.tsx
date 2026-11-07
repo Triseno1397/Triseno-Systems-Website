@@ -97,7 +97,10 @@ export default function WebWorld() {
       <WorldPlate
         world="web"
         hue={DIVISIONS.web.hue}
-        tint={0.35}
+        // no colour grade: the atrium is painted in the division's violet
+        // already, and the grade was the last blend layer on the page (a
+        // full-screen read-back every frame; design-loop/_gpu-exp.mjs)
+        tint={0}
         stations={[0, '[data-rail="Before / After"]', '[data-rail="Gate"]']}
       />
       <div ref={fxRef} className="web-plate__fx">

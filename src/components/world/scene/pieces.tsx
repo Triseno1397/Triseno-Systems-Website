@@ -775,7 +775,38 @@ export function ReadySignal({ onReady, envReady = true }: { onReady: () => void;
       }
       chain = Promise.resolve();
     }
-    chain.then(post, post).then(resume, resume);
+    // Then, with the world up and the loader gone, every texture in the scene
+    // goes to the GPU one per frame (initTexture): the objects that only
+    // appear further down the page (the doors, the gate) would otherwise
+    // upload theirs inside their first draw, mid-scroll, in one task.
+    const warmTextures = () => {
+      if (!alive) return;
+      const textures: THREE.Texture[] = [];
+      const take = (v: unknown) => {
+        if (v instanceof THREE.Texture && !textures.includes(v)) textures.push(v);
+      };
+      scene.traverse((o) => {
+        const mats = (o as THREE.Mesh).material;
+        for (const m of Array.isArray(mats) ? mats : mats ? [mats] : []) {
+          Object.values(m as unknown as Record<string, unknown>).forEach(take);
+          const u = (m as THREE.ShaderMaterial).uniforms;
+          if (u) for (const { value } of Object.values(u)) take(value);
+        }
+      });
+      const next = () => {
+        if (!alive) return;
+        const t = textures.shift();
+        if (!t) return;
+        try {
+          gl.initTexture(t);
+        } catch {
+          // a texture that will not upload is left to its first draw
+        }
+        requestAnimationFrame(next);
+      };
+      requestAnimationFrame(next);
+    };
+    chain.then(post, post).then(resume, resume).then(warmTextures);
     return () => {
       alive = false;
       window.clearTimeout(guard);

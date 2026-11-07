@@ -7,6 +7,7 @@ import { getLenis } from "./SmoothScroll";
 import { useWarp } from "./WarpProvider";
 import GhostButton from "@/components/ui/GhostButton";
 import { PAGE_NAMES, TOUR, TOUR_TOTAL, type TourStop } from "@/lib/exhibits";
+import { TOTAL, openMap } from "@/lib/discover";
 
 /**
  * The guided tour, on every page of the world (lib/exhibits.ts exploreVariant).
@@ -19,6 +20,9 @@ import { PAGE_NAMES, TOUR, TOUR_TOTAL, type TourStop } from "@/lib/exhibits";
  * Between pages it warps. A real scroll, swipe or key pauses it; Resume
  * replays the stop. It finishes on one card with the next step.
  *
+ * It opens on a short hands-free card, so the visitor knows the site is about
+ * to drive and that there is nothing for them to do but watch.
+ *
  * The scroll is driven frame by frame on a wall clock, with a timer behind
  * every move, so a stop always ends even if a frame never comes.
  *
@@ -27,6 +31,8 @@ import { PAGE_NAMES, TOUR, TOUR_TOTAL, type TourStop } from "@/lib/exhibits";
 
 const KEY = "triseno:tour";
 const START_EVENT = "triseno:tour-start";
+/** how long the hands-free card stays up before the first stop */
+const INTRO_MS = 4600;
 
 /** any button on the page can start the tour */
 export function startTour() {
@@ -135,7 +141,7 @@ function act(s: TourStop): number[] {
   return [];
 }
 
-type Phase = "idle" | "moving" | "playing" | "paused" | "end";
+type Phase = "idle" | "intro" | "moving" | "playing" | "paused" | "end";
 
 export default function Tour() {
   const pathname = usePathname() ?? "/";
@@ -143,6 +149,10 @@ export default function Tour() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [idx, setIdx] = useState<number | null>(null);
   const [runKey, setRunKey] = useState(0);
+  const [touch, setTouch] = useState(false);
+  // the home hero carries the same launcher: while that one is on screen the
+  // corner dock steps back, so the first screen shows one way in, not two
+  const [heroHasIt, setHeroHasIt] = useState(false);
   const idxRef = useRef<number | null>(null);
   const phaseRef = useRef<Phase>("idle");
   const timers = useRef<number[]>([]);
@@ -216,7 +226,8 @@ export default function Tour() {
     travel(TOUR[next].page);
   }, [runStop, travel]);
 
-  const start = useCallback(() => {
+  /** the first stop, from wherever the visitor is */
+  const begin = useCallback(() => {
     clearAll();
     if (pathname !== TOUR[0].page) {
       setI(0);
@@ -224,6 +235,14 @@ export default function Tour() {
       travel(TOUR[0].page);
     } else runStop(0);
   }, [pathname, runStop, travel]);
+
+  /** the hands-free card first, then the first stop */
+  const start = useCallback(() => {
+    clearAll();
+    setI(0);
+    setP("intro");
+    timers.current.push(window.setTimeout(begin, reduced.current ? 2400 : INTRO_MS));
+  }, [begin]);
 
   const exit = useCallback(() => {
     clearAll();
@@ -242,12 +261,14 @@ export default function Tour() {
   }, [runStop]);
 
   const skip = useCallback(() => {
-    if (idxRef.current != null) advance();
-  }, [advance]);
+    if (phaseRef.current === "intro") begin();
+    else if (idxRef.current != null) advance();
+  }, [advance, begin]);
 
   // the start button, wherever it is
   useEffect(() => {
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTouch(window.matchMedia("(pointer: coarse)").matches);
     const on = () => start();
     window.addEventListener(START_EVENT, on);
     return () => window.removeEventListener(START_EVENT, on);
@@ -301,15 +322,107 @@ export default function Tour() {
     };
   }, [phase, pause, exit]);
 
+  // the hero's launcher, when the page has one. The hero mounts it a beat
+  // after the page (it reads the explore mode on the client), so look again
+  // for a couple of seconds; and on the home page the hero is a fixed sheet
+  // that fades out as you scroll, so "on screen" means visible, not merely
+  // intersecting
+  useEffect(() => {
+    if (phase !== "idle") return;
+    let tries = 0;
+    let timer = 0;
+    let raf = 0;
+    let hero: HTMLElement | null = null;
+    const check = () => {
+      raf = 0;
+      if (!hero) return;
+      const r = hero.getBoundingClientRect();
+      const cs = getComputedStyle(hero);
+      setHeroHasIt(cs.visibility !== "hidden" && r.bottom > 0 && r.top < window.innerHeight);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(check);
+    };
+    const look = () => {
+      hero = document.querySelector<HTMLElement>(".tour-launch--hero");
+      if (!hero) {
+        setHeroHasIt(false);
+        if (tries++ < 8) timer = window.setTimeout(look, 300);
+        return;
+      }
+      check();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    };
+    look();
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [phase, pathname]);
+
+  // Esc also leaves the hands-free card
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && exit();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, exit]);
+
   useEffect(() => () => clearAll(), []);
 
   if (phase === "idle") {
     return (
-      <button type="button" className="tour-launch font-mono" onClick={start}>
-        <span className="tour-launch__dot" aria-hidden="true" />
-        Take the tour
-        <span className="tour-launch__len">90 sec</span>
-      </button>
+      <div className="tour-dock" data-hidden={heroHasIt ? "" : undefined}>
+        <button type="button" className="tour-launch" onClick={start}>
+          <span className="tour-launch__fill" aria-hidden="true" />
+          <span className="tour-launch__glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="16" height="16">
+              <path d="M3.5 2.2v11.6L13 8z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="tour-launch__text">
+            <b className="font-display">Take the guided tour</b>
+            <small className="font-mono">Hands-free · 90 seconds</small>
+          </span>
+          <i className="tour-launch__sweep" aria-hidden="true" />
+        </button>
+        <button type="button" className="tour-explore font-mono" onClick={openMap}>
+          <span className="tour-explore__glyph" aria-hidden="true" />
+          Explore {TOTAL} exhibits
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === "intro") {
+    return (
+      <div className="tour-intro" role="dialog" aria-label="The guided tour is about to start">
+        <div className="tour-intro__card">
+          <p className="tour-intro__meta font-mono">
+            <i aria-hidden="true" /> Guided tour · hands-free
+          </p>
+          <h2 className="tour-intro__title font-display">Sit back. The site will drive.</h2>
+          <p className="tour-intro__body">
+            From here it scrolls, clicks and changes pages on its own. Nothing to do but watch
+            {touch ? "." : ": move your mouse to look around."} Every stop is a component we can build into your site.
+          </p>
+          <p className="tour-intro__hint font-mono">
+            {touch ? "Swipe at any time to take the wheel." : "Scroll at any time to take the wheel · Esc ends it."}
+          </p>
+          <div className="tour-intro__row">
+            <button type="button" className="tour-card__btn tour-card__btn--solid font-mono" onClick={skip}>
+              Start now
+            </button>
+            <button type="button" className="tour-card__textbtn font-mono" onClick={exit}>
+              Explore on my own
+            </button>
+            <span className="tour-intro__bar" aria-hidden="true">
+              <i style={{ animationDuration: `${reduced.current ? 2400 : INTRO_MS}ms` }} />
+            </span>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -334,11 +447,17 @@ export default function Tour() {
 
   const stop = idx != null ? TOUR[idx] : null;
   const here = stop ? stop.page === pathname : false;
+  const driving = phase === "moving" || phase === "playing";
   return (
     <div className="tour-card" role="region" aria-label="Guided tour" aria-live="polite" data-phase={phase}>
       <div className="tour-card__top">
         <p className="tour-card__meta font-mono">
-          Guided tour · {String((idx ?? 0) + 1).padStart(2, "0")} / {String(TOUR_TOTAL).padStart(2, "0")}
+          <span className="tour-card__state" data-driving={driving ? "" : undefined}>
+            <i aria-hidden="true" />
+            {driving ? "Hands-free" : "You took the wheel"}
+          </span>
+          {" · "}
+          {String((idx ?? 0) + 1).padStart(2, "0")} / {String(TOUR_TOTAL).padStart(2, "0")}
           {stop ? ` · ${PAGE_NAMES[stop.page]}` : ""}
         </p>
         <button type="button" className="tour-card__x font-mono" onClick={exit} aria-label="End the tour">
@@ -357,8 +476,8 @@ export default function Tour() {
       )}
       <div className="tour-card__controls">
         {phase === "paused" ? (
-          <button type="button" className="tour-card__btn font-mono" onClick={resume}>
-            Resume
+          <button type="button" className="tour-card__btn tour-card__btn--solid font-mono" onClick={resume}>
+            Resume the tour
           </button>
         ) : (
           <button type="button" className="tour-card__btn font-mono" onClick={pause}>

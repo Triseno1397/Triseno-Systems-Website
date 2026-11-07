@@ -117,6 +117,10 @@ export default function WorldPlate({
         }
         if (f.near && !asked[i]) {
           asked[i] = true;
+          // promoted to its own layer only from here: a station the camera
+          // has not reached is hidden, and a hidden layer with will-change
+          // still holds a full-viewport texture on the GPU
+          el.style.willChange = "transform, opacity";
           setNear((n) => n.map((v, k) => (k === i ? true : v)));
         }
       });

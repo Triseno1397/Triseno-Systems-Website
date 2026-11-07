@@ -1,36 +1,84 @@
 /* ═══════════════════════════════════════════════════════════════════
-   The two exploring concepts (localhost only for now):
-   the guided tour (world/Tour.tsx) and inspect mode (world/Inspect.tsx).
+   Exploring the collection: the guided tour (world/Tour.tsx) and, behind
+   ?explore=inspect, inspect mode (world/Inspect.tsx).
    Dark frosted glass, 1px white hairlines, 0 radius (design-system §2).
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── shared: the corner button that starts either one ── */
-.tour-launch,
-.inspect-toggle {
+/* ── the dock: two ways in, pinned bottom-left above the chrome ── */
+.tour-dock {
   position: fixed; z-index: 805; left: var(--gutter, 16px); bottom: calc(var(--gutter-y, 24px) + 58px);
-  display: inline-flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px 0 12px; cursor: pointer;
-  color: #ffffff; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
-  background: rgba(8, 9, 12, 0.66);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  transition: border-color 300ms linear, background-color 300ms linear, transform 500ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  display: grid; gap: 6px; justify-items: start;
   animation: explore-in 900ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 1600ms both;
 }
-@media (hover: hover) {
-  .tour-launch:hover, .inspect-toggle:hover { border-color: #ffffff; transform: translateY(-2px); }
-}
-.tour-launch:focus-visible, .inspect-toggle:focus-visible { outline: 1px solid #ffffff; outline-offset: 3px; }
 @keyframes explore-in { from { opacity: 0; transform: translate3d(0, 10px, 0); } to { opacity: 1; transform: none; } }
+/* the home hero shows the same launcher: the dock waits until it has scrolled off */
+.tour-dock { transition: opacity 400ms linear, transform 600ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)); }
+/* (animation: none — the entrance animation's fill would otherwise outrank this) */
+.tour-dock[data-hidden] { animation: none; opacity: 0; pointer-events: none; transform: translate3d(0, 10px, 0); }
 
-.tour-launch__dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #ffffff; }
-.tour-launch__dot::after {
-  content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid #ffffff;
-  animation: try-ping 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+/* the tour: the big one. A play glyph, two lines, a light that runs the
+   top edge every few seconds, and the ghost-button white wipe on hover */
+.tour-launch {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 14px; height: 54px; padding: 0 20px 0 14px; cursor: pointer;
+  color: #ffffff; text-align: left;
+  background: rgba(8, 9, 12, 0.72);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  transition: border-color 300ms linear, transform 500ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
-.tour-launch__len { color: rgba(255, 255, 255, 0.5); letter-spacing: 0.14em; }
+.tour-launch__fill {
+  position: absolute; inset: 0; z-index: -1; background: #ffffff;
+  clip-path: inset(0 100% 0 0); transition: clip-path 650ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.tour-launch__glyph {
+  position: relative; display: grid; place-items: center; width: 30px; height: 30px; flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.7); transition: border-color 300ms linear, color 300ms linear;
+}
+.tour-launch__glyph svg { display: block; margin-left: 2px; }
+.tour-launch__glyph::after {
+  content: ""; position: absolute; inset: -5px; border: 1px solid #ffffff;
+  animation: try-ping 2.2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+.tour-launch__text { display: grid; gap: 3px; transition: color 300ms linear; }
+.tour-launch__text b { font-weight: 600; font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; }
+.tour-launch__text small { font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.58); transition: color 300ms linear; }
+/* the light: a short bright run along the top hairline, transform only */
+.tour-launch__sweep {
+  position: absolute; left: 0; top: 0; width: 38%; height: 1px;
+  background: linear-gradient(90deg, transparent, #ffffff 50%, transparent);
+  transform: translate3d(-100%, 0, 0);
+  animation: tour-sweep 3.6s cubic-bezier(0.4, 0, 0.2, 1) 2.6s infinite;
+}
+@keyframes tour-sweep { 0% { transform: translate3d(-100%, 0, 0); } 45%, 100% { transform: translate3d(270%, 0, 0); } }
+@media (hover: hover) {
+  .tour-launch:hover { border-color: #ffffff; transform: translateY(-2px); }
+  .tour-launch:hover .tour-launch__fill { clip-path: inset(0 0 0 0); }
+  .tour-launch:hover .tour-launch__text, .tour-launch:hover .tour-launch__glyph { color: #0b0e0f; border-color: #0b0e0f; }
+  .tour-launch:hover .tour-launch__text small { color: rgba(11, 14, 15, 0.6); }
+  .tour-launch:hover .tour-launch__glyph::after { border-color: #0b0e0f; }
+  .tour-launch:hover .tour-launch__sweep { opacity: 0; }
+}
+.tour-launch:focus-visible, .tour-explore:focus-visible, .inspect-toggle:focus-visible { outline: 1px solid #ffffff; outline-offset: 3px; }
 
-/* the home hero's own button for either concept */
-.portal-explore__btn--tour { border-color: #ffffff; }
+/* the other way in: the collection, as a quieter line under the tour */
+.tour-explore,
+.inspect-toggle {
+  display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 14px 0 12px; cursor: pointer;
+  color: #ffffff; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  background: rgba(8, 9, 12, 0.62);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  transition: border-color 300ms linear, background-color 300ms linear, transform 500ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.inspect-toggle { position: fixed; z-index: 805; left: var(--gutter, 16px); bottom: calc(var(--gutter-y, 24px) + 58px); animation: explore-in 900ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 1600ms both; }
+.tour-explore__glyph { width: 7px; height: 7px; border: 1px solid currentColor; transform: rotate(45deg); }
+@media (hover: hover) {
+  .tour-explore:hover, .inspect-toggle:hover { border-color: #ffffff; background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+}
+
+/* the home hero's own tour button is styled with the hero (world.css) */
 
 /* ══ the guided tour ══ */
 html[data-touring] .discover,
@@ -78,7 +126,36 @@ html[data-touring] .orb-say { opacity: 0 !important; pointer-events: none !impor
 .tour-card__bar { flex: 1; height: 1px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
 .tour-card__bar i { display: block; height: 100%; background: #ffffff; transform-origin: left center; animation: tour-hold linear both; }
 @keyframes tour-hold { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.tour-card[data-phase="paused"] .tour-card__meta::after { content: " · paused"; color: #ffffff; }
+.tour-card__state { display: inline-flex; align-items: center; gap: 7px; color: #ffffff; }
+.tour-card__state i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.45); }
+.tour-card__state[data-driving] i { background: #ffffff; animation: tour-live 1.4s ease-in-out infinite; }
+@keyframes tour-live { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
+.tour-card__btn--solid { background: #ffffff; color: #0b0e0f; border-color: #ffffff; }
+.tour-card__btn--solid:hover, .tour-card__btn--solid:focus-visible { background: transparent; color: #ffffff; }
+
+/* the hands-free card: centre screen, before the first stop */
+.tour-intro {
+  position: fixed; inset: 0; z-index: 812; display: grid; place-items: center; padding: var(--gutter, 16px);
+  background: rgba(4, 5, 7, 0.42);
+  animation: inspect-in 500ms linear both;
+}
+.tour-intro__card {
+  width: min(520px, 100%); padding: 26px 28px 22px; color: #ffffff;
+  background: rgba(8, 9, 12, 0.86);
+  -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+  animation: tour-intro-in 800ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+@keyframes tour-intro-in { from { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.98); } to { opacity: 1; transform: none; } }
+.tour-intro__meta { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(255, 255, 255, 0.62); }
+.tour-intro__meta i { width: 6px; height: 6px; border-radius: 50%; background: #ffffff; animation: tour-live 1.4s ease-in-out infinite; }
+.tour-intro__title { margin: 14px 0 0; font-size: clamp(22px, 2.6vw, 32px); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.06; }
+.tour-intro__body { margin: 14px 0 0; font-size: 15px; line-height: 1.55; color: rgba(255, 255, 255, 0.84); }
+.tour-intro__hint { margin: 12px 0 0; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.tour-intro__row { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
+.tour-intro__bar { flex: 1 0 60px; height: 1px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.tour-intro__bar i { display: block; height: 100%; background: #ffffff; transform-origin: left center; animation: tour-hold linear both; }
 .tour-card--end .tour-card__title { margin-top: 10px; }
 .tour-card__end { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 18px; }
 .tour-card__textbtn {
@@ -90,7 +167,18 @@ html[data-touring] .orb-say { opacity: 0 !important; pointer-events: none !impor
   .tour-card { padding: 14px 14px 12px; }
   .tour-card__caption { font-size: 13.5px; }
   .tour-card__use { display: none; }
-  .tour-launch { bottom: calc(var(--gutter-y, 16px) + 52px); }
+  /* a phone has one corner button: the tour; the pill is the collection */
+  .tour-dock { bottom: calc(var(--gutter-y, 16px) + 52px); gap: 5px; }
+  .tour-dock .tour-explore { display: none; }
+  .tour-launch { height: 44px; gap: 11px; padding: 0 14px 0 11px; }
+  /* the "now viewing" toast rises clear of the launcher */
+  html[data-explore="tour"] .discover__toast { margin-bottom: 58px; }
+  .tour-launch__glyph { width: 26px; height: 26px; }
+  .tour-launch__text b { font-size: 10.5px; }
+  .tour-launch__text small { font-size: 9px; }
+  .tour-explore { height: 32px; font-size: 9.5px; }
+  .tour-intro__card { padding: 20px 18px 16px; }
+  .tour-intro__body { font-size: 14px; }
 }
 
 /* ══ inspect mode ══ */
@@ -178,8 +266,8 @@ html[data-touring] .orb-say { opacity: 0 !important; pointer-events: none !impor
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tour-launch, .inspect-toggle, .tour-card, .tour-card__body, .inspect-card, .inspect-card__body, .inspect-frame { animation: none; }
-  .tour-launch__dot::after { animation: none; }
+  .tour-dock, .inspect-toggle, .tour-card, .tour-card__body, .inspect-card, .inspect-card__body, .inspect-frame, .tour-intro, .tour-intro__card { animation: none; }
+  .tour-launch__glyph::after, .tour-launch__sweep, .tour-card__state i, .tour-intro__meta i { animation: none; }
 }
 
 /* compact pass: the cards stay small enough to leave the page readable */

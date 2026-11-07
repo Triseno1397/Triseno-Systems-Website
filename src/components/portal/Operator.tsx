@@ -1015,6 +1015,35 @@ export default function Operator({
         linked.current = true;
       }
     };
+    // His textures go up one per frame first (initTexture), so the draw that
+    // follows has nothing big left to upload: done in one go inside that
+    // draw they were a 300ms task, and a visitor already scrolling felt it.
+    const textures: THREE.Texture[] = [];
+    rootObj.traverse((o) => {
+      const mats = (o as THREE.Mesh).material;
+      for (const m of Array.isArray(mats) ? mats : mats ? [mats] : []) {
+        for (const v of Object.values(m as unknown as Record<string, unknown>)) {
+          if (v instanceof THREE.Texture && !textures.includes(v)) textures.push(v);
+        }
+        // a shader material keeps its textures in uniforms
+        const u = (m as THREE.ShaderMaterial).uniforms;
+        if (u) for (const { value } of Object.values(u)) if (value instanceof THREE.Texture && !textures.includes(value)) textures.push(value);
+      }
+    });
+    const upload = (then: () => void) => {
+      const next = () => {
+        if (!alive) return;
+        const t = textures.shift();
+        if (!t) return then();
+        try {
+          gl.initTexture(t);
+        } catch {
+          // a texture that will not upload is left to the draw
+        }
+        requestAnimationFrame(next);
+      };
+      next();
+    };
     const r = gl as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
     if (r.compileAsync) {
       // only his own objects, against the world's lights and environment
@@ -1022,14 +1051,14 @@ export default function Operator({
       r.compileAsync(rootObj, camera, scene).then(
         () => {
           gl.setRenderTarget(prev);
-          draw();
+          upload(draw);
         },
         () => {
           gl.setRenderTarget(prev);
-          draw();
+          upload(draw);
         },
       );
-    } else draw();
+    } else upload(draw);
     return () => {
       // unmounted mid-compile: leave nothing shown that should be hidden
       if (alive) {

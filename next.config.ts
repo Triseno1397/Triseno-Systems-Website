@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.152", "192.168.0.105", "10.5.0.2"],
   // no "X-Powered-By: Next.js" — nothing a visitor needs, one thing a scanner wants
   poweredByHeader: false,
+  // NO_MINIFY=1: a readable build in its own folder, for CPU profiles that
+  // name the function (design-loop/_cpuprofile.mjs). Start it with the same env.
+  ...(process.env.NO_MINIFY ? { distDir: ".next-diag", experimental: { turbopackMinify: false } } : {}),
   // the AI Infrastructure division was retired on 2026-11-02: its page and
   // its one answer page send visitors to the home page instead of a 404
   async redirects() {

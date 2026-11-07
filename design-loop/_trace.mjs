@@ -12,7 +12,7 @@ const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleF
 const p = await ctx.newPage();
 const cdp = await ctx.newCDPSession(p);
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpu });
-await p.goto('http://localhost:3300' + page, { waitUntil: 'load' });
+await p.goto('http://localhost:' + (process.env.PORT || 3300) + '' + page, { waitUntil: 'load' });
 await p.waitForTimeout(6000);
 const events = [];
 cdp.on('Tracing.dataCollected', (e) => events.push(...e.value));
@@ -26,9 +26,10 @@ const done = new Promise((r) => cdp.once('Tracing.tracingComplete', r));
 await cdp.send('Tracing.end');
 await done;
 // the renderer main thread: the one with the most X events
-const byThread = new Map();
-for (const e of events) if (e.ph === 'X' && e.dur) { const k = `${e.pid}:${e.tid}`; byThread.set(k, (byThread.get(k) || 0) + 1); }
-const main = [...byThread.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+// the renderer's main thread, by its name (the GPU process has more events)
+let main = null;
+for (const e of events) if (e.name === 'thread_name' && e.args?.name === 'CrRendererMain') main = `${e.pid}:${e.tid}`;
+if (!main) { const byThread = new Map(); for (const e of events) if (e.ph === 'X' && e.dur) { const k = `${e.pid}:${e.tid}`; byThread.set(k, (byThread.get(k) || 0) + 1); } main = [...byThread.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]; }
 const sum = new Map(); let total = 0; let t0 = Infinity, t1 = -Infinity;
 const topLevel = new Set(['RunTask', 'ThreadControllerImpl::RunTask', 'MessageLoop::RunTask']);
 for (const e of events) {

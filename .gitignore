@@ -62,3 +62,4 @@ tmp-*.png
 
 # generated art sources (large PNGs; web copies live in public/)
 design-loop/art-src/
+.next-diag/
