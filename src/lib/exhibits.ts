@@ -50,9 +50,12 @@ export interface TourStop {
   play?: [number, number];
   /** play on until this section's top reaches the top of the screen */
   through?: string;
-  /** how long the stop lasts, from arrival */
+  /** how long the stop lasts, from arrival (the plate's own time comes on top) */
   ms: number;
   act?: "prism" | "case";
+  /** a rendered still (public/tour/plate-<name>.webp) that opens the stop:
+   *  it pushes in slowly, then dissolves into the live piece */
+  plate?: string;
 }
 
 export const TOUR: TourStop[] = [
@@ -70,6 +73,7 @@ export const TOUR: TourStop[] = [
     title: "The hall of doors",
     caption: "Your scroll is the camera. It dollies down the hall, slowing at each door.",
     ms: 12000,
+    plate: "doors",
   },
   {
     page: "/web-design-division",
@@ -93,6 +97,7 @@ export const TOUR: TourStop[] = [
     caption: "Raymarched live, sixty times a second, on your own device. Each colour is a deliverable.",
     ms: 11000,
     act: "prism",
+    plate: "crystal",
   },
   {
     page: "/studio",
@@ -101,6 +106,7 @@ export const TOUR: TourStop[] = [
     title: "The showreel",
     caption: "Scroll opens the iris on the reel. The timecode and f-stop count with you.",
     ms: 8500,
+    plate: "reel",
   },
   {
     page: "/studio",

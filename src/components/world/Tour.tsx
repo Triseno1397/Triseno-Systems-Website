@@ -33,6 +33,33 @@ const KEY = "triseno:tour";
 const START_EVENT = "triseno:tour-start";
 /** how long the hands-free card stays up before the first stop */
 const INTRO_MS = 4600;
+/** a stop's plate: how long the still holds (fade-in included) before it
+ *  starts to dissolve, and how long the dissolve into the live piece takes */
+const PLATE_MS = 3600;
+const PLATE_XF = 1100;
+
+/** the plate file for this screen: phones take the smaller cut */
+const plateSrc = (name: string) =>
+  `/tour/plate-${name}${window.matchMedia("(max-width: 767px)").matches ? "-m" : ""}.webp`;
+
+/** warm the plates of the stops on this page so the first one never pops in */
+function preloadPlates(page: string) {
+  for (const s of TOUR) {
+    if (s.page !== page || !s.plate) continue;
+    const im = new Image();
+    im.decoding = "async";
+    im.src = plateSrc(s.plate);
+  }
+}
+
+interface Plate {
+  /** the stop it belongs to; the element keeps its animations across re-renders */
+  idx: number;
+  src: string;
+  title: string;
+  /** the dissolve into the live piece has started */
+  leaving: boolean;
+}
 
 /** any button on the page can start the tour */
 export function startTour() {
@@ -153,11 +180,30 @@ export default function Tour() {
   // the home hero carries the same launcher: while that one is on screen the
   // corner dock steps back, so the first screen shows one way in, not two
   const [heroHasIt, setHeroHasIt] = useState(false);
+  const [plate, setPlate] = useState<Plate | null>(null);
   const idxRef = useRef<number | null>(null);
   const phaseRef = useRef<Phase>("idle");
   const timers = useRef<number[]>([]);
   const stopDrive = useRef<(() => void) | null>(null);
   const reduced = useRef(false);
+  /** when the current stop's plate first appeared */
+  const plateT0 = useRef(0);
+  const plateIdx = useRef<number | null>(null);
+
+  /** raise the stop's plate; a plate already up for this stop stays as it is */
+  const showPlate = useCallback((i: number) => {
+    const s = TOUR[i];
+    if (!s.plate || reduced.current) return;
+    if (plateIdx.current !== i) {
+      plateIdx.current = i;
+      plateT0.current = performance.now();
+    }
+    setPlate({ idx: i, src: plateSrc(s.plate), title: s.title, leaving: false });
+  }, []);
+  const dropPlate = useCallback(() => {
+    plateIdx.current = null;
+    setPlate(null);
+  }, []);
 
   const setP = (p: Phase) => {
     phaseRef.current = p;
@@ -190,16 +236,31 @@ export default function Tour() {
         return;
       }
       setP("moving");
+      // a plated stop opens on its still: the page glides into place behind
+      // it, the still holds and pushes in, then dissolves as the piece starts
+      showPlate(i);
+      const plated = !!s.plate && !reduced.current;
       const dist = Math.abs(r.start - window.scrollY);
       const approach = reduced.current ? 0 : Math.min(2600, Math.max(900, 900 + dist / 2.2));
-      stopDrive.current = drive(window.scrollY, r.start, approach, easeInOut, () => {
+      const play = () => {
         if (idxRef.current !== i || phaseRef.current !== "moving") return;
         setP("playing");
         setRunKey((k) => k + 1);
+        if (plated) {
+          setPlate((p) => (p && p.idx === i ? { ...p, leaving: true } : p));
+          timers.current.push(window.setTimeout(() => dropPlate(), PLATE_XF + 100));
+        }
         // the play leaves a beat at the end to take the last frame in
         const playMs = reduced.current ? 0 : Math.max(0, s.ms - 1800);
         stopDrive.current = drive(r.start, r.end, playMs, easeSine, () => {});
         timers.current.push(...act(s), window.setTimeout(() => advance(), s.ms));
+      };
+      stopDrive.current = drive(window.scrollY, r.start, approach, easeInOut, () => {
+        if (idxRef.current !== i || phaseRef.current !== "moving") return;
+        if (!plated) return play();
+        // the still has its full hold even when the glide was short
+        const rest = Math.max(0, PLATE_MS - (performance.now() - plateT0.current));
+        timers.current.push(window.setTimeout(play, rest));
       });
     },
     // advance is stable through refs
@@ -211,6 +272,7 @@ export default function Tour() {
     const i = idxRef.current;
     if (i == null) return;
     clearAll();
+    dropPlate();
     const next = i + 1;
     if (next >= TOUR.length) {
       setI(null);
@@ -241,20 +303,23 @@ export default function Tour() {
     clearAll();
     setI(0);
     setP("intro");
+    preloadPlates(pathname);
     timers.current.push(window.setTimeout(begin, reduced.current ? 2400 : INTRO_MS));
-  }, [begin]);
+  }, [begin, pathname]);
 
   const exit = useCallback(() => {
     clearAll();
+    dropPlate();
     setI(null);
     setP("idle");
-  }, []);
+  }, [dropPlate]);
 
   const pause = useCallback(() => {
     if (phaseRef.current !== "moving" && phaseRef.current !== "playing") return;
     clearAll();
+    dropPlate();
     setP("paused");
-  }, []);
+  }, [dropPlate]);
 
   const resume = useCallback(() => {
     if (idxRef.current != null) runStop(idxRef.current);
@@ -282,9 +347,21 @@ export default function Tour() {
     if (i == null || TOUR[i].page !== pathname) return;
     setI(i);
     setP("moving");
+    preloadPlates(pathname);
+    // the still went up under the warp (below); its hold counts from here,
+    // when it can first be seen
+    showPlate(i);
+    plateT0.current = performance.now();
     const id = window.setTimeout(() => runStop(i), 1400);
     return () => window.clearTimeout(id);
-  }, [pathname, busy, runStop]);
+  }, [pathname, busy, runStop, showPlate]);
+
+  // a plated stop's still goes up the moment its page mounts, while the warp
+  // still covers the screen, so the piece is never seen before its reveal
+  useEffect(() => {
+    const i = load();
+    if (i != null && TOUR[i].page === pathname) showPlate(i);
+  }, [pathname, showPlate]);
 
   // the visitor takes over. Only a real gesture counts: a resting finger on a
   // trackpad sends tiny wheel events, so the wheel has to add up first.
@@ -448,8 +525,22 @@ export default function Tour() {
   const stop = idx != null ? TOUR[idx] : null;
   const here = stop ? stop.page === pathname : false;
   const driving = phase === "moving" || phase === "playing";
+  const plateUp = !!plate && !plate.leaving;
   return (
-    <div className="tour-card" role="region" aria-label="Guided tour" aria-live="polite" data-phase={phase}>
+    <>
+    {plate ? (
+      <div key={plate.idx} className="tour-plate" data-leaving={plate.leaving ? "" : undefined} aria-hidden="true">
+        <img className="tour-plate__img" src={plate.src} alt="" decoding="async" draggable={false} />
+        <div className="tour-plate__scrim" />
+        <div className="tour-plate__text">
+          <p className="tour-plate__meta font-mono">
+            {String(plate.idx + 1).padStart(2, "0")} / {String(TOUR_TOTAL).padStart(2, "0")} · {PAGE_NAMES[TOUR[plate.idx].page]}
+          </p>
+          <h2 className="tour-plate__title font-display">{plate.title}</h2>
+        </div>
+      </div>
+    ) : null}
+    <div className="tour-card" role="region" aria-label="Guided tour" aria-live="polite" data-phase={phase} data-plate={plateUp ? "" : undefined}>
       <div className="tour-card__top">
         <p className="tour-card__meta font-mono">
           <span className="tour-card__state" data-driving={driving ? "" : undefined}>
@@ -492,5 +583,6 @@ export default function Tour() {
         </span>
       </div>
     </div>
+    </>
   );
 }
