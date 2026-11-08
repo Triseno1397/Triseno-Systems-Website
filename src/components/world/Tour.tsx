@@ -285,6 +285,9 @@ export default function Tour() {
     }
     setI(next);
     setP("moving");
+    // the next page's stills start downloading before the warp, so they are
+    // in the cache by the time the page mounts behind it
+    preloadPlates(TOUR[next].page);
     travel(TOUR[next].page);
   }, [runStop, travel]);
 
