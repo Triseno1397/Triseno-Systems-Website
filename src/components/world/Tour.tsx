@@ -296,7 +296,7 @@ export default function Tour() {
     // in the cache by the time the page mounts behind it
     preloadPlates(TOUR[next].page);
     travel(TOUR[next].page);
-  }, [runStop, travel]);
+  }, [dropPlate, runStop, travel]);
 
   /** the first stop, from wherever the visitor is */
   const begin = useCallback(() => {
