@@ -42,13 +42,20 @@ const PLATE_XF = 1100;
 const plateSrc = (name: string) =>
   `/tour/plate-${name}${window.matchMedia("(max-width: 767px)").matches ? "-m" : ""}.webp`;
 
-/** warm the plates of the stops on this page so the first one never pops in */
+const warmed = new Set<string>();
+/** warm every stop's still, this page's first, so none pops in: the fetch plus
+ *  an off-thread decode, so the first paint is not the phone's first decode */
 function preloadPlates(page: string) {
-  for (const s of TOUR) {
-    if (s.page !== page || !s.plate) continue;
+  const stops = [...TOUR].sort((a, b) => Number(b.page === page) - Number(a.page === page));
+  for (const s of stops) {
+    if (!s.plate) continue;
+    const src = plateSrc(s.plate);
+    if (warmed.has(src)) continue;
+    warmed.add(src);
     const im = new Image();
     im.decoding = "async";
-    im.src = plateSrc(s.plate);
+    im.src = src;
+    im.decode().catch(() => {});
   }
 }
 
