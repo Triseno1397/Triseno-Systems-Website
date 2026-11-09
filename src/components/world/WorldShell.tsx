@@ -23,6 +23,9 @@ import { useEffect, useState } from "react";
 export default function WorldShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const world = isRevampedRoute(pathname);
+  // the launch-spot checkout keeps the chrome but none of the exploring
+  // (tour, exhibit counter): one job on that page, reserving a spot
+  const checkout = pathname === "/launch" || pathname.startsWith("/launch/");
   // the two exploring concepts, picked by port on localhost (3401 / 3402)
   const [explore, setExplore] = useState<ExploreVariant>("none");
   useEffect(() => {
@@ -38,10 +41,10 @@ export default function WorldShell({ children }: { children: ReactNode }) {
         <>
           <SmoothScroll />
           <Chrome />
-          <Discovery />
+          {checkout ? null : <Discovery />}
           <PerfOverlay />
-          {explore === "tour" ? <Tour /> : null}
-          {explore === "inspect" ? <Inspect /> : null}
+          {explore === "tour" && !checkout ? <Tour /> : null}
+          {explore === "inspect" && !checkout ? <Inspect /> : null}
           <OrbCursor />
         </>
       ) : null}
