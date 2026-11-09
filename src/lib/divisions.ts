@@ -65,6 +65,8 @@ export function divisionForPath(pathname: string): Division {
     if (answer) return DIVISIONS[answer.division];
   }
   if (pathname.startsWith("/portfolio")) return DIVISIONS.work;
+  // the launch-spot deposit is the first step of a website
+  if (pathname === "/launch" || pathname.startsWith("/launch/")) return DIVISIONS.web;
   return DIVISIONS.portal;
 }
 
@@ -83,5 +85,5 @@ const REVAMPED = ["/", "/work", "/web-design-division", "/studio", "/contact"];
 export function isRevampedRoute(pathname: string): boolean {
   // /answers/* is built on the same foundation as the pages that raise the
   // question, so it carries the same chrome rather than arriving bare
-  return REVAMPED.includes(pathname) || pathname.startsWith("/answers/");
+  return REVAMPED.includes(pathname) || pathname.startsWith("/answers/") || pathname === "/launch" || pathname.startsWith("/launch/");
 }
