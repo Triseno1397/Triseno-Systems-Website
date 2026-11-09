@@ -41,12 +41,21 @@ export default function ContentFade() {
     const last = new WeakMap<HTMLElement, number>();
     let vh = -1;
 
+    // Every read first, every write after: a scan used to strip and re-set
+    // the attribute on every section around its style reads, and each read
+    // after a write was a forced style pass over the page. Only what changed
+    // is touched, so a scan on a settled page writes nothing.
     const scan = () => {
-      list.forEach((el) => el.removeAttribute("data-fade"));
       const main = document.querySelector("main");
-      list = main ? Array.from(main.children).filter(isContent) : [];
-      list.forEach((el) => el.setAttribute("data-fade", ""));
-      tick();
+      const next = main ? Array.from(main.children).filter(isContent) : [];
+      const keep = new Set(next);
+      for (const el of list) {
+        if (keep.has(el)) continue;
+        el.removeAttribute("data-fade");
+        el.style.removeProperty("--fade-y");
+      }
+      for (const el of next) if (!el.hasAttribute("data-fade")) el.setAttribute("data-fade", "");
+      list = next;
     };
 
     let ys: number[] = [];
@@ -70,18 +79,32 @@ export default function ContentFade() {
       write();
     };
 
-    scan();
-    // pages mount their sections (and GSAP wraps pinned ones in pin-spacers)
-    // after this runs, so re-scan whenever <main>'s children change
-    const main = document.querySelector("main");
-    const mo = new MutationObserver(scan);
-    if (main) mo.observe(main, { childList: true });
-    const late = window.setTimeout(scan, 600);
     // phones & tablets fade into fixed scrims (world.css) — no per-frame mask
     const lite = window.matchMedia("(pointer: coarse), (max-width: 767px)").matches;
     // where the browser can drive the mask from scroll itself (world.css), the
     // script only keeps --fade-vh current on resize — no per-frame work
     const native = !lite && typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()");
+    scan();
+    // the one script-driven path positions the masks now; a later section
+    // gets its first position from the frame job, in the frame it arrives
+    if (!lite && !native) tick();
+    // pages mount their sections (and GSAP wraps pinned ones in pin-spacers)
+    // after this runs, and arriving by warp they land one per frame
+    // (world/Staged), so re-scan whenever <main>'s children change: once per
+    // frame, however many changed
+    let pending = 0;
+    const rescan = () => {
+      if (!pending) {
+        pending = window.requestAnimationFrame(() => {
+          pending = 0;
+          scan();
+        });
+      }
+    };
+    const main = document.querySelector("main");
+    const mo = new MutationObserver(rescan);
+    if (main) mo.observe(main, { childList: true });
+    const late = window.setTimeout(rescan, 600);
     const onResize = () => {
       vh = window.innerHeight;
       root.style.setProperty("--fade-vh", `${vh}px`);
@@ -95,6 +118,7 @@ export default function ContentFade() {
     return () => {
       stop();
       mo.disconnect();
+      window.cancelAnimationFrame(pending);
       window.clearTimeout(late);
       list.forEach((el) => {
         el.removeAttribute("data-fade");

@@ -10,6 +10,7 @@ import WebGate from "./WebGate";
 import Rewrite from "./Rewrite";
 
 import SignOff from "@/components/world/SignOff";
+import Staged from "@/components/world/Staged";
 /**
  * Web Design Division — violet world, square / frame glyph.
  * One continuous camera-driven volume (WebWorld); every section below is an
@@ -18,6 +19,8 @@ import SignOff from "@/components/world/SignOff";
  * One motion mechanic per section (design-loop/site-map.md):
  * 1 shutter text · 2 container scroll · 3 compare reveal ·
  * 4 sticky stacking cards · 5 hover-swap gallery · 6 gate.
+ * Arriving by warp, the sections mount one per frame behind the tunnel
+ * (world/Staged); the world itself is in from the route's first commit.
  */
 export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?: string }) {
   return (
@@ -27,24 +30,26 @@ export default function WebDivisionPage({ fontClassName = "" }: { fontClassName?
     >
       <WebWorld />
 
-      <ShutterHero />
-      <Rewrite />
-      <Suspense>
-        <DemoFrame />
-      </Suspense>
-      <Suspense>
-        <CompareReveal />
-      </Suspense>
-      <Suspense>
-        <PrismDeliverables />
-      </Suspense>
-      <Suspense>
-        <RangeGallery />
-      </Suspense>
-      <Suspense>
-        <WebGate />
-      </Suspense>
-      <SignOff />
+      <Staged>
+        <ShutterHero />
+        <Rewrite />
+        <Suspense>
+          <DemoFrame />
+        </Suspense>
+        <Suspense>
+          <CompareReveal />
+        </Suspense>
+        <Suspense>
+          <PrismDeliverables />
+        </Suspense>
+        <Suspense>
+          <RangeGallery />
+        </Suspense>
+        <Suspense>
+          <WebGate />
+        </Suspense>
+        <SignOff />
+      </Staged>
     </main>
   );
 }

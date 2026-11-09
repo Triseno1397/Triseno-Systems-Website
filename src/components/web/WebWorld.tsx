@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
 import WorldPlate from "@/components/world/WorldPlate";
 import { platePose, plateTransform, type PlatePose } from "@/components/world/plateMotion";
 import { activeStation } from "@/components/world/stations";
 import { DIVISIONS } from "@/lib/divisions";
+import { SECTIONS_EVENT } from "@/components/world/Staged";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -38,15 +38,17 @@ export default function WebWorld() {
   const layerRef = useRef<HTMLDivElement>(null);
   const fxRef = useRef<HTMLDivElement>(null);
 
-  /* stations */
-  useGSAP(
-    () => {
-      const layer = layerRef.current;
-      const main = layer?.parentElement;
-      if (!layer || !main) return;
-      layer.dataset.at = "hero";
-      const stations = gsap.utils.toArray<HTMLElement>("[data-station]", main);
-      const triggers = stations.map((section) =>
+  /* stations. Arriving by warp, the sections land one per frame after this
+     layer (world/Staged): the triggers are built again once they are all in */
+  useEffect(() => {
+    const layer = layerRef.current;
+    const main = layer?.parentElement;
+    if (!layer || !main) return;
+    layer.dataset.at = "hero";
+    let triggers: ScrollTrigger[] = [];
+    const build = () => {
+      triggers.forEach((t) => t.kill());
+      triggers = gsap.utils.toArray<HTMLElement>("[data-station]", main).map((section) =>
         ScrollTrigger.create({
           trigger: section,
           start: "top 62%",
@@ -56,10 +58,14 @@ export default function WebWorld() {
           },
         }),
       );
-      return () => triggers.forEach((t) => t.kill());
-    },
-    { scope: layerRef },
-  );
+    };
+    build();
+    window.addEventListener(SECTIONS_EVENT, build);
+    return () => {
+      window.removeEventListener(SECTIONS_EVENT, build);
+      triggers.forEach((t) => t.kill());
+    };
+  }, []);
 
   /* the overlay rides the plate's own pose */
   useEffect(() => {

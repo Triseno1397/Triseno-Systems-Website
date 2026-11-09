@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { RANGE, type RangeItem } from "./RangeComps";
+import Staged from "@/components/world/Staged";
 
 /**
  * Range — hover-swap gallery, section 05, standing in the world.
@@ -23,6 +24,9 @@ import { RANGE, type RangeItem } from "./RangeComps";
  * they are the section. Every industry row carries its own tile directly
  * beneath it, pinned at a slight alternating angle like a board on a wall, so
  * wherever a phone stops in this section, concept work is on screen.
+ *
+ * Arriving by warp, the comps mount one per frame (world/Staged): eight
+ * small sites' worth of type shaped in one go was the page's longest task.
  */
 
 export default function RangeGallery() {
@@ -80,6 +84,7 @@ export default function RangeGallery() {
           className="web-range__list"
           data-active={active !== null ? "" : undefined}
         >
+          <Staged>
           {RANGE.map((entry, i) => (
             <li key={entry.industry} className="web-range__item">
               <button
@@ -116,6 +121,7 @@ export default function RangeGallery() {
               </figure>
             </li>
           ))}
+          </Staged>
         </ol>
 
         {/* Desktop: a docked deck of concept cards in its own column, so it
@@ -126,6 +132,7 @@ export default function RangeGallery() {
             className="web-range__deck"
             data-on={active !== null ? "" : undefined}
           >
+            <Staged>
             {RANGE.map((entry, i) => {
               const d = i - shown;
               const pos = Math.abs(d) > 2 ? "far" : String(d);
@@ -140,6 +147,7 @@ export default function RangeGallery() {
                 </figure>
               );
             })}
+            </Staged>
           </div>
           <p className="web-range__caption">
             <span>

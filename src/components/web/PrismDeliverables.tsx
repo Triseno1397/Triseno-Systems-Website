@@ -3,6 +3,7 @@
 import "@/app/web-prism.css";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import GlassPanel from "@/components/world/GlassPanel";
+import { afterWarp } from "@/components/world/WarpProvider";
 import { createCrystalTunnel, type CrystalTunnel } from "./crystalTunnel";
 import { discover } from "@/lib/discover";
 
@@ -121,15 +122,23 @@ export default function PrismDeliverables() {
     const phone = window.matchMedia("(max-width: 767px)").matches;
     if (reduce) setStaticMode(true);
     let onScreen = false;
+    let gone = false;
+    let waiting: (() => void) | null = null;
     // the hall is built a screen ahead (its program links in the background),
-    // never at page load
+    // never at page load, and never under the warp: its context is the
+    // page's longest single task, and arriving by tunnel the section counts
+    // as "a screen ahead" before the sections above it have their height
     const build = () => {
-      if (tunnelRef.current) return;
-      const tunnel = createCrystalTunnel(canvas, { phone }, () => root.setAttribute("data-live", ""));
-      tunnelRef.current = tunnel;
-      tunnel?.select(active0.current, BANDS[active0.current]);
-      if (reduce) tunnel?.still();
-      else tunnel?.setActive(onScreen);
+      if (tunnelRef.current || waiting) return;
+      waiting = afterWarp(() => {
+        waiting = null;
+        if (gone || tunnelRef.current) return;
+        const tunnel = createCrystalTunnel(canvas, { phone }, () => root.setAttribute("data-live", ""));
+        tunnelRef.current = tunnel;
+        tunnel?.select(active0.current, BANDS[active0.current]);
+        if (reduce) tunnel?.still();
+        else tunnel?.setActive(onScreen);
+      });
     };
     const ahead = new IntersectionObserver(([e]) => e.isIntersecting && build(), { rootMargin: "100% 0px 100% 0px" });
     ahead.observe(root);
@@ -146,6 +155,8 @@ export default function PrismDeliverables() {
     const ro = new ResizeObserver(() => tunnelRef.current?.resize());
     ro.observe(canvas);
     return () => {
+      gone = true;
+      waiting?.();
       ahead.disconnect();
       io.disconnect();
       ro.disconnect();

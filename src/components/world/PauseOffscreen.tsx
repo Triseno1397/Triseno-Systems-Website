@@ -31,6 +31,7 @@ export default function PauseOffscreen() {
     root.setAttribute("data-pause-offscreen", "");
 
     let io: IntersectionObserver | null = null;
+    const SEL = "[data-rail], [data-pause]";
     const watch = () => {
       io?.disconnect();
       io = new IntersectionObserver(
@@ -46,12 +47,26 @@ export default function PauseOffscreen() {
     };
 
     watch();
-    // sections arrive with the page: re-observe once things have settled
+    // Arriving by warp, the sections land one per frame (world/Staged): each
+    // is watched as it lands, so its state settles in its own frame rather
+    // than every section's at once in one style pass later
+    const mo = new MutationObserver((records) => {
+      for (const r of records) {
+        for (const n of r.addedNodes) {
+          if (!(n instanceof Element)) continue;
+          if (n.matches(SEL)) io?.observe(n);
+          n.querySelectorAll(SEL).forEach((el) => io?.observe(el));
+        }
+      }
+    });
+    const main = document.querySelector("main");
+    if (main) mo.observe(main, { childList: true, subtree: true });
+    // and once more when things have settled (pin-spacers wrap sections late)
     const id = window.setTimeout(watch, 1200);
 
     return () => {
       window.clearTimeout(id);
-      window.clearTimeout(id);
+      mo.disconnect();
       io?.disconnect();
       root.removeAttribute("data-pause-offscreen");
       document.querySelectorAll("main [data-rail], main [data-pause]").forEach((el) => el.removeAttribute("data-inview"));

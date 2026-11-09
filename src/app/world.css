@@ -333,6 +333,12 @@ html[data-ascent] .ai-hero__copy { opacity: 0; filter: blur(14px); }
 
 /* ── portal ── */
 .portal-hero { transition: opacity 500ms var(--ease-expo); }
+/* The page a warp is leaving, from the moment before its route changes until
+   it is gone (WarpProvider): its content is skipped for style, layout and
+   paint while it keeps its last size, so the arriving route's stylesheet never
+   re-styles it and its unwinding scroll triggers never force a layout of it. */
+main { contain-intrinsic-size: auto 100svh; }
+main[data-leaving] { content-visibility: hidden; }
 .portal-hero[data-leaving] { opacity: 0 !important; pointer-events: none; }
 .portal-hero[data-leaving] * { pointer-events: none !important; }
 .portal-headline { font-size: var(--fs-display); line-height: 1.04; letter-spacing: 0.08em; }

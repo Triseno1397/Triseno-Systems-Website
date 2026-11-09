@@ -9,6 +9,7 @@ import StudioGate from "./StudioGate";
 import FaqSection from "@/components/world/FaqSection";
 
 import SignOff from "@/components/world/SignOff";
+import Staged from "@/components/world/Staged";
 /**
  * Triseno Creative — the Creative division world (`/studio`, amber, aperture).
  * A complete standalone pitch (D3): hero -> offer -> founder/process -> proof -> gate.
@@ -26,6 +27,8 @@ import SignOff from "@/components/world/SignOff";
  *   5 Gate      aperture stop-down around the single CTA
  * The global chrome (lockup `TRISENO / CREATIVE`, rail, cursor, warp) comes from
  * WorldShell; this file owns nothing fixed to the viewport except the world.
+ * Arriving by warp, the stations mount one per frame behind the tunnel
+ * (world/Staged); the stage itself is in from the route's first commit.
  * Styles: app/studio.css.
  */
 export default function StudioWorld() {
@@ -33,12 +36,14 @@ export default function StudioWorld() {
     <main className="studio-world" style={{ ["--hue" as string]: DIVISIONS.creative.hue } as CSSProperties}>
       <StudioBackdrop />
       <div className="studio-world__stations">
-        <ExpansionHero />
-        <CaseGallery />
-        <BehindReveal />
-        <ProofMarquee />
-        <FaqSection division="creative" />
-        <StudioGate />
+        <Staged>
+          <ExpansionHero />
+          <CaseGallery />
+          <BehindReveal />
+          <ProofMarquee />
+          <FaqSection division="creative" />
+          <StudioGate />
+        </Staged>
       </div>
       <SignOff />
     </main>

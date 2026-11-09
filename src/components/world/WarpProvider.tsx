@@ -17,7 +17,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { divisionForHref, type Division } from "@/lib/divisions";
 import TrisenoMark from "./TrisenoMark";
 import { deviceClass } from "@/lib/device";
-import { T_OUT, createTunnel } from "./warpTunnel";
+import { T_IN, T_OUT, createTunnel } from "./warpTunnel";
 import { VORTEX_OUT, createVortex, vortexTexture, type Vortex } from "./vortex";
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -41,6 +41,31 @@ import { VORTEX_OUT, createVortex, vortexTexture, type Vortex } from "./vortex";
 
 /** Fired on window when a warp starts. detail: { href, key } */
 export const WARP_EVENT = "world:warp";
+/** Fired on window when the tunnel has gone and the page is the visitor's again. */
+export const WARP_END_EVENT = "world:warp-end";
+/** Fired on window once the tunnel fully covers the page it is leaving (before
+ *  the route changes): the page may start taking itself down (world/Staged). */
+export const WARP_COVERED_EVENT = "world:warp-covered";
+
+/**
+ * Run `fn` once no warp covers the screen: now, or when the one in flight has
+ * finished. For set-up work a page would otherwise do the moment it mounts
+ * (a WebGL context, a program compile): under the tunnel that work is the
+ * main thread's longest task, and nothing it builds can be seen yet.
+ * Returns a cancel.
+ */
+export function afterWarp(fn: () => void): () => void {
+  if (!document.documentElement.hasAttribute("data-warping")) {
+    fn();
+    return () => {};
+  }
+  const on = () => {
+    window.removeEventListener(WARP_END_EVENT, on);
+    fn();
+  };
+  window.addEventListener(WARP_END_EVENT, on);
+  return () => window.removeEventListener(WARP_END_EVENT, on);
+}
 
 interface WarpApi {
   travel: (href: string) => void;
@@ -171,6 +196,8 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
       busyRef.current = false;
       setBusy(false);
       if (overlayRef.current) overlayRef.current.style.display = "none";
+      document.querySelectorAll("main[data-leaving]").forEach((m) => m.removeAttribute("data-leaving"));
+      window.dispatchEvent(new Event(WARP_END_EVENT));
     };
     window.addEventListener("pageshow", onShow);
     return () => {
@@ -259,6 +286,9 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
 
       const start = performance.now();
       const timers: number[] = [];
+      // the tunnel is opaque from T_IN (warpTunnel.ts); the vortex's painting
+      // is still fading in when the route changes, so it never says covered
+      if (!vortex && !reduced && !target.external) timers.push(window.setTimeout(() => window.dispatchEvent(new Event(WARP_COVERED_EVENT)), T_IN + 40));
       let poll = 0;
       let ended = false;
 
@@ -272,12 +302,15 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
         overlay.style.display = "none";
         title?.removeAttribute("data-show");
         title?.removeAttribute("data-out");
+        // a warp that never changed the route gives the page back
+        document.querySelectorAll("main[data-leaving]").forEach((m) => m.removeAttribute("data-leaving"));
         document.documentElement.removeAttribute("data-warping");
         document.documentElement.removeAttribute("data-ascent");
         busyRef.current = false;
         setBusy(false);
         // for the design-loop tools: how the tunnel's own frames went
         (window as unknown as { __warpStats: unknown }).__warpStats = { ...(stats ?? {}), mode: worker ? "worker" : "main", ms: Math.round(performance.now() - start) };
+        window.dispatchEvent(new Event(WARP_END_EVENT));
       };
 
       // the beats: the route changes under a full cover, then the title card
@@ -288,7 +321,15 @@ export default function WarpProvider({ children }: { children: ReactNode }) {
               // Static page served from /public — finish with a document
               // navigation. The tunnel keeps drawing until the new document paints.
               window.setTimeout(() => window.location.assign(href), reduced ? 0 : 1000);
-            } else router.push(href);
+            } else {
+              // The page under the cover is about to be torn down: its content
+              // is locked first (world.css main[data-leaving]), so the new
+              // route's stylesheet does not re-style a thousand nodes that are
+              // leaving anyway, and its scroll triggers unwind without a
+              // forced layout each. It keeps its height, so nothing scrolls.
+              document.querySelector("main")?.setAttribute("data-leaving", "");
+              router.push(href);
+            }
           },
           reduced ? 420 : T_NAV,
         ),

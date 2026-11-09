@@ -10,6 +10,7 @@ import {
 import gsap from "gsap";
 import ConceptPhoto from "./ConceptPhoto";
 import GlassPanel from "@/components/world/GlassPanel";
+import Staged, { SECTIONS_EVENT } from "@/components/world/Staged";
 
 /**
  * Triseno compare reveal — section 03, an object standing in the world.
@@ -146,11 +147,15 @@ export default function CompareReveal() {
     const stage = stageRef.current;
     if (!stage) return;
     apply(posRef.current);
+    // arriving by warp the two mock-ups land after this (Staged below): the
+    // regions inside them take their state once they are in
+    const onSections = () => apply(posRef.current);
+    window.addEventListener(SECTIONS_EVENT, onSections);
 
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    if (reduced) return;
+    if (reduced) return () => window.removeEventListener(SECTIONS_EVENT, onSections);
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -168,6 +173,7 @@ export default function CompareReveal() {
     );
     io.observe(stage);
     return () => {
+      window.removeEventListener(SECTIONS_EVENT, onSections);
       io.disconnect();
       sweep.current?.kill();
     };
@@ -288,21 +294,24 @@ export default function CompareReveal() {
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
             >
-              <div
-                className="web-compare__layer"
-                aria-label="Before: dated template layout"
-                role="img"
-              >
-                <BeforeMock />
-              </div>
-              <div
-                ref={afterRef}
-                className="web-compare__layer web-compare__layer--after"
-                aria-label="After: rebuilt layout"
-                role="img"
-              >
-                <AfterMock />
-              </div>
+              {/* two small sites' worth of type: behind a warp, one per frame */}
+              <Staged>
+                <div
+                  className="web-compare__layer"
+                  aria-label="Before: dated template layout"
+                  role="img"
+                >
+                  <BeforeMock />
+                </div>
+                <div
+                  ref={afterRef}
+                  className="web-compare__layer web-compare__layer--after"
+                  aria-label="After: rebuilt layout"
+                  role="img"
+                >
+                  <AfterMock />
+                </div>
+              </Staged>
 
               {/* Region brackets, clipped to the same edge as the rebuilt layer. */}
               <div ref={regionsRef} aria-hidden="true" className="web-compare__regions">
