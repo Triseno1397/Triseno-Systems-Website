@@ -6,11 +6,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .launch-world { --lf-hue: #9d5cff; }
-/* "launch" is a long word at the contact page's display size: one size down so
-   it never runs under the form column */
-@media (min-width: 768px) {
-  .launch-world { --contact-display: clamp(40px, 5.2vw, 100px); }
-}
+/* "RESERVE" / "LAUNCH" are long words: size the headline to its own column
+   (container units), so it can never run under the form at any width.
+   One word spans ~6em at this face and tracking. */
+.launch-hero .contact-hero__intro { container-type: inline-size; }
+.launch-hero .contact-display { font-size: min(15cqi, 104px); }
 .launch-world :is(input[type="date"]) { color-scheme: dark; }
 
 /* the intro can run taller than the viewport on short laptops: no sticky */
