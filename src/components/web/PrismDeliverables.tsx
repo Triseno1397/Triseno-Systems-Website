@@ -3,23 +3,22 @@
 import "@/app/web-prism.css";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import GlassPanel from "@/components/world/GlassPanel";
-import { afterWarp } from "@/components/world/WarpProvider";
-import { createCrystalTunnel, type CrystalTunnel } from "./crystalTunnel";
 import { discover } from "@/lib/discover";
 
 /**
- * What you get, section 04: one beam of light, seven deliverables.
+ * What you get, section 04: one light, seven deliverables.
  *
- * You stand inside a hall of crystal, drawn live (crystalTunnel): the
- * camera flies on through rows of faceted crystal folded eight ways round
- * you, the pointer turns your head, and a white beam low along the floor
- * fans out ahead into seven threads of colour, one per deliverable.
+ * You stand inside a cathedral of black crystal (the plate,
+ * /tour/plate-crystal-*.webp): white light falls through the vault from the
+ * upper left and breaks into colour on the facets and the wet floor. The
+ * place is alive: the camera creeps in and leans with the pointer, the
+ * shafts breathe and drift, and the whole hall takes the colour of the
+ * deliverable in view, dipping through white between two of them.
  *
- * Nothing is scroll-driven. The deliverables step on by themselves, each one
- * lighting its thread, tinting the hall and rolling a ring of its colour down
- * the tunnel while the camera surges forward; the index on the left jumps to
- * any of them, and the run pauses while the pointer is on the card or the
- * index. Reduced motion: one still frame, every card in a column.
+ * Nothing is scroll-driven. The deliverables step on by themselves; the
+ * index on the left jumps to any of them, and the run pauses while the
+ * pointer is on the card or the index. Reduced motion: one still frame,
+ * every card in a column.
  */
 
 /** red to violet, one per deliverable; the last is the division's own hue */
@@ -105,84 +104,80 @@ const N = DELIVERABLES.length;
 
 export default function PrismDeliverables() {
   const rootRef = useRef<HTMLElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const tunnelRef = useRef<CrystalTunnel | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [running, setRunning] = useState(false);
   const [staticMode, setStaticMode] = useState(false);
-  /** the deliverable in view, for a hall built after the first pick */
-  const active0 = useRef(0);
+  /** the colour wash dips out while the hue changes under it */
+  const [swap, setSwap] = useState(false);
 
   useEffect(() => {
     const root = rootRef.current;
-    const canvas = canvasRef.current;
-    if (!root || !canvas) return;
+    const stage = stageRef.current;
+    if (!root || !stage) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const phone = window.matchMedia("(max-width: 767px)").matches;
     if (reduce) setStaticMode(true);
     let onScreen = false;
-    let gone = false;
-    let waiting: (() => void) | null = null;
-    // the hall is built a screen ahead (its program links in the background),
-    // never at page load, and never under the warp: its context is the
-    // page's longest single task, and arriving by tunnel the section counts
-    // as "a screen ahead" before the sections above it have their height
-    const build = () => {
-      if (tunnelRef.current || waiting) return;
-      waiting = afterWarp(() => {
-        waiting = null;
-        if (gone || tunnelRef.current) return;
-        const tunnel = createCrystalTunnel(canvas, { phone }, () => root.setAttribute("data-live", ""));
-        tunnelRef.current = tunnel;
-        tunnel?.select(active0.current, BANDS[active0.current]);
-        if (reduce) tunnel?.still();
-        else tunnel?.setActive(onScreen);
-      });
-    };
-    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && build(), { rootMargin: "100% 0px 100% 0px" });
-    ahead.observe(root);
     const io = new IntersectionObserver(([e]) => {
       onScreen = e.isIntersecting && !document.hidden;
       setRunning(onScreen && !reduce);
-      if (!reduce) tunnelRef.current?.setActive(onScreen);
     });
     io.observe(root);
     const onVis = () => {
-      if (document.hidden) tunnelRef.current?.setActive(false);
+      if (document.hidden) setRunning(false);
+      else if (onScreen && !reduce) setRunning(true);
     };
     document.addEventListener("visibilitychange", onVis);
-    const ro = new ResizeObserver(() => tunnelRef.current?.resize());
-    ro.observe(canvas);
+    // the hall leans a few pixels after a mouse; a finger is for scrolling
+    let raf = 0;
+    let px = 0;
+    let py = 0;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch" || !onScreen || reduce) return;
+      px = (e.clientX / window.innerWidth) * 2 - 1;
+      py = (e.clientY / window.innerHeight) * 2 - 1;
+      if (!raf)
+        raf = window.requestAnimationFrame(() => {
+          raf = 0;
+          stage.style.setProperty("--px", (-px).toFixed(3));
+          stage.style.setProperty("--py", (-py).toFixed(3));
+        });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      gone = true;
-      waiting?.();
-      ahead.disconnect();
       io.disconnect();
-      ro.disconnect();
       document.removeEventListener("visibilitychange", onVis);
-      tunnelRef.current?.dispose();
-      tunnelRef.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.cancelAnimationFrame(raf);
     };
   }, []);
 
-  // each deliverable lights its thread and rolls its colour down the hall
-  useEffect(() => {
-    active0.current = active;
-    tunnelRef.current?.select(active, BANDS[active]);
-  }, [active]);
+  // each deliverable casts its colour through the hall: the wash dips to
+  // white, takes the new hue, and comes back
+  const swapTimer = useRef(0);
+  const go = useCallback((i: number) => {
+    setSwap(true);
+    setActive(i);
+    window.clearTimeout(swapTimer.current);
+    swapTimer.current = window.setTimeout(() => setSwap(false), 200);
+  }, []);
+  useEffect(() => () => window.clearTimeout(swapTimer.current), []);
 
   // the run: step on while the section is on screen and nobody is reading
   useEffect(() => {
     if (!running || paused || staticMode) return;
-    const id = window.setTimeout(() => setActive((i) => (i + 1) % N), HOLD_MS);
+    const id = window.setTimeout(() => go((active + 1) % N), HOLD_MS);
     return () => window.clearTimeout(id);
-  }, [running, paused, staticMode, active]);
+  }, [running, paused, staticMode, active, go]);
 
-  const pick = useCallback((i: number) => {
-    setActive(i);
-    discover("web-crystal-pick");
-  }, []);
+  const pick = useCallback(
+    (i: number) => {
+      go(i);
+      discover("web-crystal-pick");
+    },
+    [go],
+  );
   const hold = { onPointerEnter: () => setPaused(true), onPointerLeave: () => setPaused(false) };
 
   return (
@@ -197,13 +192,30 @@ export default function PrismDeliverables() {
       className="web-section web-prism"
       style={{ "--hold": `${HOLD_MS}ms` } as CSSProperties}
     >
-      <div className="web-prism__stage">
+      <div ref={stageRef} className="web-prism__stage" style={{ "--band": BANDS[active] } as CSSProperties}>
         <div
           className="web-prism__film"
           role="img"
-          aria-label="Inside a hall of faceted crystal, one white beam splits into seven threads of colour"
+          aria-label="Inside a cathedral of black crystal, white light falls through the vault and breaks into seven colours"
         >
-          <canvas ref={canvasRef} className="web-prism__canvas" aria-hidden="true" />
+          <picture className="web-prism__plate">
+            <source media="(max-width: 767px)" srcSet="/tour/plate-crystal-m.webp" />
+            <img
+              ref={(img) => {
+                if (img?.complete && img.naturalWidth > 0) img.setAttribute("data-loaded", "");
+              }}
+              src="/tour/plate-crystal-wide.webp"
+              alt=""
+              decoding="async"
+              loading="lazy"
+              draggable={false}
+              onLoad={(e) => e.currentTarget.setAttribute("data-loaded", "")}
+            />
+          </picture>
+          <span className="web-prism__beam web-prism__beam--a" aria-hidden="true" />
+          <span className="web-prism__beam web-prism__beam--b" aria-hidden="true" />
+          <span className="web-prism__wash" data-swap={swap ? "" : undefined} aria-hidden="true" />
+          <span className="web-prism__spill" aria-hidden="true" />
         </div>
         <div className="web-prism__scrim" aria-hidden="true" />
 
@@ -273,7 +285,7 @@ export default function PrismDeliverables() {
         </div>
 
         <p className="web-prism__cap" aria-hidden="true">
-          <b>One beam in</b>
+          <b>One light in</b>
           <span>Seven out</span>
         </p>
       </div>

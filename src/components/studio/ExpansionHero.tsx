@@ -8,17 +8,19 @@ import { ArrowDown } from "@phosphor-icons/react";
 import GhostButton from "@/components/ui/GhostButton";
 import GlassPanel from "@/components/world/GlassPanel";
 import { getLenis } from "@/components/world/SmoothScroll";
-import Aperture, { aperturePath } from "./Aperture";
+import Aperture from "./Aperture";
 import { LazyVideo } from "./media";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /* ─────────────────────────────────────────────────────────────────────────
-   /studio §1 — scroll-expansion hero (site-map.md). The showreel starts as a
-   small aperture window between the two halves of the headline; scrolling
-   opens the iris into a 0-radius frame and expands it to full bleed.
-   Only clip-path / transform / opacity are written per frame. The mono
-   readout (timecode, f-stop, frame coverage) counts with scroll progress.
+   /studio §1 — scroll-expansion hero (site-map.md). A steel iris the size of
+   a wall stands on a wet soundstage floor between the two halves of the
+   headline (the plate: a rendered still, /tour/plate-reel-*.webp). The reel
+   shows through its small opening; scrolling swings the nine blades back
+   until the whole ring is picture, then the frame grows past the ring to
+   full bleed. Only clip-path / transform / opacity are written per frame.
+   The mono readout (timecode, f-stop, frame coverage) counts with scroll.
    ───────────────────────────────────────────────────────────────────────── */
 
 const SHOWREEL = "/videos/product-hero.mp4";
@@ -28,6 +30,19 @@ const REEL_RANGE: [number, number] = [11, 22];
 const REEL_SECONDS = 25;
 const FPS = 24;
 const F_STOPS = ["f/16", "f/11", "f/8", "f/5.6", "f/4", "f/2.8", "f/2", "f/1.4"];
+
+/* the plate's geometry, as fractions of the rendered image's HEIGHT (the
+   desktop and phone cuts share the full height of the render, centred):
+   the iris sits dead centre; its opening, the reach of the blades, the inner
+   edge of the bezel and the outer rim */
+const PLATE_WIDE = 2752 / 1536;
+const PLATE_TALL = 1392 / 2304;
+const HOLE = 0.036;
+const RIM = 0.153;
+const RIM_OUTER = 0.176;
+const BLADES = 9;
+/* the plate pushes in a little across the stage, about the iris centre */
+const PLATE_PUSH = 0.08;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const smooth = (v: number) => {
@@ -40,15 +55,32 @@ const easeInOut = (v: number) => {
 };
 const pad = (n: number, l = 2) => String(n).padStart(l, "0");
 
+/** the opening as a polygon: a regular nine-sided iris that rounds off into
+ *  a circle as it reaches the bezel (`round` 0..1), turned by `twist` */
+function irisPolygon(cx: number, cy: number, r: number, twist: number, round: number): string {
+  const N = 36;
+  const seg = (Math.PI * 2) / BLADES;
+  const apo = Math.cos(Math.PI / BLADES);
+  const pts: string[] = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    // distance to the edge of a regular polygon with circumradius 1
+    const phi = (((a + twist) % seg) + seg) % seg;
+    const poly = apo / Math.cos(phi - seg / 2);
+    const k = poly + (1 - poly) * round;
+    pts.push(`${(cx + Math.cos(a) * r * k).toFixed(1)}px ${(cy + Math.sin(a) * r * k).toFixed(1)}px`);
+  }
+  return `polygon(${pts.join(",")})`;
+}
+
 export default function ExpansionHero() {
   const root = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const plate = useRef<HTMLImageElement>(null);
   const clip = useRef<HTMLDivElement>(null);
   const edge = useRef<HTMLDivElement>(null);
   const media = useRef<HTMLDivElement>(null);
   const veil = useRef<HTMLDivElement>(null);
-  const ring = useRef<HTMLDivElement>(null);
-  const iris = useRef<SVGPathElement>(null);
   const left = useRef<HTMLSpanElement>(null);
   const right = useRef<HTMLSpanElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -65,52 +97,61 @@ export default function ExpansionHero() {
         if (!section) return;
         let vw = 0;
         let vh = 0;
-        let s = 0;
+        /** the plate's rendered height under object-fit: cover */
+        let ih = 0;
         let last = -1;
-        let lastD = "";
 
         const measure = () => {
           // the stage, not the window: <main> keeps the rail's lane
           vw = stage.current?.clientWidth || window.innerWidth;
           vh = stage.current?.offsetHeight || window.innerHeight;
-          // The window size lives in CSS (--s); the ring is drawn at 1.2 x that.
-          s = (ring.current?.offsetWidth ?? 0) / 1.2 || Math.min(vh * 0.3, vw * 0.21);
+          const ratio = vw < 768 ? PLATE_TALL : PLATE_WIDE;
+          ih = Math.max(vh, vw / ratio);
+          // the headline flanks the ring: the middle column is the rim's width
+          stage.current?.style.setProperty("--s", `${(2 * RIM_OUTER * ih).toFixed(1)}px`);
         };
 
         const render = (p: number) => {
           last = p;
-          // Timeline: iris opens (0-.22) · frame grows to full bleed (.06-.62) ·
-          // copy arrives (.58-.70) and HOLDS · the whole stage dissolves into
-          // the world (.84-1) while the formats section fades in on the spot.
-          const open = smooth(p / 0.22); // iris opens, circle -> 0-radius frame
-          const grow = easeInOut((p - 0.06) / 0.56); // frame -> full bleed
+          // Timeline: blades open (0-.22) · frame grows past the ring to full
+          // bleed (.2-.66) · copy arrives (.58-.70) and HOLDS · the whole
+          // stage dissolves into the world (.84-1) while the formats section
+          // fades in on the spot.
+          const open = smooth(p / 0.22);
+          const grow = easeInOut((p - 0.2) / 0.46);
           const out = smooth((p - 0.84) / 0.16);
-          const w = s + (vw - s) * grow;
-          const h = s + (vh - s) * grow;
+          const ps = 1 + PLATE_PUSH * p;
+          const cx = vw / 2;
+          const cy = vh / 2;
+          // the bezel's inner edge, in px, as the plate pushes in
+          const rim = RIM * ih * ps;
+          const ring = rim * 2;
+          const w = ring + (vw - ring) * grow;
+          const h = ring + (vh - ring) * grow;
           const x = (vw - w) / 2;
           const y = (vh - h) / 2;
-          const r = (s / 2) * (1 - open);
+          const r = rim * (1 - grow);
           const inset = (o: number, rad: number) =>
             `inset(${(y - o).toFixed(1)}px ${(x - o).toFixed(1)}px ${(y - o).toFixed(1)}px ${(x - o).toFixed(1)}px round ${rad.toFixed(1)}px)`;
 
-          if (clip.current) clip.current.style.clipPath = inset(0, r);
+          if (plate.current) plate.current.style.transform = `scale(${ps.toFixed(4)})`;
+          if (clip.current) {
+            if (open < 1) {
+              // the blades swing back: the opening grows from the still's own
+              // hole to the bezel, turning as a real iris does
+              const rr = (HOLE + (RIM - HOLE) * open) * ih * ps;
+              clip.current.style.clipPath = irisPolygon(cx, cy, rr, (1 - open) * 0.5, smooth((open - 0.72) / 0.28));
+            } else clip.current.style.clipPath = inset(0, r);
+          }
           if (edge.current) {
             edge.current.style.clipPath = inset(1, r > 0 ? r + 1 : 0);
-            // The hairline frames the window; at full bleed there is no frame.
-            edge.current.style.opacity = (1 - smooth((grow - 0.7) / 0.3)).toFixed(3);
+            // The hairline frames the window once it leaves the ring; at
+            // full bleed there is no frame.
+            edge.current.style.opacity = (smooth((grow - 0.04) / 0.16) * (1 - smooth((grow - 0.7) / 0.3))).toFixed(3);
           }
-          // The whole reel is visible in the small window, then fills the frame.
+          // The reel fills the ring while the blades open, then fills the frame.
           if (media.current) media.current.style.transform = `scale(${Math.max(w / vw, h / vh).toFixed(4)})`;
           if (veil.current) veil.current.style.opacity = grow.toFixed(3);
-          if (ring.current) {
-            ring.current.style.opacity = (1 - smooth((p - 0.06) / 0.2)).toFixed(3);
-            ring.current.style.transform = `translate(-50%, -50%) rotate(${(p * 160).toFixed(2)}deg) scale(${(1 + grow * 2).toFixed(3)})`;
-          }
-          const d = aperturePath(0.12 + open * 0.88);
-          if (d !== lastD) {
-            lastD = d;
-            iris.current?.parentElement?.querySelectorAll("path[data-iris]").forEach((el) => el.setAttribute("d", d));
-          }
 
           const drift = grow * 10;
           if (vw >= 768) {
@@ -123,7 +164,7 @@ export default function ExpansionHero() {
             if (right.current) right.current.style.transform = `translate3d(${drift.toFixed(1)}px,${rise}px,0) scale(${k})`;
           } else {
             // Mobile: the window is gone at full bleed, so the halves close up into one headline.
-            const join = s / 2 + 16;
+            const join = RIM_OUTER * ih + 16;
             const lift = vh * 0.12;
             if (left.current) left.current.style.transform = `translate3d(0,${((join - lift) * grow).toFixed(1)}px,0)`;
             if (right.current) right.current.style.transform = `translate3d(0,${((-join - lift) * grow).toFixed(1)}px,0)`;
@@ -138,7 +179,6 @@ export default function ExpansionHero() {
           if (stage.current) {
             stage.current.style.opacity = (1 - out).toFixed(3);
             // gone = not hit-testable, so it never blocks the chapter beneath
-            stage.current.style.visibility = out >= 0.995 ? "hidden" : "visible";
             stage.current.style.visibility = out > 0.995 ? "hidden" : "visible";
           }
 
@@ -169,7 +209,7 @@ export default function ExpansionHero() {
         return () => {
           window.removeEventListener("resize", onResize);
           st.kill();
-          [clip, edge, media, veil, ring, left, right, copy, hint, stage].forEach((r) => r.current?.removeAttribute("style"));
+          [plate, clip, edge, media, veil, left, right, copy, hint, stage].forEach((r) => r.current?.removeAttribute("style"));
         };
       });
       // M5: no scrub. The CSS renders the final frame; the readout matches it.
@@ -204,6 +244,25 @@ export default function ExpansionHero() {
   return (
     <section ref={root} data-rail="Showreel" className="sx-hero" aria-labelledby="sx-hero-title">
       <div ref={stage} className="sx-hero__stage">
+        {/* the soundstage and its steel iris: the still everything else stands
+            in, asked for at parse time and faded up once decoded */}
+        <link rel="preload" as="image" href="/tour/plate-reel-wide.webp" media="(min-width: 768px)" />
+        <link rel="preload" as="image" href="/tour/plate-reel-m.webp" media="(max-width: 767px)" />
+        <picture className="sx-hero__plate">
+          <source media="(max-width: 767px)" srcSet="/tour/plate-reel-m.webp" />
+          <img
+            ref={(img) => {
+              plate.current = img;
+              if (img?.complete && img.naturalWidth > 0) img.setAttribute("data-loaded", "");
+            }}
+            src="/tour/plate-reel-wide.webp"
+            alt=""
+            decoding="async"
+            fetchPriority="high"
+            draggable={false}
+            onLoad={(e) => e.currentTarget.setAttribute("data-loaded", "")}
+          />
+        </picture>
         {/* 1px hairline: a white layer clipped 1px wider than the media. */}
         <div ref={edge} aria-hidden="true" className="sx-hero__edge" />
         <div ref={clip} className="sx-hero__clip">
@@ -211,10 +270,6 @@ export default function ExpansionHero() {
             <LazyVideo src={SHOWREEL} eager range={REEL_RANGE} poster={19.7} className="sx-fill" />
           </div>
           <div ref={veil} aria-hidden="true" className="sx-hero__veil" />
-        </div>
-
-        <div ref={ring} aria-hidden="true" className="sx-hero__ring">
-          <Aperture size="100%" open={0.12} strokeWidth={1.25} glow pathRef={iris} />
         </div>
 
         <h1 id="sx-hero-title" className="sx-hero__title font-display font-bold uppercase">

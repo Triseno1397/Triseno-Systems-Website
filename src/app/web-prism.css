@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    04 — What you get (PrismDeliverables.tsx)
-   A live hall of crystal (crystalTunnel) you fly through; the seven
+   A cathedral of black crystal (the plate) with living light; the seven
    deliverables step on by themselves, each lighting its thread of the beam.
    Scoped to .web-prism; tokens from .web-world (web.css).
    ═══════════════════════════════════════════════════════════════════ */
@@ -11,13 +11,69 @@
   background: #000;
 }
 
-/* the hall: a small canvas the browser scales up to the stage */
-.web-prism__film { position: absolute; inset: 0; background: #000; }
-.web-prism__canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
-  opacity: 0; transition: opacity 900ms linear;
+/* the hall: a cathedral of black crystal (the plate, /tour/plate-crystal-*),
+   alive on top — the camera creeps in and leans with the pointer, the light
+   shafts breathe and drift, the floor glints, and the whole place takes the
+   colour of the deliverable in view. Transform / opacity only. */
+.web-prism__film {
+  position: absolute; inset: -2%; background: #000; overflow: hidden;
+  transform: translate3d(calc(var(--px, 0) * 9px), calc(var(--py, 0) * 6px), 0);
+  will-change: transform;
 }
-.web-prism[data-live] .web-prism__canvas { opacity: 1; }
+.web-prism__plate { position: absolute; inset: 0; }
+.web-prism__plate img {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 46%;
+  transform-origin: 50% 46%; will-change: transform; backface-visibility: hidden;
+  animation: web-prism-creep 34s ease-in-out infinite alternate;
+  animation-play-state: paused;
+  opacity: 0; transition: opacity 900ms var(--ease-expo);
+}
+.web-prism__plate img[data-loaded] { opacity: 1; }
+.web-prism[data-run] .web-prism__plate img { animation-play-state: running; }
+@keyframes web-prism-creep { from { transform: scale3d(1, 1, 1); } to { transform: scale3d(1.07, 1.07, 1); } }
+/* the light: two soft shafts from the upper left, breathing out of phase */
+.web-prism__beam {
+  position: absolute; left: -10%; right: -10%; top: -20%; bottom: -10%;
+  pointer-events: none; mix-blend-mode: screen; will-change: transform, opacity;
+  animation-play-state: paused;
+}
+.web-prism[data-run] .web-prism__beam { animation-play-state: running; }
+.web-prism__beam--a {
+  background: linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.11) 41%, rgba(255, 255, 255, 0.04) 46%, transparent 55%);
+  animation: web-prism-beam-a 11s ease-in-out infinite alternate;
+}
+.web-prism__beam--b {
+  background: linear-gradient(112deg, transparent 44%, rgba(255, 255, 255, 0.075) 52%, transparent 61%);
+  animation: web-prism-beam-b 15s ease-in-out infinite alternate;
+}
+@keyframes web-prism-beam-a { from { opacity: 0.5; transform: translate3d(-1.5%, 0, 0); } to { opacity: 1; transform: translate3d(1.5%, 0, 0); } }
+@keyframes web-prism-beam-b { from { opacity: 1; transform: translate3d(2%, 0, 0); } to { opacity: 0.35; transform: translate3d(-2%, 0, 0); } }
+/* the colour of the deliverable in view, cast through the light and onto the
+   floor: luminance from the plate, hue from the band. It dips through no
+   colour between two deliverables, so two hues never mix. */
+.web-prism__wash {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(58% 72% at 56% 42%, color-mix(in srgb, var(--band, #9d5cff) 70%, transparent), transparent 72%),
+    linear-gradient(to top, color-mix(in srgb, var(--band, #9d5cff) 55%, transparent), transparent 48%);
+  mix-blend-mode: color;
+  opacity: 0.62;
+  transition: opacity 420ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 80ms;
+}
+.web-prism__wash[data-swap] { opacity: 0; transition: opacity 180ms linear; }
+/* its spill on the wet floor, in the same hue, additive */
+.web-prism__spill {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 46%; pointer-events: none;
+  background: radial-gradient(50% 80% at 50% 100%, color-mix(in srgb, var(--band, #9d5cff) 38%, transparent), transparent 100%);
+  mix-blend-mode: screen; opacity: 0.8;
+  transition: opacity 420ms var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 80ms;
+}
+.web-prism__wash[data-swap] + .web-prism__spill { opacity: 0; transition: opacity 180ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  .web-prism__plate img, .web-prism__beam { animation: none; }
+  .web-prism__film { transform: none; }
+}
 
 /* a soft dark edge where the copy sits, so type never fights the light */
 .web-prism__scrim {

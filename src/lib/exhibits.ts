@@ -73,7 +73,6 @@ export const TOUR: TourStop[] = [
     title: "The hall of doors",
     caption: "Your scroll is the camera. It dollies down the hall, slowing at each door.",
     ms: 12000,
-    plate: "doors",
   },
   {
     page: "/web-design-division",
@@ -97,7 +96,6 @@ export const TOUR: TourStop[] = [
     caption: "Raymarched live, sixty times a second, on your own device. Each colour is a deliverable.",
     ms: 11000,
     act: "prism",
-    plate: "crystal",
   },
   {
     page: "/studio",
@@ -106,7 +104,6 @@ export const TOUR: TourStop[] = [
     title: "The showreel",
     caption: "Scroll opens the iris on the reel. The timecode and f-stop count with you.",
     ms: 8500,
-    plate: "reel",
   },
   {
     page: "/studio",

@@ -24,6 +24,8 @@ const LEGEND = ["Websites", "Ad creative"];
 /** under each division's door word: what is behind it, in a few words */
 const DOOR_WHAT = ["Custom websites", "Ads for paid social"];
 import {
+  DOLLY_END_Z,
+  DOLLY_START_Z,
   DOOR_ITEMS,
   DOOR_Z,
   MENU_ITEMS,
@@ -31,7 +33,16 @@ import {
   dollyZ,
   doorSide,
   portalState,
+  smooth,
 } from "./portalState";
+
+/* the hall of doors: a rendered still of the concrete hall with its lit
+   frames (/tour/plate-doors-*.webp) that the camera travels down while the
+   three doors scroll by. It fades up as the hero's fly-through ends and goes
+   as the gate arrives; between, the scroll dolly pushes it in (its vanishing
+   point held) with the same lingers the 3D camera has at each door. */
+const HALL_PUSH = 0.42;
+const HALL_VP_Y = 0.45;
 
 import SignOff from "@/components/world/SignOff";
 gsap.registerPlugin(ScrollTrigger);
@@ -147,6 +158,10 @@ export default function PortalPage() {
   const heroRef = useRef<HTMLElement>(null);
   const heroInnerRef = useRef<HTMLDivElement>(null);
   const doorsRef = useRef<HTMLElement>(null);
+  const hallRef = useRef<HTMLDivElement>(null);
+  const hallImgRef = useRef<HTMLImageElement>(null);
+  /** lite world: the hall is up while a door owns the viewport */
+  const [liteHall, setLiteHall] = useState(false);
   const gateRef = useRef<HTMLElement>(null);
   const beamsRef = useRef<HTMLDivElement>(null);
   // the beams layer is a fixed full-screen sheet that only fades in near the
@@ -342,6 +357,20 @@ export default function PortalPage() {
           }
         },
       });
+      // the hall: up from the end of the fly-through until the gate arrives
+      let hallIn = 0;
+      let hallOut = 0;
+      let hallLast = "";
+      const paintHall = () => {
+        const hall = hallRef.current;
+        if (!hall) return;
+        const o = hallIn * (1 - hallOut);
+        const key = o.toFixed(3);
+        if (key === hallLast) return;
+        hallLast = key;
+        hall.style.opacity = key;
+        hall.style.visibility = o <= 0.005 ? "hidden" : "visible";
+      };
       ScrollTrigger.create({
         trigger: doorsRef.current,
         start: "top bottom",
@@ -349,6 +378,14 @@ export default function PortalPage() {
         onUpdate: (self) => {
           portalState.doors = self.progress;
           const z = dollyZ(self.progress);
+          hallIn = smooth(0.05, 0.14, self.progress);
+          paintHall();
+          if (hallImgRef.current) {
+            // the camera's travel down the hall, lingers included
+            const travel = (DOLLY_START_Z - z) / (DOLLY_START_Z - DOLLY_END_Z);
+            const s = 1 + HALL_PUSH * travel;
+            hallImgRef.current.style.transform = `translate3d(0, ${(travel * -6).toFixed(1)}px, 0) scale3d(${s.toFixed(4)}, ${s.toFixed(4)}, 1)`;
+          }
           cardRefs.current.forEach((card, i) => {
             if (!card) return;
             const v = cardVisible(i, z);
@@ -361,6 +398,8 @@ export default function PortalPage() {
         },
         onLeaveBack: () => {
           portalState.doors = 0;
+          hallIn = 0;
+          paintHall();
         },
       });
       ScrollTrigger.create({
@@ -369,6 +408,8 @@ export default function PortalPage() {
         end: "top top",
         onUpdate: (self) => {
           portalState.gate = self.progress;
+          hallOut = smooth(0.04, 0.42, self.progress);
+          paintHall();
           if (beamsRef.current) {
             const o = Math.min(1, Math.max(0, (self.progress - 0.55) / 0.4));
             beamsRef.current.style.opacity = o.toFixed(3);
@@ -394,6 +435,7 @@ export default function PortalPage() {
         entries.forEach((e) => e.target.toggleAttribute("data-lit", e.intersectionRatio > 0.55));
         const lit = panels.findIndex((p) => p.hasAttribute("data-lit"));
         setLiteHue(lit >= 0 ? DOOR_ITEMS[lit].hue : WHITE);
+        setLiteHall(lit >= 0);
       },
       { threshold: [0, 0.55, 1] },
     );
@@ -514,6 +556,23 @@ export default function PortalPage() {
               <PortalScene onReady={() => setReady(true)} onEnter={travel} onTooSlow={toLite} />
             </SceneGuard>
           </div>
+          {/* the hall of doors, over the 3D world while the doors scroll by */}
+          <div ref={hallRef} className="hall-plate" aria-hidden="true" style={{ opacity: 0, visibility: "hidden" }}>
+            <picture>
+              <source media="(max-width: 767px)" srcSet="/tour/plate-doors-m.webp" />
+              <img
+                ref={hallImgRef}
+                src="/tour/plate-doors-wide.webp"
+                alt=""
+                decoding="async"
+                fetchPriority="low"
+                draggable={false}
+                style={{ transformOrigin: `50% ${HALL_VP_Y * 100}%` }}
+              />
+            </picture>
+            <span className="hall-plate__haze" />
+            <span className="hall-plate__vignette" />
+          </div>
         </div>
       ) : null}
 
@@ -523,6 +582,22 @@ export default function PortalPage() {
       {mode === "lite" ? (
         <div className="fixed inset-0 z-0" data-world-layer="" aria-hidden="true">
           <WorldPlate world="portal" hue={liteHue} />
+          {/* the hall of doors stands behind the three door cards */}
+          <div className="hall-plate" data-lite="" data-on={liteHall ? "" : undefined}>
+            <picture>
+              <source media="(max-width: 767px)" srcSet="/tour/plate-doors-m.webp" />
+              <img
+                src="/tour/plate-doors-wide.webp"
+                alt=""
+                decoding="async"
+                loading="lazy"
+                draggable={false}
+                style={{ transformOrigin: `50% ${HALL_VP_Y * 100}%` }}
+              />
+            </picture>
+            <span className="hall-plate__haze" />
+            <span className="hall-plate__vignette" />
+          </div>
         </div>
       ) : null}
 
