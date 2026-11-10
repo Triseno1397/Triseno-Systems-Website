@@ -104,7 +104,7 @@ export default async function LaunchRoute() {
           </p>
         </div>
 
-        <LaunchForm monthLabel={spots.label} ready={stripeReady()} />
+        <LaunchForm monthLabel={spots.label} ready={stripeReady()} nextMonth={Boolean(spots.fullMonth)} />
       </section>
       <SignOff />
     </main>

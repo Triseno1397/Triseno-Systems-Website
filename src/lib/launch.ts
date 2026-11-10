@@ -136,23 +136,35 @@ export interface Spots {
   live: boolean;
 }
 
-export async function launchSpots(opts: { fresh?: boolean } = {}): Promise<Spots> {
-  const total = spotsPerMonth();
+async function bookedByMonth(fresh: boolean): Promise<{ booked: (key: string) => number; live: boolean }> {
   const manual = manualBooked();
   let paid: Record<string, number> = {};
   let live = stripeReady();
   try {
-    paid = await stripeBooked(opts.fresh ? undefined : 60);
+    paid = await stripeBooked(fresh ? undefined : 60);
   } catch {
     live = false;
   }
+  return { booked: (key) => (paid[key] ?? 0) + (manual[key] ?? 0), live };
+}
+
+export async function launchSpots(opts: { fresh?: boolean } = {}): Promise<Spots> {
+  const total = spotsPerMonth();
+  const { booked, live } = await bookedByMonth(Boolean(opts.fresh));
   const current = monthKey(0);
   for (let i = 0; i < 4; i++) {
     const key = monthKey(i);
-    const left = Math.max(0, total - (paid[key] ?? 0) - (manual[key] ?? 0));
+    const left = Math.max(0, total - booked(key));
     if (left > 0)
       return { month: key, label: monthLabel(key), total, left, fullMonth: i > 0 ? monthLabel(current) : undefined, live };
   }
   const key = monthKey(4);
   return { month: key, label: monthLabel(key), total, left: total, fullMonth: monthLabel(current), live };
+}
+
+/** Open spots left in one month ("2026-11"), read fresh: for the booking email. */
+export async function spotsLeftIn(month: string): Promise<{ left: number; total: number }> {
+  const total = spotsPerMonth();
+  const { booked } = await bookedByMonth(true);
+  return { left: Math.max(0, total - booked(month)), total };
 }
