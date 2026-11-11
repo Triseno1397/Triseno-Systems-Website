@@ -11,6 +11,9 @@
  *   STRIPE_SECRET_KEY        sk_test_… while testing, sk_live_… in production
  *   LAUNCH_SPOTS_PER_MONTH   default 6
  *   LAUNCH_SPOTS_BOOKED      optional, "YYYY-MM=n,…"
+ *   LAUNCH_SPOTS_DROP_DAYS   optional, "15,21,27": days of every month Tristen
+ *                            books a client through his own client system;
+ *                            each one counts as a taken spot from that day on
  */
 
 const STRIPE_API = "https://api.stripe.com/v1";
@@ -104,6 +107,26 @@ function manualBooked(): Record<string, number> {
   return out;
 }
 
+/** Today's day of the month in Los Angeles. */
+function todayLA(now = new Date()): number {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: TZ, day: "numeric" }).format(now));
+}
+
+/** Spots Tristen books on fixed days each month (his own client system):
+ *  this month counts the days already reached, later months none yet. */
+function scheduledBooked(key: string): number {
+  const days = (process.env.LAUNCH_SPOTS_DROP_DAYS ?? "")
+    .split(",")
+    .map((d) => Number.parseInt(d.trim(), 10))
+    .filter((d) => Number.isFinite(d) && d >= 1 && d <= 31);
+  if (!days.length) return 0;
+  const current = monthKey(0);
+  if (key < current) return days.length;
+  if (key > current) return 0;
+  const today = todayLA();
+  return days.filter((d) => d <= today).length;
+}
+
 /** Paid launch deposits per month, read from Stripe (last ~100 days). */
 async function stripeBooked(revalidate?: number): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
@@ -145,7 +168,7 @@ async function bookedByMonth(fresh: boolean): Promise<{ booked: (key: string) =>
   } catch {
     live = false;
   }
-  return { booked: (key) => (paid[key] ?? 0) + (manual[key] ?? 0), live };
+  return { booked: (key) => (paid[key] ?? 0) + (manual[key] ?? 0) + scheduledBooked(key), live };
 }
 
 export async function launchSpots(opts: { fresh?: boolean } = {}): Promise<Spots> {
