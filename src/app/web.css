@@ -1086,6 +1086,9 @@
   font-family: var(--font-geist-mono), monospace; font-size: var(--fs-label); letter-spacing: 0.16em; text-transform: uppercase; color: #ffffff;
 }
 .web-gate__cross > span { color: var(--ink-muted); }
+.web-gate__cross { margin-bottom: 0; }
+/* a second row of cross-links sits close under the first: one rule, not two */
+.web-gate__cross--next { margin-top: -8px; padding-top: 0; border-top: 0; }
 @media (min-width: 900px) {
   .web-gate { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); column-gap: 5vw; }
   .web-gate__object { --nest: min(32vw, 46svh, 460px); }

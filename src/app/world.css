@@ -575,6 +575,8 @@ main[data-leaving] { content-visibility: hidden; }
 /* gate: copy owns the left column, the gate object owns the right */
 .portal-gate { padding-top: var(--lane-top); padding-bottom: var(--lane-bottom); }
 .portal-gate__copy { width: min(620px, 46%); }
+/* the deposit page, as the quieter second way in under the gate's button */
+.portal-gate__copy > .portal-gate__launch { margin-top: 1.6rem; font-size: var(--fs-label); letter-spacing: 0.16em; }
 .gate-title { font-size: var(--fs-display); line-height: 1.06; letter-spacing: 0.08em; }
 
 /* lite world (mobile / reduced motion / no WebGL): the composited atmosphere */

@@ -102,7 +102,13 @@ export default function WebGate() {
             Threshold — Contact
           </span>
         </div>
-        <nav aria-label="Other Triseno divisions" className="web-gate__cross">
+        <p className="web-gate__cross">
+          <span>Ready to start</span>
+          <WarpLink href="/launch" className="world-underline">
+            Reserve a launch spot
+          </WarpLink>
+        </p>
+        <nav aria-label="Other Triseno divisions" className="web-gate__cross web-gate__cross--next">
           <span>The other division</span>
           <WarpLink href={DIVISIONS.creative.route} className="world-underline">
             Creative — ad creative

@@ -296,6 +296,19 @@ function MenuOverlay({
           })}
         </ul>
         <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-4 font-mono text-[12px] uppercase tracking-[0.2em] text-white">
+          {/* the deposit page: the first step of a website, one tap from anywhere */}
+          <a
+            href="/launch"
+            className="world-underline"
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              e.preventDefault();
+              onClose();
+              travel("/launch");
+            }}
+          >
+            Reserve a launch spot
+          </a>
           <a href={`mailto:${CONTACT_EMAIL}`} className="world-underline">
             {CONTACT_EMAIL}
           </a>

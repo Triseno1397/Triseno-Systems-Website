@@ -13,7 +13,7 @@ import GlassPanel from "@/components/world/GlassPanel";
 import RobotStage from "./RobotStage";
 import SceneGuard from "@/components/world/SceneGuard";
 import { prefersLite } from "@/lib/device";
-import { WARP_EVENT, useWarp } from "@/components/world/WarpProvider";
+import { WARP_EVENT, WarpLink, useWarp } from "@/components/world/WarpProvider";
 import { MENU_LABEL } from "@/lib/divisions";
 import { TOTAL, openMap } from "@/lib/discover";
 import { startTour } from "@/components/world/Tour";
@@ -856,6 +856,9 @@ export default function PortalPage() {
           <GhostButton href="/contact" className="mt-10">
             Start a Conversation
           </GhostButton>
+          <WarpLink href="/launch" className="portal-gate__launch world-underline font-mono uppercase text-white">
+            Or reserve a launch spot
+          </WarpLink>
         </div>
       </section>
       <SignOff />
