@@ -3,9 +3,9 @@ import WorldPlate from "@/components/world/WorldPlate";
 import Glyph from "@/components/world/Glyph";
 import SignOff from "@/components/world/SignOff";
 import LaunchForm from "@/components/launch/LaunchForm";
-import SpotMeter from "@/components/launch/SpotMeter";
+import LaunchHero from "@/components/launch/LaunchHero";
 import { DEPOSIT_LABEL } from "@/components/launch/schema";
-import { launchSpots, stripeReady } from "@/lib/launch";
+import { launchSpots, monthKey, monthLabel, stripeReady } from "@/lib/launch";
 import { SITE } from "@/lib/seo";
 import "../contact.css";
 import "../launch.css";
@@ -66,23 +66,23 @@ export default async function LaunchRoute() {
         <span className="contact-world__scrim contact-world__scrim--bottom" />
       </div>
 
-      <section data-rail="Reserve" aria-labelledby="launch-title" className="contact-section contact-hero launch-hero">
+      <LaunchHero spots={spots} resetLabel={monthLabel(monthKey(1))} />
+
+      <section id="reserve" data-rail="Reserve" aria-labelledby="reserve-title" className="contact-section contact-hero launch-hero">
         <div className="contact-hero__intro">
           <p className="contact-label">
             <Glyph kind="square" size={12} color={HUE} strokeWidth={1.25} />
-            <span>Launch spots</span>
+            <span>Your reservation</span>
           </p>
-          <h1 id="launch-title" className="contact-display font-display font-bold uppercase">
-            <span>Reserve</span>
-            <span>your</span>
-            <span>launch</span>
-          </h1>
+          <h2 id="reserve-title" className="lf-h2 font-display font-bold uppercase">
+            <span>Claim a</span>
+            <span>{spots.label}</span>
+            <span>spot</span>
+          </h2>
           <p className="contact-body contact-hero__sub">
-            Your website starts with a launch spot. A {DEPOSIT_LABEL} deposit holds it, puts your custom preview into
+            Three quick questions, then the {DEPOSIT_LABEL} deposit. It holds your spot, puts your custom preview into
             production and goes toward your site. If the preview isn&apos;t right for you, you get it back in full.
           </p>
-
-          <SpotMeter spots={spots} />
 
           <ol className="lf-steps">
             {STEPS.map((s) => (
@@ -104,7 +104,7 @@ export default async function LaunchRoute() {
           </p>
         </div>
 
-        <LaunchForm monthLabel={spots.label} ready={stripeReady()} />
+        <LaunchForm monthLabel={spots.label} ready={stripeReady()} nextMonth={Boolean(spots.fullMonth)} />
       </section>
       <SignOff />
     </main>

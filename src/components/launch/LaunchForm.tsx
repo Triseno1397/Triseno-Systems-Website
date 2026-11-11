@@ -63,7 +63,9 @@ function todayLocal(): string {
  * Validation runs once on submit (same schema as the server); the server opens
  * a Stripe Checkout Session and we hand the browser to it.
  */
-export default function LaunchForm({ monthLabel, ready }: { monthLabel: string; ready: boolean }) {
+export default function LaunchForm({ monthLabel, ready, nextMonth = false }: { monthLabel: string; ready: boolean; nextMonth?: boolean }) {
+  // when this month is full the button joins next month instead
+  const cta = nextMonth ? `Join ${monthLabel} · ${DEPOSIT_LABEL}` : `Reserve my spot · ${DEPOSIT_LABEL}`;
   const [v, setV] = useState<Values>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>("idle");
@@ -338,7 +340,7 @@ export default function LaunchForm({ monthLabel, ready }: { monthLabel: string; 
           <div className="lf-pay__row">
             <span className="lf-pay__what">
               <span className="contact-label">Launch spot deposit</span>
-              <span className="lf-pay__month">{monthLabel}</span>
+              <span className="lf-pay__month">{nextMonth ? `${monthLabel} · this month is fully booked` : monthLabel}</span>
             </span>
             <span className="lf-pay__amount font-display">{DEPOSIT_LABEL}</span>
           </div>
@@ -349,7 +351,7 @@ export default function LaunchForm({ monthLabel, ready }: { monthLabel: string; 
           <div className="cf-foot">
             <button type="submit" className="ghost-btn cf-next" disabled={status === "sending" || !ready}>
               <span className="ghost-btn__layer">
-                <span>{status === "sending" ? "Opening checkout" : `Reserve my spot · ${DEPOSIT_LABEL}`}</span>
+                <span>{status === "sending" ? "Opening checkout" : cta}</span>
                 {status === "sending" ? (
                   <CircleNotch size={16} weight="light" aria-hidden="true" className="cf-spin" />
                 ) : (
@@ -357,7 +359,7 @@ export default function LaunchForm({ monthLabel, ready }: { monthLabel: string; 
                 )}
               </span>
               <span className="ghost-btn__layer ghost-btn__fill" aria-hidden="true">
-                <span>{status === "sending" ? "Opening checkout" : `Reserve my spot · ${DEPOSIT_LABEL}`}</span>
+                <span>{status === "sending" ? "Opening checkout" : cta}</span>
                 <ArrowRight size={16} weight="light" />
               </span>
             </button>

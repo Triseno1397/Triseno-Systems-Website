@@ -20,6 +20,8 @@ export interface Reservation {
   phone: string;
   instagram: string;
   test: boolean;
+  /** "2 of 6 left in November", read right after the payment */
+  spotsLeft: string;
 }
 
 // FormSubmit takes posts from the visitor's browser only (Cloudflare blocks
@@ -46,7 +48,7 @@ export default function LaunchNotify({ reservation: r }: { reservation: Reservat
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
-        _subject: `${r.test ? "[TEST] " : ""}Launch spot reserved: ${r.businessName} (${r.month}, ${r.amount})`,
+        _subject: `${r.test ? "[TEST] " : ""}Launch spot reserved: ${r.businessName} (${r.month}, ${r.amount})${r.spotsLeft ? ` · ${r.spotsLeft}` : ""}`,
         _replyto: r.email,
         _template: "table",
         _captcha: "false",
@@ -64,6 +66,7 @@ export default function LaunchNotify({ reservation: r }: { reservation: Reservat
         ].join("\n"),
         email: r.email,
         "Launch month": r.month,
+        "Spots left": r.spotsLeft || "(could not read)",
         Deposit: r.amount,
         Business: r.businessName,
         "Business type": r.businessType,

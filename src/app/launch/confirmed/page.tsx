@@ -7,7 +7,7 @@ import TrisenoMark from "@/components/world/TrisenoMark";
 import GhostButton from "@/components/ui/GhostButton";
 import LaunchNotify, { type Reservation } from "@/components/launch/LaunchNotify";
 import { EMAIL } from "@/components/contact/form";
-import { monthLabel, stripe, stripeReady, type CheckoutSession } from "@/lib/launch";
+import { monthLabel, spotsLeftIn, stripe, stripeReady, type CheckoutSession } from "@/lib/launch";
 import { SITE } from "@/lib/seo";
 import "../../contact.css";
 import "../../launch.css";
@@ -36,6 +36,15 @@ export default async function LaunchConfirmed({ searchParams }: { searchParams: 
   const s = await readSession(session_id);
 
   const m = s?.metadata ?? {};
+  let spotsLeft = "";
+  if (s && m.launch_month) {
+    try {
+      const sp = await spotsLeftIn(m.launch_month);
+      spotsLeft = `${sp.left} of ${sp.total} left in ${monthLabel(m.launch_month)}`;
+    } catch {
+      /* the email still goes out without the count */
+    }
+  }
   const reservation: Reservation | null = s
     ? {
         session: s.id,
@@ -53,6 +62,7 @@ export default async function LaunchConfirmed({ searchParams }: { searchParams: 
         phone: m.phone ?? "",
         instagram: m.instagram ?? "",
         test: s.id.startsWith("cs_test_"),
+        spotsLeft,
       }
     : null;
   const first = reservation?.name.trim().split(/\s+/)[0];
