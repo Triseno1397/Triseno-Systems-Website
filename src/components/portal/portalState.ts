@@ -53,6 +53,10 @@ const P0 = (DOLLY_START_Z - DOOR_Z[0] - LINGER_AT) / SPAN;
 const PERIOD = (DOOR_Z[0] - DOOR_Z[1]) / SPAN;
 const AMP = (PERIOD / (Math.PI * 2)) * 0.62;
 
+/** the camera's travel (0..1 of the dolly) at its first linger, and the travel between two lingers */
+export const LINGER_T0 = P0;
+export const LINGER_PERIOD = PERIOD;
+
 /** Scroll progress (0..1) -> camera z, slowing down in front of each door. */
 export function dollyZ(p: number): number {
   const eased = p - AMP * Math.sin(((p - P0) / PERIOD) * Math.PI * 2);

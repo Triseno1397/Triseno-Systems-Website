@@ -860,19 +860,22 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   .world-plate__shaft, .world-plate__haze, .world-plate__dust { animation: none; }
 }
 
-/* ═══ THE HALL OF DOORS (PortalPage.tsx) — the still the camera travels down
-   while the three doors scroll by: a concrete hall, its frames lit in the
-   divisions' light. Sits over the 3D world (full) or the portal plate (lite);
-   opacity and the push-in are written by the page, the haze drifts on its own. */
+/* ═══ THE HALL OF DOORS (PortalPage.tsx) — the hall the scroll walks down
+   while the three doors go by: a concrete hall of lit portals. Sits over the
+   3D world (full) or the portal plate (lite); the page writes its opacity and
+   how far in the camera is, the haze drifts on its own. */
 .hall-plate {
   position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #000;
   will-change: opacity;
 }
 .hall-plate picture, .hall-plate img { position: absolute; inset: 0; width: 100%; height: 100%; }
-.hall-plate img {
-  object-fit: cover; object-position: 50% 50%;
-  will-change: transform; backface-visibility: hidden;
+.hall-plate img { object-fit: cover; object-position: 50% 50%; }
+/* the walk (HallTravel.tsx): drawn over the still once the plate is cut */
+.hall-plate__travel {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  opacity: 0; transition: opacity 500ms var(--ease-expo);
 }
+.hall-plate__travel[data-live] { opacity: 1; }
 .hall-plate__haze {
   position: absolute; left: -30%; right: -30%; top: 28%; height: 44%;
   background: radial-gradient(42% 60% at 50% 50%, rgba(255, 255, 255, 0.07), transparent 72%);
@@ -883,14 +886,12 @@ html[data-portal-capture] :is(.morph-nav, .chrome-btn, .progress-rail, .orb-curs
   position: absolute; inset: 0;
   background: radial-gradient(120% 100% at 50% 50%, transparent 54%, rgba(0, 0, 0, 0.36) 86%, rgba(0, 0, 0, 0.62) 100%);
 }
-/* lite world: the hall fades up while a door owns the viewport and creeps in on its own */
+/* lite world: the hall fades up while a door owns the viewport */
 .hall-plate[data-lite] { opacity: 0; transition: opacity 900ms var(--ease-expo); }
 .hall-plate[data-lite][data-on] { opacity: 1; }
-.hall-plate[data-lite] img { animation: hall-creep 36s ease-in-out infinite alternate; animation-play-state: paused; }
-.hall-plate[data-lite][data-on] img { animation-play-state: running; }
-@keyframes hall-creep { from { transform: scale3d(1, 1, 1); } to { transform: scale3d(1.12, 1.12, 1); } }
 @media (prefers-reduced-motion: reduce) {
-  .hall-plate__haze, .hall-plate[data-lite] img { animation: none; }
+  .hall-plate__haze { animation: none; }
+  .hall-plate__travel { display: none; }
 }
 
 /* ═══ GLASS PANEL (GlassPanel.tsx) — frosted glass that survives the fade ═══
