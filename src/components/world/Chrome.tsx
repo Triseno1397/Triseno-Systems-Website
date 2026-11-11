@@ -19,6 +19,8 @@ import { WarpLink, useWarp } from "./WarpProvider";
 import { lockScroll, scrollToTop } from "./SmoothScroll";
 import { addFrameJob } from "./frameLoop";
 import { discover } from "@/lib/discover";
+import { useLaunchSpots } from "@/lib/useLaunchSpots";
+import LaunchTicker from "./LaunchTicker";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Persistent chrome — exactly five elements (design-system §4):
@@ -98,6 +100,7 @@ export default function Chrome() {
           })
         }
       />
+      {pathname === "/launch" || pathname.startsWith("/launch/") ? null : <LaunchTicker />}
       <MenuOverlay open={menuOpen} current={division.key} onClose={() => setMenuOpen(false)} />
       <BackChevron division={division} scrolled={compact} />
       <ContactIcon division={division} />
@@ -295,6 +298,7 @@ function MenuOverlay({
             );
           })}
         </ul>
+        <MenuReserve onClose={onClose} />
         <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-4 font-mono text-[12px] uppercase tracking-[0.2em] text-white">
           {/* the deposit page: the first step of a website, one tap from anywhere */}
           <a
@@ -322,6 +326,24 @@ function MenuOverlay({
           </a>
         </div>
       </nav>
+    </div>
+  );
+}
+
+function MenuReserve({ onClose }: { onClose: () => void }) {
+  const s = useLaunchSpots();
+  return (
+    <div className="world-menu__item world-menu__reserve-wrap" style={{ ["--i" as string]: 5 }}>
+      <WarpLink href="/launch" onClick={onClose} className="world-menu__reserve">
+        <span className="world-menu__reserve-main font-display font-semibold uppercase">Reserve a launch spot</span>
+        <span className="world-menu__reserve-meta">
+          {s ? (s.full ? `${s.month} full · join ${s.next}` : `${s.left} of ${s.total} ${s.month} spots open`) : "Six spots a month"}
+          {" · $100 deposit"}
+        </span>
+        <span className="world-menu__reserve-go" aria-hidden="true">
+          Reserve
+        </span>
+      </WarpLink>
     </div>
   );
 }
