@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CircleNotch, LockSimple } from "@phosphor-icons/react";
-import GlassPanel from "@/components/world/GlassPanel";
 import { EMAIL } from "@/components/contact/form";
 import {
   ACTIONS,
@@ -50,7 +49,7 @@ const EMPTY: Values = {
 type Errors = Partial<Record<LaunchField, string>>;
 type Status = "idle" | "sending" | "error";
 
-const HUE = "#9d5cff";
+const HUE = "#d6b25e";
 
 /** Local date "YYYY-MM-DD" (the date input's min). */
 function todayLocal(): string {
@@ -147,7 +146,7 @@ export default function LaunchForm({ monthLabel, ready, nextMonth = false }: { m
   const count = Object.values(errors).filter(Boolean).length;
 
   return (
-    <GlassPanel world="portal" className="cf-panel" veil={0.55}>
+    <div className="cf-panel v-panel">
       <form
         ref={formRef}
         className="cf cf-form"
@@ -391,7 +390,7 @@ export default function LaunchForm({ monthLabel, ready, nextMonth = false }: { m
           </p>
         ) : null}
       </form>
-    </GlassPanel>
+    </div>
   );
 }
 

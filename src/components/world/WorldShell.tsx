@@ -22,10 +22,10 @@ import { useEffect, useState } from "react";
  */
 export default function WorldShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
-  const world = isRevampedRoute(pathname);
-  // the launch-spot checkout keeps the chrome but none of the exploring
-  // (tour, exhibit counter): one job on that page, reserving a spot
+  // /launch is the Launch Vault: its own room with its own header, palette and
+  // type, so none of the site's chrome, cursor or smooth scroll mounts there
   const checkout = pathname === "/launch" || pathname.startsWith("/launch/");
+  const world = isRevampedRoute(pathname) && !checkout;
   // the two exploring concepts, picked by port on localhost (3401 / 3402)
   const [explore, setExplore] = useState<ExploreVariant>("none");
   useEffect(() => {

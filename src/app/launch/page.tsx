@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import WorldPlate from "@/components/world/WorldPlate";
-import Glyph from "@/components/world/Glyph";
-import SignOff from "@/components/world/SignOff";
+import TrisenoMark from "@/components/world/TrisenoMark";
 import LaunchForm from "@/components/launch/LaunchForm";
-import LaunchHero from "@/components/launch/LaunchHero";
+import VaultHero from "@/components/launch/VaultHero";
 import { DEPOSIT_LABEL } from "@/components/launch/schema";
 import { launchSpots, monthKey, monthLabel, stripeReady } from "@/lib/launch";
 import { SITE } from "@/lib/seo";
@@ -35,13 +33,11 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/og/default.png"] },
 };
 
-const HUE = "#9d5cff";
-
 const STEPS = [
   {
     n: "01",
     title: "Reserve",
-    body: `Answer three quick questions and place the ${DEPOSIT_LABEL} deposit. Your spot is held from that moment.`,
+    body: `Answer three quick questions and place the ${DEPOSIT_LABEL} deposit. Your place is held from that moment.`,
   },
   {
     n: "02",
@@ -59,54 +55,62 @@ export default async function LaunchRoute() {
   const spots = await launchSpots();
 
   return (
-    <main className="contact-world launch-world relative text-white" data-tinted="" style={{ ["--cf-scene-hue" as string]: HUE }}>
-      <div aria-hidden="true" data-world-layer="" className="contact-world__scene">
-        <WorldPlate world="portal" stations={false} hue={HUE} tint={0.5} />
-        <span className="contact-world__scrim contact-world__scrim--top" />
-        <span className="contact-world__scrim contact-world__scrim--bottom" />
-      </div>
+    <main className="vault">
+      <header className="vbar">
+        <a href="/" aria-label="Triseno Systems, back to the site">
+          <TrisenoMark size={20} color="currentColor" />
+          <span>Triseno Systems</span>
+        </a>
+        <span>The Launch Vault</span>
+      </header>
 
-      <LaunchHero spots={spots} resetLabel={monthLabel(monthKey(1))} />
+      <VaultHero spots={spots} resetLabel={monthLabel(monthKey(1))} />
 
-      <section id="reserve" data-rail="Reserve" aria-labelledby="reserve-title" className="contact-section contact-hero launch-hero">
-        <div className="contact-hero__intro">
-          <p className="contact-label">
-            <Glyph kind="square" size={12} color={HUE} strokeWidth={1.25} />
+      <section className="vs" aria-labelledby="vs-title">
+        <p id="vs-title" className="v-eyebrow">
+          <i aria-hidden="true" />
+          <span>Inside the vault</span>
+        </p>
+        <ol className="vs__list">
+          {STEPS.map((s) => (
+            <li key={s.n}>
+              <span className="vs__n" aria-hidden="true">
+                {s.n}
+              </span>
+              <b>{s.title}</b>
+              <p>{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section id="reserve" className="vr" aria-labelledby="reserve-title">
+        <div className="vr__intro">
+          <p className="v-eyebrow">
+            <i aria-hidden="true" />
             <span>Your reservation</span>
           </p>
-          <h2 id="reserve-title" className="lf-h2 font-display font-bold uppercase">
+          <h2 id="reserve-title" className="vr__title">
             <span>Claim a</span>
-            <span>{spots.label}</span>
-            <span>spot</span>
+            <em>{spots.label}</em>
+            <span>place</span>
           </h2>
-          <p className="contact-body contact-hero__sub">
-            Three quick questions, then the {DEPOSIT_LABEL} deposit. It holds your spot, puts your custom preview into
+          <p className="vr__sub">
+            Three quick questions, then the {DEPOSIT_LABEL} deposit. It holds your place, puts your custom preview into
             production and goes toward your site. If the preview isn&apos;t right for you, you get it back in full.
           </p>
-
-          <ol className="lf-steps">
-            {STEPS.map((s) => (
-              <li key={s.n}>
-                <span className="cf-num">{s.n}</span>
-                <span className="lf-steps__text">
-                  <b className="font-display">{s.title}</b>
-                  <span>{s.body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-
-          <p className="lf-direct">
-            Questions first? Call or text{" "}
-            <a href={`tel:${SITE.phoneE164}`} className="world-underline">
-              {SITE.phone}
-            </a>
+          <p className="vr__direct">
+            Questions first? Call or text <a href={`tel:${SITE.phoneE164}`}>{SITE.phone}</a>
           </p>
         </div>
 
         <LaunchForm monthLabel={spots.label} ready={stripeReady()} nextMonth={Boolean(spots.fullMonth)} />
       </section>
-      <SignOff />
+
+      <footer className="vfoot">
+        <span>Triseno Systems</span>
+        <a href="/">Back to the site</a>
+      </footer>
     </main>
   );
 }
